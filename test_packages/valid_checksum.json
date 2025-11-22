@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "package_id": "PKG-TEST-001",
+  "package_type": "DELTA",
+  "package_size": 135,
+  "checksum": "31ef53110371fefb27896712aef57c0b49dfae7e18d5e4d10b638fe50f080f06",
+  "changes_count": 1,
+  "changes": [
+    {
+      "table": "items",
+      "operation": "INSERT",
+      "data": {
+        "item_code": "MED001",
+        "item_name": "紗布"
+      },
+      "timestamp": "2025-11-14T12:00:00"
+    }
+  ],
+  "message": "測試封包"
+}

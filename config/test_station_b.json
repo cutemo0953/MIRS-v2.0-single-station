@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.5.0",
+  "station": {
+    "uuid": "uuid-station-b",
+    "code": "TEST-B",
+    "name": "測試站點B",
+    "station_type": "THIRD_CLASS_BORP",
+    "admin_level": "STATION_LOCAL",
+    "parent_node": null,
+    "status": "ACTIVE",
+    "created_at": null
+  },
+  "organization": {
+    "uuid": null,
+    "code": "TEST-ORG",
+    "name": "測試組織",
+    "type": "MILITARY"
+  },
+  "location": {
+    "region_code": "TEST",
+    "region_name": "測試區域",
+    "address": null,
+    "coordinates": {
+      "latitude": null,
+      "longitude": null
+    }
+  },
+  "contact": {
+    "primary_name": null,
+    "primary_phone": null,
+    "secondary_name": null,
+    "secondary_phone": null,
+    "emergency_contact": null
+  },
+  "database": {
+    "general_inventory_path": "database/test_station_b_general.db",
+    "pharmacy_path": "database/test_station_b_pharmacy.db",
+    "backup_path": "database/backups",
+    "export_path": "exports"
+  },
+  "system": {
+    "timezone": "Asia/Taipei",
+    "language": "zh-TW",
+    "auto_backup_enabled": false,
+    "auto_backup_interval_hours": 4,
+    "max_backup_days": 7
+  },
+  "capabilities": {
+    "beds": 20,
+    "daily_capacity": 50,
+    "has_pharmacy": true,
+    "has_surgery": false,
+    "has_icu": false,
+    "has_emergency": true,
+    "has_blood_bank": false,
+    "can_store_controlled": true,
+    "max_staff": 30,
+    "storage_capacity_m3": 20,
+    "backup_power": true,
+    "satellite_comms": true
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "success": true,
+  "package_id": "PKG-20251114-120000-TC01",
+  "package_type": "DELTA",
+  "package_size": 1234,
+  "checksum": "abc123def4567890123456789012345678901234567890123456789012345678",
+  "changes_count": 3,
+  "changes": [
+    {
+      "table": "items",
+      "operation": "INSERT",
+      "data": {
+        "item_code": "MED001",
+        "item_name": "紗布",
+        "current_stock": 100,
+        "unit": "包"
+      },
+      "timestamp": "2025-11-14T12:00:00"
+    },
+    {
+      "table": "blood_events",
+      "operation": "INSERT",
+      "data": {
+        "event_id": "EVT-001",
+        "blood_id": "BLOOD-001",
+        "event_type": "RECEIVE",
+        "remarks": "測試備註"
+      },
+      "timestamp": "2025-11-14T12:05:00"
+    },
+    {
+      "table": "inventory_events",
+      "operation": "UPDATE",
+      "data": {
+        "event_id": "INV-001",
+        "item_code": "MED001",
+        "quantity": 50,
+        "event_type": "DISPENSE"
+      },
+      "timestamp": "2025-11-14T12:10:00"
+    }
+  ],
+  "message": "同步封包已產生，包含 3 項變更"
+}

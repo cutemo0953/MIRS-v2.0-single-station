@@ -1,0 +1,111 @@
+{
+  "version": "1.4.5",
+  "initialized": false,
+  "station": {
+    "uuid": null,
+    "code": null,
+    "name": null,
+    "type": null,
+    "status": "ACTIVE",
+    "created_at": null
+  },
+  "organization": {
+    "uuid": null,
+    "code": null,
+    "name": null,
+    "type": null
+  },
+  "location": {
+    "region_code": null,
+    "region_name": null,
+    "address": null,
+    "coordinates": {
+      "latitude": null,
+      "longitude": null
+    }
+  },
+  "contact": {
+    "primary_name": null,
+    "primary_phone": null,
+    "secondary_name": null,
+    "secondary_phone": null,
+    "emergency_contact": null
+  },
+  "system": {
+    "database_path": "database/medical_inventory.db",
+    "backup_path": "database/backups",
+    "export_path": "exports",
+    "timezone": "Asia/Taipei",
+    "language": "zh-TW",
+    "auto_backup_enabled": true,
+    "auto_backup_interval_hours": 4,
+    "max_backup_days": 7
+  },
+  "station_types": {
+    "H": {
+      "code": "H",
+      "name": "醫院",
+      "name_en": "Hospital",
+      "description": "綜合醫院或專科醫院"
+    },
+    "F": {
+      "code": "F",
+      "name": "前進站",
+      "name_en": "Forward Station",
+      "description": "前線醫療站點"
+    },
+    "C": {
+      "code": "C",
+      "name": "診所",
+      "name_en": "Clinic",
+      "description": "診所或衛生所"
+    },
+    "P": {
+      "code": "P",
+      "name": "藥局",
+      "name_en": "Pharmacy",
+      "description": "藥局或藥房"
+    },
+    "M": {
+      "code": "M",
+      "name": "行動站",
+      "name_en": "Mobile Station",
+      "description": "行動醫療站或救護車"
+    }
+  },
+  "organization_types": {
+    "HOSPITAL": "醫院",
+    "MILITARY": "國防醫療",
+    "GOVERNMENT": "政府機關",
+    "NGO": "非政府組織",
+    "PRIVATE": "民間組織"
+  },
+  "station_code_format": {
+    "pattern": "{ORG}-{TYPE}-{REGION}-{SEQ}",
+    "example": "DNO-F-TC-01",
+    "org_length": "2-4",
+    "type_length": "1",
+    "region_length": "2-3",
+    "seq_length": "2"
+  },
+  "emergency_blood_code_format": {
+    "pattern": "{ORG}-{YYMMDD}-{BLOOD_TYPE}-{SEQ}",
+    "example": "DNO-251109-AP-001",
+    "blood_type_codes": {
+      "A+": "AP",
+      "A-": "AN",
+      "B+": "BP",
+      "B-": "BN",
+      "O+": "OP",
+      "O-": "ON",
+      "AB+": "ABP",
+      "AB-": "ABN"
+    }
+  },
+  "blood_expiry_days": {
+    "WHOLE_BLOOD": 35,
+    "PLATELET": 5,
+    "FROZEN_PLASMA": 365,
+    "RBC_CONCENTRATE": 42
+  }
+}

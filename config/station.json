@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.5.0",
+  "station": {
+    "uuid": null,
+    "code": "TC-01",
+    "name": "前線醫療站01",
+    "station_type": "THIRD_CLASS_BORP",
+    "admin_level": "STATION_LOCAL",
+    "parent_node": null,
+    "status": "ACTIVE",
+    "created_at": null
+  },
+  "organization": {
+    "uuid": null,
+    "code": "DNO",
+    "name": "De Novo Orthopedics",
+    "type": "MILITARY"
+  },
+  "location": {
+    "region_code": "TC",
+    "region_name": "桃園地區",
+    "address": null,
+    "coordinates": {
+      "latitude": null,
+      "longitude": null
+    }
+  },
+  "contact": {
+    "primary_name": null,
+    "primary_phone": null,
+    "secondary_name": null,
+    "secondary_phone": null,
+    "emergency_contact": null
+  },
+  "database": {
+    "general_inventory_path": "database/general_inventory.db",
+    "pharmacy_path": "database/pharmacy.db",
+    "backup_path": "database/backups",
+    "export_path": "exports"
+  },
+  "system": {
+    "timezone": "Asia/Taipei",
+    "language": "zh-TW",
+    "auto_backup_enabled": true,
+    "auto_backup_interval_hours": 4,
+    "max_backup_days": 7
+  },
+  "capabilities": {
+    "beds": 20,
+    "daily_capacity": 50,
+    "has_pharmacy": true,
+    "has_surgery": false,
+    "has_icu": false,
+    "has_emergency": true,
+    "has_blood_bank": false,
+    "can_store_controlled": true,
+    "max_staff": 30,
+    "storage_capacity_m3": 20,
+    "backup_power": true,
+    "satellite_comms": true
+  },
+  "station_types_reference": {
+    "FIRST_CLASS": {
+      "name": "一級站",
+      "name_en": "First-Class Station",
+      "description": "大型醫療中心，具備完整醫療能力"
+    },
+    "SECOND_CLASS": {
+      "name": "二級站",
+      "name_en": "Second-Class Station",
+      "description": "中型醫療站，具備基本醫療與手術能力"
+    },
+    "THIRD_CLASS_BORP": {
+      "name": "三級站（基層）",
+      "name_en": "Third-Class BORP",
+      "description": "基層醫療站，提供初級醫療照護與緊急處置"
+    }
+  },
+  "admin_levels_reference": {
+    "STATION_LOCAL": {
+      "name": "站點層級",
+      "description": "最基層醫療站點"
+    },
+    "DISTRICT": {
+      "name": "區域層級",
+      "description": "管理多個站點的區域中心"
+    },
+    "COUNTY": {
+      "name": "縣市層級",
+      "description": "縣市級醫療指揮中心"
+    },
+    "MOHW": {
+      "name": "中央層級",
+      "description": "衛生福利部中央統籌"
+    }
+  }
+}

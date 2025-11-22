@@ -1,0 +1,63 @@
+# MIRS Configuration File
+# Copy this file to config.ini and customize for your deployment
+
+[database]
+# Database profile: minimal, government, testing, production
+# For installer packages, use "government" for compliance builds
+profile = government
+
+# Auto-initialize database on first run
+auto_initialize = true
+
+# Backup database before initialization
+backup_on_start = false
+
+[hospital]
+# Hospital identification
+hospital_id = HOSP-001
+hospital_name = 示範醫療機構
+station_id = TC-01
+station_name = 急診檢傷站
+
+[server]
+# Server configuration
+host = 0.0.0.0
+port = 8000
+
+# Enable debug mode (only for development)
+debug = false
+
+[security]
+# Pharmacist PIN code (CHANGE THIS in production!)
+pharmacist_pin = 1234
+
+# Session timeout (minutes)
+session_timeout = 60
+
+[features]
+# Enable/disable features
+enable_pharmacy = true
+enable_blood_bank = true
+enable_equipment = true
+enable_sync = true
+
+[paths]
+# Override default paths (optional)
+# database_path = /custom/path/medical_inventory.db
+# log_path = /custom/path/logs
+
+[installer]
+# Installer-specific settings
+# Set to true if this is running from an installer package
+is_packaged = false
+
+# Installer version
+installer_version = 1.0.0
+
+# Deployment type: demo, testing, production
+deployment_type = demo
+
+[data_import]
+# Automatic data import on initialization
+# import_hospital_items = path/to/hospital_items.csv
+# import_custom_medicines = path/to/medicines.csv

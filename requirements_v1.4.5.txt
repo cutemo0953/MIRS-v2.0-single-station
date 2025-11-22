@@ -1,0 +1,35 @@
+# 醫療站庫存管理系統 v1.4.5
+# Python 依賴套件清單
+
+# Web Framework
+fastapi==0.104.1
+
+# ASGI Server
+uvicorn[standard]==0.24.0
+
+# 資料驗證
+pydantic==2.5.0
+
+# PDF 生成 (v1.4.5新增)
+reportlab>=4.0.0
+
+# QR Code 生成 (v1.4.5新增)
+qrcode[pil]>=7.4.2
+
+# 資料處理與導出 (v1.4.5新增)
+pandas>=2.0.0
+
+# 圖像處理 (v1.4.5新增)
+Pillow>=10.0.0
+
+# CORS 中介軟體（已包含在 FastAPI 中）
+# starlette (FastAPI 依賴)
+
+# 安裝指令:
+# pip3 install -r requirements_v1.4.1.txt --break-system-packages
+
+# 或使用虛擬環境（推薦）:
+# python -m venv venv
+# source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate     # Windows
+# pip install -r requirements_v1.4.1.txt
