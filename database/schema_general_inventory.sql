@@ -364,6 +364,45 @@ CREATE INDEX IF NOT EXISTS idx_dispense_records_patient ON dispense_records(pati
 CREATE INDEX IF NOT EXISTS idx_dispense_records_status ON dispense_records(status);
 CREATE INDEX IF NOT EXISTS idx_dispense_records_date ON dispense_records(dispense_date);
 
+-- 手術記錄主表
+CREATE TABLE IF NOT EXISTS surgery_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    record_number TEXT NOT NULL UNIQUE,
+    record_date DATE NOT NULL,
+    patient_name TEXT NOT NULL,
+    triage_tag_id TEXT,
+    surgery_sequence INTEGER DEFAULT 1,
+    surgery_type TEXT,
+    surgeon_name TEXT,
+    anesthesia_type TEXT,
+    duration_minutes INTEGER,
+    remarks TEXT,
+    station_id TEXT NOT NULL,
+    status TEXT DEFAULT 'COMPLETED',
+    patient_outcome TEXT,
+    archived_at TIMESTAMP,
+    archived_by TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 手術耗材明細表
+CREATE TABLE IF NOT EXISTS surgery_consumptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    surgery_id INTEGER NOT NULL,
+    item_code TEXT NOT NULL,
+    item_name TEXT,
+    quantity INTEGER NOT NULL,
+    unit TEXT,
+    FOREIGN KEY (surgery_id) REFERENCES surgery_records(id) ON DELETE CASCADE,
+    FOREIGN KEY (item_code) REFERENCES items(item_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_surgery_records_date ON surgery_records(record_date);
+CREATE INDEX IF NOT EXISTS idx_surgery_records_patient ON surgery_records(patient_name);
+CREATE INDEX IF NOT EXISTS idx_surgery_records_station ON surgery_records(station_id);
+CREATE INDEX IF NOT EXISTS idx_surgery_consumptions_surgery ON surgery_consumptions(surgery_id);
+
 -- ============================================================================
 -- 視圖 (Views)
 -- ============================================================================
