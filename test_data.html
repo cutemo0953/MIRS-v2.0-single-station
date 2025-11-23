@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MIRS Data Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <div x-data="testData()" x-init="init()">
+        <h1>MIRS Data Test</h1>
+
+        <h2>Blood Inventory (API Test)</h2>
+        <div x-show="bloodLoading">Loading blood data...</div>
+        <div x-show="!bloodLoading && bloodData.length > 0">
+            <p>✅ Found <span x-text="bloodData.length"></span> blood types</p>
+            <ul>
+                <template x-for="blood in bloodData" :key="blood.blood_type">
+                    <li x-text="`${blood.blood_type}: ${blood.quantity} 袋`"></li>
+                </template>
+            </ul>
+        </div>
+        <div x-show="!bloodLoading && bloodData.length === 0">
+            ❌ No blood data found
+        </div>
+
+        <h2>Equipment (API Test)</h2>
+        <div x-show="equipmentLoading">Loading equipment...</div>
+        <div x-show="!equipmentLoading && equipmentData.length > 0">
+            <p>✅ Found <span x-text="equipmentData.length"></span> equipment items</p>
+            <ul>
+                <template x-for="eq in equipmentData" :key="eq.id">
+                    <li x-text="`${eq.id}: ${eq.name} (${eq.quantity})`"></li>
+                </template>
+            </ul>
+        </div>
+        <div x-show="!equipmentLoading && equipmentData.length === 0">
+            ❌ No equipment found
+        </div>
+
+        <h2>Items (API Test)</h2>
+        <div x-show="itemsLoading">Loading items...</div>
+        <div x-show="!itemsLoading && itemsData.length > 0">
+            <p>✅ Found <span x-text="itemsData.length"></span> items</p>
+            <ul>
+                <template x-for="item in itemsData.slice(0, 5)" :key="item.item_code">
+                    <li x-text="`${item.item_code}: ${item.item_name}`"></li>
+                </template>
+            </ul>
+        </div>
+        <div x-show="!itemsLoading && itemsData.length === 0">
+            ❌ No items found
+        </div>
+    </div>
+
+    <script>
+        function testData() {
+            return {
+                bloodData: [],
+                equipmentData: [],
+                itemsData: [],
+                bloodLoading: true,
+                equipmentLoading: true,
+                itemsLoading: true,
+
+                async init() {
+                    console.log('🔍 Testing MIRS APIs...');
+                    await this.loadBlood();
+                    await this.loadEquipment();
+                    await this.loadItems();
+                },
+
+                async loadBlood() {
+                    try {
+                        const response = await fetch('http://localhost:8000/api/blood/inventory');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.bloodData = data.bloodInventory || [];
+                            console.log('✅ Blood data:', this.bloodData.length, 'items');
+                        } else {
+                            console.error('❌ Blood API error:', response.status);
+                        }
+                    } catch (error) {
+                        console.error('❌ Blood fetch error:', error);
+                    }
+                    this.bloodLoading = false;
+                },
+
+                async loadEquipment() {
+                    try {
+                        const response = await fetch('http://localhost:8000/api/equipment');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.equipmentData = data.equipment || [];
+                            console.log('✅ Equipment data:', this.equipmentData.length, 'items');
+                        } else {
+                            console.error('❌ Equipment API error:', response.status);
+                        }
+                    } catch (error) {
+                        console.error('❌ Equipment fetch error:', error);
+                    }
+                    this.equipmentLoading = false;
+                },
+
+                async loadItems() {
+                    try {
+                        const response = await fetch('http://localhost:8000/api/items');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.itemsData = data.items || [];
+                            console.log('✅ Items data:', this.itemsData.length, 'items');
+                        } else {
+                            console.error('❌ Items API error:', response.status);
+                        }
+                    } catch (error) {
+                        console.error('❌ Items fetch error:', error);
+                    }
+                    this.itemsLoading = false;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
