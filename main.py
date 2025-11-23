@@ -972,16 +972,16 @@ class DatabaseManager:
         
         try:
             cursor.execute("""
-                SELECT code FROM items 
-                WHERE code LIKE ? 
-                ORDER BY code DESC 
+                SELECT item_code FROM items
+                WHERE item_code LIKE ?
+                ORDER BY item_code DESC
                 LIMIT 1
             """, (f"{prefix}-%",))
-            
+
             result = cursor.fetchone()
-            
+
             if result:
-                last_code = result['code']
+                last_code = result['item_code']
                 try:
                     last_number = int(last_code.split('-')[1])
                     new_number = last_number + 1
@@ -2644,25 +2644,25 @@ async def update_item(code: str, request: ItemUpdateRequest):
     cursor = conn.cursor()
     
     try:
-        cursor.execute("SELECT code FROM items WHERE code = ?", (code,))
+        cursor.execute("SELECT item_code FROM items WHERE item_code = ?", (code,))
         if not cursor.fetchone():
             raise HTTPException(status_code=404, detail=f"物品代碼 {code} 不存在")
-        
+
         update_fields = []
         update_values = []
-        
-        if request.name: update_fields.append("name = ?"); update_values.append(request.name)
+
+        if request.name: update_fields.append("item_name = ?"); update_values.append(request.name)
         if request.unit: update_fields.append("unit = ?"); update_values.append(request.unit)
         if request.minStock is not None: update_fields.append("min_stock = ?"); update_values.append(request.minStock)
         if request.category: update_fields.append("category = ?"); update_values.append(request.category)
-        
+
         if not update_fields:
             raise HTTPException(status_code=400, detail="沒有提供要更新的欄位")
-        
+
         update_fields.append("updated_at = CURRENT_TIMESTAMP")
         update_values.append(code)
-        
-        cursor.execute(f"UPDATE items SET {', '.join(update_fields)} WHERE code = ?", update_values)
+
+        cursor.execute(f"UPDATE items SET {', '.join(update_fields)} WHERE item_code = ?", update_values)
         conn.commit()
         
         return {"success": True, "message": f"物品 {code} 更新成功"}
