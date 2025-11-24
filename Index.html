@@ -860,12 +860,18 @@
 
         <!-- 血袋分頁 -->
         <div x-show="currentTab === 'blood'" class="bg-white rounded-xl shadow-lg p-3 sm:p-4 md:p-6">
+            <!-- DEBUG: Show if this container is visible -->
+            <div x-init="console.log('🔍 Blood tab container rendered! currentTab:', currentTab, 'bloodInventory length:', bloodInventory.length)" style="display:none;"></div>
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                 <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
                     <svg class="w-6 h-6 text-blood-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                     </svg>
                     血庫管理
+                    <!-- DEBUG: Show blood inventory count -->
+                    <span class="text-sm text-red-600 font-normal">
+                        (DEBUG: <span x-text="bloodInventory.length"></span> items, Tab: <span x-text="currentTab"></span>)
+                    </span>
                 </h2>
                 <button @click.prevent.stop="showBloodHistoryModal = true; loadBloodHistory()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -884,8 +890,13 @@
                     血型庫存統計
                 </h3>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
+                    <!-- DEBUG: Before template -->
+                    <div x-show="bloodInventory.length === 0" class="col-span-full text-center text-white p-4 bg-red-900 rounded">
+                        ⚠️ DEBUG: bloodInventory is empty! Length: <span x-text="bloodInventory.length"></span>
+                    </div>
                     <template x-for="blood in bloodInventory" :key="blood.blood_type">
-                        <div class="bg-red-800 bg-opacity-50 backdrop-blur rounded-lg p-4 border border-red-700 hover:border-red-500 transition-all duration-200 hover:shadow-lg">
+                        <div class="bg-red-800 bg-opacity-50 backdrop-blur rounded-lg p-4 border border-red-700 hover:border-red-500 transition-all duration-200 hover:shadow-lg"
+                             x-init="console.log('🩸 Rendering blood card:', blood.blood_type, blood.quantity)">
                             <div class="text-center">
                                 <!-- 血型標籤 -->
                                 <div class="text-sm font-bold text-red-100 mb-2" x-text="blood.blood_type"></div>
