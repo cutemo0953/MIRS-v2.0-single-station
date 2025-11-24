@@ -2434,6 +2434,32 @@ async def serve_index():
         raise HTTPException(status_code=404, detail="Index.html not found")
 
 
+@app.get("/test_data.html")
+async def serve_test_data():
+    """
+    Serve test data HTML file for API debugging
+    """
+    from pathlib import Path
+    test_file = Path(__file__).parent / "test_data.html"
+    if test_file.exists():
+        return FileResponse(test_file)
+    else:
+        raise HTTPException(status_code=404, detail="test_data.html not found")
+
+
+@app.get("/init_borp_station.html")
+async def serve_init_borp():
+    """
+    Serve BORP station initialization HTML
+    """
+    from pathlib import Path
+    init_file = Path(__file__).parent / "init_borp_station.html"
+    if init_file.exists():
+        return FileResponse(init_file)
+    else:
+        raise HTTPException(status_code=404, detail="init_borp_station.html not found")
+
+
 # 掛載靜態文件（Logo圖片等）
 app.mount("/static", StaticFiles(directory="."), name="static")
 
