@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>醫療站庫存管理系統 v1.4.5</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>醫療站庫存管理系統 v1.4.5-fixed</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Tailwind 自定義色系配置
@@ -40,7 +43,10 @@
                             600: '#C4564A',
                         },
                         'equipment': {
-                            500: '#6C7362',
+                            900: '#2D3531',  // 深色灰綠
+                            500: '#6C7362',  // 主色橄欖綠
+                            200: '#D7C8B0',  // 淺米色
+                            100: '#E8E3DB',  // 極淺米色
                         },
                         'sky-custom': {
                             600: '#245FA7',
@@ -107,15 +113,6 @@
 <body class="min-h-screen">
     <div x-data="medicalInventory()" x-init="init()" x-cloak class="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
 
-        <!-- DEBUG: Always visible status bar -->
-        <div style="position: fixed; top: 0; right: 0; background: yellow; color: black; padding: 10px; z-index: 9999; font-size: 12px; font-family: monospace;">
-            🐛 DEBUG<br>
-            currentTab: <strong x-text="currentTab"></strong><br>
-            bloodInventory: <strong x-text="bloodInventory.length"></strong> items<br>
-            equipment: <strong x-text="equipment.length"></strong> items<br>
-            Tab === 'blood': <strong x-text="currentTab === 'blood' ? 'TRUE' : 'FALSE'"></strong>
-        </div>
-
         <!-- Header -->
         <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
             <div class="flex items-center justify-between flex-wrap gap-3 sm:gap-4">
@@ -138,14 +135,20 @@
                         </div>
                     </div>
                 </div>
-                <div class="text-right">
-                    <p class="text-xs sm:text-sm text-gray-600">
-                        站點: <span class="font-semibold text-teal-600" x-text="stationId + ' - ' + stationName"></span>
-                        <span class="text-xs text-gray-500" x-show="stationType" x-text="' (' + getStationTypeName() + ')'"></span>
-                    </p>
+                <div class="text-right space-y-2">
+                    <!-- Station Selector -->
+                    <div class="flex items-center justify-end gap-2">
+                        <label class="text-xs text-gray-600">站點:</label>
+                        <select @change="changeStation($event.target.value)"
+                                x-model="stationId"
+                                class="text-xs sm:text-sm px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white font-semibold text-teal-600">
+                            <option value="TC-01">TC-01 - 醫療站</option>
+                            <option value="BORP-01">BORP-01 - 備援手術站</option>
+                            <option value="LOG-HUB">LOG-HUB - 物資中心</option>
+                        </select>
+                    </div>
                     <p class="text-xs text-gray-400">
                         <span x-text="currentTime"></span>
-                        <a href="/setup" class="ml-2 text-teal-600 hover:text-teal-700 underline">重新設定</a>
                     </p>
                 </div>
             </div>
@@ -689,6 +692,7 @@
                         </p>
                     </div>
                 </div>
+                </div>
             </div>
 
                 <!-- 藥品領用表單 (批次) -->
@@ -870,18 +874,12 @@
         <!-- 血袋分頁 -->
         <!-- CHANGED: x-show to style binding to force reactivity -->
         <div :style="currentTab === 'blood' ? '' : 'display: none !important'" class="bg-white rounded-xl shadow-lg p-3 sm:p-4 md:p-6">
-            <!-- DEBUG: Show if this container is visible -->
-            <div x-init="console.log('🔍 Blood tab container rendered! currentTab:', currentTab, 'bloodInventory length:', bloodInventory.length)" style="display:none;"></div>
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                 <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
                     <svg class="w-6 h-6 text-blood-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                     </svg>
                     血庫管理
-                    <!-- DEBUG: Show blood inventory count -->
-                    <span class="text-sm text-red-600 font-normal">
-                        (DEBUG: <span x-text="bloodInventory.length"></span> items, Tab: <span x-text="currentTab"></span>)
-                    </span>
                 </h2>
                 <button @click.prevent.stop="showBloodHistoryModal = true; loadBloodHistory()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -900,13 +898,8 @@
                     血型庫存統計
                 </h3>
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
-                    <!-- DEBUG: Before template -->
-                    <div x-show="bloodInventory.length === 0" class="col-span-full text-center text-white p-4 bg-red-900 rounded">
-                        ⚠️ DEBUG: bloodInventory is empty! Length: <span x-text="bloodInventory.length"></span>
-                    </div>
                     <template x-for="blood in bloodInventory" :key="blood.blood_type">
-                        <div class="bg-red-800 bg-opacity-50 backdrop-blur rounded-lg p-4 border border-red-700 hover:border-red-500 transition-all duration-200 hover:shadow-lg"
-                             x-init="console.log('🩸 Rendering blood card:', blood.blood_type, blood.quantity)">
+                        <div class="bg-red-800 bg-opacity-50 backdrop-blur rounded-lg p-4 border border-red-700 hover:border-red-500 transition-all duration-200 hover:shadow-lg">
                             <div class="text-center">
                                 <!-- 血型標籤 -->
                                 <div class="text-sm font-bold text-red-100 mb-2" x-text="blood.blood_type"></div>
@@ -1101,51 +1094,117 @@
                 <span>設備狀態將於每日 <strong class="text-equipment-500">07:00am</strong> 自動重置為待檢查</span>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 table-hover">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">設備ID</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名稱</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">狀態</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分類</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">數量</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">電力</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最後檢查</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <template x-for="eq in equipment" :key="eq.id">
+            <!-- 電氣設備區域 -->
+            <div class="bg-gradient-to-br from-equipment-100 to-white border-2 border-equipment-200 rounded-xl p-5 mb-6 shadow-sm">
+                <div class="bg-equipment-900 text-white px-4 py-2 -mx-5 -mt-5 mb-4 rounded-t-xl">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        電氣設備
+                    </h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-equipment-200 table-hover">
+                        <thead class="bg-equipment-200 bg-opacity-30">
                             <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900" x-text="eq.id"></td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900" x-text="eq.name"></td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span :class="{
-                                        'bg-green-100 text-green-800': eq.status === 'NORMAL',
-                                        'bg-yellow-100 text-yellow-800': eq.status === 'WARNING',
-                                        'bg-red-100 text-red-800': eq.status === 'ERROR',
-                                        'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED'
-                                    }" class="px-2 py-1 text-xs font-medium rounded-full" x-text="eq.status"></span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700" x-text="eq.category"></span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="eq.quantity"></td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    <span x-show="eq.power_level !== null" x-text="eq.power_level + '%'"></span>
-                                    <span x-show="eq.power_level === null" class="text-gray-400">-</span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="eq.last_check ? new Date(eq.last_check).toLocaleString('zh-TW') : '-'"></td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                                    <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] font-medium">檢查</button>
-                                    <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 font-medium">編輯</button>
-                                    <button @click="deleteEquipment(eq.id, eq.name)" class="text-red-600 hover:text-red-800 font-medium">刪除</button>
-                                </td>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">設備ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">名稱</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">狀態</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">分類</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">數量</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">電力</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">最後檢查</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">操作</th>
                             </tr>
-                        </template>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="eq in equipment.filter(e => !e.id.startsWith('SURG-'))" :key="eq.id">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900" x-text="eq.id"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900" x-text="eq.name"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span :class="{
+                                            'bg-green-100 text-green-800': eq.status === 'NORMAL',
+                                            'bg-yellow-100 text-yellow-800': eq.status === 'WARNING',
+                                            'bg-red-100 text-red-800': eq.status === 'ERROR',
+                                            'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED'
+                                        }" class="px-2 py-1 text-xs font-medium rounded-full" x-text="eq.status"></span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700" x-text="eq.category"></span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="eq.quantity"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <span x-show="eq.power_level !== null" x-text="eq.power_level + '%'"></span>
+                                        <span x-show="eq.power_level === null" class="text-gray-400">-</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="eq.last_check ? new Date(eq.last_check).toLocaleString('zh-TW') : '-'"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                                        <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] font-medium">檢查</button>
+                                        <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 font-medium">編輯</button>
+                                        <button @click="deleteEquipment(eq.id, eq.name)" class="text-red-600 hover:text-red-800 font-medium">刪除</button>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr x-show="equipment.filter(e => !e.id.startsWith('SURG-')).length === 0">
+                                <td colspan="8" class="px-6 py-8 text-center text-gray-400">目前沒有電氣設備</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 手術包區域 -->
+            <div class="bg-gradient-to-br from-equipment-200 to-white border-2 border-equipment-500 rounded-xl p-5 shadow-sm">
+                <div class="bg-equipment-500 text-white px-4 py-2 -mx-5 -mt-5 mb-4 rounded-t-xl">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                        手術包
+                    </h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-equipment-500 table-hover">
+                        <thead class="bg-equipment-500 bg-opacity-20">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">設備ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">名稱</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">狀態</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">數量</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">最後檢查</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-equipment-900 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="eq in equipment.filter(e => e.id.startsWith('SURG-'))" :key="eq.id">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900" x-text="eq.id"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900" x-text="eq.name"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span :class="{
+                                            'bg-green-100 text-green-800': eq.status === 'NORMAL',
+                                            'bg-yellow-100 text-yellow-800': eq.status === 'WARNING',
+                                            'bg-red-100 text-red-800': eq.status === 'ERROR',
+                                            'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED'
+                                        }" class="px-2 py-1 text-xs font-medium rounded-full" x-text="eq.status"></span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="eq.quantity"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="eq.last_check ? new Date(eq.last_check).toLocaleString('zh-TW') : '-'"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                                        <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] font-medium">檢查</button>
+                                        <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 font-medium">編輯</button>
+                                        <button @click="deleteEquipment(eq.id, eq.name)" class="text-red-600 hover:text-red-800 font-medium">刪除</button>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr x-show="equipment.filter(e => e.id.startsWith('SURG-')).length === 0">
+                                <td colspan="6" class="px-6 py-8 text-center text-gray-400">目前沒有手術包</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -1276,6 +1335,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">分類 *</label>
                         <select x-model="addEquipmentForm.category" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-equipment-500">
+                            <option value="手術包">手術包</option>
                             <option value="電力設備">電力設備</option>
                             <option value="空氣淨化">空氣淨化</option>
                             <option value="水處理">水處理</option>
@@ -1332,6 +1392,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">分類 *</label>
                         <select x-model="editEquipmentForm.category" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-equipment-500">
+                            <option value="手術包">手術包</option>
                             <option value="電力設備">電力設備</option>
                             <option value="空氣淨化">空氣淨化</option>
                             <option value="水處理">水處理</option>
@@ -2691,6 +2752,69 @@
                     await this.lazyLoadTabData(tab);
                 },
 
+                // 切換站點
+                async changeStation(newStationId) {
+                    // If same station, do nothing
+                    if (newStationId === this.stationId) return;
+
+                    // Confirm station switch
+                    const stationNames = {
+                        'TC-01': '醫療站 TC-01',
+                        'BORP-01': 'BORP 備援手術站',
+                        'LOG-HUB': '壯闊台灣物資中心'
+                    };
+                    const targetName = stationNames[newStationId] || newStationId;
+
+                    const confirmed = confirm(
+                        `確定要切換至「${targetName}」嗎？\n\n` +
+                        `📌 重要說明：\n` +
+                        `• 切換站點後，您將只能看到該站點的資料\n` +
+                        `• 各站點的資料都保存在資料庫中，不會被刪除\n` +
+                        `• 在 ${this.stationName} 新增的資料仍屬於 ${this.stationName}\n` +
+                        `• 切換回原站點時，資料仍會在那裡\n\n` +
+                        `是否繼續切換？`
+                    );
+
+                    if (!confirmed) {
+                        // Reset select to current station
+                        this.$nextTick(() => {
+                            this.stationId = this.stationId; // Force re-render
+                        });
+                        return;
+                    }
+
+                    const oldStationId = this.stationId;
+                    this.stationId = newStationId;
+                    localStorage.setItem('stationId', newStationId);
+
+                    const stationTypes = {
+                        'TC-01': 'health_center',
+                        'BORP-01': 'surgical_station',
+                        'LOG-HUB': 'logistics_hub'
+                    };
+
+                    this.stationName = targetName;
+                    this.stationType = stationTypes[newStationId] || '';
+
+                    localStorage.setItem('stationName', this.stationName);
+                    localStorage.setItem('stationType', this.stationType);
+
+                    // Reset data loaded flags
+                    this.dataLoaded = {
+                        items: false,
+                        blood: false,
+                        equipment: false,
+                        surgery: false,
+                        dispense: false
+                    };
+
+                    // Reload current tab data
+                    await this.loadStats();
+                    await this.lazyLoadTabData(this.currentTab);
+
+                    this.toast(`已從 ${stationNames[oldStationId]} 切換至 ${this.stationName}`, 'info');
+                },
+
                 // 確保items已載入 (用於搜尋耗材功能)
                 async ensureItemsLoaded() {
                     if (!this.dataLoaded.items || this.items.length === 0) {
@@ -3222,12 +3346,42 @@
                 // 血袋
                 async loadBloodInventory() {
                     try {
-                        const response = await fetch(`${this.apiUrl}/blood/inventory`);
+                        // Add cache busting for Safari
+                        const timestamp = new Date().getTime();
+                        const response = await fetch(`${this.apiUrl}/blood/inventory?_t=${timestamp}`, {
+                            cache: 'no-cache',
+                            headers: {
+                                'Cache-Control': 'no-cache',
+                                'Pragma': 'no-cache'
+                            }
+                        });
                         if (response.ok) {
                             const data = await response.json();
+                            console.log('API Response:', data);
+                            console.log('Current station:', this.stationId);
+
                             // Filter by current station only
-                            this.bloodInventory = data.bloodInventory.filter(b => b.station_id === this.stationId);
+                            const stationBlood = data.bloodInventory.filter(b => b.station_id === this.stationId);
+                            console.log('Filtered blood for station:', stationBlood);
+
+                            // Ensure all blood types are present with at least 0 quantity
+                            const allBloodTypes = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
+                            this.bloodInventory = allBloodTypes.map(type => {
+                                const existing = stationBlood.find(b => b.blood_type === type);
+                                return existing || {
+                                    blood_type: type,
+                                    quantity: 0,
+                                    station_id: this.stationId
+                                };
+                            });
+
                             console.log('✓ 血袋庫存已載入:', this.bloodInventory.length, '筆', `(站點: ${this.stationId})`);
+                            console.log('Blood inventory array:', JSON.stringify(this.bloodInventory));
+
+                            // Force Alpine.js to reactively update
+                            this.$nextTick(() => {
+                                console.log('Next tick - blood inventory updated');
+                            });
                         } else {
                             console.error('血袋庫存API錯誤:', response.status);
                         }

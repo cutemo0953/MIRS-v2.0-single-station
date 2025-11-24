@@ -1,0 +1,49 @@
+# Database files (keep as user data, not in repo)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Backup files
+*.backup
+*.bak
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config (keep templates only)
+config.ini
+!config.ini.template
+
+# Exports (user data)
+exports/*.csv
+exports/*.json
+!exports/.gitkeep
+
+# Temporary files
+*.tmp
+/tmp/
