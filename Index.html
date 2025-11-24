@@ -3203,8 +3203,9 @@
                         const response = await fetch(`${this.apiUrl}/blood/inventory`);
                         if (response.ok) {
                             const data = await response.json();
-                            this.bloodInventory = data.bloodInventory;
-                            console.log('✓ 血袋庫存已載入:', this.bloodInventory.length, '筆');
+                            // Filter by current station only
+                            this.bloodInventory = data.bloodInventory.filter(b => b.station_id === this.stationId);
+                            console.log('✓ 血袋庫存已載入:', this.bloodInventory.length, '筆', `(站點: ${this.stationId})`);
                         } else {
                             console.error('血袋庫存API錯誤:', response.status);
                         }
