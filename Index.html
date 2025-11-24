@@ -2658,7 +2658,101 @@
                     await this.loadStats();
                     await this.lazyLoadTabData(this.currentTab);
 
+                    // Auto-initialize new station with template if empty
+                    if (this.currentTab === 'equipment' || !this.dataLoaded.equipment) {
+                        await this.loadEquipment();
+                        await this.autoInitializeStationTemplate();
+                    }
+
                     this.toast(`已從 ${oldInfo.name} 切換至 ${this.stationName}`, 'info');
+                },
+
+                // Auto-initialize station with equipment template
+                async autoInitializeStationTemplate() {
+                    // Only auto-initialize if equipment is empty
+                    if (this.equipment && this.equipment.length > 0) {
+                        return; // Station already has equipment
+                    }
+
+                    // Don't auto-initialize if it's a well-known station (already set up manually)
+                    const knownStations = ['TC-01', 'BORP-01', 'LOG-HUB'];
+                    if (knownStations.includes(this.stationId)) {
+                        return;
+                    }
+
+                    // Determine template based on station type
+                    let templateStationId;
+                    if (this.stationId.startsWith('TC-')) {
+                        templateStationId = 'TC-01';
+                    } else if (this.stationId.startsWith('BORP-')) {
+                        templateStationId = 'BORP-01';
+                    } else if (this.stationId.startsWith('LOG-')) {
+                        templateStationId = 'LOG-HUB';
+                    } else {
+                        return; // Unknown type, skip auto-initialization
+                    }
+
+                    // Fetch template equipment
+                    try {
+                        const response = await fetch(`${this.apiUrl}/equipment?station_id=${templateStationId}`);
+                        if (!response.ok) return;
+
+                        const data = await response.json();
+                        const templateEquipment = data.equipment || [];
+
+                        if (templateEquipment.length === 0) return;
+
+                        // Ask user if they want to copy template
+                        const confirmed = confirm(
+                            `檢測到 ${this.stationName} 尚無設備。\n\n` +
+                            `是否要從 ${templateStationId} 複製 ${templateEquipment.length} 項設備模板？\n\n` +
+                            `這將幫助您快速設置新站點。`
+                        );
+
+                        if (!confirmed) return;
+
+                        // Copy equipment from template
+                        let successCount = 0;
+                        for (const eq of templateEquipment) {
+                            // Generate new equipment ID for this station
+                            const oldPrefix = templateStationId.replace('-', '');
+                            const newPrefix = this.stationId.replace('-', '');
+                            const newId = eq.id.replace(oldPrefix, newPrefix);
+
+                            const newEquipment = {
+                                id: newId,
+                                name: eq.name,
+                                category: eq.category,
+                                quantity: eq.quantity,
+                                status: 'UNCHECKED',
+                                power_level: eq.power_level,
+                                remarks: `從 ${templateStationId} 複製`,
+                                station_id: this.stationId
+                            };
+
+                            try {
+                                const addResponse = await fetch(`${this.apiUrl}/equipment`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(newEquipment)
+                                });
+
+                                if (addResponse.ok) {
+                                    successCount++;
+                                }
+                            } catch (error) {
+                                console.error('複製設備失敗:', newId, error);
+                            }
+                        }
+
+                        if (successCount > 0) {
+                            this.toast(`已成功複製 ${successCount} 項設備`, 'success');
+                            await this.loadEquipment();
+                            await this.loadStats();
+                        }
+                    } catch (error) {
+                        console.error('自動初始化失敗:', error);
+                    }
                 },
 
                 // 處理站點選擇變更
