@@ -2823,9 +2823,13 @@
                 // 載入統計
                 async loadStats() {
                     try {
-                        const response = await fetch(`${this.apiUrl}/stats`);
+                        const url = this.stationId
+                            ? `${this.apiUrl}/stats?station_id=${this.stationId}`
+                            : `${this.apiUrl}/stats`;
+                        const response = await fetch(url);
                         if (response.ok) {
                             this.stats = await response.json();
+                            console.log(`✓ 統計已載入 (站點: ${this.stationId}):`, this.stats);
                         }
                     } catch (error) {
                         console.error('載入統計失敗:', error);

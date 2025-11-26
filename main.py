@@ -1359,50 +1359,82 @@ class DatabaseManager:
 
     # ========== 封存功能結束 ==========
 
-    def get_stats(self) -> Dict[str, int]:
-        """取得系統統計"""
+    def get_stats(self, station_id: str = None) -> Dict[str, int]:
+        """取得系統統計（支援站點過濾）"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
         try:
-            # 品項總數
+            # 品項總數（不需站點過濾，物品是共用的）
             cursor.execute("SELECT COUNT(*) as count FROM items")
             total_items = cursor.fetchone()['count']
-            
-            # 庫存警戒數
-            cursor.execute("""
-                SELECT COUNT(*) as count
-                FROM (
-                    SELECT
-                        i.item_code,
-                        i.min_stock,
-                        COALESCE(stock.current_stock, 0) as current_stock
-                    FROM items i
-                    LEFT JOIN (
-                        SELECT item_code,
-                               SUM(CASE WHEN event_type = 'RECEIVE' THEN quantity
-                                        WHEN event_type = 'CONSUME' THEN -quantity
-                                        ELSE 0 END) as current_stock
-                        FROM inventory_events
-                        GROUP BY item_code
-                    ) stock ON i.item_code = stock.item_code
-                ) t
-                WHERE t.current_stock < t.min_stock
-            """)
+
+            # 庫存警戒數（依站點過濾）
+            if station_id:
+                cursor.execute("""
+                    SELECT COUNT(*) as count
+                    FROM (
+                        SELECT
+                            i.item_code,
+                            i.min_stock,
+                            COALESCE(stock.current_stock, 0) as current_stock
+                        FROM items i
+                        LEFT JOIN (
+                            SELECT item_code,
+                                   SUM(CASE WHEN event_type = 'RECEIVE' THEN quantity
+                                            WHEN event_type = 'CONSUME' THEN -quantity
+                                            ELSE 0 END) as current_stock
+                            FROM inventory_events
+                            WHERE station_id = ?
+                            GROUP BY item_code
+                        ) stock ON i.item_code = stock.item_code
+                    ) t
+                    WHERE t.current_stock < t.min_stock
+                """, (station_id,))
+            else:
+                cursor.execute("""
+                    SELECT COUNT(*) as count
+                    FROM (
+                        SELECT
+                            i.item_code,
+                            i.min_stock,
+                            COALESCE(stock.current_stock, 0) as current_stock
+                        FROM items i
+                        LEFT JOIN (
+                            SELECT item_code,
+                                   SUM(CASE WHEN event_type = 'RECEIVE' THEN quantity
+                                            WHEN event_type = 'CONSUME' THEN -quantity
+                                            ELSE 0 END) as current_stock
+                            FROM inventory_events
+                            GROUP BY item_code
+                        ) stock ON i.item_code = stock.item_code
+                    ) t
+                    WHERE t.current_stock < t.min_stock
+                """)
             low_stock = cursor.fetchone()['count']
-            
-            # 全血總量
-            cursor.execute("SELECT SUM(quantity) as total FROM blood_inventory")
+
+            # 全血總量（依站點過濾）
+            if station_id:
+                cursor.execute("SELECT SUM(quantity) as total FROM blood_inventory WHERE station_id = ?", (station_id,))
+            else:
+                cursor.execute("SELECT SUM(quantity) as total FROM blood_inventory")
             total_blood = cursor.fetchone()['total'] or 0
-            
-            # 設備警戒數
-            cursor.execute("""
-                SELECT COUNT(*) as count 
-                FROM equipment 
-                WHERE status IN ('WARNING', 'ERROR')
-            """)
+
+            # 設備警戒數（包含待檢查 + 警告 + 錯誤，依站點過濾）
+            if station_id:
+                cursor.execute("""
+                    SELECT COUNT(*) as count
+                    FROM equipment
+                    WHERE station_id = ? AND status IN ('UNCHECKED', 'WARNING', 'ERROR')
+                """, (station_id,))
+            else:
+                cursor.execute("""
+                    SELECT COUNT(*) as count
+                    FROM equipment
+                    WHERE status IN ('UNCHECKED', 'WARNING', 'ERROR')
+                """)
             equipment_alerts = cursor.fetchone()['count']
-            
+
             return {
                 "totalItems": total_items,
                 "lowStockItems": low_stock,
@@ -2584,10 +2616,10 @@ async def health_check():
 
 
 @app.get("/api/stats")
-async def get_stats():
-    """取得系統統計"""
+async def get_stats(station_id: str = None):
+    """取得系統統計（支援站點過濾）"""
     try:
-        stats = db.get_stats()
+        stats = db.get_stats(station_id)
         return stats
     except Exception as e:
         logger.error(f"取得統計失敗: {e}")
