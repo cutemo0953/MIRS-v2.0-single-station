@@ -1448,9 +1448,9 @@ class DatabaseManager:
         """進貨處理"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
         try:
-            cursor.execute("SELECT name FROM items WHERE code = ?", (request.itemCode,))
+            cursor.execute("SELECT item_name FROM items WHERE item_code = ?", (request.itemCode,))
             item = cursor.fetchone()
             if not item:
                 raise HTTPException(status_code=404, detail=f"物品代碼 {request.itemCode} 不存在")
@@ -1490,9 +1490,9 @@ class DatabaseManager:
         """消耗處理"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
         try:
-            cursor.execute("SELECT name FROM items WHERE code = ?", (request.itemCode,))
+            cursor.execute("SELECT item_name FROM items WHERE item_code = ?", (request.itemCode,))
             item = cursor.fetchone()
             if not item:
                 raise HTTPException(status_code=404, detail=f"物品代碼 {request.itemCode} 不存在")
@@ -2761,17 +2761,17 @@ async def delete_item(code: str):
     """刪除物品"""
     conn = db.get_connection()
     cursor = conn.cursor()
-    
+
     try:
-        cursor.execute("SELECT name FROM items WHERE code = ?", (code,))
+        cursor.execute("SELECT item_name FROM items WHERE item_code = ?", (code,))
         item = cursor.fetchone()
         if not item:
             raise HTTPException(status_code=404, detail=f"物品代碼 {code} 不存在")
-        
-        cursor.execute("DELETE FROM items WHERE code = ?", (code,))
+
+        cursor.execute("DELETE FROM items WHERE item_code = ?", (code,))
         conn.commit()
-        
-        return {"success": True, "message": f"物品 {item['name']} 已刪除"}
+
+        return {"success": True, "message": f"物品 {item['item_name']} 已刪除"}
     except HTTPException:
         raise
     except Exception as e:
