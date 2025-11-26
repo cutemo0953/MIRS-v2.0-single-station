@@ -2513,11 +2513,23 @@
                     this.updateTime();
                     setInterval(() => this.updateTime(), 1000);
 
+                    // 同步所有表單的 stationId
+                    this.syncFormStationIds();
+
                     // 只載入統計資料（輕量級）
                     await this.loadStats();
 
                     // 根據當前標籤載入對應資料
                     await this.lazyLoadTabData(this.currentTab);
+                },
+
+                // 同步所有表單的 stationId 與當前站點
+                syncFormStationIds() {
+                    this.receiveForm.stationId = this.stationId;
+                    this.consumeForm.stationId = this.stationId;
+                    this.batchConsumeForm.stationId = this.stationId;
+                    this.bloodReceiveForm.stationId = this.stationId;
+                    this.bloodConsumeForm.stationId = this.stationId;
                 },
 
                 updateTime() {
@@ -2649,6 +2661,9 @@
                     localStorage.setItem('stationId', newStationId);
                     localStorage.setItem('stationName', this.stationName);
                     localStorage.setItem('stationType', this.stationType);
+
+                    // 同步所有表單的 stationId
+                    this.syncFormStationIds();
 
                     // Reset data loaded flags
                     this.dataLoaded = {
