@@ -385,11 +385,12 @@ class DatabaseManager:
             # 物品主檔
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS items (
-                    code TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
+                    item_code TEXT PRIMARY KEY,
+                    item_name TEXT NOT NULL,
+                    item_category TEXT,
+                    category TEXT,
                     unit TEXT DEFAULT 'EA',
                     min_stock INTEGER DEFAULT 5,
-                    category TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -408,7 +409,7 @@ class DatabaseManager:
                     station_id TEXT NOT NULL,
                     operator TEXT DEFAULT 'SYSTEM',
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (item_code) REFERENCES items(code)
+                    FOREIGN KEY (item_code) REFERENCES items(item_code)
                 )
             """)
             
@@ -422,7 +423,7 @@ class DatabaseManager:
                 ON inventory_events(timestamp)
             """)
             
-            # 血袋庫存（支援多站點）
+            # 血袋庫存(支援多站點)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS blood_inventory (
                     blood_type TEXT NOT NULL,
@@ -533,7 +534,7 @@ class DatabaseManager:
                     quantity INTEGER NOT NULL,
                     unit TEXT NOT NULL,
                     FOREIGN KEY (surgery_id) REFERENCES surgery_records(id) ON DELETE CASCADE,
-                    FOREIGN KEY (item_code) REFERENCES items(code)
+                    FOREIGN KEY (item_code) REFERENCES items(item_code)
                 )
             """)
 
@@ -640,7 +641,7 @@ class DatabaseManager:
                     audited_by TEXT NOT NULL,
                     audited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (audit_id) REFERENCES inventory_audit(id) ON DELETE CASCADE,
-                    FOREIGN KEY (item_code) REFERENCES items(code)
+                    FOREIGN KEY (item_code) REFERENCES items(item_code)
                 )
             """)
 
@@ -817,7 +818,7 @@ class DatabaseManager:
                 )
             """)
 
-            # 醫院日報表（谷盺公司向中央回報用）
+            # 醫院日報表(谷盺公司向中央回報用)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS hospital_daily_reports (
                     report_id TEXT PRIMARY KEY,
@@ -872,7 +873,7 @@ class DatabaseManager:
             # 初始化預設設備 - 已停用，改由 profile 系統處理
             # self._init_default_equipment(cursor)
 
-            # 初始化預設醫院和站點（聯邦架構）
+            # 初始化預設醫院和站點(聯邦架構)
             self._init_hospitals_and_stations(cursor)
 
             # 初始化血型庫存
@@ -908,7 +909,7 @@ class DatabaseManager:
             """, (eq_id, eq_name, eq_category))
 
     def _init_hospitals_and_stations(self, cursor):
-        """初始化預設醫院和站點（聯邦架構）"""
+        """初始化預設醫院和站點(聯邦架構)"""
         # 建立預設醫院 HOSP-001
         cursor.execute("""
             INSERT OR IGNORE INTO hospitals (
@@ -926,7 +927,7 @@ class DatabaseManager:
             'ACTIVE'
         ))
 
-        # 建立當前站點（從 config.STATION_ID 讀取）
+        # 建立當前站點(從 config.STATION_ID 讀取)
         station_id = getattr(config, 'STATION_ID', 'TC-01')
         cursor.execute("""
             INSERT OR IGNORE INTO stations (
@@ -1360,16 +1361,16 @@ class DatabaseManager:
     # ========== 封存功能結束 ==========
 
     def get_stats(self, station_id: str = None) -> Dict[str, int]:
-        """取得系統統計（支援站點過濾）"""
+        """取得系統統計(支援站點過濾)"""
         conn = self.get_connection()
         cursor = conn.cursor()
 
         try:
-            # 品項總數（不需站點過濾，物品是共用的）
+            # 品項總數(不需站點過濾，物品是共用的)
             cursor.execute("SELECT COUNT(*) as count FROM items")
             total_items = cursor.fetchone()['count']
 
-            # 庫存警戒數（依站點過濾）
+            # 庫存警戒數(依站點過濾)
             # 短期方案：使用 INNER JOIN 只統計有進貨記錄的品項
             # v2.0 multi-station 將改為 LEFT JOIN + 自動初始化 + 設置精靈
             if station_id:
@@ -1415,14 +1416,14 @@ class DatabaseManager:
                 """)
             low_stock = cursor.fetchone()['count']
 
-            # 全血總量（依站點過濾）
+            # 全血總量(依站點過濾)
             if station_id:
                 cursor.execute("SELECT SUM(quantity) as total FROM blood_inventory WHERE station_id = ?", (station_id,))
             else:
                 cursor.execute("SELECT SUM(quantity) as total FROM blood_inventory")
             total_blood = cursor.fetchone()['total'] or 0
 
-            # 設備警戒數（包含待檢查 + 警告 + 錯誤，依站點過濾）
+            # 設備警戒數(包含待檢查 + 警告 + 錯誤，依站點過濾)
             if station_id:
                 cursor.execute("""
                     SELECT COUNT(*) as count
@@ -1546,7 +1547,7 @@ class DatabaseManager:
             conn.close()
     
     def process_blood(self, action: str, request: BloodRequest) -> dict:
-        """血袋處理（支援多站點）"""
+        """血袋處理(支援多站點)"""
         conn = self.get_connection()
         cursor = conn.cursor()
 
@@ -1619,7 +1620,7 @@ class DatabaseManager:
             conn.close()
     
     def get_blood_inventory(self, station_id: str = None) -> List[Dict]:
-        """取得血袋庫存（支援多站點）"""
+        """取得血袋庫存(支援多站點)"""
         conn = self.get_connection()
         cursor = conn.cursor()
 
@@ -1871,7 +1872,7 @@ class DatabaseManager:
             conn.close()
 
     def reset_equipment_daily(self) -> int:
-        """每日重置設備狀態（清空備註、電力、重置為UNCHECKED）"""
+        """每日重置設備狀態(清空備註、電力、重置為UNCHECKED)"""
         conn = self.get_connection()
         cursor = conn.cursor()
 
@@ -2276,7 +2277,7 @@ class DatabaseManager:
                         changes_applied += 1
 
                     elif operation == 'UPDATE':
-                        # 建立 UPDATE 語句（暫時簡化實作）
+                        # 建立 UPDATE 語句(暫時簡化實作)
                         set_clause = ', '.join([f"{k} = ?" for k in data.keys() if k != 'id'])
                         query = f"UPDATE {table} SET {set_clause} WHERE id = ?"
                         values = [v for k, v in data.items() if k != 'id'] + [data.get('id')]
@@ -2346,7 +2347,7 @@ class DatabaseManager:
                 "actual": calculated_checksum
             }
 
-        # 匯入變更（複用 import_sync_package 邏輯）
+        # 匯入變更(複用 import_sync_package 邏輯)
         result = self.import_sync_package(package_id, changes, checksum, package_type)
 
         if result['success']:
@@ -2517,7 +2518,7 @@ async def serve_debug():
         raise HTTPException(status_code=404, detail="debug.html not found")
 
 
-# 掛載靜態文件（Logo圖片等）
+# 掛載靜態文件(Logo圖片等)
 app.mount("/static", StaticFiles(directory="."), name="static")
 
 db = DatabaseManager(config.DATABASE_PATH)
@@ -2619,7 +2620,7 @@ async def health_check():
 
 @app.get("/api/stats")
 async def get_stats(station_id: str = None):
-    """取得系統統計（支援站點過濾）"""
+    """取得系統統計(支援站點過濾)"""
     try:
         stats = db.get_stats(station_id)
         return stats
@@ -2801,7 +2802,7 @@ async def consume_item(request: ConsumeRequest):
 
 @app.get("/api/blood/inventory")
 async def get_blood_inventory(station_id: str = Query(None, description="站點ID，留空則查詢所有站點")):
-    """取得血袋庫存（支援多站點）"""
+    """取得血袋庫存(支援多站點)"""
     try:
         inventory = db.get_blood_inventory(station_id)
         return {"bloodInventory": inventory, "station_id": station_id}
@@ -3194,7 +3195,7 @@ async def transfer_blood(request: BloodTransferRequest):
             f"轉移至 {request.targetStationId}. {request.remarks or ''}"
         ))
 
-        # 4. 在目標站點增加血袋（如果不存在則新增）
+        # 4. 在目標站點增加血袋(如果不存在則新增)
         cursor.execute("""
             INSERT INTO blood_inventory (blood_type, quantity, station_id)
             VALUES (?, ?, ?)
@@ -3848,7 +3849,7 @@ async def get_inventory_events(
     item_code: Optional[str] = Query(None, description="物品代碼(模糊搜尋)"),
     limit: int = Query(100, ge=1, le=1000, description="最大回傳筆數")
 ):
-    """查詢庫存事件記錄（進貨/消耗）"""
+    """查詢庫存事件記錄(進貨/消耗)"""
     try:
         events = db.get_inventory_events(event_type, start_date, end_date, item_code, limit)
         return {"events": events, "count": len(events)}
@@ -4119,7 +4120,7 @@ manifest.json      檔案清單與檢查碼
 
 @app.get("/api/emergency/info")
 async def get_emergency_info():
-    """取得緊急資訊（用於QR Code掃描後顯示）"""
+    """取得緊急資訊(用於QR Code掃描後顯示)"""
     try:
         stats = db.get_stats()
         blood_inventory = db.get_blood_inventory()
@@ -4151,7 +4152,7 @@ async def get_emergency_info():
 
 @app.get("/emergency/view")
 async def view_emergency_info():
-    """緊急資訊顯示頁面 (QR Code掃描後跳轉）"""
+    """緊急資訊顯示頁面 (QR Code掃描後跳轉)"""
     try:
         stats = db.get_stats()
         blood_inventory = db.get_blood_inventory()
@@ -4409,7 +4410,7 @@ async def emergency_qr_code(request: Request):
     - 設備狀態
     """
     try:
-        # 獲取請求的主機名稱 (支持手機掃描）
+        # 獲取請求的主機名稱 (支持手機掃描)
         # 優先使用環境變數，否則使用請求的 Host header
         host = config.BASE_URL if hasattr(config, 'BASE_URL') and config.BASE_URL else request.headers.get("host", "localhost:8000")
         protocol = "https" if request.url.scheme == "https" else "http"
@@ -4502,7 +4503,7 @@ async def import_station_sync_package(request: SyncPackageUpload):
     """
     【站點層】匯入同步封包
 
-    站點匯入從醫院層收到的同步封包 (通常包含其他站點的更新）
+    站點匯入從醫院層收到的同步封包 (通常包含其他站點的更新)
 
     參數:
     - stationId: 站點ID
@@ -4582,7 +4583,7 @@ async def upload_hospital_sync(request: SyncPackageUpload):
     """
     【醫院層】接收站點同步上傳
 
-    醫院層接收站點上傳的同步封包 (谷盺公司使用）
+    醫院層接收站點上傳的同步封包 (谷盺公司使用)
 
     參數:
     - stationId: 站點ID
@@ -4592,7 +4593,7 @@ async def upload_hospital_sync(request: SyncPackageUpload):
 
     返回:
     - changes_applied: 成功套用的變更數
-    - response_package_id: 回傳封包ID (包含其他站點更新）
+    - response_package_id: 回傳封包ID (包含其他站點更新)
     """
     try:
         logger.info(f"醫院層接收同步上傳: station={request.stationId}, package={request.packageId}")
@@ -4667,7 +4668,7 @@ async def coordinate_hospital_transfer(request: HospitalTransferCoordinate):
     """
     【醫院層】院內調撥協調 (Phase 2)
 
-    醫院層協調站點間物資調撥 (谷盺公司使用）
+    醫院層協調站點間物資調撥 (谷盺公司使用)
 
     參數:
     - hospitalId: 醫院ID
@@ -4923,10 +4924,10 @@ if __name__ == "__main__":
     print(f"📊 健康檢查: http://localhost:8000/api/health")
     print("=" * 70)
     print("✨ v1.4.5 新功能:")
-    print("   - UI 全面重構 (Heroicons + 新色系）")
-    print("   - 處置標籤頁整合 (手術記錄 + 一般消耗）")
-    print("   - 血庫管理增強 (病患資訊 + 歷史記錄）")
-    print("   - 設備自動刷新機制 (每日 07:00am）")
+    print("   - UI 全面重構 (Heroicons + 新色系)")
+    print("   - 處置標籤頁整合 (手術記錄 + 一般消耗)")
+    print("   - 血庫管理增強 (病患資訊 + 歷史記錄)")
+    print("   - 設備自動刷新機制 (每日 07:00am)")
     print("   - 響應式設計優化")
     print("=" * 70)
     print("按 Ctrl+C 停止服務")
