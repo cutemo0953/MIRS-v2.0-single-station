@@ -395,7 +395,27 @@ class DatabaseManager:
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            
+
+            # 藥品主檔 (v2.3新增 - Emergency Dispense功能)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS medicines (
+                    medicine_code TEXT PRIMARY KEY,
+                    generic_name TEXT NOT NULL,
+                    brand_name TEXT,
+                    unit TEXT DEFAULT '顆',
+                    min_stock INTEGER DEFAULT 100,
+                    current_stock INTEGER DEFAULT 0,
+                    is_controlled_drug INTEGER DEFAULT 0,
+                    controlled_level TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    station_id TEXT NOT NULL DEFAULT 'TC-01',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    CHECK(is_controlled_drug IN (0, 1)),
+                    CHECK(is_active IN (0, 1))
+                )
+            """)
+
             # 庫存事件記錄
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS inventory_events (
