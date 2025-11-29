@@ -1443,19 +1443,13 @@ class DatabaseManager:
                 cursor.execute("SELECT SUM(quantity) as total FROM blood_inventory")
             total_blood = cursor.fetchone()['total'] or 0
 
-            # 設備警戒數(包含待檢查 + 警告 + 錯誤，依站點過濾)
-            if station_id:
-                cursor.execute("""
-                    SELECT COUNT(*) as count
-                    FROM equipment
-                    WHERE station_id = ? AND status IN ('UNCHECKED', 'WARNING', 'ERROR')
-                """, (station_id,))
-            else:
-                cursor.execute("""
-                    SELECT COUNT(*) as count
-                    FROM equipment
-                    WHERE status IN ('UNCHECKED', 'WARNING', 'ERROR')
-                """)
+            # 設備警戒數(包含待檢查 + 警告 + 錯誤)
+            # v1.4.5 單站版本：equipment 表無 station_id 欄位
+            cursor.execute("""
+                SELECT COUNT(*) as count
+                FROM equipment
+                WHERE status IN ('UNCHECKED', 'WARNING', 'ERROR')
+            """)
             equipment_alerts = cursor.fetchone()['count']
 
             return {
