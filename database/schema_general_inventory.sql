@@ -404,6 +404,25 @@ CREATE INDEX IF NOT EXISTS idx_surgery_records_station ON surgery_records(statio
 CREATE INDEX IF NOT EXISTS idx_surgery_consumptions_surgery ON surgery_consumptions(surgery_id);
 
 -- ============================================================================
+-- 設備檢查記錄表 (Equipment Check Records)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS equipment_checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    equipment_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    power_level INTEGER,
+    remarks TEXT,
+    station_id TEXT NOT NULL,
+    operator TEXT DEFAULT 'SYSTEM',
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (equipment_id) REFERENCES equipment(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_checks_time ON equipment_checks(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_equipment_checks_equipment ON equipment_checks(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_checks_station ON equipment_checks(station_id);
+
+-- ============================================================================
 -- 視圖 (Views)
 -- ============================================================================
 
