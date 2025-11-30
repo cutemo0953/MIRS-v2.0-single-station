@@ -67,43 +67,43 @@ CREATE TABLE IF NOT EXISTS equipment (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO equipment (id, name, category, quantity, status, remarks, station_id) VALUES
+INSERT INTO equipment (id, name, category, quantity, status, remarks) VALUES
 -- Orthopedic Instruments (BORP-01 station)
-('BORP-SURG-ORTHO-01', '骨科包', '手術器械', 8, 'UNCHECKED', '可重複使用', 'BORP-01'),
-('BORP-SURG-DRILL-01', '顱骨手搖鑽', '手術器械', 1, 'UNCHECKED', '神經外科專用', 'BORP-01'),
-('BORP-SURG-DRILL-02', '鑽/切骨電動工具組', '手術器械', 1, 'UNCHECKED', '骨科專用', 'BORP-01'),
-('BORP-SURG-DRILL-03', '電池式電動骨鑽', '手術器械', 1, 'UNCHECKED', '骨科專用', 'BORP-01'),
-('BORP-SURG-SAW-01', '電池式電動骨鋸', '手術器械', 3, 'UNCHECKED', '骨科專用', 'BORP-01'),
+('BORP-SURG-ORTHO-01', '骨科包', '手術器械', 8, 'UNCHECKED', '可重複使用'),
+('BORP-SURG-DRILL-01', '顱骨手搖鑽', '手術器械', 1, 'UNCHECKED', '神經外科專用'),
+('BORP-SURG-DRILL-02', '鑽/切骨電動工具組', '手術器械', 1, 'UNCHECKED', '骨科專用'),
+('BORP-SURG-DRILL-03', '電池式電動骨鑽', '手術器械', 1, 'UNCHECKED', '骨科專用'),
+('BORP-SURG-SAW-01', '電池式電動骨鋸', '手術器械', 3, 'UNCHECKED', '骨科專用'),
 
 -- Airway & Vascular Instruments
-('BORP-SURG-TRACH-01', '氣切輔助包', '手術器械', 8, 'UNCHECKED', '緊急氣道管理', 'BORP-01'),
-('BORP-SURG-CLAMP-01', 'Bull dog血管夾', '手術器械', 4, 'UNCHECKED', '血管手術專用', 'BORP-01'),
+('BORP-SURG-TRACH-01', '氣切輔助包', '手術器械', 8, 'UNCHECKED', '緊急氣道管理'),
+('BORP-SURG-CLAMP-01', 'Bull dog血管夾', '手術器械', 4, 'UNCHECKED', '血管手術專用'),
 
 -- General Surgical Packs
-('BORP-SURG-BASIC-01', '共同基本包（一）', '手術器械', 8, 'UNCHECKED', '一般手術器械', 'BORP-01'),
-('BORP-SURG-BASIC-02', '共同基本包（二）', '手術器械', 8, 'UNCHECKED', '一般手術器械', 'BORP-01'),
+('BORP-SURG-BASIC-01', '共同基本包（一）', '手術器械', 8, 'UNCHECKED', '一般手術器械'),
+('BORP-SURG-BASIC-02', '共同基本包（二）', '手術器械', 8, 'UNCHECKED', '一般手術器械'),
 
 -- Abdominal Surgery Instruments
-('BORP-SURG-ABD-01', '開腹輔助包', '手術器械', 8, 'UNCHECKED', '腹部手術專用', 'BORP-01'),
-('BORP-SURG-RETRACT-01', '腹部開創器', '手術器械', 8, 'UNCHECKED', '腹部手術專用', 'BORP-01'),
+('BORP-SURG-ABD-01', '開腹輔助包', '手術器械', 8, 'UNCHECKED', '腹部手術專用'),
+('BORP-SURG-RETRACT-01', '腹部開創器', '手術器械', 8, 'UNCHECKED', '腹部手術專用'),
 
 -- Thoracic & Cardiovascular Instruments
-('BORP-SURG-THORAX-01', '開胸基本包', '手術器械', 1, 'UNCHECKED', '胸腔手術專用', 'BORP-01'),
-('BORP-SURG-VASC-01', '血管包', '手術器械', 3, 'UNCHECKED', '血管手術專用', 'BORP-01'),
-('BORP-SURG-CARDIAC-01', '心外基本包', '手術器械', 4, 'UNCHECKED', '心臟手術專用', 'BORP-01'),
+('BORP-SURG-THORAX-01', '開胸基本包', '手術器械', 1, 'UNCHECKED', '胸腔手術專用'),
+('BORP-SURG-VASC-01', '血管包', '手術器械', 3, 'UNCHECKED', '血管手術專用'),
+('BORP-SURG-CARDIAC-01', '心外基本包', '手術器械', 4, 'UNCHECKED', '心臟手術專用'),
 
 -- Specialty Packs
-('BORP-SURG-ASSET-01', 'ASSET包', '手術器械', 8, 'UNCHECKED', '緊急手術包', 'BORP-01'),
-('BORP-SURG-SUTURE-01', '皮膚縫合包', '手術器械', 2, 'UNCHECKED', '傷口縫合專用', 'BORP-01'),
+('BORP-SURG-ASSET-01', 'ASSET包', '手術器械', 8, 'UNCHECKED', '緊急手術包'),
+('BORP-SURG-SUTURE-01', '皮膚縫合包', '手術器械', 2, 'UNCHECKED', '傷口縫合專用'),
 
 -- ============================================================================
 -- Basic Equipment (BORP Configuration with unique IDs)
 -- ============================================================================
 
-('BORP-POWER-01', '行動電源站', '電力設備', 1, 'UNCHECKED', 'BORP標準配備', 'BORP-01'),
-('BORP-PHOTO-01', '光觸媒', '空氣淨化', 1, 'UNCHECKED', 'BORP標準配備', 'BORP-01'),
-('BORP-WATER-01', '淨水器', '水處理', 1, 'UNCHECKED', 'BORP標準配備', 'BORP-01'),
-('BORP-FRIDGE-01', '行動冰箱', '冷藏設備', 2, 'UNCHECKED', 'BORP標準配備 (增量)', 'BORP-01');
+('BORP-POWER-01', '行動電源站', '電力設備', 1, 'UNCHECKED', 'BORP標準配備'),
+('BORP-PHOTO-01', '光觸媒', '空氣淨化', 1, 'UNCHECKED', 'BORP標準配備'),
+('BORP-WATER-01', '淨水器', '水處理', 1, 'UNCHECKED', 'BORP標準配備'),
+('BORP-FRIDGE-01', '行動冰箱', '冷藏設備', 2, 'UNCHECKED', 'BORP標準配備 (增量)');
 
 -- ============================================================================
 -- Sample Consumable Items (Can be customized)

@@ -2524,7 +2524,7 @@ async def serve_debug():
 
 
 # 掛載靜態文件(Logo圖片等)
-app.mount("/static", StaticFiles(directory="."), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 db = DatabaseManager(config.DATABASE_PATH)
 
