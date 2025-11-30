@@ -14,18 +14,15 @@
 -- ============================================================================
 -- Station Metadata - BORP Configuration
 -- ============================================================================
-
-INSERT OR REPLACE INTO station_metadata (
-    station_code, station_name, station_type, admin_level,
-    organization_code, organization_name, region_code, region_name,
-    beds, daily_capacity, has_pharmacy, has_surgery, has_emergency,
-    storage_capacity_m3, status
-) VALUES (
-    'BORP-01', '備援手術站', 'THIRD_CLASS_BORP', 'STATION_LOCAL',
-    'BORP', '備援手術平台', 'EMERG', '緊急救援',
-    4, 10, 1, 1, 1,
-    40.0, 'ACTIVE'
-);
+-- 注意：站點資訊不再預載，請在設定精靈中配置站點名稱與代碼
+-- 建議配置（可依實際需求調整）：
+--   站點代碼: BORP-XX (例如: WuriBORP-1, VGHBORP-3)
+--   站點名稱: 自訂 (例如: 烏日手術站1號, 榮總備援手術站3號)
+--   站點類型: THIRD_CLASS_BORP (三級備援手術站)
+--   組織代碼: BORP
+--   區域代碼: EMERG (緊急救援)
+--
+-- 站點資訊將在首次使用時透過「設定精靈」建立，自動綁定正確的站點配置
 
 -- ============================================================================
 -- Government Standard Medicine List (15 items) - Same as Health Center
