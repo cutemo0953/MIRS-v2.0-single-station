@@ -15,18 +15,15 @@
 -- ============================================================================
 -- Station Metadata - Health Center Configuration
 -- ============================================================================
-
-INSERT OR REPLACE INTO station_metadata (
-    station_code, station_name, station_type, admin_level,
-    organization_code, organization_name, region_code, region_name,
-    beds, daily_capacity, has_pharmacy, has_surgery, has_emergency,
-    storage_capacity_m3, status
-) VALUES (
-    'HC-01', '衛生所示範站', 'FIRST_CLASS', 'DISTRICT',
-    'MOHW', '衛生福利部', 'GOV', '政府標準',
-    0, 30, 1, 0, 0,
-    15.0, 'ACTIVE'
-);
+-- 注意：站點資訊不再預載，請在設定精靈中配置站點名稱與代碼
+-- 建議配置（可依實際需求調整）：
+--   站點代碼: HC-XX (例如: WuriHC-1, VGHHC-2)
+--   站點名稱: 自訂 (例如: 烏日衛生所, 榮總衛生所2號)
+--   站點類型: FIRST_CLASS (一級衛生所)
+--   組織代碼: MOHW (衛生福利部)
+--   區域代碼: GOV (政府標準)
+--
+-- 站點資訊將在首次使用時透過「設定精靈」建立，自動綁定正確的站點配置
 
 -- ============================================================================
 -- Government Standard Medicine List (15 items)
