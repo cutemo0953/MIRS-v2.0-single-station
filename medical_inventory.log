@@ -86,3 +86,110 @@
 2025-11-29 21:15:43,594 - __main__ - INFO - 資料庫初始化完成
 2025-11-29 21:15:43,637 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
 2025-11-29 21:15:43,637 - __main__ - INFO - 下次設備重置時間: 2025-11-30 07:00:00 (等待 9.7 小時)
+2025-11-29 21:26:10,374 - __main__ - INFO - 開始初始化資料庫，Profile: health_center
+2025-11-29 21:26:10,504 - __main__ - INFO - 資料庫初始化成功: {'items': 0, 'medicines': 15, 'equipment': 4}
+2025-11-29 21:26:17,131 - __main__ - INFO - 站點資訊已更新: TC-01 - 檢傷站1號
+2025-11-29 21:26:57,458 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-29 21:26:57,582 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-29 21:26:57,583 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-29 21:27:00,330 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-29 21:27:00,419 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-29 21:27:00,419 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-29 21:27:01,385 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-29 21:27:01,476 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-29 21:27:01,476 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-29 21:27:08,665 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-29 21:27:08,771 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-29 21:27:08,771 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-29 21:27:12,468 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-29 21:27:12,569 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-29 21:27:12,569 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-29 21:27:18,319 - __main__ - INFO - 開始初始化資料庫，Profile: logistics_hub
+2025-11-29 21:27:18,416 - __main__ - INFO - 資料庫初始化成功: {'items': 23, 'medicines': 15, 'equipment': 26}
+2025-11-29 21:27:50,987 - __main__ - INFO - 站點資訊已更新: HUB-007 - 中繼7站
+2025-11-30 07:00:00,146 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-11-30 07:00:00): 0 個設備已重置
+2025-11-30 07:00:00,149 - __main__ - INFO - 下次設備重置時間: 2025-12-01 07:00:00 (等待 24.0 小時)
+2025-11-30 08:05:51,349 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 08:05:51,867 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 08:05:51,867 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 08:08:42,722 - __main__ - INFO - 開始初始化資料庫，Profile: hospital_custom
+2025-11-30 08:08:42,826 - __main__ - INFO - 資料庫初始化成功: {'items': 0, 'medicines': 0, 'equipment': 0}
+2025-11-30 08:08:50,327 - __main__ - INFO - 站點資訊已更新: TC-04 - 檢傷站4號
+2025-11-30 08:08:52,374 - __main__ - ERROR - 取得統計失敗: no such table: equipment
+2025-11-30 08:08:52,377 - __main__ - ERROR - 取得統計失敗: no such table: equipment
+2025-11-30 08:09:02,107 - __main__ - ERROR - 取得統計失敗: no such table: equipment
+2025-11-30 08:09:02,109 - __main__ - ERROR - 取得統計失敗: no such table: equipment
+2025-11-30 08:09:25,642 - __main__ - INFO - 開始初始化資料庫，Profile: health_center
+2025-11-30 08:09:25,780 - __main__ - INFO - 資料庫初始化成功: {'items': 0, 'medicines': 15, 'equipment': 4}
+2025-11-30 08:09:44,307 - __main__ - INFO - 站點資訊已更新: TC-04 - DNO 4號
+2025-11-30 08:10:12,031 - __main__ - INFO - 開始初始化資料庫，Profile: logistics_hub
+2025-11-30 08:10:12,137 - __main__ - INFO - 資料庫初始化成功: {'items': 23, 'medicines': 15, 'equipment': 26}
+2025-11-30 08:10:45,798 - __main__ - INFO - 站點資訊已更新: HUB-03 - Hub 3號
+2025-11-30 08:13:08,773 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 08:13:08,872 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 08:13:08,872 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 08:13:16,221 - __main__ - INFO - 開始初始化資料庫，Profile: logistics_hub
+2025-11-30 08:13:16,321 - __main__ - INFO - 資料庫初始化成功: {'items': 23, 'medicines': 15, 'equipment': 26}

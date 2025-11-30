@@ -74,7 +74,7 @@ class Config:
     """系統配置"""
     VERSION = "1.4.5"
     DATABASE_PATH = "medical_inventory.db"
-    STATION_ID = "TC-01"
+    STATION_ID = "HC-000000"
     DEBUG = True
 
     # 血型列表
@@ -94,7 +94,7 @@ class ReceiveRequest(BaseModel):
     batchNumber: Optional[str] = Field(None, description="批號")
     expiryDate: Optional[str] = Field(None, description="效期 (YYYY-MM-DD)")
     remarks: Optional[str] = Field(None, description="備註", max_length=500)
-    stationId: str = Field(default="TC-01", description="站點ID")
+    stationId: str = Field(default="HC-000000", description="站點ID")
 
     @field_validator('expiryDate')
     @classmethod
@@ -113,14 +113,14 @@ class ConsumeRequest(BaseModel):
     itemCode: str = Field(..., description="物品代碼", min_length=1)
     quantity: int = Field(..., gt=0, description="數量必須大於0")
     purpose: str = Field(..., description="用途說明", min_length=1, max_length=500)
-    stationId: str = Field(default="TC-01", description="站點ID")
+    stationId: str = Field(default="HC-000000", description="站點ID")
 
 
 class BloodRequest(BaseModel):
     """血袋請求"""
     bloodType: str = Field(..., description="血型")
     quantity: int = Field(..., gt=0, description="數量(U)必須大於0")
-    stationId: str = Field(default="TC-01", description="站點ID")
+    stationId: str = Field(default="HC-000000", description="站點ID")
 
     @field_validator('bloodType')
     @classmethod
@@ -155,7 +155,7 @@ class EmergencyBloodBagRequest(BaseModel):
     productType: str = Field(..., description="血品類型 (WHOLE_BLOOD/PLATELET/FROZEN_PLASMA/RBC_CONCENTRATE)")
     collectionDate: str = Field(..., description="採集日期 (YYYY-MM-DD)")
     volumeMl: int = Field(default=250, ge=50, le=500, description="容量 (ml)")
-    stationId: str = Field(default="TC-01", description="站點ID")
+    stationId: str = Field(default="HC-000000", description="站點ID")
     operator: str = Field(..., description="操作人員", min_length=1)
     orgCode: str = Field(default="DNO", description="組織代碼", max_length=4)
     remarks: Optional[str] = Field(None, description="備註", max_length=500)
@@ -185,7 +185,7 @@ class EmergencyBloodBagUseRequest(BaseModel):
 
 class EquipmentCheckRequest(BaseModel):
     """設備檢查請求"""
-    stationId: str = Field(default="TC-01", description="站點ID")
+    stationId: str = Field(default="HC-000000", description="站點ID")
     status: str = Field(default="NORMAL", description="設備狀態")
     powerLevel: Optional[int] = Field(None, ge=0, le=100, description="電力等級 (0-100%)")
     remarks: Optional[str] = Field(None, description="備註", max_length=500)
@@ -242,7 +242,7 @@ class SurgeryRecordRequest(BaseModel):
     durationMinutes: Optional[int] = Field(None, ge=0, description="手術時長(分鐘)")
     remarks: Optional[str] = Field(None, description="手術備註", max_length=2000)
     consumptions: List[SurgeryConsumptionItem] = Field(..., description="使用耗材清單")
-    stationId: str = Field(default="TC-01", description="站點ID")
+    stationId: str = Field(default="HC-000000", description="站點ID")
 
 
 # ============================================================================
@@ -257,7 +257,7 @@ class EmergencyDispenseRequest(BaseModel):
     emergencyReason: str = Field(..., description="緊急原因 (5-50字)", min_length=5, max_length=200)
     patientRefId: Optional[str] = Field(None, description="病患參考編號 (Triage Tag)", max_length=50)
     patientName: Optional[str] = Field(None, description="病患姓名", max_length=100)
-    stationCode: str = Field(default="TC-01", description="站點代碼")
+    stationCode: str = Field(default="HC-000000", description="站點代碼")
 
     @field_validator('emergencyReason')
     @classmethod
@@ -276,7 +276,7 @@ class NormalDispenseRequest(BaseModel):
     patientRefId: Optional[str] = Field(None, description="病患參考編號 (Triage Tag)", max_length=50)
     patientName: Optional[str] = Field(None, description="病患姓名", max_length=100)
     prescriptionId: Optional[str] = Field(None, description="處方ID", max_length=50)
-    stationCode: str = Field(default="TC-01", description="站點代碼")
+    stationCode: str = Field(default="HC-000000", description="站點代碼")
 
 
 class DispenseApprovalRequest(BaseModel):
@@ -408,7 +408,7 @@ class DatabaseManager:
                     is_controlled_drug INTEGER DEFAULT 0,
                     controlled_level TEXT,
                     is_active INTEGER DEFAULT 1,
-                    station_id TEXT NOT NULL DEFAULT 'TC-01',
+                    station_id TEXT NOT NULL DEFAULT 'HC-000000',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     CHECK(is_controlled_drug IN (0, 1)),
@@ -572,7 +572,7 @@ class DatabaseManager:
                     emergency_reason TEXT,
                     patient_ref_id TEXT,
                     patient_name TEXT,
-                    station_code TEXT NOT NULL DEFAULT 'TC-01',
+                    station_code TEXT NOT NULL DEFAULT 'HC-000000',
                     storage_location TEXT,
                     batch_number TEXT,
                     lot_number TEXT,
@@ -948,7 +948,7 @@ class DatabaseManager:
         ))
 
         # 建立當前站點(從 config.STATION_ID 讀取)
-        station_id = getattr(config, 'STATION_ID', 'TC-01')
+        station_id = getattr(config, 'STATION_ID', 'HC-000000')
         cursor.execute("""
             INSERT OR IGNORE INTO stations (
                 station_id, station_name, hospital_id, station_type,
@@ -2829,7 +2829,7 @@ async def consume_blood(request: BloodRequest):
 
 @app.get("/api/blood/events")
 async def get_blood_events(
-    station_id: str = Query("TC-01"),
+    station_id: str = Query("HC-000000"),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     blood_type: Optional[str] = Query(None),
@@ -3041,7 +3041,7 @@ async def get_emergency_blood_bag_label(blood_bag_code: str):
 async def get_blood_batch_label(
     blood_type: str = Query(..., description="血型"),
     quantity: int = Query(..., ge=1, description="數量"),
-    station_id: str = Query("TC-01", description="站點ID"),
+    station_id: str = Query("HC-000000", description="站點ID"),
     remarks: str = Query("", description="批號或備註")
 ):
     """取得一般血袋批次標籤 (HTML) - 用於列印"""
@@ -4465,7 +4465,7 @@ async def generate_station_sync_package(request: SyncPackageGenerate):
     - 匯出為檔案供 USB 實體轉移
 
     參數:
-    - stationId: 站點ID (e.g., TC-01)
+    - stationId: 站點ID (e.g., HC-000000)
     - hospitalId: 所屬醫院ID (e.g., HOSP-001)
     - syncType: DELTA (增量) 或 FULL (全量)
     - sinceTimestamp: 增量同步起始時間 (可選)

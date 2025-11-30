@@ -145,7 +145,7 @@
                             <select :value="showCustomStationInput ? '__CUSTOM__' : stationId"
                                     @change="handleStationSelectChange($event.target.value)"
                                     class="text-xs sm:text-sm px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white font-semibold text-teal-600">
-                                <option value="TC-01">TC-01 - 醫療站</option>
+                                <option value="HC-000000">HC-000000 - 醫療站</option>
                                 <option value="BORP-01">BORP-01 - 備援手術站</option>
                                 <option value="LOG-HUB">LOG-HUB - 物資中心</option>
                                 <option value="__CUSTOM__">其他站點...</option>
@@ -2292,7 +2292,7 @@
             return {
                 // 基本設定
                 apiUrl: apiBaseUrl,
-                stationId: localStorage.getItem('stationId') || 'TC-01',
+                stationId: localStorage.getItem('stationId') || 'HC-000000',
                 stationName: localStorage.getItem('stationName') || '前線醫療站',
                 stationType: localStorage.getItem('stationType') || '',
                 showCustomStationInput: false,
@@ -2360,18 +2360,18 @@
                     batchNumber: '',
                     expiryDate: '',
                     remarks: '',
-                    stationId: 'TC-01'
+                    stationId: 'HC-000000'
                 },
                 consumeForm: {
                     itemCode: '',
                     quantity: 1,
                     purpose: '',
-                    stationId: 'TC-01'
+                    stationId: 'HC-000000'
                 },
                 batchConsumeForm: {
                     purpose: '',
                     items: [],
-                    stationId: 'TC-01'
+                    stationId: 'HC-000000'
                 },
                 bloodReceiveForm: {
                     bloodType: '',
@@ -2380,7 +2380,7 @@
                     source: 'blood_center',  // 新增：血液來源
                     donorName: '',           // 新增：捐血者姓名
                     donorPhone: '',          // 新增：捐血者電話
-                    stationId: 'TC-01'
+                    stationId: 'HC-000000'
                 },
                 bloodConsumeForm: {
                     bloodType: '',
@@ -2388,10 +2388,10 @@
                     patientName: '',
                     patientId: '',
                     purpose: '',
-                    stationId: 'TC-01'
+                    stationId: 'HC-000000'
                 },
                 bloodTransferForm: {
-                    sourceStationId: 'TC-01',
+                    sourceStationId: 'HC-000000',
                     targetStationId: '',
                     bloodType: '',
                     quantity: 1,
@@ -2417,7 +2417,7 @@
                     category: '其他',
                     quantity: 1,
                     remarks: '',
-                    stationId: localStorage.getItem('stationId') || 'TC-01'
+                    stationId: localStorage.getItem('stationId') || 'HC-000000'
                 },
                 editEquipmentForm: {
                     id: '',
@@ -2432,7 +2432,7 @@
                     status: 'NORMAL',
                     powerLevel: null,
                     remarks: '',
-                    stationId: 'TC-01'
+                    stationId: 'HC-000000'
                 },
                 addSurgeryForm: {
                     patientName: '',
@@ -2443,7 +2443,7 @@
                     durationMinutes: null,
                     remarks: '',
                     consumptions: [],
-                    stationId: 'TC-01'
+                    stationId: 'HC-000000'
                 },
                 surgerySearchForm: {
                     startDate: '',
@@ -2466,7 +2466,7 @@
                     dispensedBy: '',
                     patientRefId: '',
                     patientName: '',
-                    stationCode: 'TC-01',
+                    stationCode: 'HC-000000',
                     emergencyReason: ''
                 },
                 batchDispenseForm: {
@@ -2474,7 +2474,7 @@
                     patientRefId: '',
                     patientName: '',
                     items: [],
-                    stationCode: 'TC-01',
+                    stationCode: 'HC-000000',
                     isEmergency: false,
                     emergencyReason: ''
                 },
@@ -2612,7 +2612,7 @@
                     const getStationInfo = (stationId) => {
                         // Hardcoded mappings for common stations
                         const hardcoded = {
-                            'TC-01': { name: '醫療站 TC-01', type: 'health_center' },
+                            'HC-000000': { name: '醫療站 HC-000000', type: 'health_center' },
                             'BORP-01': { name: 'BORP 備援手術站', type: 'surgical_station' },
                             'LOG-HUB': { name: '物資中心 LOG-HUB', type: 'logistics_hub' }
                         };
@@ -2705,7 +2705,7 @@
                     }
 
                     // Don't auto-initialize if it's a well-known station (already set up manually)
-                    const knownStations = ['TC-01', 'BORP-01', 'LOG-HUB'];
+                    const knownStations = ['HC-000000', 'BORP-01', 'LOG-HUB'];
                     if (knownStations.includes(this.stationId)) {
                         return;
                     }
@@ -2713,7 +2713,7 @@
                     // Determine template based on station type
                     let templateStationId;
                     if (this.stationId.startsWith('TC-')) {
-                        templateStationId = 'TC-01';
+                        templateStationId = 'HC-000000';
                     } else if (this.stationId.startsWith('BORP-')) {
                         templateStationId = 'BORP-01';
                     } else if (this.stationId.startsWith('LOG-')) {
@@ -3536,7 +3536,7 @@
                             this.toast(data.message || '血袋轉移成功', 'success');
                             // 重置表單
                             this.bloodTransferForm = {
-                                sourceStationId: 'TC-01',
+                                sourceStationId: 'HC-000000',
                                 targetStationId: '',
                                 bloodType: '',
                                 quantity: 1,
@@ -4228,7 +4228,7 @@
                         dispensedBy: '',
                         patientRefId: '',
                         patientName: '',
-                        stationCode: 'TC-01',
+                        stationCode: 'HC-000000',
                         emergencyReason: ''
                     };
                 },
