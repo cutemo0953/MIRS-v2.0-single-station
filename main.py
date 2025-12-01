@@ -5735,6 +5735,72 @@ async def use_blood_bag(request: BloodBagUseRequest):
         conn.close()
 
 
+class BloodBagDiscardRequest(BaseModel):
+    """血袋丟棄請求"""
+    bagCode: str
+    reason: str = "expired"  # expired, damaged, other
+
+
+@app.post("/api/blood-bags/discard")
+async def discard_blood_bag(request: BloodBagDiscardRequest):
+    """丟棄血袋 (過期/損壞)"""
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    try:
+        # 檢查血袋是否存在且可用
+        cursor.execute("""
+            SELECT * FROM blood_bags WHERE bag_code = ? AND status = 'AVAILABLE'
+        """, (request.bagCode,))
+        bag = cursor.fetchone()
+
+        if not bag:
+            raise HTTPException(status_code=404, detail=f"血袋 {request.bagCode} 不存在或已處理")
+
+        # 更新血袋狀態為 DISCARDED
+        cursor.execute("""
+            UPDATE blood_bags
+            SET status = 'DISCARDED', used_at = CURRENT_TIMESTAMP, used_for = ?
+            WHERE bag_code = ?
+        """, (f"丟棄原因: {request.reason}", request.bagCode))
+
+        # 同步更新 blood_inventory (減少庫存)
+        station_id = config.get_station_id()
+        cursor.execute("""
+            UPDATE blood_inventory
+            SET quantity = quantity - 1, last_updated = CURRENT_TIMESTAMP
+            WHERE blood_type = ? AND station_id = ?
+        """, (bag['blood_type'], station_id))
+
+        # 記錄血袋事件
+        cursor.execute("""
+            INSERT INTO blood_events (event_type, blood_type, quantity, station_id, operator)
+            VALUES ('DISCARD', ?, 1, ?, ?)
+        """, (bag['blood_type'], station_id, request.reason))
+
+        conn.commit()
+
+        logger.info(f"🩸 血袋丟棄: {request.bagCode} -> {request.reason}")
+
+        return {
+            "success": True,
+            "message": f"血袋 {request.bagCode} 已標記為丟棄",
+            "bag_code": request.bagCode,
+            "blood_type": bag['blood_type'],
+            "reason": request.reason
+        }
+
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"丟棄血袋失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
 @app.get("/api/blood-bags/print-labels/{bag_codes}")
 async def print_blood_bag_labels(bag_codes: str):
     """

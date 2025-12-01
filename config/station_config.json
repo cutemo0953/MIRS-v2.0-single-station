@@ -1,10 +1,10 @@
 {
-  "version": "2.0.0",
+  "version": "1.4.2-plus",
   "station": {
     "type": "BORP",
-    "org": "VGH",
+    "org": "DNO",
     "number": "01",
-    "name": "榮總備援手術室 01"
+    "name": "谷盺備援手術室 01"
   },
   "organization": {
     "code": "DNO",
