@@ -5804,6 +5804,15 @@ class BloodBagDiscardRequest(BaseModel):
     reason: str = "expired"  # expired, damaged, other
 
 
+class BloodBagConsumeRequest(BaseModel):
+    """血袋出庫請求 (v1.4.2-plus)"""
+    bagCodes: List[str]  # 要出庫的血袋編號列表
+    patientName: str
+    patientId: str = ""
+    purpose: str = ""
+    stationId: str
+
+
 @app.post("/api/blood-bags/discard")
 async def discard_blood_bag(request: BloodBagDiscardRequest):
     """丟棄血袋 (過期/損壞)"""
@@ -5859,6 +5868,88 @@ async def discard_blood_bag(request: BloodBagDiscardRequest):
     except Exception as e:
         conn.rollback()
         logger.error(f"丟棄血袋失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/blood-bags/consume")
+async def consume_blood_bags(request: BloodBagConsumeRequest):
+    """批次出庫血袋 (v1.4.2-plus) - 連動個別血袋狀態與庫存"""
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    try:
+        if not request.bagCodes:
+            raise HTTPException(status_code=400, detail="請選擇要出庫的血袋")
+
+        consumed_bags = []
+        blood_type_counts = {}  # 記錄各血型消耗數量
+
+        for bag_code in request.bagCodes:
+            # 檢查血袋是否存在且可用
+            cursor.execute("""
+                SELECT * FROM blood_bags WHERE bag_code = ? AND status = 'AVAILABLE'
+            """, (bag_code,))
+            bag = cursor.fetchone()
+
+            if not bag:
+                raise HTTPException(status_code=404, detail=f"血袋 {bag_code} 不存在或已使用")
+
+            # 更新血袋狀態為 USED
+            used_for = f"病患: {request.patientName}"
+            if request.patientId:
+                used_for += f" ({request.patientId})"
+            if request.purpose:
+                used_for += f" - {request.purpose}"
+
+            cursor.execute("""
+                UPDATE blood_bags
+                SET status = 'USED', used_at = CURRENT_TIMESTAMP, used_for = ?
+                WHERE bag_code = ?
+            """, (used_for, bag_code))
+
+            consumed_bags.append({
+                "bag_code": bag_code,
+                "blood_type": bag['blood_type'],
+                "volume_ml": bag['volume_ml']
+            })
+
+            # 統計各血型消耗數量
+            bt = bag['blood_type']
+            blood_type_counts[bt] = blood_type_counts.get(bt, 0) + 1
+
+        # 更新 blood_inventory (減少庫存)
+        for blood_type, count in blood_type_counts.items():
+            cursor.execute("""
+                UPDATE blood_inventory
+                SET quantity = quantity - ?, last_updated = CURRENT_TIMESTAMP
+                WHERE blood_type = ? AND station_id = ?
+            """, (count, blood_type, request.stationId))
+
+            # 記錄血袋出庫事件
+            cursor.execute("""
+                INSERT INTO blood_events (event_type, blood_type, quantity, station_id, operator, remarks)
+                VALUES ('CONSUME', ?, ?, ?, ?, ?)
+            """, (blood_type, count, request.stationId, request.patientName, request.purpose))
+
+        conn.commit()
+
+        logger.info(f"🩸 血袋出庫: {len(consumed_bags)} 袋 -> {request.patientName}")
+
+        return {
+            "success": True,
+            "message": f"成功出庫 {len(consumed_bags)} 袋血袋",
+            "consumed_bags": consumed_bags,
+            "patient": request.patientName
+        }
+
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"血袋出庫失敗: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()

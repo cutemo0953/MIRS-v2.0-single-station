@@ -2480,6 +2480,110 @@
             </div>
         </div>
 
+        <!-- 血袋選擇出庫 Modal (v1.4.2-plus) -->
+        <div x-show="showBloodBagSelectModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 overflow-y-auto" style="display: none;">
+            <div @click.away="showBloodBagSelectModal = false" class="bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 my-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-red-700 flex items-center gap-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                        選擇出庫血袋
+                    </h3>
+                    <button @click="showBloodBagSelectModal = false" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- 病患資訊摘要 -->
+                <div class="mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
+                    <div class="flex items-center gap-4 text-sm">
+                        <span class="font-semibold text-red-700">血型: <span x-text="bloodConsumeForm.bloodType" class="text-lg"></span></span>
+                        <span class="text-gray-600">病患: <span x-text="bloodConsumeForm.patientName || '-'" class="font-medium"></span></span>
+                        <span class="text-gray-600">需求: <span x-text="bloodConsumeForm.quantity" class="font-medium"></span> U</span>
+                    </div>
+                </div>
+
+                <!-- 可用血袋列表 -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-semibold text-gray-700">可用血袋 (<span x-text="availableBagsForConsume.length"></span> 袋)</h4>
+                        <span class="text-sm text-gray-500">已選: <span x-text="selectedBagsForConsume.length" class="font-bold text-red-600"></span> 袋</span>
+                    </div>
+
+                    <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+                        <template x-if="availableBagsForConsume.length === 0">
+                            <div class="p-4 text-center text-gray-500">
+                                <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                                </svg>
+                                此血型目前無可用血袋
+                            </div>
+                        </template>
+                        <template x-for="bag in availableBagsForConsume" :key="bag.bag_code">
+                            <label class="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                   :class="{
+                                       'bg-red-100': isExpired(bag.expiry_date),
+                                       'bg-amber-50': isExpiringSoon(bag.expiry_date) && !isExpired(bag.expiry_date)
+                                   }">
+                                <input type="checkbox"
+                                       :value="bag.bag_code"
+                                       x-model="selectedBagsForConsume"
+                                       class="rounded text-red-600 focus:ring-red-500 mr-3">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono text-sm font-medium" x-text="bag.bag_code"></span>
+                                        <span class="px-1.5 py-0.5 text-xs font-bold rounded bg-red-600 text-white" x-text="bag.blood_type"></span>
+                                        <span class="text-xs text-gray-500" x-text="bag.volume_ml + ' ml'"></span>
+                                    </div>
+                                    <div class="flex items-center gap-3 mt-1 text-xs">
+                                        <span class="text-gray-500">效期:</span>
+                                        <span :class="{
+                                            'text-red-600 font-bold': isExpired(bag.expiry_date),
+                                            'text-amber-600 font-semibold': isExpiringSoon(bag.expiry_date) && !isExpired(bag.expiry_date),
+                                            'text-gray-600': !isExpiringSoon(bag.expiry_date) && !isExpired(bag.expiry_date)
+                                        }">
+                                            <span x-text="bag.expiry_date"></span>
+                                            <template x-if="isExpired(bag.expiry_date)">
+                                                <span class="ml-1 text-red-600">(已過期!)</span>
+                                            </template>
+                                            <template x-if="isExpiringSoon(bag.expiry_date) && !isExpired(bag.expiry_date)">
+                                                <span class="ml-1 text-amber-600">(即將過期)</span>
+                                            </template>
+                                        </span>
+                                        <template x-if="bag.donor_info">
+                                            <span class="text-blue-600" x-text="bag.donor_info"></span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- 操作按鈕 -->
+                <div class="flex gap-3">
+                    <button @click="confirmBloodBagConsume()"
+                            :disabled="selectedBagsForConsume.length === 0"
+                            :class="selectedBagsForConsume.length === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-claude-red-500 hover:bg-claude-red-600'"
+                            class="flex-1 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>確認出庫 (<span x-text="selectedBagsForConsume.length"></span> 袋)</span>
+                    </button>
+                    <button @click="showBloodBagSelectModal = false" class="flex-1 bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        <span>取消</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Footer -->
         <footer class="mt-12 pt-8 border-t border-gray-200">
             <div class="flex flex-col items-center justify-center gap-4">
@@ -2556,6 +2660,11 @@
                 showBloodHistoryModal: false,
                 showEmergencyReasonModal: false,
                 showPharmacistApprovalModal: false,
+                showBloodBagSelectModal: false,  // v1.4.2-plus: 血袋選擇出庫
+
+                // 血袋選擇出庫 (v1.4.2-plus)
+                availableBagsForConsume: [],  // 該血型可用的血袋列表
+                selectedBagsForConsume: [],   // 選中要出庫的血袋
 
                 // 血庫歷史記錄
                 bloodHistory: [],
@@ -3740,19 +3849,62 @@
                 },
 
                 async submitBloodConsume() {
+                    // v1.4.2-plus: 改為開啟血袋選擇模態窗
+                    if (!this.bloodConsumeForm.bloodType) {
+                        this.toast('請選擇血型', 'error');
+                        return;
+                    }
+                    if (!this.bloodConsumeForm.patientName) {
+                        this.toast('請輸入病患姓名', 'error');
+                        return;
+                    }
+
+                    // 載入該血型的可用血袋
                     try {
-                        const response = await fetch(`${this.apiUrl}/blood/consume`, {
+                        const response = await fetch(`${this.apiUrl}/blood-bags/list?blood_type=${encodeURIComponent(this.bloodConsumeForm.bloodType)}&status=AVAILABLE`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.availableBagsForConsume = data.bags || [];
+                            this.selectedBagsForConsume = [];
+                            this.showBloodBagSelectModal = true;
+                        } else {
+                            this.toast('無法載入血袋列表', 'error');
+                        }
+                    } catch (error) {
+                        console.error('載入血袋失敗:', error);
+                        this.toast('載入血袋失敗', 'error');
+                    }
+                },
+
+                async confirmBloodBagConsume() {
+                    // v1.4.2-plus: 確認出庫選中的血袋
+                    if (this.selectedBagsForConsume.length === 0) {
+                        this.toast('請選擇要出庫的血袋', 'error');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${this.apiUrl}/blood-bags/consume`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(this.bloodConsumeForm)
+                            body: JSON.stringify({
+                                bagCodes: this.selectedBagsForConsume,
+                                patientName: this.bloodConsumeForm.patientName,
+                                patientId: this.bloodConsumeForm.patientId || '',
+                                purpose: this.bloodConsumeForm.purpose || '',
+                                stationId: this.bloodConsumeForm.stationId
+                            })
                         });
-                        
+
                         const data = await response.json();
-                        
+
                         if (response.ok) {
-                            this.toast(data.message || '血袋出庫成功', 'success');
-                            this.bloodConsumeForm = { bloodType: '', quantity: 1, stationId: this.stationId };
+                            this.toast(data.message || `成功出庫 ${this.selectedBagsForConsume.length} 袋血袋`, 'success');
+                            this.showBloodBagSelectModal = false;
+                            this.bloodConsumeForm = { bloodType: '', quantity: 1, patientName: '', patientId: '', purpose: '', stationId: this.stationId };
+                            this.selectedBagsForConsume = [];
                             await this.loadBloodInventory();
+                            await this.loadBloodBags();
                             await this.loadStats();
                         } else {
                             this.toast(data.detail || '出庫失敗', 'error');
