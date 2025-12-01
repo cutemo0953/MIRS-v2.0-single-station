@@ -134,10 +134,10 @@
                             <svg class="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                             </svg>
-                            <span x-text="stationName || '醫療站庫存系統'"></span>
+                            BORP備援手術站（單站版）
                         </h1>
                         <p class="text-xs sm:text-sm text-gray-500">
-                            <span x-text="stationId"></span> - v1.4.2-plus
+                            BORP-DNO-01 - v1.4.2-plus
                         </p>
                         <div class="hidden sm:flex items-center gap-2 mt-1 text-xs text-gray-400">
                             <span class="font-medium">Designed in Taiwan</span>
@@ -147,38 +147,6 @@
                     </div>
                 </div>
                 <div class="text-right space-y-2">
-                    <!-- Station Selector -->
-                    <div class="flex items-center justify-end gap-2">
-                        <label class="text-xs text-gray-600">站點:</label>
-                        <div class="flex gap-1">
-                            <select :value="showCustomStationInput ? '__CUSTOM__' : stationId"
-                                    @change="handleStationSelectChange($event.target.value)"
-                                    class="text-xs sm:text-sm px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white font-semibold text-teal-600">
-                                <option value="HC-000000">HC-000000 - 醫療站</option>
-                                <option value="BORP-01">BORP-01 - 備援手術站</option>
-                                <option value="LOG-HUB">LOG-HUB - 物資中心</option>
-                                <option value="__CUSTOM__">其他站點...</option>
-                            </select>
-                            <div x-show="showCustomStationInput" class="flex gap-1" style="display: none;">
-                                <select x-model="customStationType"
-                                        class="text-xs sm:text-sm px-2 py-1 border border-teal-300 rounded-lg focus:ring-2 focus:ring-teal-500 bg-white font-semibold text-teal-700">
-                                    <option value="TC">TC-醫療站</option>
-                                    <option value="BORP">BORP-手術站</option>
-                                    <option value="LOG">LOG-物資站</option>
-                                </select>
-                                <input type="text"
-                                       x-model="customStationNumber"
-                                       @keyup.enter="applyCustomStation()"
-                                       placeholder="編號"
-                                       maxlength="3"
-                                       class="text-xs sm:text-sm px-2 py-1 border border-teal-300 rounded-lg focus:ring-2 focus:ring-teal-500 w-16 font-mono text-center">
-                                <button @click="applyCustomStation()"
-                                        class="px-2 py-1 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-xs">
-                                    ✓
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                     <p class="text-xs text-gray-400">
                         <span x-text="currentTime"></span>
                     </p>
@@ -293,9 +261,9 @@
                     <span class="text-xs sm:text-sm truncate">處置</span>
                 </button>
 
-                <!-- 血袋管理 - 血庫色系 #D96754 -->
+                <!-- 血袋管理 - 血庫色系 #D96754 (claude-red) -->
                 <button @click="switchTab('blood')"
-                        :class="currentTab === 'blood' ? 'bg-blood-500 text-white font-semibold shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                        :class="currentTab === 'blood' ? 'bg-claude-red-500 text-white font-semibold shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                         class="flex-1 py-2.5 sm:py-3 px-2 sm:px-3 md:px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 min-w-0">
                     <svg class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
@@ -353,10 +321,10 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
                     </svg>
-                    藥品 (MED-)
+                    藥品
                 </button>
                 <button @click="itemCategoryFilter = 'consumable'; filterItems()"
-                        :class="itemCategoryFilter === 'consumable' ? 'bg-sky-custom-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                        :class="itemCategoryFilter === 'consumable' ? 'bg-pharma-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
@@ -4614,8 +4582,8 @@
                     const item = this.batchDispenseForm.items[index];
                     const searchText = item.searchText.toLowerCase();
 
-                    // 只顯示藥品 (medicines) - 一般物品應該透過處置消耗流程
-                    const medicineItems = this.items.filter(i => i.category === '藥品');
+                    // 只顯示藥品 (MED- 開頭) - 一般物品應該透過處置消耗流程
+                    const medicineItems = this.items.filter(i => i.code.startsWith('MED-'));
 
                     if (!searchText) {
                         item.filteredItems = medicineItems;

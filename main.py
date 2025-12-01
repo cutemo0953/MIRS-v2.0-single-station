@@ -95,7 +95,7 @@ class Config:
     STATION_TYPE: str = os.getenv("MIRS_STATION_TYPE", "BORP")
 
     # ORG: 機構識別碼
-    STATION_ORG: str = os.getenv("MIRS_STATION_ORG", "VGH")
+    STATION_ORG: str = os.getenv("MIRS_STATION_ORG", "DNO")
 
     # NUMBER: 站點編號
     STATION_NUMBER: str = os.getenv("MIRS_STATION_NUMBER", "01")
@@ -106,7 +106,7 @@ class Config:
         return f"{cls.STATION_TYPE}-{cls.STATION_ORG}-{cls.STATION_NUMBER}"
 
     # ========== 站點顯示名稱 ==========
-    STATION_NAME: str = os.getenv("MIRS_STATION_NAME", "")
+    STATION_NAME: str = os.getenv("MIRS_STATION_NAME", "谷盺備援手術室 01")
 
     @classmethod
     def get_station_name(cls) -> str:
@@ -5922,11 +5922,10 @@ async def get_expiring_blood_bags(days: int = Query(7, ge=1, le=30)):
 # ============================================================================
 
 if __name__ == "__main__":
-    # v2.0: 配置在啟動時已從 config file 載入
-    # config.load_station_id_from_db()
+    # v1.4.2-plus 單站版
 
     print("=" * 70)
-    print(f"🏥 醫療站庫存管理系統 API v{config.VERSION}")
+    print(f"🏥 BORP備援手術站庫存管理系統（單站版）v{config.VERSION}")
     print("=" * 70)
     print(f"📁 資料庫: {config.DATABASE_PATH}")
     print(f"🏢 站點ID: {config.get_station_id()}")
@@ -5936,12 +5935,12 @@ if __name__ == "__main__":
     print(f"📖 API文件: http://localhost:8000/docs")
     print(f"📊 健康檢查: http://localhost:8000/api/health")
     print("=" * 70)
-    print("✨ v1.4.5 新功能:")
-    print("   - UI 全面重構 (Heroicons + 新色系)")
-    print("   - 處置標籤頁整合 (手術記錄 + 一般消耗)")
-    print("   - 血庫管理增強 (病患資訊 + 歷史記錄)")
-    print("   - 設備自動刷新機制 (每日 07:00am)")
-    print("   - 響應式設計優化")
+    print("✨ v1.4.2-plus 功能:")
+    print("   - 藥品整合至庫存查詢 (MED- 前綴區分)")
+    print("   - 庫存查詢分類篩選 (全部/藥品/耗材)")
+    print("   - 血袋標籤多張排列列印 (A4紙 ~12張/頁)")
+    print("   - 動態 API URL (支援遠端存取)")
+    print("   - 單站版簡化架構")
     print("=" * 70)
     print("按 Ctrl+C 停止服務")
     print("=" * 70)
