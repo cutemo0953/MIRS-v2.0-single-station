@@ -659,9 +659,16 @@ class DatabaseManager:
                     quantity INTEGER NOT NULL,
                     station_id TEXT NOT NULL,
                     operator TEXT DEFAULT 'SYSTEM',
+                    remarks TEXT,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+
+            # v1.4.2-plus: 確保 remarks 欄位存在 (支援既有資料庫升級)
+            try:
+                cursor.execute("ALTER TABLE blood_events ADD COLUMN remarks TEXT")
+            except:
+                pass  # 欄位已存在則忽略
 
             # 緊急血袋登記 (v1.4.5新增)
             cursor.execute("""
