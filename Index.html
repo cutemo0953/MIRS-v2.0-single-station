@@ -3815,7 +3815,7 @@
                         const response = await fetch(`${this.apiUrl}/blood-bags/list?status=AVAILABLE`);
                         if (response.ok) {
                             const data = await response.json();
-                            this.bloodBags = data.blood_bags || [];
+                            this.bloodBags = data.bags || [];
                             console.log('✓ 血袋已載入:', this.bloodBags.length, '袋');
                         }
                     } catch (error) {
