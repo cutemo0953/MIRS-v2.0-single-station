@@ -2579,6 +2579,20 @@
                     <img src="/static/iRehab_logo.png" alt="iRehab Logo" class="h-12 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity">
                 </div>
 
+                <!-- Upgrade to Multi-Station Button -->
+                <div class="flex items-center justify-center">
+                    <button @click="showUpgradeModal = true"
+                            class="group flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        <span>升級至多站版</span>
+                        <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+
                 <!-- Footer Text -->
                 <div class="text-center text-xs text-gray-400 space-y-1">
                     <p>醫療站庫存管理系統 v1.4.2-plus</p>
@@ -2589,6 +2603,101 @@
                 </div>
             </div>
         </footer>
+
+        <!-- Upgrade Modal -->
+        <div x-show="showUpgradeModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-start justify-center z-50 overflow-y-auto py-4" style="display: none;">
+            <div @click.away="showUpgradeModal = false" class="bg-white rounded-2xl shadow-2xl p-6 max-w-lg w-full mx-4 my-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                        升級至多站版
+                    </h3>
+                    <button @click="showUpgradeModal = false" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Feature Comparison -->
+                <div class="mb-6">
+                    <h4 class="font-semibold text-gray-700 mb-3">多站版功能</h4>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2 text-sm">
+                            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>多站點資料同步與管理</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>中央庫存監控儀表板</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>跨站點物資調撥</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>進階報表與分析</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upgrade Steps -->
+                <div class="mb-6 p-4 bg-gray-50 rounded-xl">
+                    <h4 class="font-semibold text-gray-700 mb-3">升級步驟</h4>
+                    <ol class="space-y-3 text-sm">
+                        <li class="flex items-start gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-semibold text-xs">1</span>
+                            <span>點擊下方「匯出資料」下載目前所有資料</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-semibold text-xs">2</span>
+                            <span>聯繫我們取得多站版授權碼</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-semibold text-xs">3</span>
+                            <span>在多站版系統匯入資料並輸入授權碼</span>
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="space-y-3">
+                    <button @click="exportUpgradeData()"
+                            class="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-purple-600 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center gap-2 font-semibold shadow-md">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        匯出資料 (ZIP)
+                    </button>
+
+                    <a href="mailto:tom@denovortho.com?subject=MIRS%20多站版升級申請&body=站點ID：%0A目前版本：v1.4.2-plus%0A%0A請提供多站版授權碼"
+                       class="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 font-medium">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        聯繫取得授權碼
+                    </a>
+
+                    <button @click="showUpgradeModal = false"
+                            class="w-full text-gray-500 px-6 py-2 rounded-xl hover:text-gray-700 transition-colors text-sm">
+                        稍後再說
+                    </button>
+                </div>
+            </div>
+        </div>
 
     </div>
 
@@ -2648,6 +2757,7 @@
                 showEmergencyReasonModal: false,
                 showPharmacistApprovalModal: false,
                 showBloodBagSelectModal: false,  // v1.4.2-plus: 血袋選擇出庫
+                showUpgradeModal: false,  // 升級至多站版
 
                 // 血袋選擇出庫 (v1.4.2-plus)
                 availableBagsForConsume: [],  // 該血型可用的血袋列表
@@ -3239,6 +3349,39 @@
                     const url = `${this.apiUrl}/inventory/export/json`;
                     window.open(url, '_blank');
                     this.toast('JSON 匯出成功', 'success');
+                },
+
+                // 升級至多站版 - 匯出完整資料
+                async exportUpgradeData() {
+                    try {
+                        this.toast('正在準備匯出資料...', 'info');
+
+                        const url = `${this.apiUrl}/export/upgrade-package`;
+                        const response = await fetch(url);
+
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const filename = `mirs_upgrade_${this.stationId}_${new Date().toISOString().slice(0,10)}.zip`;
+
+                            // 建立下載連結
+                            const downloadUrl = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = downloadUrl;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(downloadUrl);
+
+                            this.toast('升級資料匯出成功！請妥善保存此檔案', 'success');
+                        } else {
+                            const data = await response.json();
+                            this.toast(data.detail || '匯出失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('匯出升級資料失敗:', error);
+                        this.toast('匯出升級資料失敗', 'error');
+                    }
                 },
 
                 // 新增物品

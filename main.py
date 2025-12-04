@@ -4539,6 +4539,219 @@ manifest.json      檔案清單與檢查碼
         raise HTTPException(status_code=500, detail=f"備份失敗: {str(e)}")
 
 
+@app.get("/api/export/upgrade-package")
+async def export_upgrade_package():
+    """
+    匯出升級至多站版所需的完整資料包
+
+    用途：讓使用者從單站版升級至多站版時，匯出所有資料
+
+    包含內容：
+    - database/: 完整資料庫
+    - exports/: CSV + JSON 分類資料
+    - config/: 站點設定檔
+    - upgrade_info.json: 升級相容性資訊
+    """
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        zip_filename = f"mirs_upgrade_{config.STATION_ID}_{timestamp}.zip"
+        zip_path = Path("exports") / zip_filename
+
+        # 確保exports目錄存在
+        zip_path.parent.mkdir(exist_ok=True)
+
+        logger.info(f"開始生成升級資料包: {zip_filename}")
+
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # 1. 加入資料庫
+            db_path = Path(config.DATABASE_PATH)
+            if db_path.exists():
+                zipf.write(db_path, f"database/{db_path.name}")
+                logger.info("✓ 資料庫已加入")
+
+            # 2. 導出CSV資料
+            exports_dir = Path("exports/temp_upgrade")
+            exports_dir.mkdir(exist_ok=True, parents=True)
+
+            inventory_data = []
+            blood_data = []
+            equipment = []
+            surgery_records = []
+            blood_bags = []
+
+            try:
+                conn = db.get_connection()
+                cursor = conn.cursor()
+
+                # 導出庫存清單
+                inventory_data = db.get_inventory_items()
+                if inventory_data:
+                    csv_path = exports_dir / "items.csv"
+                    with open(csv_path, 'w', encoding='utf-8-sig', newline='') as f:
+                        writer = csv.DictWriter(f, fieldnames=inventory_data[0].keys())
+                        writer.writeheader()
+                        writer.writerows([dict(item) for item in inventory_data])
+                    zipf.write(csv_path, "exports/items.csv")
+
+                # 導出血袋庫存
+                blood_data = db.get_blood_inventory()
+                if blood_data:
+                    csv_path = exports_dir / "blood_inventory.csv"
+                    with open(csv_path, 'w', encoding='utf-8-sig', newline='') as f:
+                        writer = csv.DictWriter(f, fieldnames=['blood_type', 'quantity', 'station_id'])
+                        writer.writeheader()
+                        writer.writerows([dict(b) for b in blood_data])
+                    zipf.write(csv_path, "exports/blood_inventory.csv")
+
+                # 導出設備清單
+                equipment = cursor.execute("SELECT * FROM equipment").fetchall()
+                if equipment:
+                    csv_path = exports_dir / "equipment.csv"
+                    with open(csv_path, 'w', encoding='utf-8-sig', newline='') as f:
+                        cols = [desc[0] for desc in cursor.description]
+                        writer = csv.DictWriter(f, fieldnames=cols)
+                        writer.writeheader()
+                        writer.writerows([dict(zip(cols, row)) for row in equipment])
+                    zipf.write(csv_path, "exports/equipment.csv")
+
+                # 導出處置記錄
+                surgery_records = cursor.execute("SELECT * FROM surgery_records").fetchall()
+                if surgery_records:
+                    csv_path = exports_dir / "surgery_records.csv"
+                    with open(csv_path, 'w', encoding='utf-8-sig', newline='') as f:
+                        cols = [desc[0] for desc in cursor.description]
+                        writer = csv.DictWriter(f, fieldnames=cols)
+                        writer.writeheader()
+                        writer.writerows([dict(zip(cols, row)) for row in surgery_records])
+                    zipf.write(csv_path, "exports/surgery_records.csv")
+
+                # 導出血袋明細 (v1.4.2-plus)
+                try:
+                    blood_bags = cursor.execute("SELECT * FROM blood_bags").fetchall()
+                    if blood_bags:
+                        csv_path = exports_dir / "blood_bags.csv"
+                        with open(csv_path, 'w', encoding='utf-8-sig', newline='') as f:
+                            cols = [desc[0] for desc in cursor.description]
+                            writer = csv.DictWriter(f, fieldnames=cols)
+                            writer.writeheader()
+                            writer.writerows([dict(zip(cols, row)) for row in blood_bags])
+                        zipf.write(csv_path, "exports/blood_bags.csv")
+                except:
+                    pass  # 舊版本可能沒有這張表
+
+                # 導出領藥記錄
+                try:
+                    dispense_records = cursor.execute("SELECT * FROM dispense_records").fetchall()
+                    if dispense_records:
+                        csv_path = exports_dir / "dispense_records.csv"
+                        with open(csv_path, 'w', encoding='utf-8-sig', newline='') as f:
+                            cols = [desc[0] for desc in cursor.description]
+                            writer = csv.DictWriter(f, fieldnames=cols)
+                            writer.writeheader()
+                            writer.writerows([dict(zip(cols, row)) for row in dispense_records])
+                        zipf.write(csv_path, "exports/dispense_records.csv")
+                except:
+                    pass
+
+            except Exception as e:
+                logger.warning(f"部分資料導出失敗: {e}")
+
+            # 3. 加入配置文件
+            config_path = Path("config/station_config.json")
+            if config_path.exists():
+                zipf.write(config_path, "config/station_config.json")
+
+            # 4. 生成升級資訊
+            upgrade_info = {
+                "export_time": datetime.now().isoformat(),
+                "source_version": config.VERSION,
+                "source_station_id": config.STATION_ID,
+                "target_version": "2.0",
+                "compatibility": {
+                    "min_target_version": "2.0",
+                    "export_format": "v1"
+                },
+                "statistics": {
+                    "total_items": len(inventory_data) if inventory_data else 0,
+                    "total_blood_types": len(blood_data) if blood_data else 0,
+                    "total_equipment": len(equipment) if equipment else 0,
+                    "total_surgery_records": len(surgery_records) if surgery_records else 0,
+                    "total_blood_bags": len(blood_bags) if blood_bags else 0
+                },
+                "tables_exported": [
+                    "items", "blood_inventory", "equipment",
+                    "surgery_records", "blood_bags", "dispense_records"
+                ]
+            }
+            zipf.writestr("upgrade_info.json", json.dumps(upgrade_info, ensure_ascii=False, indent=2))
+
+            # 5. 生成 README
+            readme_content = f"""
+================================================
+MIRS 升級資料包 - 單站版 → 多站版
+================================================
+
+匯出時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+來源站點: {config.STATION_ID}
+來源版本: v{config.VERSION}
+目標版本: v2.0 Multi-Station
+
+目錄結構:
+------------------------------------------------
+database/           完整資料庫檔案
+exports/            CSV格式資料
+  - items.csv           物品清單
+  - blood_inventory.csv 血袋庫存
+  - equipment.csv       設備清單
+  - surgery_records.csv 處置記錄
+  - blood_bags.csv      血袋明細
+  - dispense_records.csv 領藥記錄
+config/             站點設定檔
+upgrade_info.json   升級相容性資訊
+README.txt          本說明文件
+
+升級步驟:
+------------------------------------------------
+1. 安裝 MIRS v2.0 Multi-Station
+2. 在多站版系統中選擇「匯入資料」
+3. 上傳此 ZIP 檔案
+4. 輸入授權碼完成升級
+5. 驗證資料完整性
+
+注意事項:
+------------------------------------------------
+- 此檔案包含敏感資料，請妥善保管
+- 建議升級前先備份多站版資料庫
+- 匯入時會覆蓋多站版現有資料
+
+技術支援:
+------------------------------------------------
+Email: tom@denovortho.com
+GitHub: https://github.com/cutemo0953/MIRS_v2.0_multi-station
+
+================================================
+De Novo Orthopedics Inc. © 2024
+================================================
+"""
+            zipf.writestr("README.txt", readme_content.encode('utf-8'))
+
+        # 清理臨時目錄
+        if exports_dir.exists():
+            shutil.rmtree(exports_dir)
+
+        logger.info(f"升級資料包生成成功: {zip_filename}")
+
+        return FileResponse(
+            path=str(zip_path),
+            media_type="application/zip",
+            filename=zip_filename
+        )
+
+    except Exception as e:
+        logger.error(f"升級資料包生成失敗: {e}")
+        raise HTTPException(status_code=500, detail=f"匯出失敗: {str(e)}")
+
+
 @app.get("/api/emergency/info")
 async def get_emergency_info():
     """取得緊急資訊(用於QR Code掃描後顯示)"""
