@@ -1,36 +1,42 @@
-# 醫療站庫存管理系統 v1.4.5
+# 醫療站庫存管理系統 v1.4.2-plus (單站版)
 # Python 依賴套件清單
 # 支援 Python 3.11, 3.12, 3.13
+# 專為 Raspberry Pi 5 + Bookworm 優化
 
-# Web Framework (Python 3.13 compatible)
+# Web Framework
 fastapi>=0.115.0
 
 # ASGI Server
-uvicorn[standard]==0.24.0
+uvicorn[standard]>=0.24.0
 
-# 資料驗證 (Python 3.13 compatible)
+# 資料驗證
 pydantic>=2.8.0
 
-# PDF 生成 (v1.4.5新增)
+# PDF 生成
 reportlab>=4.0.0
 
-# QR Code 生成 (v1.4.5新增)
+# QR Code 生成
 qrcode[pil]>=7.4.2
 
-# 資料處理與導出 (v1.4.5新增)
+# 資料處理與導出
 pandas>=2.0.0
 
-# 圖像處理 (v1.4.5新增)
+# 圖像處理
 Pillow>=10.0.0
 
-# CORS 中介軟體（已包含在 FastAPI 中）
-# starlette (FastAPI 依賴)
+# 時區處理 (v1.4.2-plus 新增)
+pytz>=2024.1
 
-# 安裝指令:
-# pip3 install -r requirements_v1.4.1.txt --break-system-packages
+# HTTP 請求 (選用，用於同步功能)
+requests>=2.31.0
 
-# 或使用虛擬環境（推薦）:
+# 安裝指令 (Raspberry Pi 5):
+# python3 -m venv venv
+# source venv/bin/activate
+# pip install -r requirements_v1.4.5.txt
+
+# 安裝指令 (Windows/Mac):
 # python -m venv venv
 # source venv/bin/activate  # Linux/Mac
 # venv\Scripts\activate     # Windows
-# pip install -r requirements_v1.4.1.txt
+# pip install -r requirements_v1.4.5.txt
