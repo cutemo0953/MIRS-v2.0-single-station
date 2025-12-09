@@ -344,6 +344,7 @@ class SurgeryConsumptionItem(BaseModel):
 class SurgeryRecordRequest(BaseModel):
     """手術記錄請求"""
     patientName: str = Field(..., description="病患姓名", min_length=1, max_length=100)
+    cirsPersonId: Optional[str] = Field(None, description="CIRS 人員序號 (如 P0001)，用於關聯 CIRS 系統", max_length=20)
     surgeryType: str = Field(..., description="手術類型", min_length=1, max_length=200)
     surgeonName: str = Field(..., description="主刀醫師", min_length=1, max_length=100)
     anesthesiaType: Optional[str] = Field(None, description="麻醉方式", max_length=100)
@@ -883,6 +884,14 @@ class DatabaseManager:
                 ON surgery_consumptions(surgery_id)
             """)
 
+            # CIRS Integration: 新增 cirs_person_id 欄位 (v2.0.1)
+            # 用於關聯 CIRS 社區韌性系統的人員 ID (如 P0001)
+            try:
+                cursor.execute("ALTER TABLE surgery_records ADD COLUMN cirs_person_id TEXT")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_surgery_cirs_person ON surgery_records(cirs_person_id)")
+            except:
+                pass  # 欄位已存在則忽略
+
             # 庫存物品索引
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_items_category
@@ -1362,15 +1371,16 @@ class DatabaseManager:
             # 插入手術記錄
             cursor.execute("""
                 INSERT INTO surgery_records (
-                    record_number, record_date, patient_name, surgery_sequence,
+                    record_number, record_date, patient_name, cirs_person_id, surgery_sequence,
                     surgery_type, surgeon_name, anesthesia_type, duration_minutes,
                     remarks, station_id
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 record_number,
                 record_date,
                 request.patientName,
+                request.cirsPersonId,  # CIRS Integration
                 sequence,
                 request.surgeryType,
                 request.surgeonName,
