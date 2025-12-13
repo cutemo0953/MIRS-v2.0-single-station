@@ -482,6 +482,28 @@ class HospitalTransferCoordinate(BaseModel):
 # 資料庫管理器
 # ============================================================================
 
+class NonClosingConnection:
+    """包裝連接，忽略 close() 調用 (用於記憶體模式)"""
+    def __init__(self, conn: sqlite3.Connection):
+        self._conn = conn
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+    def close(self):
+        """忽略關閉請求"""
+        pass
+
+    def cursor(self):
+        return self._conn.cursor()
+
+    def commit(self):
+        return self._conn.commit()
+
+    def rollback(self):
+        return self._conn.rollback()
+
+
 class DatabaseManager:
     """資料庫管理器 - 處理所有資料庫操作"""
 
@@ -497,18 +519,23 @@ class DatabaseManager:
     def get_connection(self) -> sqlite3.Connection:
         """取得資料庫連接"""
         if self.is_memory:
-            # For in-memory mode, reuse singleton connection
+            # For in-memory mode, reuse singleton connection wrapped to ignore close()
             if DatabaseManager._memory_connection is None:
                 DatabaseManager._memory_connection = sqlite3.connect(
                     self.db_path, check_same_thread=False
                 )
                 DatabaseManager._memory_connection.row_factory = sqlite3.Row
-            return DatabaseManager._memory_connection
+            return NonClosingConnection(DatabaseManager._memory_connection)
         else:
             # For file-based mode, create new connection
             conn = sqlite3.connect(self.db_path, check_same_thread=False)
             conn.row_factory = sqlite3.Row
             return conn
+
+    def close_connection(self, conn: sqlite3.Connection):
+        """安全關閉連接 - 記憶體模式下不關閉"""
+        if not self.is_memory:
+            conn.close()
 
     def reset_memory_db(self):
         """Reset in-memory database (for demo reset feature)"""
