@@ -2780,11 +2780,19 @@ async def root():
 
     如果資料庫未初始化，重新導向至 setup_wizard.html
     否則重新導向至 Index.html
-    """
-    try:
-        from pathlib import Path
 
-        db_path = Path(__file__).parent / "medical_inventory.db"
+    Vercel 模式下，直接返回 Index.html (已預載展示資料)
+    """
+    # On Vercel, always serve Index.html directly (demo data is pre-seeded)
+    if IS_VERCEL:
+        try:
+            with open(PROJECT_ROOT / "Index.html", "r", encoding="utf-8") as f:
+                return HTMLResponse(content=f.read())
+        except FileNotFoundError:
+            return {"error": "Index.html not found", "mode": "vercel_demo"}
+
+    try:
+        db_path = PROJECT_ROOT / "medical_inventory.db"
 
         # Check if database exists and has data
         needs_setup = True
@@ -2830,11 +2838,8 @@ async def manual_setup():
 
 @app.get("/setup_wizard.html")
 async def serve_setup_wizard():
-    """
-    Serve setup wizard HTML file
-    """
-    from pathlib import Path
-    wizard_file = Path(__file__).parent / "setup_wizard.html"
+    """Serve setup wizard HTML file"""
+    wizard_file = PROJECT_ROOT / "setup_wizard.html"
     if wizard_file.exists():
         return FileResponse(wizard_file)
     else:
@@ -2843,11 +2848,8 @@ async def serve_setup_wizard():
 
 @app.get("/Index.html")
 async def serve_index():
-    """
-    Serve main Index.html file
-    """
-    from pathlib import Path
-    index_file = Path(__file__).parent / "Index.html"
+    """Serve main Index.html file"""
+    index_file = PROJECT_ROOT / "Index.html"
     if index_file.exists():
         return FileResponse(index_file)
     else:
@@ -2856,11 +2858,8 @@ async def serve_index():
 
 @app.get("/test_data.html")
 async def serve_test_data():
-    """
-    Serve test data HTML file for API debugging
-    """
-    from pathlib import Path
-    test_file = Path(__file__).parent / "test_data.html"
+    """Serve test data HTML file for API debugging"""
+    test_file = PROJECT_ROOT / "test_data.html"
     if test_file.exists():
         return FileResponse(test_file)
     else:
@@ -2869,11 +2868,8 @@ async def serve_test_data():
 
 @app.get("/init_borp_station.html")
 async def serve_init_borp():
-    """
-    Serve BORP station initialization HTML
-    """
-    from pathlib import Path
-    init_file = Path(__file__).parent / "init_borp_station.html"
+    """Serve BORP station initialization HTML"""
+    init_file = PROJECT_ROOT / "init_borp_station.html"
     if init_file.exists():
         return FileResponse(init_file)
     else:
@@ -2885,8 +2881,7 @@ async def serve_debug():
     """
     Serve debug HTML for Alpine.js and API testing
     """
-    from pathlib import Path
-    debug_file = Path(__file__).parent / "debug.html"
+    debug_file = PROJECT_ROOT / "debug.html"
     if debug_file.exists():
         return FileResponse(debug_file)
     else:
@@ -2950,37 +2945,6 @@ async def startup_event():
 # ============================================================================
 # API 端點
 # ============================================================================
-
-@app.get("/")
-async def root():
-    """根端點 - 返回主頁面"""
-    try:
-        with open(PROJECT_ROOT / "Index.html", "r", encoding="utf-8") as f:
-            html_content = f.read()
-        return HTMLResponse(content=html_content)
-    except FileNotFoundError:
-        return {
-            "name": "醫療站庫存管理系統 API",
-            "version": config.VERSION,
-            "station": config.STATION_ID,
-            "docs": "/docs",
-            "error": "Index.html not found"
-        }
-
-
-@app.get("/setup")
-async def setup_station():
-    """站點設定頁面"""
-    try:
-        with open(PROJECT_ROOT / "setup_station.html", "r", encoding="utf-8") as f:
-            html_content = f.read()
-        return HTMLResponse(content=html_content)
-    except FileNotFoundError:
-        return HTMLResponse(
-            content="<h1>站點設定頁面未找到</h1><p>請確認 setup_station.html 存在</p>",
-            status_code=404
-        )
-
 
 @app.get("/api/info")
 async def api_info():
@@ -5482,8 +5446,12 @@ async def initialize_setup(request: SetupInitializeRequest):
                 detail=f"無效的 profile: {request.profile}. 有效選項: {', '.join(valid_profiles)}"
             )
 
+        # Skip on Vercel (serverless doesn't support subprocess)
+        if IS_VERCEL:
+            raise HTTPException(status_code=503, detail="此功能在展示模式下不可用")
+
         # Check if profile file exists
-        profile_file = Path(__file__).parent / "database" / "profiles" / f"{request.profile}.sql"
+        profile_file = PROJECT_ROOT / "database" / "profiles" / f"{request.profile}.sql"
         if not profile_file.exists():
             raise HTTPException(
                 status_code=404,
@@ -5491,11 +5459,10 @@ async def initialize_setup(request: SetupInitializeRequest):
             )
 
         # Run initialization script
-        project_root = Path(__file__).parent
         result = subprocess.run(
             [
                 "python3",
-                str(project_root / "scripts" / "init_database.py"),
+                str(PROJECT_ROOT / "scripts" / "init_database.py"),
                 "--profile", request.profile,
                 "--force",
                 "--no-backup"
@@ -5555,10 +5522,16 @@ async def get_setup_status():
     - needs_setup: 是否需要執行設定
     """
     try:
-        from pathlib import Path
-        import os
+        # On Vercel, always return demo mode status
+        if IS_VERCEL:
+            return {
+                "initialized": True,
+                "has_data": True,
+                "demo_mode": True,
+                "message": "展示模式 - 使用預載資料"
+            }
 
-        db_path = Path(__file__).parent / "medical_inventory.db"
+        db_path = PROJECT_ROOT / "medical_inventory.db"
         is_initialized = db_path.exists()
 
         # Check if database has data
