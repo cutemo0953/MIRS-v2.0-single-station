@@ -2738,7 +2738,10 @@
         function medicalInventory() {
             // v1.4.2-plus: 動態偵測 API URL (支援遠端存取)
             const currentHost = window.location.hostname;
-            const apiBaseUrl = `http://${currentHost}:8000/api`;
+            const currentPort = window.location.port;
+            // Vercel 或其他雲端部署使用相對路徑，本地開發使用 :8000
+            const isVercelOrCloud = currentHost.includes('vercel.app') || currentHost.includes('.com') || !currentPort;
+            const apiBaseUrl = isVercelOrCloud ? '/api' : `http://${currentHost}:8000/api`;
 
             return {
                 // 基本設定
