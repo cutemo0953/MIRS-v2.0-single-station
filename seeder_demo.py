@@ -25,8 +25,15 @@ def seed_mirs_demo(conn: sqlite3.Connection):
     now = datetime.now()
 
     # =========================================
-    # 1. 站點設定
+    # 1. 站點設定 (create config table if not exists)
     # =========================================
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS config (
+            key TEXT PRIMARY KEY,
+            value TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     config_data = [
         ('station_name', '[DEMO] 台北備援手術站'),
         ('station_type', 'BORP'),
@@ -89,8 +96,8 @@ def seed_mirs_demo(conn: sqlite3.Connection):
             collect_date = now - timedelta(days=random.randint(1, 7))
             cursor.execute("""
                 INSERT INTO blood_bags
-                (bag_id, blood_type, volume_ml, status, collection_date, expiry_date, donor_id, station_id, created_at)
-                VALUES (?, ?, 250, 'available', ?, ?, ?, 'BORP-DNO-001', ?)
+                (bag_code, blood_type, volume_ml, status, collection_date, expiry_date, donor_id, created_at)
+                VALUES (?, ?, 250, 'AVAILABLE', ?, ?, ?, ?)
             """, (
                 f"BB-{bag_id:06d}",
                 bt,
@@ -123,12 +130,15 @@ def seed_mirs_demo(conn: sqlite3.Connection):
     ]
 
     for eq in equipment:
-        eq_id, name, loc, status, desc = eq
+        eq_id, name, category, status, remarks = eq
+        # Map status to schema values: UNCHECKED, READY, NEEDS_REPAIR
+        status_map = {'operational': 'READY', 'standby': 'READY', 'maintenance': 'NEEDS_REPAIR'}
+        mapped_status = status_map.get(status, 'UNCHECKED')
         cursor.execute("""
             INSERT INTO equipment
-            (equipment_id, name, location, status, description, last_check_date, created_at)
+            (id, name, category, status, remarks, last_check, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (eq_id, name, loc, status, desc, now.strftime("%Y-%m-%d"), now.isoformat()))
+        """, (eq_id, name, category, mapped_status, remarks, now.isoformat(), now.isoformat()))
 
     # =========================================
     # 5. 一般耗材 (items)
@@ -175,24 +185,26 @@ def seed_mirs_demo(conn: sqlite3.Connection):
     # 6. 手術記錄範例
     # =========================================
     surgeries = [
-        ("急性闘尾炎切除術", "陳醫師", "王麻醉師", 120),
-        ("腹腔鏡膽囊切除術", "林醫師", "李麻醉師", 90),
-        ("開放性骨折固定術", "張醫師", "王麻醉師", 180),
+        ("急性闘尾炎切除術", "陳醫師", "全身麻醉", 120, "病患A"),
+        ("腹腔鏡膽囊切除術", "林醫師", "全身麻醉", 90, "病患B"),
+        ("開放性骨折固定術", "張醫師", "局部麻醉", 180, "病患C"),
     ]
 
-    for i, (proc, surgeon, anesth, duration) in enumerate(surgeries):
-        surgery_time = now - timedelta(days=i+1, hours=random.randint(8, 14))
+    for i, (surgery_type, surgeon, anesthesia, duration, patient) in enumerate(surgeries):
+        surgery_date = (now - timedelta(days=i+1)).strftime("%Y-%m-%d")
         cursor.execute("""
             INSERT INTO surgery_records
-            (surgery_id, procedure_name, surgeon, anesthesiologist, start_time, end_time, status, notes, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, 'completed', 'Demo surgery record', ?)
+            (record_number, record_date, patient_name, surgery_sequence, surgery_type, surgeon_name, anesthesia_type, duration_minutes, station_id, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'BORP-DNO-01', 'COMPLETED', ?)
         """, (
-            f"SRG-{surgery_time.strftime('%Y%m%d')}-{i+1:03d}",
-            proc,
+            f"SRG-{surgery_date.replace('-', '')}-{i+1:03d}",
+            surgery_date,
+            patient,
+            i + 1,
+            surgery_type,
             surgeon,
-            anesth,
-            surgery_time.isoformat(),
-            (surgery_time + timedelta(minutes=duration)).isoformat(),
+            anesthesia,
+            duration,
             now.isoformat()
         ))
 

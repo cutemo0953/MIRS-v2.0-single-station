@@ -1156,13 +1156,15 @@ class DatabaseManager:
 
             conn.commit()
             logger.info(f"✓ 資料庫初始化完成: {config.get_station_id()}")
-            
+
         except Exception as e:
             logger.error(f"資料庫初始化失敗: {e}")
             conn.rollback()
             raise
         finally:
-            conn.close()
+            # Don't close in-memory connection (would destroy data)
+            if not self.is_memory:
+                conn.close()
     
     def _init_default_equipment(self, cursor):
         """初始化預設設備"""
