@@ -21,6 +21,12 @@ import asyncio
 import os
 from enum import Enum
 
+# ============================================================================
+# Vercel 環境偵測
+# ============================================================================
+IS_VERCEL = os.environ.get("VERCEL") == "1"
+PROJECT_ROOT = Path(__file__).parent
+
 from fastapi import FastAPI, HTTPException, status, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, StreamingResponse, HTMLResponse
@@ -39,13 +45,19 @@ from io import BytesIO
 
 def setup_logging():
     """設定日誌系統"""
+    handlers = [logging.StreamHandler(sys.stdout)]
+
+    # Only add file handler for non-Vercel environments
+    if not IS_VERCEL:
+        try:
+            handlers.append(logging.FileHandler('medical_inventory.log', encoding='utf-8'))
+        except Exception:
+            pass  # Skip file logging if not writable
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler('medical_inventory.log', encoding='utf-8')
-        ]
+        handlers=handlers
     )
     return logging.getLogger(__name__)
 
@@ -86,9 +98,9 @@ class StationType(str, Enum):
 
 class Config:
     """系統配置 - v1.4.2-plus 穩定單站點架構"""
-    VERSION = "1.4.2-plus"
-    DATABASE_PATH = "medical_inventory.db"
-    TEMPLATES_PATH = "templates"
+    VERSION = "1.4.2-plus-demo" if IS_VERCEL else "1.4.2-plus"
+    DATABASE_PATH = ":memory:" if IS_VERCEL else "medical_inventory.db"
+    TEMPLATES_PATH = str(PROJECT_ROOT / "templates")
 
     # ========== 站點配置 (三層結構) ==========
     # TYPE: 決定載入的資料庫 Template
@@ -472,17 +484,44 @@ class HospitalTransferCoordinate(BaseModel):
 
 class DatabaseManager:
     """資料庫管理器 - 處理所有資料庫操作"""
-    
+
+    # Singleton connection for in-memory mode
+    _memory_connection = None
+
     def __init__(self, db_path: str):
         self.db_path = db_path
-        logger.info(f"初始化資料庫: {db_path}")
+        self.is_memory = (db_path == ":memory:")
+        logger.info(f"初始化資料庫: {db_path} (in-memory: {self.is_memory})")
         self.init_database()
-    
+
     def get_connection(self) -> sqlite3.Connection:
         """取得資料庫連接"""
-        conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        return conn
+        if self.is_memory:
+            # For in-memory mode, reuse singleton connection
+            if DatabaseManager._memory_connection is None:
+                DatabaseManager._memory_connection = sqlite3.connect(
+                    self.db_path, check_same_thread=False
+                )
+                DatabaseManager._memory_connection.row_factory = sqlite3.Row
+            return DatabaseManager._memory_connection
+        else:
+            # For file-based mode, create new connection
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            return conn
+
+    def reset_memory_db(self):
+        """Reset in-memory database (for demo reset feature)"""
+        if not self.is_memory:
+            return False
+        if DatabaseManager._memory_connection:
+            try:
+                DatabaseManager._memory_connection.close()
+            except:
+                pass
+            DatabaseManager._memory_connection = None
+        self.init_database()
+        return True
     
     def init_database(self):
         """初始化資料庫結構"""
@@ -2855,7 +2894,10 @@ async def serve_debug():
 
 
 # 掛載靜態文件(Logo圖片等)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount static files with pathlib for cross-platform path safety
+_static_dir = PROJECT_ROOT / "static"
+if _static_dir.exists() and not IS_VERCEL:
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 db = DatabaseManager(config.DATABASE_PATH)
 
@@ -2893,9 +2935,16 @@ async def daily_equipment_reset():
 @app.on_event("startup")
 async def startup_event():
     """應用啟動時執行"""
-    # 啟動每日設備重置背景任務
-    asyncio.create_task(daily_equipment_reset())
-    logger.info("✓ 每日設備重置背景任務已啟動 (07:00am)")
+    # Seed demo data if running on Vercel
+    if IS_VERCEL:
+        from seeder_demo import seed_mirs_demo
+        conn = db.get_connection()
+        seed_mirs_demo(conn)
+        logger.info("✓ [MIRS] Demo mode initialized with sample data")
+    else:
+        # 只在非 Vercel 環境啟動背景任務
+        asyncio.create_task(daily_equipment_reset())
+        logger.info("✓ 每日設備重置背景任務已啟動 (07:00am)")
 
 
 # ============================================================================
@@ -2952,8 +3001,51 @@ async def health_check():
         "version": config.VERSION,
         "station_id": config.get_station_id(),
         "station_type": config.STATION_TYPE,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        "demo_mode": IS_VERCEL
     }
+
+
+# ========== Demo Mode Endpoints ==========
+
+@app.get("/api/demo-status")
+async def get_demo_status():
+    """Get demo mode status"""
+    return {
+        "is_demo": IS_VERCEL,
+        "version": config.VERSION,
+        "message": "此為線上展示版，資料將在頁面重整後重置" if IS_VERCEL else None,
+        "github_url": "https://github.com/cutemo0953/MIRS"
+    }
+
+
+@app.post("/api/demo/reset")
+async def reset_demo():
+    """Reset demo database (only available in Vercel mode)"""
+    if not IS_VERCEL:
+        raise HTTPException(
+            status_code=403,
+            detail="Reset is only available in demo mode"
+        )
+
+    try:
+        # Reset the in-memory database
+        db.reset_memory_db()
+
+        # Re-seed with demo data
+        from seeder_demo import seed_mirs_demo
+        conn = db.get_connection()
+        seed_mirs_demo(conn)
+
+        return {
+            "success": True,
+            "message": "Demo data has been reset successfully"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to reset demo: {str(e)}"
+        )
 
 
 # ========== 站點資訊 API (v2.0 新增) ==========

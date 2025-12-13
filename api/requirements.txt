@@ -1,0 +1,9 @@
+# MIRS Backend Dependencies for Vercel
+# Medical Inventory Resilience System v1.4.2-plus
+
+fastapi>=0.104.0
+uvicorn>=0.24.0
+python-multipart>=0.0.6
+pydantic>=2.5.0
+qrcode>=7.4.2
+Pillow>=10.1.0
