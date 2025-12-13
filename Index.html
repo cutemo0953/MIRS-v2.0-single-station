@@ -3023,10 +3023,11 @@
 
                     // Check if running in Vercel demo mode
                     try {
-                        const demoRes = await fetch('/api/demo-status');
+                        const demoRes = await fetch(`${this.apiUrl}/demo-status`);
                         if (demoRes.ok) {
                             const demoData = await demoRes.json();
-                            this.demoMode = demoData.demo_mode || false;
+                            this.demoMode = demoData.is_demo || false;
+                            console.log('Demo mode:', this.demoMode);
                         }
                     } catch (e) {
                         // Not in demo mode or API not available
