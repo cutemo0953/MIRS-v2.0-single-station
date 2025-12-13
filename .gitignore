@@ -47,3 +47,4 @@ exports/*.json
 # Temporary files
 *.tmp
 /tmp/
+.vercel

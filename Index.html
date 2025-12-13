@@ -1369,44 +1369,59 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                         </svg>
                         電氣設備
+                        <span class="ml-2 text-sm font-normal opacity-80" x-text="'(' + equipment.filter(e => !e.id.includes(\'-SURG-\') && !e.id.startsWith(\'SURG-\')).length + ' 項)'"></span>
                     </h3>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <template x-for="eq in equipment.filter(e => !e.id.includes('-SURG-') && !e.id.startsWith('SURG-'))" :key="eq.id">
-                        <div class="border rounded-lg p-3" :class="{
-                            'border-green-300 bg-green-50': eq.status === 'NORMAL',
-                            'border-yellow-300 bg-yellow-50': eq.status === 'WARNING',
-                            'border-red-300 bg-red-50': eq.status === 'ERROR',
-                            'border-gray-200 bg-white': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
-                        }">
-                            <div class="flex justify-between items-start mb-2">
-                                <div class="flex-1 min-w-0">
-                                    <span class="font-mono text-xs text-gray-500" x-text="eq.id"></span>
-                                    <h3 class="font-medium text-gray-900 truncate" x-text="eq.name"></h3>
-                                </div>
-                                <span :class="{
-                                    'bg-green-100 text-green-800': eq.status === 'NORMAL',
-                                    'bg-yellow-100 text-yellow-800': eq.status === 'WARNING',
-                                    'bg-red-100 text-red-800': eq.status === 'ERROR',
-                                    'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
-                                }" class="px-2 py-1 text-xs font-medium rounded-full ml-2 flex-shrink-0" x-text="eq.status"></span>
-                            </div>
-                            <div class="flex flex-wrap gap-2 text-sm mb-2">
-                                <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-700" x-text="eq.category"></span>
-                                <span class="text-gray-600">數量: <span class="font-semibold" x-text="eq.quantity"></span></span>
-                                <span x-show="eq.power_level !== null" class="text-gray-600">電力: <span class="font-semibold" x-text="eq.power_level + '%'"></span></span>
-                            </div>
-                            <div class="text-xs text-gray-500 mb-3">
-                                最後檢查: <span x-text="eq.last_check ? new Date(eq.last_check).toLocaleString('zh-TW') : '-'"></span>
-                            </div>
-                            <div class="flex gap-2 flex-wrap">
-                                <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-sm font-medium px-2 py-1 bg-equipment-100 rounded">檢查</button>
-                                <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-sm font-medium px-2 py-1 bg-gray-100 rounded">編輯</button>
-                                <button @click="deleteEquipment(eq.id, eq.name)" class="text-red-600 hover:text-red-800 text-sm font-medium px-2 py-1 bg-red-50 rounded">刪除</button>
-                            </div>
-                        </div>
-                    </template>
-                    <div x-show="equipment.filter(e => !e.id.includes('-SURG-') && !e.id.startsWith('SURG-')).length === 0" class="col-span-full text-center text-gray-400 py-8">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-medium">編號</th>
+                                <th class="px-3 py-2 text-left font-medium">名稱</th>
+                                <th class="px-3 py-2 text-left font-medium hidden sm:table-cell">類別</th>
+                                <th class="px-3 py-2 text-center font-medium">數量</th>
+                                <th class="px-3 py-2 text-center font-medium hidden md:table-cell">電力</th>
+                                <th class="px-3 py-2 text-center font-medium">狀態</th>
+                                <th class="px-3 py-2 text-left font-medium hidden lg:table-cell">最後檢查</th>
+                                <th class="px-3 py-2 text-center font-medium">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <template x-for="eq in equipment.filter(e => !e.id.includes('-SURG-') && !e.id.startsWith('SURG-'))" :key="eq.id">
+                                <tr class="hover:bg-gray-50" :class="{
+                                    'bg-green-50': eq.status === 'NORMAL',
+                                    'bg-yellow-50': eq.status === 'WARNING',
+                                    'bg-red-50': eq.status === 'ERROR'
+                                }">
+                                    <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
+                                    <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
+                                    <td class="px-3 py-2 text-gray-600 hidden sm:table-cell" x-text="eq.category"></td>
+                                    <td class="px-3 py-2 text-center font-semibold" x-text="eq.quantity"></td>
+                                    <td class="px-3 py-2 text-center hidden md:table-cell">
+                                        <span x-show="eq.power_level !== null" x-text="eq.power_level + '%'"></span>
+                                        <span x-show="eq.power_level === null" class="text-gray-400">-</span>
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <span :class="{
+                                            'bg-green-100 text-green-800': eq.status === 'NORMAL',
+                                            'bg-yellow-100 text-yellow-800': eq.status === 'WARNING',
+                                            'bg-red-100 text-red-800': eq.status === 'ERROR',
+                                            'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
+                                        }" class="px-2 py-0.5 text-xs font-medium rounded-full" x-text="eq.status"></span>
+                                    </td>
+                                    <td class="px-3 py-2 text-xs text-gray-500 hidden lg:table-cell" x-text="eq.last_check ? new Date(eq.last_check).toLocaleString('zh-TW') : '-'"></td>
+                                    <td class="px-3 py-2 text-center">
+                                        <div class="flex gap-1 justify-center">
+                                            <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="檢查">✓</button>
+                                            <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
+                                            <button @click="deleteEquipment(eq.id, eq.name)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <div x-show="equipment.filter(e => !e.id.includes('-SURG-') && !e.id.startsWith('SURG-')).length === 0" class="text-center text-gray-400 py-8">
                         目前沒有電氣設備
                     </div>
                 </div>
@@ -1420,42 +1435,52 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                         </svg>
                         手術包
+                        <span class="ml-2 text-sm font-normal opacity-80" x-text="'(' + equipment.filter(e => e.id.includes(\'-SURG-\') || e.id.startsWith(\'SURG-\')).length + ' 項)'"></span>
                     </h3>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <template x-for="eq in equipment.filter(e => e.id.includes('-SURG-') || e.id.startsWith('SURG-'))" :key="eq.id">
-                        <div class="border rounded-lg p-3" :class="{
-                            'border-green-300 bg-green-50': eq.status === 'NORMAL',
-                            'border-yellow-300 bg-yellow-50': eq.status === 'WARNING',
-                            'border-red-300 bg-red-50': eq.status === 'ERROR',
-                            'border-gray-200 bg-white': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
-                        }">
-                            <div class="flex justify-between items-start mb-2">
-                                <div class="flex-1 min-w-0">
-                                    <span class="font-mono text-xs text-gray-500" x-text="eq.id"></span>
-                                    <h3 class="font-medium text-gray-900 truncate" x-text="eq.name"></h3>
-                                </div>
-                                <span :class="{
-                                    'bg-green-100 text-green-800': eq.status === 'NORMAL',
-                                    'bg-yellow-100 text-yellow-800': eq.status === 'WARNING',
-                                    'bg-red-100 text-red-800': eq.status === 'ERROR',
-                                    'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
-                                }" class="px-2 py-1 text-xs font-medium rounded-full ml-2 flex-shrink-0" x-text="eq.status"></span>
-                            </div>
-                            <div class="flex flex-wrap gap-2 text-sm mb-2">
-                                <span class="text-gray-600">數量: <span class="font-semibold" x-text="eq.quantity"></span></span>
-                            </div>
-                            <div class="text-xs text-gray-500 mb-3">
-                                最後檢查: <span x-text="eq.last_check ? new Date(eq.last_check).toLocaleString('zh-TW') : '-'"></span>
-                            </div>
-                            <div class="flex gap-2 flex-wrap">
-                                <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-sm font-medium px-2 py-1 bg-equipment-100 rounded">檢查</button>
-                                <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-sm font-medium px-2 py-1 bg-gray-100 rounded">編輯</button>
-                                <button @click="deleteEquipment(eq.id, eq.name)" class="text-red-600 hover:text-red-800 text-sm font-medium px-2 py-1 bg-red-50 rounded">刪除</button>
-                            </div>
-                        </div>
-                    </template>
-                    <div x-show="equipment.filter(e => e.id.includes('-SURG-') || e.id.startsWith('SURG-')).length === 0" class="col-span-full text-center text-gray-400 py-8">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-medium">編號</th>
+                                <th class="px-3 py-2 text-left font-medium">名稱</th>
+                                <th class="px-3 py-2 text-center font-medium">數量</th>
+                                <th class="px-3 py-2 text-center font-medium">狀態</th>
+                                <th class="px-3 py-2 text-left font-medium hidden md:table-cell">最後檢查</th>
+                                <th class="px-3 py-2 text-center font-medium">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <template x-for="eq in equipment.filter(e => e.id.includes('-SURG-') || e.id.startsWith('SURG-'))" :key="eq.id">
+                                <tr class="hover:bg-gray-50" :class="{
+                                    'bg-green-50': eq.status === 'NORMAL',
+                                    'bg-yellow-50': eq.status === 'WARNING',
+                                    'bg-red-50': eq.status === 'ERROR'
+                                }">
+                                    <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
+                                    <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
+                                    <td class="px-3 py-2 text-center font-semibold" x-text="eq.quantity"></td>
+                                    <td class="px-3 py-2 text-center">
+                                        <span :class="{
+                                            'bg-green-100 text-green-800': eq.status === 'NORMAL',
+                                            'bg-yellow-100 text-yellow-800': eq.status === 'WARNING',
+                                            'bg-red-100 text-red-800': eq.status === 'ERROR',
+                                            'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
+                                        }" class="px-2 py-0.5 text-xs font-medium rounded-full" x-text="eq.status"></span>
+                                    </td>
+                                    <td class="px-3 py-2 text-xs text-gray-500 hidden md:table-cell" x-text="eq.last_check ? new Date(eq.last_check).toLocaleString('zh-TW') : '-'"></td>
+                                    <td class="px-3 py-2 text-center">
+                                        <div class="flex gap-1 justify-center">
+                                            <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="檢查">✓</button>
+                                            <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
+                                            <button @click="deleteEquipment(eq.id, eq.name)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <div x-show="equipment.filter(e => e.id.includes('-SURG-') || e.id.startsWith('SURG-')).length === 0" class="text-center text-gray-400 py-8">
                         目前沒有手術包
                     </div>
                 </div>
