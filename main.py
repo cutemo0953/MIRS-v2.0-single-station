@@ -2955,7 +2955,7 @@ async def startup_event():
 async def root():
     """根端點 - 返回主頁面"""
     try:
-        with open("Index.html", "r", encoding="utf-8") as f:
+        with open(PROJECT_ROOT / "Index.html", "r", encoding="utf-8") as f:
             html_content = f.read()
         return HTMLResponse(content=html_content)
     except FileNotFoundError:
@@ -2972,7 +2972,7 @@ async def root():
 async def setup_station():
     """站點設定頁面"""
     try:
-        with open("setup_station.html", "r", encoding="utf-8") as f:
+        with open(PROJECT_ROOT / "setup_station.html", "r", encoding="utf-8") as f:
             html_content = f.read()
         return HTMLResponse(content=html_content)
     except FileNotFoundError:
