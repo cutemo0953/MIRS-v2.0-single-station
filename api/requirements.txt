@@ -10,3 +10,4 @@ Pillow>=10.1.0
 
 # PostgreSQL support (Neon)
 psycopg2-binary>=2.9.9
+# v1.4.4 - 2025年12月16日 星期二 13時22分45秒 CST
