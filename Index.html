@@ -1815,7 +1815,7 @@
                         <template x-for="lifeline in (resilienceStatus.lifelines || []).filter(l => l.type === 'POWER')" :key="lifeline.item_code">
                             <div class="flex justify-between">
                                 <span x-text="lifeline.name"></span>
-                                <span class="text-gray-600" x-text="lifeline.endurance?.effective_hours + 'h'"></span>
+                                <span class="text-gray-600" x-text="(lifeline.endurance ? lifeline.endurance.effective_hours : 0) + 'h'"></span>
                             </div>
                         </template>
                     </div>
@@ -1861,7 +1861,7 @@
                         <template x-for="lifeline in (resilienceStatus.lifelines || []).filter(l => l.type === 'OXYGEN')" :key="lifeline.item_code">
                             <div class="flex justify-between">
                                 <span x-text="lifeline.name"></span>
-                                <span class="text-gray-600" x-text="lifeline.endurance?.effective_hours === '∞' ? '∞h' : lifeline.endurance?.effective_hours + 'h'"></span>
+                                <span class="text-gray-600" x-text="(lifeline.endurance && lifeline.endurance.effective_hours === '∞') ? '∞h' : ((lifeline.endurance && lifeline.endurance.effective_hours) || 0) + 'h'"></span>
                             </div>
                         </template>
                     </div>
@@ -1922,7 +1922,7 @@
                                 </svg>
                                 <span class="font-medium text-gray-700" x-text="lifeline.name"></span>
                                 <span class="text-sm text-gray-400" x-text="'(' + (lifeline.inventory?.items?.reduce((sum, i) => sum + i.qty, 0) || 0) + '支)'"></span>
-                                <span class="ml-auto font-bold text-amber-600" x-text="lifeline.endurance?.effective_hours + 'h'"></span>
+                                <span class="ml-auto font-bold text-amber-600" x-text="(lifeline.endurance ? lifeline.endurance.effective_hours : 0) + 'h'"></span>
                             </div>
 
                             <!-- 展開的子項目 (個別鋼瓶) -->
@@ -1973,7 +1973,7 @@
                                                         <!-- 百分比 -->
                                                         <span class="w-10 text-right font-medium" :class="unit.checked ? 'text-gray-700' : 'text-gray-400'" x-text="unit.level + '%'"></span>
                                                         <!-- 容量 -->
-                                                        <span class="w-14 text-right text-gray-400" x-text="unit.capacity?.toLocaleString() + 'L'"></span>
+                                                        <span class="w-14 text-right text-gray-400" x-text="(unit.capacity ? unit.capacity.toLocaleString() : '0') + 'L'"></span>
                                                         <!-- 狀態標籤 -->
                                                         <span class="px-2 py-0.5 text-xs rounded"
                                                               :class="unit.checked ? 'bg-gray-100 text-gray-600' : 'bg-gray-200 text-gray-400'"
@@ -1994,7 +1994,7 @@
                                         <!-- AGGREGATE 模式 (無個別追蹤) -->
                                         <template x-if="item.tracking_mode !== 'PER_UNIT'">
                                             <div class="text-xs text-gray-400">
-                                                總容量: <span x-text="(item.capacity_each * item.qty)?.toLocaleString()"></span> L
+                                                總容量: <span x-text="((item.capacity_each || 0) * (item.qty || 0)).toLocaleString()"></span> L
                                             </div>
                                         </template>
                                     </div>
@@ -2017,8 +2017,8 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
                                 <span class="font-medium text-gray-700" x-text="lifeline.name"></span>
-                                <span class="text-sm text-gray-400" x-text="'(' + lifeline.consumption?.load_display + ')'"></span>
-                                <span class="ml-auto font-bold text-amber-600" x-text="lifeline.endurance?.effective_hours + 'h'"></span>
+                                <span class="text-sm text-gray-400" x-text="'(' + (lifeline.consumption ? lifeline.consumption.load_display : '-') + ')'"></span>
+                                <span class="ml-auto font-bold text-amber-600" x-text="(lifeline.endurance ? lifeline.endurance.effective_hours : 0) + 'h'"></span>
                             </div>
                             <!-- 電力明細 -->
                             <div x-show="expandedLifeline === lifeline.item_code"
@@ -2032,9 +2032,9 @@
                                     </div>
                                 </template>
                                 <div class="flex items-center gap-3 text-xs text-gray-500 pt-2 border-t border-gray-200">
-                                    <span>電池: <span class="font-medium text-gray-700" x-text="lifeline.endurance?.battery_hours + 'h'"></span></span>
-                                    <span>+ 發電機: <span class="font-medium text-gray-700" x-text="lifeline.endurance?.generator_hours + 'h'"></span></span>
-                                    <span class="ml-auto">= 總計: <span class="font-bold text-amber-600" x-text="lifeline.endurance?.effective_hours + 'h'"></span></span>
+                                    <span>電池: <span class="font-medium text-gray-700" x-text="(lifeline.endurance ? lifeline.endurance.battery_hours : 0) + 'h'"></span></span>
+                                    <span>+ 發電機: <span class="font-medium text-gray-700" x-text="(lifeline.endurance ? lifeline.endurance.generator_hours : 0) + 'h'"></span></span>
+                                    <span class="ml-auto">= 總計: <span class="font-bold text-amber-600" x-text="(lifeline.endurance ? lifeline.endurance.effective_hours : 0) + 'h'"></span></span>
                                 </div>
                             </div>
                         </div>
