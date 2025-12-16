@@ -1,9 +1,20 @@
-# MIRS 設備韌性整合規格 v1.2.8
+# MIRS 設備韌性整合規格 v1.4.6
 
 > Updated: 2025-12-16
-> Part of: MIRS v1.4.2-plus Single Station
+> Part of: MIRS v1.4.6 Single Station
 
 ## Changelog
+
+### v1.4.6 (2025-12-16)
+- **最弱環節修正**: 氧氣濃縮機不再覆蓋鋼瓶計算
+  - 跳過「受依賴限制」的設備（如氧氣濃縮機受電力限制）
+  - 避免重複計算，正確顯示瓶頸來源
+- **UI 響應修正**: 設備檢查後灰黃變色不需切換 Tab
+  - 使用 `lifelinesRefreshKey` 強制 DOM 重建
+  - 簡化更新流程，提升可靠性
+- **PostgreSQL 支援**: 新增 Neon 雲端資料庫連接
+  - 新增 db_postgres.py 提供相容介面
+  - 支援 Vercel 無伺服器部署
 
 ### v1.2.8 (2025-12-16)
 - **檢查歷史記錄**: 新增 `equipment_check_history` 表，完整追蹤設備檢查記錄

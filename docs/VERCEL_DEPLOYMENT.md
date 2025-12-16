@@ -1,8 +1,13 @@
-# MIRS Vercel 部署指南
+# MIRS Vercel 部署指南 v1.4.6
 
 ## 概述
 
-MIRS (Medical Inventory Resilience System) 可部署至 Vercel 作為線上展示版本。展示版使用記憶體資料庫 (`:memory:`)，資料在伺服器重啟後會重置。
+MIRS (Medical Inventory Resilience System) 可部署至 Vercel 作為線上展示版本。
+
+**v1.4.6 新增 PostgreSQL 支援**:
+- 設定 `DATABASE_URL` 環境變數可連接 Neon 雲端資料庫
+- 資料持久保存，不受 Lambda 冷啟動影響
+- 無 DATABASE_URL 時退回記憶體模式（資料會重置）
 
 ## 部署網址
 
@@ -161,8 +166,36 @@ npx vercel --prod --yes
 2. **不支援功能**: 某些功能 (如 subprocess 呼叫) 在 Vercel 不可用
 3. **靜態檔案**: 需在 `vercel.json` 中正確配置路由
 
+## PostgreSQL/Neon 設定 (v1.4.6)
+
+### 1. 建立 Neon 專案
+```
+1. 前往 https://neon.tech 註冊/登入
+2. 建立新專案 (Region: 選最近的)
+3. 複製 Connection String
+```
+
+### 2. 設定 Vercel 環境變數
+```bash
+# 在 Vercel 專案設定 > Environment Variables
+DATABASE_URL=postgresql://user:pass@host/dbname?sslmode=require
+```
+
+### 3. 執行資料庫 Migration
+```bash
+# 使用 Neon SQL Editor 或 psql 執行
+# /tmp/neon_migration.sql 包含完整 schema
+```
+
+### 4. 驗證連線
+```bash
+curl https://mirs-demo.vercel.app/api/health
+# 應回傳 {"status": "healthy", "database": "postgresql"}
+```
+
 ## 相關文件
 
 - [vercel.json](../vercel.json) - Vercel 配置
 - [api/index.py](../api/index.py) - Serverless 入口
 - [seeder_demo.py](../seeder_demo.py) - 展示資料
+- [db_postgres.py](../db_postgres.py) - PostgreSQL 相容層 (v1.4.6)
