@@ -153,6 +153,8 @@ def seed_mirs_demo(conn: sqlite3.Connection):
                 (station_id, isolation_target_days, oxygen_consumption_rate, fuel_consumption_rate, power_consumption_watts, population_count, population_label)
                 VALUES ('BORP-DNO-01', 3, 10.0, 3.0, 500.0, 2, '插管患者數')
             """)
+        # v1.4.6: 確保韌性關鍵設備存在
+        _ensure_resilience_equipment(cursor, now)
         # 確保 equipment_units 有資料
         cursor.execute("SELECT COUNT(*) FROM equipment_units")
         if cursor.fetchone()[0] == 0:
@@ -257,8 +259,33 @@ def seed_mirs_demo(conn: sqlite3.Connection):
             bag_id += 1
 
     # =========================================
-    # 4. 設備資料 (equipment)
+    # 4. 設備資料 (equipment) - v1.4.6 新增韌性關鍵設備
     # =========================================
+    # 先建立韌性關鍵設備 (氧氣、電力)
+    resilience_equipment = [
+        # (id, name, category, status, quantity, tracking_mode, power_watts, capacity_wh, output_watts, fuel_rate_lph, device_type)
+        ("RESP-001", "H型氧氣鋼瓶", "呼吸設備", "READY", 5, "PER_UNIT", None, None, None, None, None),
+        ("EMER-EQ-006", "E型氧氣瓶", "急救設備", "READY", 4, "PER_UNIT", None, None, None, None, None),
+        ("RESP-002", "氧氣濃縮機 5L", "呼吸設備", "READY", 1, "AGGREGATE", 350, None, None, None, "O2_CONCENTRATOR"),
+        ("UTIL-001", "行動電源站", "電力設備", "READY", 1, "AGGREGATE", None, 2048, 2000, None, "POWER_STATION"),
+        ("UTIL-002", "發電機 (備用)", "電力設備", "READY", 1, "AGGREGATE", None, None, 3000, 1.5, "GENERATOR"),
+        ("RESP-003", "呼吸器", "呼吸設備", "READY", 2, "AGGREGATE", 100, None, None, None, None),
+        ("OTH-001", "行動冰箱", "冷藏設備", "READY", 1, "AGGREGATE", 60, None, None, None, None),
+        ("DIAG-001", "生理監視器", "診斷設備", "READY", 2, "AGGREGATE", 50, None, None, None, None),
+        ("EMER-EQ-007", "抽吸機", "急救設備", "READY", 1, "AGGREGATE", 80, None, None, None, None),
+        ("RESP-004", "呼吸器 (Transport)", "呼吸設備", "READY", 1, "AGGREGATE", 60, None, None, None, None),
+        ("DIAG-002", "血氧機", "診斷設備", "READY", 2, "AGGREGATE", 5, None, None, None, None),
+    ]
+
+    for eq in resilience_equipment:
+        eq_id, name, category, status, qty, tracking, pw, cap_wh, out_w, fuel, dev_type = eq
+        cursor.execute("""
+            INSERT INTO equipment
+            (id, name, category, status, quantity, tracking_mode, power_watts, capacity_wh, output_watts, fuel_rate_lph, device_type, last_check, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (eq_id, name, category, status, qty, tracking, pw, cap_wh, out_w, fuel, dev_type, now.isoformat(), now.isoformat()))
+
+    # 一般設備
     equipment = [
         ("EQ-OL-001", "手術燈 A", "手術室", "operational", "主手術燈"),
         ("EQ-OL-002", "手術燈 B", "手術室", "operational", "輔助手術燈"),
@@ -266,15 +293,8 @@ def seed_mirs_demo(conn: sqlite3.Connection):
         ("EQ-VM-001", "生理監視器 A", "手術室", "operational", "Philips MX800"),
         ("EQ-VM-002", "生理監視器 B", "恢復室", "standby", "Philips MX500"),
         ("EQ-DF-001", "除顫器", "急診室", "operational", "Philips HeartStart"),
-        ("EQ-VT-001", "呼吸器 #1", "ICU", "operational", "Hamilton C6"),
-        ("EQ-VT-002", "呼吸器 #2", "ICU", "standby", "Hamilton C3"),
         ("EQ-US-001", "超音波儀", "診療室", "maintenance", "GE Logiq E10"),
         ("EQ-XR-001", "移動式X光", "放射科", "operational", "Siemens Mobilett"),
-        ("EQ-SC-001", "抽痰機 A", "病房", "operational", "日本住友"),
-        ("EQ-SC-002", "抽痰機 B", "病房", "operational", "日本住友"),
-        ("EQ-IF-001", "輸液幫浦 A", "病房", "operational", "Terumo TE-171"),
-        ("EQ-IF-002", "輸液幫浦 B", "病房", "standby", "Terumo TE-171"),
-        ("EQ-EC-001", "心電圖機", "診療室", "operational", "GE MAC 2000"),
     ]
 
     for eq in equipment:
@@ -405,6 +425,48 @@ def seed_mirs_demo(conn: sqlite3.Connection):
     print(f"  - 3 surgery records")
     print(f"  - Resilience tables (v1.2.8)")
     print(f"  - 9 oxygen cylinder units")
+
+
+def _ensure_resilience_equipment(cursor, now):
+    """Helper: Ensure resilience equipment exists (v1.4.6)"""
+    from datetime import datetime
+    if now is None:
+        now = datetime.now()
+
+    resilience_equipment = [
+        # (id, name, category, status, quantity, tracking_mode, power_watts, capacity_wh, output_watts, fuel_rate_lph, device_type)
+        ("RESP-001", "H型氧氣鋼瓶", "呼吸設備", "READY", 5, "PER_UNIT", None, None, None, None, None),
+        ("EMER-EQ-006", "E型氧氣瓶", "急救設備", "READY", 4, "PER_UNIT", None, None, None, None, None),
+        ("RESP-002", "氧氣濃縮機 5L", "呼吸設備", "READY", 1, "AGGREGATE", 350, None, None, None, "O2_CONCENTRATOR"),
+        ("UTIL-001", "行動電源站", "電力設備", "READY", 1, "AGGREGATE", None, 2048, 2000, None, "POWER_STATION"),
+        ("UTIL-002", "發電機 (備用)", "電力設備", "READY", 1, "AGGREGATE", None, None, 3000, 1.5, "GENERATOR"),
+        ("RESP-003", "呼吸器", "呼吸設備", "READY", 2, "AGGREGATE", 100, None, None, None, None),
+        ("OTH-001", "行動冰箱", "冷藏設備", "READY", 1, "AGGREGATE", 60, None, None, None, None),
+        ("DIAG-001", "生理監視器", "診斷設備", "READY", 2, "AGGREGATE", 50, None, None, None, None),
+    ]
+
+    for eq in resilience_equipment:
+        eq_id, name, category, status, qty, tracking, pw, cap_wh, out_w, fuel, dev_type = eq
+        # Check if equipment exists
+        cursor.execute("SELECT id FROM equipment WHERE id = ?", (eq_id,))
+        if cursor.fetchone() is None:
+            cursor.execute("""
+                INSERT INTO equipment
+                (id, name, category, status, quantity, tracking_mode, power_watts, capacity_wh, output_watts, fuel_rate_lph, device_type, last_check, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (eq_id, name, category, status, qty, tracking, pw, cap_wh, out_w, fuel, dev_type, now.isoformat(), now.isoformat()))
+        else:
+            # Update existing equipment with resilience columns
+            cursor.execute("""
+                UPDATE equipment SET
+                    tracking_mode = COALESCE(tracking_mode, ?),
+                    power_watts = COALESCE(power_watts, ?),
+                    capacity_wh = COALESCE(capacity_wh, ?),
+                    output_watts = COALESCE(output_watts, ?),
+                    fuel_rate_lph = COALESCE(fuel_rate_lph, ?),
+                    device_type = COALESCE(device_type, ?)
+                WHERE id = ?
+            """, (tracking, pw, cap_wh, out_w, fuel, dev_type, eq_id))
 
 
 def _seed_equipment_units(cursor):
