@@ -65,6 +65,41 @@ def seed_mirs_demo(conn: sqlite3.Connection):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    # v1.4.2: resilience_profiles 表格 (消耗情境設定)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS resilience_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            station_id TEXT NOT NULL,
+            endurance_type TEXT NOT NULL,
+            profile_name TEXT NOT NULL,
+            profile_name_en TEXT,
+            burn_rate REAL NOT NULL,
+            burn_rate_unit TEXT NOT NULL,
+            population_multiplier INTEGER DEFAULT 0,
+            description TEXT,
+            is_default INTEGER DEFAULT 0,
+            sort_order INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # v1.4.2: reagent_open_records 表格 (試劑開封追蹤)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS reagent_open_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_code TEXT NOT NULL,
+            batch_number TEXT,
+            station_id TEXT NOT NULL,
+            opened_at DATETIME NOT NULL,
+            tests_remaining INTEGER,
+            is_active INTEGER DEFAULT 1,
+            notes TEXT,
+            created_by TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     conn.commit()
 
     # Check if already seeded
@@ -83,6 +118,10 @@ def seed_mirs_demo(conn: sqlite3.Connection):
         cursor.execute("SELECT COUNT(*) FROM equipment_units")
         if cursor.fetchone()[0] == 0:
             _seed_equipment_units(cursor)
+        # v1.4.2: 確保 resilience_profiles 有預設資料
+        cursor.execute("SELECT COUNT(*) FROM resilience_profiles")
+        if cursor.fetchone()[0] == 0:
+            _seed_resilience_profiles(cursor)
         conn.commit()
         return
 
@@ -281,6 +320,7 @@ def seed_mirs_demo(conn: sqlite3.Connection):
         VALUES ('BORP-DNO-01', 3, 10.0, 3.0, 500.0, 2, '插管患者數')
     """)
     _seed_equipment_units(cursor)
+    _seed_resilience_profiles(cursor)
 
     conn.commit()
     print(f"[MIRS Seeder] Demo data seeded successfully!")
@@ -319,6 +359,38 @@ def _seed_equipment_units(cursor):
     except:
         pass
     cursor.execute("UPDATE equipment SET tracking_mode = 'PER_UNIT' WHERE id IN ('RESP-001', 'EMER-EQ-006')")
+
+
+def _seed_resilience_profiles(cursor):
+    """Helper: Seed default resilience consumption profiles"""
+    # Oxygen Profiles
+    oxygen_profiles = [
+        ('*', 'OXYGEN', '1位插管患者', '1 Intubated Patient', 10, 'L/min', 1, '標準機械通氣 10 L/min', 1, 1),
+        ('*', 'OXYGEN', '2位插管患者', '2 Intubated Patients', 20, 'L/min', 0, '2位患者各10 L/min', 0, 2),
+        ('*', 'OXYGEN', '3位插管患者', '3 Intubated Patients', 30, 'L/min', 0, '3位患者各10 L/min', 0, 3),
+        ('*', 'OXYGEN', '面罩供氧(3人)', '3 Patients on Mask', 15, 'L/min', 0, '每人約 5 L/min', 0, 4),
+        ('*', 'OXYGEN', '鼻導管(5人)', '5 Patients on Nasal', 10, 'L/min', 0, '每人約 2 L/min', 0, 5),
+    ]
+    # Power Profiles
+    power_profiles = [
+        ('*', 'POWER', '省電模式', 'Power Saving', 1.5, 'L/hr', 0, '僅照明+呼吸器', 0, 1),
+        ('*', 'POWER', '標準運作', 'Normal Operation', 3.0, 'L/hr', 0, '照明+冷藏+基本設備', 1, 2),
+        ('*', 'POWER', '全速運轉', 'Full Load', 5.0, 'L/hr', 0, '含空調+檢驗設備', 0, 3),
+    ]
+    # Reagent Profiles
+    reagent_profiles = [
+        ('*', 'REAGENT', '平時', 'Normal', 5, 'tests/day', 0, '日常檢驗量', 1, 1),
+        ('*', 'REAGENT', '災時增量', 'Disaster Surge', 15, 'tests/day', 0, '災難期間增加', 0, 2),
+        ('*', 'REAGENT', '大量傷患', 'Mass Casualty', 30, 'tests/day', 0, '大量傷患應變', 0, 3),
+    ]
+
+    all_profiles = oxygen_profiles + power_profiles + reagent_profiles
+    for p in all_profiles:
+        cursor.execute("""
+            INSERT OR IGNORE INTO resilience_profiles
+            (station_id, endurance_type, profile_name, profile_name_en, burn_rate, burn_rate_unit, population_multiplier, description, is_default, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, p)
 
 
 def clear_mirs_demo(conn: sqlite3.Connection):
