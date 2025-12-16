@@ -14,15 +14,79 @@ def seed_mirs_demo(conn: sqlite3.Connection):
         conn: SQLite connection object
     """
     cursor = conn.cursor()
+    now = datetime.now()
+
+    # =========================================
+    # 0. 確保韌性表格存在 (v1.2.8) - 必須先建立
+    # =========================================
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS resilience_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            station_id TEXT NOT NULL,
+            isolation_target_days INTEGER DEFAULT 3,
+            oxygen_consumption_rate REAL DEFAULT 10.0,
+            fuel_consumption_rate REAL DEFAULT 3.0,
+            power_consumption_watts REAL DEFAULT 500.0,
+            population_count INTEGER DEFAULT 2,
+            population_label TEXT DEFAULT '插管患者數',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS equipment_units (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            equipment_id TEXT NOT NULL,
+            unit_serial TEXT,
+            unit_label TEXT,
+            level_percent INTEGER DEFAULT 100,
+            status TEXT DEFAULT 'AVAILABLE',
+            last_check TIMESTAMP,
+            checked_by TEXT,
+            remarks TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS equipment_check_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            equipment_id TEXT NOT NULL,
+            unit_label TEXT,
+            check_date DATE NOT NULL,
+            check_time TIMESTAMP NOT NULL,
+            checked_by TEXT,
+            level_before INTEGER,
+            level_after INTEGER,
+            status_before TEXT,
+            status_after TEXT,
+            remarks TEXT,
+            station_id TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
 
     # Check if already seeded
     cursor.execute("SELECT COUNT(*) FROM items")
     if cursor.fetchone()[0] > 0:
-        print("[MIRS Seeder] Data already exists, skipping...")
+        print("[MIRS Seeder] Data already exists, ensuring resilience tables...")
+        # 確保 resilience_config 有預設值
+        cursor.execute("SELECT COUNT(*) FROM resilience_config WHERE station_id = 'BORP-DNO-01'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                INSERT INTO resilience_config
+                (station_id, isolation_target_days, oxygen_consumption_rate, fuel_consumption_rate, power_consumption_watts, population_count, population_label)
+                VALUES ('BORP-DNO-01', 3, 10.0, 3.0, 500.0, 2, '插管患者數')
+            """)
+        # 確保 equipment_units 有資料
+        cursor.execute("SELECT COUNT(*) FROM equipment_units")
+        if cursor.fetchone()[0] == 0:
+            _seed_equipment_units(cursor)
+        conn.commit()
         return
 
     print("[MIRS Seeder] Seeding demo data...")
-    now = datetime.now()
 
     # =========================================
     # 1. 站點設定 (create config table if not exists)
@@ -209,47 +273,28 @@ def seed_mirs_demo(conn: sqlite3.Connection):
         ))
 
     # =========================================
-    # 7. 韌性設定表 (v1.2.8)
+    # 7. 韌性資料 (v1.2.8) - 表格已在開頭建立
     # =========================================
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS resilience_config (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            station_id TEXT NOT NULL,
-            isolation_target_days INTEGER DEFAULT 3,
-            oxygen_consumption_rate REAL DEFAULT 10.0,
-            fuel_consumption_rate REAL DEFAULT 3.0,
-            power_consumption_watts REAL DEFAULT 500.0,
-            population_count INTEGER DEFAULT 2,
-            population_label TEXT DEFAULT '插管患者數',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
     cursor.execute("""
         INSERT OR IGNORE INTO resilience_config
         (station_id, isolation_target_days, oxygen_consumption_rate, fuel_consumption_rate, power_consumption_watts, population_count, population_label)
         VALUES ('BORP-DNO-01', 3, 10.0, 3.0, 500.0, 2, '插管患者數')
     """)
+    _seed_equipment_units(cursor)
 
-    # =========================================
-    # 8. 設備分項追蹤表 (v1.2.8)
-    # =========================================
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS equipment_units (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            equipment_id TEXT NOT NULL,
-            unit_serial TEXT,
-            unit_label TEXT,
-            level_percent INTEGER DEFAULT 100,
-            status TEXT DEFAULT 'AVAILABLE',
-            last_check TIMESTAMP,
-            checked_by TEXT,
-            remarks TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    # Seed oxygen cylinder units
+    conn.commit()
+    print(f"[MIRS Seeder] Demo data seeded successfully!")
+    print(f"  - 15 pharmaceuticals")
+    print(f"  - {bag_id-1} blood bags")
+    print(f"  - 15 equipment items")
+    print(f"  - 20 supply items")
+    print(f"  - 3 surgery records")
+    print(f"  - Resilience tables (v1.2.8)")
+    print(f"  - 9 oxygen cylinder units")
+
+
+def _seed_equipment_units(cursor):
+    """Helper: Seed oxygen cylinder units"""
     h_cylinders = [
         ('RESP-001', 'H-CYL-001', 'H型1號', 100, 'AVAILABLE'),
         ('RESP-001', 'H-CYL-002', 'H型2號', 85, 'AVAILABLE'),
@@ -268,44 +313,12 @@ def seed_mirs_demo(conn: sqlite3.Connection):
             INSERT OR IGNORE INTO equipment_units (equipment_id, unit_serial, unit_label, level_percent, status)
             VALUES (?, ?, ?, ?, ?)
         """, (eq_id, serial, label, level, status))
-
     # Add tracking_mode column to equipment if not exists
     try:
         cursor.execute("ALTER TABLE equipment ADD COLUMN tracking_mode TEXT DEFAULT 'AGGREGATE'")
     except:
-        pass  # Column already exists
+        pass
     cursor.execute("UPDATE equipment SET tracking_mode = 'PER_UNIT' WHERE id IN ('RESP-001', 'EMER-EQ-006')")
-
-    # =========================================
-    # 9. 檢查歷史表 (v1.2.8)
-    # =========================================
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS equipment_check_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            equipment_id TEXT NOT NULL,
-            unit_label TEXT,
-            check_date DATE NOT NULL,
-            check_time TIMESTAMP NOT NULL,
-            checked_by TEXT,
-            level_before INTEGER,
-            level_after INTEGER,
-            status_before TEXT,
-            status_after TEXT,
-            remarks TEXT,
-            station_id TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    conn.commit()
-    print(f"[MIRS Seeder] Demo data seeded successfully!")
-    print(f"  - 15 pharmaceuticals")
-    print(f"  - {bag_id-1} blood bags")
-    print(f"  - 15 equipment items")
-    print(f"  - 20 supply items")
-    print(f"  - 3 surgery records")
-    print(f"  - Resilience tables (v1.2.8)")
-    print(f"  - 9 oxygen cylinder units")
 
 
 def clear_mirs_demo(conn: sqlite3.Connection):
