@@ -3,6 +3,7 @@ Vercel Serverless Entry Point for MIRS
 Medical Inventory Resilience System
 """
 import sys
+import os
 from pathlib import Path
 
 # Add project root to Python path for imports
