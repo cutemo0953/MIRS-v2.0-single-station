@@ -2101,7 +2101,7 @@
                         </button>
                         <button type="submit"
                                 class="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600">
-                            儲存並檢查
+                            儲存已檢查
                         </button>
                     </div>
                     <!-- v1.2.8: 重置檢查狀態按鈕 (僅已檢查項目顯示) -->
@@ -3942,6 +3942,8 @@
                             body: JSON.stringify(this.resilienceConfig)
                         });
                         if (response.ok) {
+                            // 延遲確保資料庫更新完成
+                            await new Promise(r => setTimeout(r, 200));
                             // Recalculate after config update
                             await this.loadResilienceStatus();
                             // Show feedback with new resilience hours
@@ -3951,14 +3953,17 @@
                                 'WARNING': '警戒',
                                 'CRITICAL': '危險'
                             }[this.resilienceStatus.summary?.overall_status] || '';
-                            const msg = hours
+                            const msg = hours !== undefined
                                 ? `韌性已更新：可獨立運作 ${hours.toFixed(1)} 小時 (${statusText})`
                                 : '韌性設定已更新';
                             this.toast(msg, 'success');
+                        } else {
+                            const err = await response.json();
+                            this.toast(err.detail || '更新失敗', 'error');
                         }
                     } catch (error) {
                         console.error('更新韌性設定失敗:', error);
-                        this.toast('更新韌性設定失敗', 'error');
+                        this.toast('更新韌性設定失敗: ' + error.message, 'error');
                     }
                 },
 
@@ -5439,20 +5444,22 @@
                             // v1.2.8: 強制重新渲染 - 先收合再載入再展開
                             const currentExpanded = this.expandedLifeline;
                             this.expandedLifeline = null;
+                            // 延遲確保資料庫更新完成
+                            await new Promise(r => setTimeout(r, 300));
                             // 重新載入韌性狀態和設備列表
                             await this.loadResilienceStatus();
                             await this.loadEquipment();
                             // 延遲恢復展開狀態確保 DOM 更新
                             setTimeout(() => {
                                 this.expandedLifeline = currentExpanded;
-                            }, 100);
+                            }, 150);
                         } else {
                             const error = await response.json();
                             this.showToast(error.detail || '更新失敗', 'error');
                         }
                     } catch (err) {
                         console.error('Update unit error:', err);
-                        this.showToast('更新失敗', 'error');
+                        this.showToast('更新失敗: ' + err.message, 'error');
                     }
                 },
 
