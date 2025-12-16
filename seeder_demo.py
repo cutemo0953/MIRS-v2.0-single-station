@@ -22,15 +22,22 @@ def seed_mirs_demo(conn: sqlite3.Connection):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS resilience_config (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            station_id TEXT NOT NULL,
-            isolation_target_days INTEGER DEFAULT 3,
+            station_id TEXT NOT NULL UNIQUE,
+            isolation_target_days REAL DEFAULT 3,
+            isolation_source TEXT DEFAULT 'manual',
+            population_count INTEGER DEFAULT 2,
+            population_label TEXT DEFAULT '插管患者數',
+            oxygen_profile_id INTEGER,
+            power_profile_id INTEGER,
+            reagent_profile_id INTEGER,
+            threshold_safe REAL DEFAULT 1.2,
+            threshold_warning REAL DEFAULT 1.0,
             oxygen_consumption_rate REAL DEFAULT 10.0,
             fuel_consumption_rate REAL DEFAULT 3.0,
             power_consumption_watts REAL DEFAULT 500.0,
-            population_count INTEGER DEFAULT 2,
-            population_label TEXT DEFAULT '插管患者數',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_by TEXT
         )
     """)
     cursor.execute("""
@@ -100,6 +107,22 @@ def seed_mirs_demo(conn: sqlite3.Connection):
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    # v1.4.2: Add missing columns to resilience_config (for existing tables)
+    config_columns = [
+        ("isolation_source", "TEXT DEFAULT 'manual'"),
+        ("oxygen_profile_id", "INTEGER"),
+        ("power_profile_id", "INTEGER"),
+        ("reagent_profile_id", "INTEGER"),
+        ("threshold_safe", "REAL DEFAULT 1.2"),
+        ("threshold_warning", "REAL DEFAULT 1.0"),
+        ("updated_by", "TEXT"),
+    ]
+    for col_name, col_def in config_columns:
+        try:
+            cursor.execute(f"ALTER TABLE resilience_config ADD COLUMN {col_name} {col_def}")
+        except:
+            pass  # Column already exists
 
     # v1.4.2: Add endurance columns to items table for resilience calculation
     items_columns = [
