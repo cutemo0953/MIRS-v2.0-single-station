@@ -2925,6 +2925,13 @@ if _static_dir.exists() and not IS_VERCEL:
 
 db = DatabaseManager(config.DATABASE_PATH)
 
+# Vercel: 立即在模組載入時初始化 demo 資料 (不等待 startup event)
+if IS_VERCEL:
+    from seeder_demo import seed_mirs_demo
+    _conn = db.get_connection()
+    seed_mirs_demo(_conn)
+    logger.info("✓ [MIRS] Demo mode initialized (module load)")
+
 
 # ========== 背景任務：每日設備重置 (v1.4.5) ==========
 
