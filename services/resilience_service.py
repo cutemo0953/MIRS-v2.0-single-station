@@ -1,0 +1,988 @@
+"""
+韌性計算服務 (Resilience Calculation Service)
+Based on: IRS_RESILIENCE_FRAMEWORK.md v1.0
+
+Provides endurance calculation for oxygen, power, and reagents
+with dependency chain resolution.
+"""
+
+import sqlite3
+from datetime import datetime
+from typing import Optional, Dict, List, Any
+from dataclasses import dataclass
+from enum import Enum
+
+
+class StatusLevel(str, Enum):
+    """韌性警戒狀態"""
+    SAFE = "SAFE"           # Green: >= 120% of isolation target
+    WARNING = "WARNING"     # Yellow: 100-120% of isolation target
+    CRITICAL = "CRITICAL"   # Red: < 100% of isolation target
+    UNKNOWN = "UNKNOWN"     # Gray: Cannot calculate
+
+
+@dataclass
+class EnduranceResult:
+    """單項韌性計算結果"""
+    item_code: str
+    item_name: str
+    endurance_type: str
+    inventory: Dict[str, Any]
+    consumption: Dict[str, Any]
+    raw_hours: float
+    effective_hours: float
+    effective_days: float
+    dependency: Optional[Dict[str, Any]]
+    status: StatusLevel
+    vs_isolation: Dict[str, Any]
+    message: str
+
+
+@dataclass
+class ReagentEndurance:
+    """試劑韌性計算結果"""
+    item_code: str
+    item_name: str
+    tests_remaining: int
+    tests_per_day: float
+    days_by_volume: float
+    days_by_expiry: Optional[float]
+    effective_days: float
+    limited_by: str  # 'VOLUME' or 'EXPIRY'
+    status: StatusLevel
+    alert: Optional[str]
+
+
+class ResilienceService:
+    """
+    韌性計算服務
+
+    實作 IRS Resilience Framework 的三大定律:
+    1. Law of Capacity: Total Usable = Σ(quantity × capacity_per_unit)
+    2. Law of Dependency: Endurance(A) = MIN(Endurance(A), Endurance(Dependency_B))
+    3. Law of Weakest Link: Effective Days = MIN(volume_days, expiry_days)
+    """
+
+    def __init__(self, db_path: str):
+        """初始化服務"""
+        self.db_path = db_path
+
+    def _get_connection(self) -> sqlite3.Connection:
+        """取得資料庫連接"""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    # =========================================================================
+    # Configuration Methods
+    # =========================================================================
+
+    def get_config(self, station_id: str) -> Dict[str, Any]:
+        """取得站點韌性設定"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT * FROM resilience_config WHERE station_id = ?
+        """, (station_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            # Return defaults
+            conn.close()
+            return {
+                'station_id': station_id,
+                'isolation_target_days': 3,
+                'population_count': 1,
+                'population_label': '人數',
+                'threshold_safe': 1.2,
+                'threshold_warning': 1.0
+            }
+
+        result = dict(row)
+        conn.close()
+        return result
+
+    def update_config(self, station_id: str, config: Dict[str, Any]) -> bool:
+        """更新站點韌性設定"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT OR REPLACE INTO resilience_config (
+                station_id, isolation_target_days, population_count,
+                population_label, oxygen_profile_id, power_profile_id,
+                reagent_profile_id, threshold_safe, threshold_warning,
+                updated_at, updated_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            station_id,
+            config.get('isolation_target_days', 3),
+            config.get('population_count', 1),
+            config.get('population_label', '人數'),
+            config.get('oxygen_profile_id'),
+            config.get('power_profile_id'),
+            config.get('reagent_profile_id'),
+            config.get('threshold_safe', 1.2),
+            config.get('threshold_warning', 1.0),
+            datetime.now().isoformat(),
+            config.get('updated_by', 'SYSTEM')
+        ))
+
+        conn.commit()
+        conn.close()
+        return True
+
+    # =========================================================================
+    # Profile Methods
+    # =========================================================================
+
+    def get_profiles(self, endurance_type: str, station_id: str = '*') -> List[Dict[str, Any]]:
+        """取得情境設定列表"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT * FROM resilience_profiles
+            WHERE endurance_type = ? AND (station_id = '*' OR station_id = ?)
+            ORDER BY sort_order, id
+        """, (endurance_type, station_id))
+
+        results = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return results
+
+    def get_profile(self, profile_id: int) -> Optional[Dict[str, Any]]:
+        """取得單一情境設定"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM resilience_profiles WHERE id = ?", (profile_id,))
+        row = cursor.fetchone()
+        conn.close()
+
+        return dict(row) if row else None
+
+    def create_profile(self, profile: Dict[str, Any]) -> int:
+        """建立自訂情境設定"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO resilience_profiles (
+                station_id, endurance_type, profile_name, profile_name_en,
+                burn_rate, burn_rate_unit, population_multiplier,
+                description, is_default, sort_order
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            profile.get('station_id', '*'),
+            profile['endurance_type'],
+            profile['profile_name'],
+            profile.get('profile_name_en'),
+            profile['burn_rate'],
+            profile['burn_rate_unit'],
+            profile.get('population_multiplier', 0),
+            profile.get('description'),
+            0,  # Custom profiles are never default
+            profile.get('sort_order', 99)
+        ))
+
+        profile_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return profile_id
+
+    # =========================================================================
+    # Equipment-based Resilience Calculation (v1.2.2)
+    # =========================================================================
+
+    # Mapping: equipment_id -> (capacity_per_unit, capacity_unit, item_name, endurance_type)
+    # Note: This map is for legacy fuel-based power calculation
+    # v1.2.3: Power stations are now calculated via capacity_wh/output_watts fields
+    EQUIPMENT_CAPACITY_MAP = {
+        # Oxygen equipment
+        'RESP-001': (6900, 'liters', 'H型氧氣瓶', 'OXYGEN'),      # H-type cylinder
+        'EMER-EQ-006': (680, 'liters', 'E型氧氣瓶', 'OXYGEN'),    # E-type cylinder
+        'RESP-002': (None, 'L/min', '氧氣濃縮機', 'OXYGEN'),      # Concentrator (infinite with power)
+        # Power equipment (generator fuel)
+        'UTIL-002': (50, 'liters', '發電機油箱', 'POWER'),        # Generator tank (50L default)
+    }
+
+    def _get_equipment_stock(self, station_id: str, endurance_type: str) -> List[Dict[str, Any]]:
+        """
+        從設備表取得韌性相關設備數量 (v1.2.6)
+        支援 PER_UNIT 追蹤模式，回傳個別單位狀態
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        # Get equipment with tracking mode
+        cursor.execute("""
+            SELECT id, name, quantity, power_level, tracking_mode
+            FROM equipment
+        """)
+
+        results = []
+        for row in cursor.fetchall():
+            eq_id = row['id']
+            if eq_id in self.EQUIPMENT_CAPACITY_MAP:
+                capacity, unit, name, eq_type = self.EQUIPMENT_CAPACITY_MAP[eq_id]
+                if eq_type == endurance_type:
+                    tracking_mode = row['tracking_mode'] or 'AGGREGATE'
+
+                    if tracking_mode == 'PER_UNIT' and capacity:
+                        # v1.2.7: 從 equipment_units 取得個別單位 (含 last_check)
+                        cursor.execute("""
+                            SELECT unit_label, level_percent, status, last_check
+                            FROM equipment_units
+                            WHERE equipment_id = ?
+                            ORDER BY unit_label
+                        """, (eq_id,))
+                        units = cursor.fetchall()
+
+                        if units:
+                            # 計算總有效容量 (每單位容量 × 充填%)
+                            total_effective = sum(
+                                capacity * (u['level_percent'] / 100.0)
+                                for u in units
+                            )
+                            avg_level = sum(u['level_percent'] for u in units) / len(units)
+                            checked_count = sum(1 for u in units if u['last_check'])
+
+                            results.append({
+                                'item_code': eq_id,
+                                'item_name': row['name'] or name,
+                                'endurance_type': eq_type,
+                                'capacity_per_unit': capacity,
+                                'capacity_unit': unit,
+                                'stock': len(units),
+                                'depends_on_item_code': None,
+                                'power_level': round(avg_level, 1),
+                                'tracking_mode': 'PER_UNIT',
+                                'units': [
+                                    {
+                                        'label': u['unit_label'],
+                                        'level': u['level_percent'],
+                                        'status': u['status'],
+                                        'capacity': round(capacity * u['level_percent'] / 100.0, 0),
+                                        'checked': u['last_check'] is not None,
+                                        'last_check': u['last_check']
+                                    } for u in units
+                                ],
+                                'total_effective_capacity': round(total_effective, 0),
+                                'checked_count': checked_count
+                            })
+                            continue
+
+                    # AGGREGATE mode (default)
+                    qty = row['quantity'] or 1
+                    level = row['power_level']
+                    if level is not None and capacity:
+                        effective_capacity = capacity * (level / 100.0)
+                    else:
+                        effective_capacity = capacity
+
+                    results.append({
+                        'item_code': eq_id,
+                        'item_name': row['name'] or name,
+                        'endurance_type': eq_type,
+                        'capacity_per_unit': effective_capacity,
+                        'capacity_unit': unit,
+                        'stock': qty,
+                        'depends_on_item_code': 'GEN-FUEL-20L' if capacity is None else None,
+                        'power_level': level,
+                        'tracking_mode': 'AGGREGATE'
+                    })
+
+        conn.close()
+        return results
+
+    # =========================================================================
+    # Inventory Calculation Methods
+    # =========================================================================
+
+    def _get_stock_by_type(self, station_id: str, endurance_type: str) -> List[Dict[str, Any]]:
+        """取得特定類型的庫存項目及數量"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        # Sum inventory events for each item
+        cursor.execute("""
+            SELECT
+                i.item_code,
+                i.item_name,
+                i.endurance_type,
+                i.capacity_per_unit,
+                i.capacity_unit,
+                i.tests_per_unit,
+                i.valid_days_after_open,
+                i.depends_on_item_code,
+                i.dependency_note,
+                COALESCE(SUM(
+                    CASE
+                        WHEN e.event_type = 'RECEIVE' THEN e.quantity
+                        ELSE -e.quantity
+                    END
+                ), 0) as stock
+            FROM items i
+            LEFT JOIN inventory_events e ON i.item_code = e.item_code AND e.station_id = ?
+            WHERE i.endurance_type = ?
+            GROUP BY i.item_code
+            HAVING stock > 0 OR i.depends_on_item_code IS NOT NULL
+        """, (station_id, endurance_type))
+
+        results = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return results
+
+    def _calculate_total_capacity(self, items: List[Dict[str, Any]]) -> float:
+        """計算總容量 (Law of Capacity)"""
+        total = 0.0
+        for item in items:
+            if item.get('capacity_per_unit') and item.get('stock'):
+                total += item['capacity_per_unit'] * item['stock']
+        return total
+
+    def _calculate_hours(
+        self,
+        total_capacity: float,
+        burn_rate: float,
+        burn_rate_unit: str
+    ) -> float:
+        """計算可用時數"""
+        if burn_rate <= 0:
+            return float('inf')
+
+        if burn_rate_unit == 'L/min':
+            # Convert L/min to hours: capacity / (rate * 60)
+            return total_capacity / (burn_rate * 60)
+        elif burn_rate_unit == 'L/hr':
+            return total_capacity / burn_rate
+        elif burn_rate_unit == 'tests/day':
+            # Convert to hours
+            return (total_capacity / burn_rate) * 24
+        else:
+            # Assume hourly rate
+            return total_capacity / burn_rate
+
+    def _determine_status(
+        self,
+        hours_remaining: float,
+        isolation_hours: float,
+        threshold_safe: float = 1.2,
+        threshold_warning: float = 1.0
+    ) -> StatusLevel:
+        """判斷警戒狀態"""
+        if isolation_hours <= 0:
+            return StatusLevel.UNKNOWN
+
+        if hours_remaining == float('inf'):
+            return StatusLevel.SAFE
+
+        ratio = hours_remaining / isolation_hours
+
+        if ratio >= threshold_safe:
+            return StatusLevel.SAFE
+        elif ratio >= threshold_warning:
+            return StatusLevel.WARNING
+        else:
+            return StatusLevel.CRITICAL
+
+    # =========================================================================
+    # Main Calculation Method
+    # =========================================================================
+
+    def calculate_resilience_status(self, station_id: str) -> Dict[str, Any]:
+        """
+        計算站點完整韌性狀態
+
+        Returns:
+            完整韌性狀態 JSON (符合 IRS Framework API Response Format)
+        """
+        # Get configuration
+        config = self.get_config(station_id)
+        isolation_days = config.get('isolation_target_days', 3)
+        isolation_hours = isolation_days * 24
+        population = config.get('population_count', 1)
+
+        # Get active profiles
+        oxygen_profile = self.get_profile(config.get('oxygen_profile_id')) or \
+                        self._get_default_profile('OXYGEN')
+        power_profile = self.get_profile(config.get('power_profile_id')) or \
+                       self._get_default_profile('POWER')
+        reagent_profile = self.get_profile(config.get('reagent_profile_id')) or \
+                         self._get_default_profile('REAGENT')
+
+        # Calculate lifelines
+        lifelines = []
+        endurance_map = {}  # For dependency resolution
+
+        # 1. Calculate Power (must be first for dependency)
+        power_result = self._calculate_power_endurance(
+            station_id, power_profile, isolation_hours, config
+        )
+        if power_result:
+            lifelines.append(power_result)
+            endurance_map['POWER'] = power_result['endurance']['effective_hours']
+
+        # 2. Calculate Oxygen (may depend on power)
+        oxygen_results = self._calculate_oxygen_endurance(
+            station_id, oxygen_profile, isolation_hours, config, endurance_map
+        )
+        lifelines.extend(oxygen_results)
+
+        # 3. Calculate Reagents
+        reagents = self._calculate_reagent_endurance(
+            station_id, reagent_profile, isolation_days, config
+        )
+
+        # Determine overall status
+        all_statuses = [l['status'] for l in lifelines] + [r['status'] for r in reagents]
+        if StatusLevel.CRITICAL.value in all_statuses:
+            overall_status = StatusLevel.CRITICAL.value
+        elif StatusLevel.WARNING.value in all_statuses:
+            overall_status = StatusLevel.WARNING.value
+        elif StatusLevel.UNKNOWN.value in all_statuses:
+            overall_status = StatusLevel.UNKNOWN.value
+        else:
+            overall_status = StatusLevel.SAFE.value
+
+        # Find weakest link
+        weakest = None
+        min_hours = float('inf')
+        for l in lifelines:
+            eff_hours = l['endurance']['effective_hours']
+            # Handle string '∞' or actual infinity
+            if isinstance(eff_hours, str) or eff_hours == float('inf'):
+                continue
+            if eff_hours < min_hours:
+                min_hours = eff_hours
+                weakest = {
+                    'item': l['name'],
+                    'hours': eff_hours,
+                    'type': l['type']
+                }
+
+        # Build response
+        return {
+            'system': 'MIRS',
+            'version': '1.0',
+            'station_id': station_id,
+            'calculated_at': datetime.now().isoformat(),
+            'context': {
+                'isolation_target_days': isolation_days,
+                'isolation_target_hours': isolation_hours,
+                'isolation_source': config.get('isolation_source', 'manual'),
+                'population': {
+                    'count': population,
+                    'label': config.get('population_label', '人數')
+                }
+            },
+            'lifelines': lifelines,
+            'reagents': reagents,
+            'summary': {
+                'overall_status': overall_status,
+                'weakest_link': weakest,
+                'can_survive_isolation': overall_status != StatusLevel.CRITICAL.value,
+                'critical_items': [l['item_code'] for l in lifelines if l['status'] == StatusLevel.CRITICAL.value],
+                'warning_items': [l['item_code'] for l in lifelines if l['status'] == StatusLevel.WARNING.value]
+            }
+        }
+
+    def _get_default_profile(self, endurance_type: str) -> Dict[str, Any]:
+        """取得預設情境設定"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT * FROM resilience_profiles
+            WHERE endurance_type = ? AND is_default = 1
+            LIMIT 1
+        """, (endurance_type,))
+
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            return dict(row)
+
+        # Hardcoded fallbacks
+        defaults = {
+            'OXYGEN': {'burn_rate': 10, 'burn_rate_unit': 'L/min', 'profile_name': '1位插管患者', 'population_multiplier': 1},
+            'POWER': {'burn_rate': 3.0, 'burn_rate_unit': 'L/hr', 'profile_name': '標準運作', 'population_multiplier': 0},
+            'REAGENT': {'burn_rate': 5, 'burn_rate_unit': 'tests/day', 'profile_name': '平時', 'population_multiplier': 0}
+        }
+        return defaults.get(endurance_type, {})
+
+    def _calculate_power_endurance(
+        self,
+        station_id: str,
+        profile: Dict[str, Any],
+        isolation_hours: float,
+        config: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """
+        計算電力韌性 - v1.2.5: 設備瓦數累計計算
+
+        計算邏輯：
+        1. 總負載 = Σ(設備.power_watts) 從所有耗電設備
+        2. 電源站時數 = capacity_wh × (power_level/100) ÷ 總負載
+        3. 發電機時數 = 油量 ÷ fuel_rate_lph
+        4. 總時數 = 電源站時數 + 發電機時數 (依序使用)
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        # 1. 計算總負載 (所有有 power_watts 的設備)
+        cursor.execute("""
+            SELECT id, name, power_watts
+            FROM equipment
+            WHERE power_watts IS NOT NULL AND power_watts > 0
+        """)
+        consuming_equipment = cursor.fetchall()
+        total_load_watts = sum(row['power_watts'] for row in consuming_equipment)
+
+        # 如果沒有耗電設備，使用預設負載
+        if total_load_watts == 0:
+            total_load_watts = profile.get('burn_rate', 900)  # 預設 900W
+
+        # 2. 取得電源站 (有 capacity_wh 的設備)
+        cursor.execute("""
+            SELECT id, name, capacity_wh, output_watts, power_level
+            FROM equipment
+            WHERE capacity_wh IS NOT NULL AND capacity_wh > 0
+        """)
+        power_stations = cursor.fetchall()
+
+        # 3. 取得發電機 (有 fuel_rate_lph 的設備)
+        cursor.execute("""
+            SELECT id, name, output_watts, fuel_rate_lph, power_level
+            FROM equipment
+            WHERE fuel_rate_lph IS NOT NULL AND fuel_rate_lph > 0
+        """)
+        generators = cursor.fetchall()
+
+        # 4. 取得備用油料 (FUEL_RESERVE 類型設備)
+        cursor.execute("""
+            SELECT SUM(quantity * 20) as total_fuel
+            FROM equipment
+            WHERE device_type = 'FUEL_RESERVE'
+               OR name LIKE '%備用油%'
+               OR name LIKE '%油桶%'
+        """)
+        fuel_row = cursor.fetchone()
+        extra_fuel = fuel_row['total_fuel'] if fuel_row and fuel_row['total_fuel'] else 0
+
+        conn.close()
+
+        # 計算各電源可用時數
+        sources = []
+        total_battery_wh = 0
+        total_fuel_liters = extra_fuel
+
+        # 電源站計算
+        for ps in power_stations:
+            capacity = ps['capacity_wh']
+            level = ps['power_level'] if ps['power_level'] is not None else 100
+            available_wh = capacity * (level / 100.0)
+            hours = available_wh / total_load_watts if total_load_watts > 0 else 0
+            total_battery_wh += available_wh
+
+            sources.append({
+                'name': f"{ps['name']} ({level}%)",
+                'capacity': f"{capacity} Wh",
+                'available': f"{available_wh:.1f} Wh",
+                'hours': round(hours, 1)
+            })
+
+        # 發電機計算 (假設有足夠油料)
+        for gen in generators:
+            fuel_rate = gen['fuel_rate_lph']
+            # 發電機油量：power_level 代表油箱百分比，假設 50L 油箱
+            tank_capacity = 50  # 預設 50L 油箱
+            level = gen['power_level'] if gen['power_level'] is not None else 100
+            tank_fuel = tank_capacity * (level / 100.0)
+            total_fuel_liters += tank_fuel
+
+            gen_hours = (tank_fuel + extra_fuel) / fuel_rate if fuel_rate > 0 else 0
+
+            sources.append({
+                'name': f"{gen['name']} (燃油 {tank_fuel + extra_fuel:.1f}L)",
+                'capacity': f"{gen['output_watts']}W, {fuel_rate}L/hr",
+                'available': f"{gen_hours:.1f} hr 運轉",
+                'hours': round(gen_hours, 1)
+            })
+
+        # 總時數 = 電池時數 + 發電機時數
+        battery_hours = total_battery_wh / total_load_watts if total_load_watts > 0 else 0
+
+        # 發電機時數 (使用第一台發電機的油耗率)
+        gen_fuel_rate = generators[0]['fuel_rate_lph'] if generators else 1.5
+        generator_hours = total_fuel_liters / gen_fuel_rate if gen_fuel_rate > 0 else 0
+
+        total_hours = battery_hours + generator_hours
+
+        status = self._determine_status(
+            total_hours, isolation_hours,
+            config.get('threshold_safe', 1.2),
+            config.get('threshold_warning', 1.0)
+        )
+
+        ratio = total_hours / isolation_hours if isolation_hours > 0 else 0
+        can_survive = ratio >= 1.0
+        gap = max(0, isolation_hours - total_hours)
+
+        return {
+            'item_code': 'POWER-TOTAL',
+            'name': '電力供應',
+            'type': 'POWER',
+            'inventory': {
+                'sources': sources,
+                'total_battery_wh': round(total_battery_wh, 1),
+                'total_fuel_liters': round(total_fuel_liters, 1),
+                'capacity_unit': 'Wh'
+            },
+            'consumption': {
+                'profile_name': profile.get('profile_name', '標準運作'),
+                'load_watts': total_load_watts,
+                'load_display': f"{total_load_watts} W",
+                'equipment_count': len(consuming_equipment),
+                'equipment_list': [eq['name'] for eq in consuming_equipment[:5]]  # 前5項
+            },
+            'endurance': {
+                'battery_hours': round(battery_hours, 1),
+                'generator_hours': round(generator_hours, 1),
+                'raw_hours': round(total_hours, 1),
+                'effective_hours': round(total_hours, 1),
+                'effective_days': round(total_hours / 24, 1)
+            },
+            'dependency': None,
+            'status': status.value,
+            'vs_isolation': {
+                'ratio': round(ratio, 2),
+                'can_survive': can_survive,
+                'gap_hours': round(gap, 1) if not can_survive else 0,
+                'gap_display': f"缺口 {gap:.1f} 小時" if not can_survive else None
+            },
+            'message': self._generate_message('POWER', total_hours, isolation_hours, status)
+        }
+
+    def _calculate_oxygen_endurance(
+        self,
+        station_id: str,
+        profile: Dict[str, Any],
+        isolation_hours: float,
+        config: Dict[str, Any],
+        endurance_map: Dict[str, float]
+    ) -> List[Dict[str, Any]]:
+        """計算氧氣韌性 (含依賴解析) - v1.2.2: 使用設備表數量"""
+        # v1.2.2: 優先使用設備表數量，備用庫存表
+        items = self._get_equipment_stock(station_id, 'OXYGEN')
+        if not items:
+            # Fallback to inventory
+            items = self._get_stock_by_type(station_id, 'OXYGEN')
+        if not items:
+            return []
+
+        results = []
+        burn_rate = profile.get('burn_rate', 10)  # L/min
+
+        # Apply population multiplier if configured (e.g., 2 ventilated patients = 2x oxygen)
+        population = config.get('population_count', 1)
+        if profile.get('population_multiplier', 0):
+            if population == 0:
+                burn_rate = 0  # No oxygen demand
+            elif population > 1:
+                burn_rate = burn_rate * population
+
+        # Separate cylinders and concentrators
+        cylinders = [i for i in items if i.get('capacity_per_unit')]
+        concentrators = [i for i in items if not i.get('capacity_per_unit')]
+
+        # Calculate cylinder endurance (v1.2.6: 支援 PER_UNIT 追蹤)
+        if cylinders:
+            # 計算總有效容量
+            total_liters = 0
+            inventory_items = []
+
+            for c in cylinders:
+                if c.get('tracking_mode') == 'PER_UNIT' and c.get('total_effective_capacity'):
+                    # 使用個別追蹤的實際容量
+                    total_liters += c['total_effective_capacity']
+                    inventory_items.append({
+                        'name': c['item_name'],
+                        'qty': c['stock'],
+                        'capacity_each': c['capacity_per_unit'],
+                        'avg_level': c.get('power_level'),
+                        'effective_total': c['total_effective_capacity'],
+                        'unit': 'liters',
+                        'tracking_mode': 'PER_UNIT',
+                        'units': c.get('units', [])  # 個別單位詳情
+                    })
+                else:
+                    # AGGREGATE 模式
+                    effective = c['capacity_per_unit'] * c['stock']
+                    total_liters += effective
+                    inventory_items.append({
+                        'name': c['item_name'],
+                        'qty': c['stock'],
+                        'capacity_each': c['capacity_per_unit'],
+                        'unit': 'liters',
+                        'tracking_mode': 'AGGREGATE'
+                    })
+
+            hours = self._calculate_hours(total_liters, burn_rate, 'L/min')
+
+            status = self._determine_status(
+                hours, isolation_hours,
+                config.get('threshold_safe', 1.2),
+                config.get('threshold_warning', 1.0)
+            )
+
+            ratio = hours / isolation_hours if isolation_hours > 0 else 0
+            can_survive = ratio >= 1.0
+            gap = max(0, isolation_hours - hours)
+
+            results.append({
+                'item_code': 'O2-SUPPLY',
+                'name': '氧氣供應(鋼瓶)',
+                'type': 'OXYGEN',
+                'inventory': {
+                    'items': inventory_items,
+                    'total_capacity': round(total_liters, 0),
+                    'capacity_unit': 'liters'
+                },
+                'consumption': {
+                    'profile_name': profile.get('profile_name', '1位插管患者'),
+                    'burn_rate': burn_rate,
+                    'burn_rate_unit': 'L/min',
+                    'burn_rate_display': f"{burn_rate} L/min"
+                },
+                'endurance': {
+                    'raw_hours': round(hours, 1),
+                    'effective_hours': round(hours, 1),
+                    'effective_days': round(hours / 24, 2)
+                },
+                'dependency': None,
+                'status': status.value,
+                'vs_isolation': {
+                    'ratio': round(ratio, 2),
+                    'can_survive': can_survive,
+                    'gap_hours': round(gap, 1) if not can_survive else 0,
+                    'gap_display': f"缺口 {gap:.1f} 小時" if not can_survive else None
+                },
+                'message': self._generate_message('OXYGEN', hours, isolation_hours, status)
+            })
+
+        # Calculate concentrator endurance (with dependency)
+        for conc in concentrators:
+            raw_hours = float('inf')  # Infinite as long as power available
+            effective_hours = raw_hours
+
+            dependency = None
+            if conc.get('depends_on_item_code'):
+                power_hours = endurance_map.get('POWER', float('inf'))
+                if power_hours < raw_hours:
+                    effective_hours = power_hours
+                    dependency = {
+                        'depends_on': conc['depends_on_item_code'],
+                        'dependency_name': '發電機電力',
+                        'is_limiting': True,
+                        'warning': f"⚠️ 受限於發電機電力：當油料耗盡時，{conc['item_name']} 將停止運作"
+                    }
+
+            status = self._determine_status(
+                effective_hours, isolation_hours,
+                config.get('threshold_safe', 1.2),
+                config.get('threshold_warning', 1.0)
+            )
+
+            ratio = effective_hours / isolation_hours if isolation_hours > 0 else 0
+
+            results.append({
+                'item_code': conc['item_code'],
+                'name': conc['item_name'],
+                'type': 'OXYGEN',
+                'inventory': {
+                    'items': [{
+                        'name': conc['item_name'],
+                        'qty': conc['stock'],
+                        'capacity_each': None,  # 製造機持續供氧，無固定容量
+                        'unit': 'device'
+                    }],
+                    'total_capacity': None,
+                    'note': '持續供氧 (需電力)'
+                },
+                'consumption': {
+                    'profile_name': '持續供氧',
+                    'burn_rate': 5 if '5L' in conc['item_name'] else 10,
+                    'burn_rate_unit': 'L/min',
+                    'burn_rate_display': f"持續供氧"
+                },
+                'endurance': {
+                    'raw_hours': '∞' if raw_hours == float('inf') else round(raw_hours, 1),
+                    'effective_hours': round(effective_hours, 1) if effective_hours != float('inf') else '∞',
+                    'effective_days': round(effective_hours / 24, 1) if effective_hours != float('inf') else '∞'
+                },
+                'dependency': dependency,
+                'status': status.value,
+                'vs_isolation': {
+                    'ratio': round(ratio, 2) if ratio != float('inf') else '∞',
+                    'can_survive': ratio >= 1.0 if ratio != float('inf') else True
+                },
+                'message': f"製造機本身無限供氧，但受限於發電機（{effective_hours:.0f}小時）" if dependency else "製造機供氧正常"
+            })
+
+        return results
+
+    def _calculate_reagent_endurance(
+        self,
+        station_id: str,
+        profile: Dict[str, Any],
+        isolation_days: float,
+        config: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """計算試劑韌性 (含開封效期邏輯)"""
+        items = self._get_stock_by_type(station_id, 'REAGENT')
+        if not items:
+            return []
+
+        tests_per_day = profile.get('burn_rate', 5)
+        results = []
+
+        for item in items:
+            stock = item.get('stock', 0)
+            tests_per_unit = item.get('tests_per_unit', 1)
+            valid_days = item.get('valid_days_after_open')
+
+            total_tests = stock * tests_per_unit
+            days_by_volume = total_tests / tests_per_day if tests_per_day > 0 else float('inf')
+
+            # Check for open records
+            days_by_expiry = None
+            limited_by = 'VOLUME'
+            alert = None
+
+            if valid_days:
+                open_record = self._get_open_reagent(station_id, item['item_code'])
+                if open_record:
+                    days_since_open = (datetime.now() - datetime.fromisoformat(open_record['opened_at'])).days
+                    days_by_expiry = max(0, valid_days - days_since_open)
+
+                    if days_by_expiry < days_by_volume:
+                        limited_by = 'EXPIRY'
+                        alert = f"⚠️ 效期限制：試劑將於 {days_by_expiry} 天後失效（開封已 {days_since_open} 天）"
+
+            effective_days = min(days_by_volume, days_by_expiry) if days_by_expiry else days_by_volume
+
+            status = self._determine_status(
+                effective_days * 24,  # Convert to hours
+                isolation_days * 24,
+                config.get('threshold_safe', 1.2),
+                config.get('threshold_warning', 1.0)
+            )
+
+            results.append({
+                'item_code': item['item_code'],
+                'name': item['item_name'],
+                'inventory': {
+                    'kits_remaining': stock,
+                    'tests_per_kit': tests_per_unit,
+                    'tests_remaining': total_tests
+                },
+                'consumption': {
+                    'profile_name': profile.get('profile_name', '平時'),
+                    'tests_per_day': tests_per_day
+                },
+                'endurance': {
+                    'days_by_volume': round(days_by_volume, 1),
+                    'days_by_expiry': round(days_by_expiry, 1) if days_by_expiry else None,
+                    'effective_days': round(effective_days, 1),
+                    'limited_by': limited_by
+                },
+                'status': status.value,
+                'alert': alert
+            })
+
+        return results
+
+    def _get_open_reagent(self, station_id: str, item_code: str) -> Optional[Dict[str, Any]]:
+        """取得開封中的試劑記錄"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT * FROM reagent_open_records
+            WHERE station_id = ? AND item_code = ? AND is_active = 1
+            ORDER BY opened_at DESC LIMIT 1
+        """, (station_id, item_code))
+
+        row = cursor.fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def mark_reagent_opened(
+        self,
+        station_id: str,
+        item_code: str,
+        batch_number: str = None,
+        tests_remaining: int = None,
+        opened_by: str = 'SYSTEM'
+    ) -> int:
+        """標記試劑已開封"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        # Deactivate previous open records
+        cursor.execute("""
+            UPDATE reagent_open_records
+            SET is_active = 0
+            WHERE station_id = ? AND item_code = ? AND is_active = 1
+        """, (station_id, item_code))
+
+        # Create new open record
+        cursor.execute("""
+            INSERT INTO reagent_open_records (
+                item_code, batch_number, station_id, opened_at,
+                tests_remaining, is_active, created_by
+            ) VALUES (?, ?, ?, ?, ?, 1, ?)
+        """, (item_code, batch_number, station_id, datetime.now().isoformat(),
+              tests_remaining, opened_by))
+
+        record_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return record_id
+
+    def _generate_message(
+        self,
+        endurance_type: str,
+        hours: float,
+        isolation_hours: float,
+        status: StatusLevel
+    ) -> str:
+        """生成狀態訊息"""
+        type_names = {
+            'OXYGEN': '氧氣',
+            'POWER': '電力',
+            'REAGENT': '試劑'
+        }
+        name = type_names.get(endurance_type, '物資')
+
+        if hours == float('inf'):
+            return f"{name}供應充足"
+
+        days = hours / 24
+        isolation_days = isolation_hours / 24
+
+        if status == StatusLevel.CRITICAL:
+            gap = isolation_hours - hours
+            return f"{name}僅剩 {hours:.1f} 小時，無法撐過 {isolation_days:.0f} 天斷航期（缺口 {gap:.1f} 小時）"
+        elif status == StatusLevel.WARNING:
+            return f"{name}可撐 {hours:.1f} 小時 ({days:.1f}天)，建議補充"
+        else:
+            return f"{name}充足，可撐 {hours:.1f} 小時 ({days:.1f}天)"
+
+
+# Export
+__all__ = ['ResilienceService', 'StatusLevel', 'EnduranceResult', 'ReagentEndurance']

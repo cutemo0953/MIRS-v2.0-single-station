@@ -3782,6 +3782,319 @@ async def check_equipment(equipment_id: str, request: EquipmentCheckRequest):
     return db.check_equipment(equipment_id, request)
 
 
+# v1.2.7: 更新設備單位 (個別鋼瓶追蹤)
+class EquipmentUnitUpdateRequest(BaseModel):
+    equipment_id: str
+    unit_label: str
+    level_percent: int = Field(ge=0, le=100)
+    status: str = "AVAILABLE"
+
+
+@app.post("/api/equipment/units/update")
+async def update_equipment_unit(request: EquipmentUnitUpdateRequest):
+    """更新設備單位狀態 (v1.2.8) - 含自動同步設備表 + 檢查記錄"""
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    try:
+        # 0. 取得更新前的狀態 (用於歷史記錄)
+        cursor.execute("""
+            SELECT level_percent, status
+            FROM equipment_units
+            WHERE equipment_id = ? AND unit_label = ?
+        """, (request.equipment_id, request.unit_label))
+        old_state = cursor.fetchone()
+        if not old_state:
+            raise HTTPException(status_code=404, detail=f"找不到單位 {request.unit_label}")
+
+        level_before = old_state['level_percent']
+        status_before = old_state['status']
+
+        # 1. 更新 equipment_units 表
+        cursor.execute("""
+            UPDATE equipment_units
+            SET level_percent = ?, status = ?, last_check = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE equipment_id = ? AND unit_label = ?
+        """, (request.level_percent, request.status, request.equipment_id, request.unit_label))
+
+        # 2. 記錄檢查歷史
+        cursor.execute("""
+            INSERT INTO equipment_check_history
+            (equipment_id, unit_label, check_date, check_time, level_before, level_after, status_before, status_after, station_id)
+            VALUES (?, ?, DATE('now'), CURRENT_TIMESTAMP, ?, ?, ?, ?, ?)
+        """, (request.equipment_id, request.unit_label, level_before, request.level_percent,
+              status_before, request.status, config.get_station_id()))
+
+        # 3. 計算該設備所有單位的平均 level
+        cursor.execute("""
+            SELECT AVG(level_percent) as avg_level,
+                   COUNT(*) as total,
+                   SUM(CASE WHEN last_check IS NOT NULL THEN 1 ELSE 0 END) as checked
+            FROM equipment_units
+            WHERE equipment_id = ?
+        """, (request.equipment_id,))
+        stats = cursor.fetchone()
+        avg_level = round(stats['avg_level']) if stats['avg_level'] else 0
+        all_checked = stats['checked'] == stats['total']
+
+        # 4. 同步更新 equipment 表的 power_level 和 status
+        new_status = 'NORMAL' if all_checked else 'PENDING'
+        cursor.execute("""
+            UPDATE equipment
+            SET power_level = ?, status = ?, last_check = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (avg_level, new_status, request.equipment_id))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "message": f"單位 {request.unit_label} 已更新為 {request.level_percent}% ({request.status})",
+            "avg_level": avg_level,
+            "equipment_status": new_status,
+            "checked_count": stats['checked'],
+            "total_count": stats['total']
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Update unit error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+class UnitResetRequest(BaseModel):
+    equipment_id: str
+    unit_label: str
+
+
+@app.post("/api/equipment/units/reset-check")
+async def reset_unit_check(request: UnitResetRequest):
+    """重置單位檢查狀態 (v1.2.8) - 設為未檢查，但保留歷史記錄"""
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    try:
+        # 1. 取得目前狀態
+        cursor.execute("""
+            SELECT level_percent, status, last_check
+            FROM equipment_units
+            WHERE equipment_id = ? AND unit_label = ?
+        """, (request.equipment_id, request.unit_label))
+        current = cursor.fetchone()
+        if not current:
+            raise HTTPException(status_code=404, detail=f"找不到單位 {request.unit_label}")
+
+        # 2. 記錄重置操作到歷史 (status_after = 'RESET')
+        cursor.execute("""
+            INSERT INTO equipment_check_history
+            (equipment_id, unit_label, check_date, check_time, level_before, level_after, status_before, status_after, station_id, remarks)
+            VALUES (?, ?, DATE('now'), CURRENT_TIMESTAMP, ?, ?, ?, 'RESET', ?, '檢查狀態重置')
+        """, (request.equipment_id, request.unit_label, current['level_percent'], current['level_percent'],
+              current['status'], config.get_station_id()))
+
+        # 3. 清除 last_check (設為未檢查)
+        cursor.execute("""
+            UPDATE equipment_units
+            SET last_check = NULL, updated_at = CURRENT_TIMESTAMP
+            WHERE equipment_id = ? AND unit_label = ?
+        """, (request.equipment_id, request.unit_label))
+
+        # 4. 重新計算設備狀態
+        cursor.execute("""
+            SELECT COUNT(*) as total,
+                   SUM(CASE WHEN last_check IS NOT NULL THEN 1 ELSE 0 END) as checked
+            FROM equipment_units
+            WHERE equipment_id = ?
+        """, (request.equipment_id,))
+        stats = cursor.fetchone()
+        all_checked = stats['checked'] == stats['total']
+        new_status = 'NORMAL' if all_checked else 'PENDING'
+
+        cursor.execute("""
+            UPDATE equipment
+            SET status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (new_status, request.equipment_id))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "message": f"單位 {request.unit_label} 已重置為未檢查",
+            "checked_count": stats['checked'],
+            "total_count": stats['total']
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Reset unit check error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+# v1.2.8: 檢查歷史報表 API
+@app.get("/api/equipment/check-history")
+async def get_check_history(
+    date: Optional[str] = Query(None, description="日期 YYYY-MM-DD"),
+    equipment_id: Optional[str] = Query(None),
+    limit: int = Query(100, le=500)
+):
+    """取得設備檢查歷史記錄"""
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+            SELECT h.*, e.name as equipment_name
+            FROM equipment_check_history h
+            LEFT JOIN equipment e ON h.equipment_id = e.id
+            WHERE 1=1
+        """
+        params = []
+
+        if date:
+            query += " AND h.check_date = ?"
+            params.append(date)
+        if equipment_id:
+            query += " AND h.equipment_id = ?"
+            params.append(equipment_id)
+
+        query += " ORDER BY h.check_time DESC LIMIT ?"
+        params.append(limit)
+
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+        return {
+            "success": True,
+            "records": [dict(row) for row in rows],
+            "total": len(rows)
+        }
+    except Exception as e:
+        logger.error(f"Get check history error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/equipment/check-summary")
+async def get_check_summary(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None)
+):
+    """取得每日檢查摘要"""
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+            SELECT
+                check_date,
+                COUNT(DISTINCT equipment_id) as equipment_checked,
+                COUNT(*) as total_checks,
+                COUNT(DISTINCT unit_label) as units_checked,
+                MIN(check_time) as first_check,
+                MAX(check_time) as last_check
+            FROM equipment_check_history
+            WHERE 1=1
+        """
+        params = []
+
+        if start_date:
+            query += " AND check_date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND check_date <= ?"
+            params.append(end_date)
+
+        query += " GROUP BY check_date ORDER BY check_date DESC LIMIT 30"
+
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+        return {
+            "success": True,
+            "summaries": [dict(row) for row in rows]
+        }
+    except Exception as e:
+        logger.error(f"Get check summary error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/equipment/check-report/{date}")
+async def get_daily_check_report(date: str):
+    """取得特定日期的完整檢查報表 (v1.2.8: 只顯示每單位最新狀態)"""
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    try:
+        # 取得當日每單位的最新檢查記錄 (排除 RESET，只取最新)
+        cursor.execute("""
+            SELECT h.*, e.name as equipment_name
+            FROM equipment_check_history h
+            LEFT JOIN equipment e ON h.equipment_id = e.id
+            INNER JOIN (
+                SELECT equipment_id, unit_label, MAX(check_time) as max_time
+                FROM equipment_check_history
+                WHERE check_date = ? AND status_after != 'RESET'
+                GROUP BY equipment_id, unit_label
+            ) latest ON h.equipment_id = latest.equipment_id
+                    AND h.unit_label = latest.unit_label
+                    AND h.check_time = latest.max_time
+            WHERE h.check_date = ? AND h.status_after != 'RESET'
+            ORDER BY h.equipment_id, h.unit_label
+        """, (date, date))
+        records = [dict(row) for row in cursor.fetchall()]
+
+        # 取得當日檢查的設備統計 (排除 RESET)
+        cursor.execute("""
+            SELECT
+                equipment_id,
+                COUNT(DISTINCT unit_label) as units_checked,
+                MIN(level_after) as min_level,
+                MAX(level_after) as max_level,
+                AVG(level_after) as avg_level
+            FROM equipment_check_history
+            WHERE check_date = ? AND status_after != 'RESET'
+            GROUP BY equipment_id
+        """, (date,))
+        equipment_stats = [dict(row) for row in cursor.fetchall()]
+
+        # 取得總計 (排除 RESET)
+        cursor.execute("""
+            SELECT
+                COUNT(DISTINCT equipment_id) as equipment_count,
+                COUNT(DISTINCT equipment_id || '-' || unit_label) as check_count,
+                COUNT(DISTINCT unit_label) as unit_count,
+                MIN(check_time) as first_check,
+                MAX(check_time) as last_check
+            FROM equipment_check_history
+            WHERE check_date = ? AND status_after != 'RESET'
+        """, (date,))
+        summary = dict(cursor.fetchone())
+
+        return {
+            "success": True,
+            "date": date,
+            "station_id": config.get_station_id(),
+            "summary": summary,
+            "equipment_stats": equipment_stats,
+            "records": records
+        }
+    except Exception as e:
+        logger.error(f"Get daily report error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
 @app.post("/api/equipment")
 async def create_equipment(request: EquipmentCreateRequest):
     """新增設備"""
@@ -4540,6 +4853,34 @@ async def emergency_download_all():
                     zipf.write(csv_path, "exports/equipment.csv")
                     logger.info("✓ 設備清單已導出")
 
+                # v1.2.8: 導出設備分項 (equipment_units)
+                try:
+                    units = cursor.execute("SELECT * FROM equipment_units").fetchall()
+                    if units:
+                        csv_path = exports_dir / "equipment_units.csv"
+                        with open(csv_path, 'w', encoding='utf-8-sig', newline='') as f:
+                            writer = csv.DictWriter(f, fieldnames=[desc[0] for desc in cursor.description])
+                            writer.writeheader()
+                            writer.writerows([dict(zip([desc[0] for desc in cursor.description], row)) for row in units])
+                        zipf.write(csv_path, "exports/equipment_units.csv")
+                        logger.info("✓ 設備分項已導出")
+                except Exception as e:
+                    logger.warning(f"設備分項導出失敗: {e}")
+
+                # v1.2.8: 導出檢查歷史 (equipment_check_history)
+                try:
+                    history = cursor.execute("SELECT * FROM equipment_check_history ORDER BY check_time DESC LIMIT 1000").fetchall()
+                    if history:
+                        csv_path = exports_dir / "equipment_check_history.csv"
+                        with open(csv_path, 'w', encoding='utf-8-sig', newline='') as f:
+                            writer = csv.DictWriter(f, fieldnames=[desc[0] for desc in cursor.description])
+                            writer.writeheader()
+                            writer.writerows([dict(zip([desc[0] for desc in cursor.description], row)) for row in history])
+                        zipf.write(csv_path, "exports/equipment_check_history.csv")
+                        logger.info("✓ 檢查歷史已導出")
+                except Exception as e:
+                    logger.warning(f"檢查歷史導出失敗: {e}")
+
             except Exception as e:
                 logger.warning(f"部分資料導出失敗: {e}")
 
@@ -4563,9 +4904,11 @@ async def emergency_download_all():
 -----------------------
 database/          完整資料庫檔案
 exports/           CSV格式資料
-  - inventory.csv     庫存清單
-  - blood_inventory.csv  血袋庫存
-  - equipment.csv     設備清單
+  - inventory.csv           庫存清單
+  - blood_inventory.csv     血袋庫存
+  - equipment.csv           設備清單
+  - equipment_units.csv     設備分項 (氧氣瓶充填%)
+  - equipment_check_history.csv  檢查歷史記錄
 config/            站點設定檔
 README.txt         本說明文件
 manifest.json      檔案清單與檢查碼
@@ -6489,6 +6832,176 @@ async def get_expiring_blood_bags(days: int = Query(7, ge=1, le=30)):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
+
+
+# ============================================================================
+# 韌性估算 API (Resilience Calculation)
+# Based on: IRS_RESILIENCE_FRAMEWORK.md v1.0
+# ============================================================================
+
+from services.resilience_service import ResilienceService, StatusLevel
+
+# Initialize resilience service
+resilience_service = ResilienceService(config.DATABASE_PATH)
+
+
+class ResilienceConfigUpdate(BaseModel):
+    """韌性設定更新請求"""
+    isolation_target_days: Optional[float] = Field(None, ge=1, le=30, description="預估孤立天數")
+    population_count: Optional[float] = Field(None, ge=0, le=100, description="等效插管人數 (插管=1.0, 面罩≈0.6, 鼻導管≈0.3)")
+    population_label: Optional[str] = Field(None, description="人數標籤")
+    oxygen_profile_id: Optional[int] = Field(None, description="氧氣情境設定ID")
+    power_profile_id: Optional[int] = Field(None, description="電力情境設定ID")
+    reagent_profile_id: Optional[int] = Field(None, description="試劑情境設定ID")
+    threshold_safe: Optional[float] = Field(None, ge=1.0, le=2.0, description="安全閾值")
+    threshold_warning: Optional[float] = Field(None, ge=0.5, le=1.5, description="警告閾值")
+
+
+class ProfileCreate(BaseModel):
+    """情境設定建立請求"""
+    endurance_type: str = Field(..., description="類型: OXYGEN/POWER/REAGENT")
+    profile_name: str = Field(..., description="情境名稱")
+    profile_name_en: Optional[str] = Field(None, description="英文名稱")
+    burn_rate: float = Field(..., gt=0, description="消耗率")
+    burn_rate_unit: str = Field(..., description="單位: L/min, L/hr, tests/day")
+    population_multiplier: Optional[int] = Field(0, description="是否乘以人數")
+    description: Optional[str] = Field(None, description="說明")
+
+
+class ReagentOpenRequest(BaseModel):
+    """試劑開封請求"""
+    item_code: str = Field(..., description="試劑代碼")
+    batch_number: Optional[str] = Field(None, description="批號")
+    tests_remaining: Optional[int] = Field(None, description="剩餘測試數")
+
+
+@app.get("/api/resilience/status")
+async def get_resilience_status(station_id: Optional[str] = Query(None)):
+    """
+    取得站點韌性狀態
+
+    計算氧氣、電力、試劑的維持時數/天數，
+    並與孤立天數目標比較，回傳警戒狀態。
+    """
+    try:
+        sid = station_id or config.get_station_id()
+        result = resilience_service.calculate_resilience_status(sid)
+        return result
+    except Exception as e:
+        logger.error(f"韌性狀態計算失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/resilience/config")
+async def get_resilience_config(station_id: Optional[str] = Query(None)):
+    """取得站點韌性設定"""
+    try:
+        sid = station_id or config.get_station_id()
+        return resilience_service.get_config(sid)
+    except Exception as e:
+        logger.error(f"取得韌性設定失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/resilience/config")
+async def update_resilience_config(
+    update: ResilienceConfigUpdate,
+    station_id: Optional[str] = Query(None)
+):
+    """更新站點韌性設定"""
+    try:
+        sid = station_id or config.get_station_id()
+        config_dict = update.model_dump(exclude_none=True)
+        config_dict['updated_by'] = 'API'
+
+        resilience_service.update_config(sid, config_dict)
+        return {"success": True, "message": "設定已更新"}
+    except Exception as e:
+        logger.error(f"更新韌性設定失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/resilience/profiles")
+async def get_resilience_profiles(
+    endurance_type: str = Query(..., description="類型: OXYGEN/POWER/REAGENT"),
+    station_id: Optional[str] = Query(None)
+):
+    """取得情境設定列表"""
+    try:
+        sid = station_id or config.get_station_id()
+        profiles = resilience_service.get_profiles(endurance_type, sid)
+        return {"profiles": profiles, "count": len(profiles)}
+    except Exception as e:
+        logger.error(f"取得情境設定失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/resilience/profiles")
+async def create_resilience_profile(
+    profile: ProfileCreate,
+    station_id: Optional[str] = Query(None)
+):
+    """建立自訂情境設定"""
+    try:
+        sid = station_id or config.get_station_id()
+        profile_dict = profile.model_dump()
+        profile_dict['station_id'] = sid
+
+        profile_id = resilience_service.create_profile(profile_dict)
+        return {"success": True, "profile_id": profile_id}
+    except Exception as e:
+        logger.error(f"建立情境設定失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/resilience/reagent/open")
+async def mark_reagent_opened(
+    request: ReagentOpenRequest,
+    station_id: Optional[str] = Query(None)
+):
+    """標記試劑已開封（啟動效期倒數）"""
+    try:
+        sid = station_id or config.get_station_id()
+        record_id = resilience_service.mark_reagent_opened(
+            station_id=sid,
+            item_code=request.item_code,
+            batch_number=request.batch_number,
+            tests_remaining=request.tests_remaining
+        )
+        return {
+            "success": True,
+            "record_id": record_id,
+            "message": f"試劑 {request.item_code} 已標記為開封"
+        }
+    except Exception as e:
+        logger.error(f"標記試劑開封失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/resilience/summary")
+async def get_resilience_summary(station_id: Optional[str] = Query(None)):
+    """
+    取得韌性摘要（簡化版，適合Dashboard顯示）
+    """
+    try:
+        sid = station_id or config.get_station_id()
+        full_status = resilience_service.calculate_resilience_status(sid)
+
+        # Extract summary
+        return {
+            "station_id": sid,
+            "overall_status": full_status['summary']['overall_status'],
+            "can_survive": full_status['summary']['can_survive_isolation'],
+            "weakest_link": full_status['summary']['weakest_link'],
+            "isolation_target_days": full_status['context']['isolation_target_days'],
+            "critical_count": len(full_status['summary']['critical_items']),
+            "warning_count": len(full_status['summary']['warning_items']),
+            "lifeline_count": len(full_status['lifelines']),
+            "reagent_count": len(full_status['reagents'])
+        }
+    except Exception as e:
+        logger.error(f"韌性摘要計算失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================

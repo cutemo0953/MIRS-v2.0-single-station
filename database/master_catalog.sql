@@ -157,6 +157,61 @@ INSERT OR IGNORE INTO items (item_code, item_name, item_category, category, unit
 ('DIAG-ECG-PORTABLE', '攜帶式心電圖機', 'EQUIPMENT', '診斷設備', '台', '12導程');
 
 -- ============================================================================
+-- REAGENTS - 檢驗試劑 (Life-Threatening Condition Related)
+-- ============================================================================
+
+-- Cardiac Emergency Reagents
+INSERT OR IGNORE INTO items (item_code, item_name, item_category, category, unit, specification) VALUES
+('REA-TROP-001', '心肌肌鈣蛋白 Troponin I 快篩試劑', 'REAGENT', '檢驗試劑', '組', '25 tests/kit, 心肌梗塞診斷'),
+('REA-BNP-001', 'BNP/NT-proBNP 心衰竭試劑', 'REAGENT', '檢驗試劑', '組', '25 tests/kit, 心衰竭診斷');
+
+-- Metabolic Emergency Reagents
+INSERT OR IGNORE INTO items (item_code, item_name, item_category, category, unit, specification) VALUES
+('REA-GLU-001', '血糖試紙', 'REAGENT', '檢驗試劑', '盒', '50 strips/box, DKA/低血糖'),
+('REA-ELEC-001', '電解質分析試劑 (Na/K/Cl)', 'REAGENT', '檢驗試劑', '組', '100 tests/kit, 心律不整/脫水'),
+('REA-ABG-001', '血液氣體分析卡匣', 'REAGENT', '檢驗試劑', '盒', '25 cartridges/box, 呼吸衰竭');
+
+-- Sepsis/Infection Reagents
+INSERT OR IGNORE INTO items (item_code, item_name, item_category, category, unit, specification) VALUES
+('REA-CBC-001', 'CBC 全血球計數試劑組', 'REAGENT', '檢驗試劑', '組', '100 tests/kit, 28天開封效期'),
+('REA-LAC-001', '乳酸 Lactate 試劑', 'REAGENT', '檢驗試劑', '組', '50 tests/kit, 敗血症休克'),
+('REA-CRP-001', 'CRP 發炎指數試劑', 'REAGENT', '檢驗試劑', '組', '50 tests/kit, 感染嚴重度'),
+('REA-PCT-001', '降鈣素原 Procalcitonin 試劑', 'REAGENT', '檢驗試劑', '組', '25 tests/kit, 細菌感染');
+
+-- Thrombosis/Bleeding Reagents
+INSERT OR IGNORE INTO items (item_code, item_name, item_category, category, unit, specification) VALUES
+('REA-DDIM-001', 'D-Dimer 二聚體試劑', 'REAGENT', '檢驗試劑', '組', '25 tests/kit, 肺栓塞/DVT'),
+('REA-COAG-001', 'PT/INR 凝血試劑', 'REAGENT', '檢驗試劑', '組', '50 tests/kit, 出血/抗凝監測');
+
+-- Renal Emergency Reagents
+INSERT OR IGNORE INTO items (item_code, item_name, item_category, category, unit, specification) VALUES
+('REA-URI-001', '尿液分析試紙', 'REAGENT', '檢驗試劑', '盒', '100 strips/box, UTI/腎病/糖尿'),
+('REA-CREA-001', '肌酸酐 Creatinine 試劑', 'REAGENT', '檢驗試劑', '組', '50 tests/kit, 急性腎損傷');
+
+-- Rapid Diagnostic Tests
+INSERT OR IGNORE INTO items (item_code, item_name, item_category, category, unit, specification) VALUES
+('REA-FLU-001', '流感快篩試劑 A+B', 'REAGENT', '檢驗試劑', '盒', '25 tests/box'),
+('REA-COVID-001', 'COVID-19 快篩試劑', 'REAGENT', '檢驗試劑', '盒', '25 tests/box');
+
+-- ============================================================================
+-- RESILIENCE ITEMS - 韌性物資 (Oxygen & Power)
+-- ============================================================================
+
+-- Oxygen Supply
+INSERT OR IGNORE INTO items (item_code, item_name, item_category, category, unit, specification) VALUES
+('O2-CYL-E', 'E型氧氣瓶', 'EQUIPMENT', '氧氣供應', '瓶', '680L capacity, 攜帶型'),
+('O2-CYL-H', 'H型氧氣瓶', 'EQUIPMENT', '氧氣供應', '瓶', '6900L capacity, 固定式'),
+('O2-CYL-D', 'D型氧氣瓶', 'EQUIPMENT', '氧氣供應', '瓶', '400L capacity, 小型'),
+('O2-CONC-5L', '氧氣製造機 5L', 'EQUIPMENT', '氧氣供應', '台', '5 L/min, 需電力'),
+('O2-CONC-10L', '氧氣製造機 10L', 'EQUIPMENT', '氧氣供應', '台', '10 L/min, 需電力');
+
+-- Generator & Fuel
+INSERT OR IGNORE INTO items (item_code, item_name, item_category, category, unit, specification) VALUES
+('GEN-FUEL-20L', '發電機油桶 20L', 'CONSUMABLE', '電力設備', '桶', '20L 汽油'),
+('GEN-FUEL-10L', '發電機油桶 10L', 'CONSUMABLE', '電力設備', '桶', '10L 汽油'),
+('GEN-TANK', '發電機油箱(滿)', 'CONSUMABLE', '電力設備', '次', '約20L, 現有油量');
+
+-- ============================================================================
 -- METADATA
 -- ============================================================================
 
@@ -169,7 +224,7 @@ CREATE TABLE IF NOT EXISTS catalog_metadata (
 );
 
 INSERT OR REPLACE INTO catalog_metadata (version, item_count, description) VALUES
-('1.0.0', 100, 'Initial master catalog - Essential medical items for emergency stations');
+('1.1.0', 130, 'Added reagents & resilience items - Oxygen/Power/Reagents for endurance calculation');
 
 -- ============================================================================
 -- USAGE NOTES
