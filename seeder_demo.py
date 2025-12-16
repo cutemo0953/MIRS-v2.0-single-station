@@ -100,6 +100,22 @@ def seed_mirs_demo(conn: sqlite3.Connection):
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    # v1.4.2: Add endurance columns to items table for resilience calculation
+    items_columns = [
+        ("endurance_type", "TEXT"),              # OXYGEN, POWER, REAGENT
+        ("capacity_per_unit", "REAL"),           # Capacity per stock unit
+        ("capacity_unit", "TEXT"),               # liters, hours, tests
+        ("tests_per_unit", "INTEGER"),           # Tests per unit for reagents
+        ("valid_days_after_open", "INTEGER"),    # Valid days after opening
+        ("depends_on_item_code", "TEXT"),        # Dependency on other item
+        ("dependency_note", "TEXT"),             # Dependency description
+    ]
+    for col_name, col_def in items_columns:
+        try:
+            cursor.execute(f"ALTER TABLE items ADD COLUMN {col_name} {col_def}")
+        except:
+            pass  # Column already exists
     conn.commit()
 
     # Check if already seeded
