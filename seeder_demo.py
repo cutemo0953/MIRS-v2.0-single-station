@@ -353,11 +353,20 @@ def _seed_equipment_units(cursor):
             INSERT OR IGNORE INTO equipment_units (equipment_id, unit_serial, unit_label, level_percent, status)
             VALUES (?, ?, ?, ?, ?)
         """, (eq_id, serial, label, level, status))
-    # Add tracking_mode column to equipment if not exists
-    try:
-        cursor.execute("ALTER TABLE equipment ADD COLUMN tracking_mode TEXT DEFAULT 'AGGREGATE'")
-    except:
-        pass
+    # Add resilience-related columns to equipment if not exist
+    columns_to_add = [
+        ("tracking_mode", "TEXT DEFAULT 'AGGREGATE'"),
+        ("power_watts", "REAL"),           # Power consumption in watts
+        ("capacity_wh", "REAL"),           # Battery capacity in watt-hours
+        ("output_watts", "REAL"),          # Output power in watts
+        ("fuel_rate_lph", "REAL"),         # Fuel consumption rate (liters/hour)
+        ("device_type", "TEXT"),           # Device type for classification
+    ]
+    for col_name, col_def in columns_to_add:
+        try:
+            cursor.execute(f"ALTER TABLE equipment ADD COLUMN {col_name} {col_def}")
+        except:
+            pass  # Column already exists
     cursor.execute("UPDATE equipment SET tracking_mode = 'PER_UNIT' WHERE id IN ('RESP-001', 'EMER-EQ-006')")
 
 
