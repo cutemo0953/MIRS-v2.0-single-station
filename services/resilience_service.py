@@ -229,6 +229,7 @@ class ResilienceService:
         """
         從設備表取得韌性相關設備數量 (v1.2.6)
         支援 PER_UNIT 追蹤模式，回傳個別單位狀態
+        v1.4.5: 修正 PostgreSQL cursor 重用問題
         """
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -238,9 +239,27 @@ class ResilienceService:
             SELECT id, name, quantity, power_level, tracking_mode
             FROM equipment
         """)
+        # v1.4.5: 先將結果存入 list，避免 PostgreSQL cursor 重用問題
+        all_equipment = list(cursor.fetchall())
+
+        # v1.4.5: 一次取得所有 equipment_units
+        cursor.execute("""
+            SELECT equipment_id, unit_label, level_percent, status, last_check
+            FROM equipment_units
+            ORDER BY equipment_id, unit_label
+        """)
+        all_units = list(cursor.fetchall())
+
+        # 建立 units lookup map
+        units_by_equipment = {}
+        for u in all_units:
+            eq_id = u['equipment_id']
+            if eq_id not in units_by_equipment:
+                units_by_equipment[eq_id] = []
+            units_by_equipment[eq_id].append(u)
 
         results = []
-        for row in cursor.fetchall():
+        for row in all_equipment:
             eq_id = row['id']
             if eq_id in self.EQUIPMENT_CAPACITY_MAP:
                 capacity, unit, name, eq_type = self.EQUIPMENT_CAPACITY_MAP[eq_id]
@@ -248,14 +267,8 @@ class ResilienceService:
                     tracking_mode = row['tracking_mode'] or 'AGGREGATE'
 
                     if tracking_mode == 'PER_UNIT' and capacity:
-                        # v1.2.7: 從 equipment_units 取得個別單位 (含 last_check)
-                        cursor.execute("""
-                            SELECT unit_label, level_percent, status, last_check
-                            FROM equipment_units
-                            WHERE equipment_id = ?
-                            ORDER BY unit_label
-                        """, (eq_id,))
-                        units = cursor.fetchall()
+                        # v1.4.5: 從預先載入的 units 取得
+                        units = units_by_equipment.get(eq_id, [])
 
                         if units:
                             # 計算總有效容量 (每單位容量 × 充填%)
@@ -729,12 +742,13 @@ class ResilienceService:
         results = []
         burn_rate = profile.get('burn_rate', 10)  # L/min
 
-        # Apply population multiplier if configured (e.g., 2 ventilated patients = 2x oxygen)
+        # v1.4.5: Apply population multiplier (e.g., 2 ventilated patients = 2x oxygen)
         population = config.get('population_count', 1)
         if profile.get('population_multiplier', 0):
-            if population == 0:
+            # 人數直接乘上消耗率（可為小數，如 0.5 位插管患者）
+            if population <= 0:
                 burn_rate = 0  # No oxygen demand
-            elif population > 1:
+            else:
                 burn_rate = burn_rate * population
 
         # Separate cylinders and concentrators
