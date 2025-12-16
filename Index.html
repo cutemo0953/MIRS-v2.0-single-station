@@ -1905,7 +1905,7 @@
 
                 <div class="p-4 space-y-3">
                     <!-- 氧氣供應明細 -->
-                    <template x-for="lifeline in (resilienceStatus.lifelines || []).filter(l => l.type === 'OXYGEN' && l.inventory?.items)" :key="lifeline.item_code">
+                    <template x-for="lifeline in (resilienceStatus.lifelines || []).filter(l => l.type === 'OXYGEN' && l.inventory?.items)" :key="lifeline.item_code + '-' + lifelinesRefreshKey">
                         <div class="border border-gray-100 rounded-lg">
                             <!-- 主項目列 -->
                             <div class="flex items-center gap-2 p-3 cursor-pointer hover:bg-gray-50"
@@ -3553,6 +3553,7 @@
                     population_label: '插管患者數'
                 },
                 expandedLifeline: null,  // v1.2.6: 展開的生命線項目
+                lifelinesRefreshKey: 0,  // v1.4.6: 強制重新渲染 key
                 showUnitEditModal: false,  // v1.2.7: 單位編輯 Modal
                 unitEditForm: {
                     equipment_id: '',
@@ -5455,37 +5456,15 @@
                             this.showUnitEditModal = false;
                             this.showToast(`${result.message} (平均${result.avg_level}%)`, 'success');
 
-                            // v1.4.3: 立即更新本地狀態以即時反映變更
-                            const eqId = this.unitEditForm.equipment_id;
-                            const unitLabel = this.unitEditForm.unit_label;
-                            const newLevel = this.unitEditForm.level;
-                            const newStatus = this.unitEditForm.status;
-
-                            // 更新 oxygen_supplies 中的單位
-                            if (this.resilienceStatus?.oxygen_supplies?.items) {
-                                for (const item of this.resilienceStatus.oxygen_supplies.items) {
-                                    if (item.item_code === eqId && item.units) {
-                                        for (const unit of item.units) {
-                                            if (unit.label === unitLabel) {
-                                                unit.level = newLevel;
-                                                unit.status = newStatus;
-                                                unit.checked = true; // 標記為已檢查
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // v1.4.5: 強制清除舊狀態並重新載入
-                            // 先清空以觸發響應式更新
+                            // v1.4.6: 笨方法 - 重新載入並強制 DOM 重建
                             const oldExpanded = this.expandedLifeline;
-                            this.expandedLifeline = null;
-                            this.resilienceStatus = {};
-                            await this.$nextTick();
 
-                            // 重新載入完整狀態
+                            // 重新載入資料
                             await this.loadResilienceStatus();
                             await this.loadEquipment();
+
+                            // 遞增 key 強制 x-for 重建 DOM（類似 setup wizard 作法）
+                            this.lifelinesRefreshKey++;
 
                             // 恢復展開狀態
                             await this.$nextTick();

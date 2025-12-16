@@ -478,9 +478,16 @@ class ResilienceService:
             overall_status = StatusLevel.SAFE.value
 
         # Find weakest link
+        # v1.4.6: Skip lifelines that are limited by dependencies (avoid double-counting)
+        #         e.g., O2 concentrator limited by power is already reflected in power lifeline
         weakest = None
         min_hours = float('inf')
         for l in lifelines:
+            # Skip if this lifeline is limited by a dependency (its hours come from the dependency)
+            dep = l.get('dependency')
+            if dep and dep.get('is_limiting'):
+                continue
+
             eff_hours = l['endurance']['effective_hours']
             # Handle string '∞' or actual infinity
             if isinstance(eff_hours, str) or eff_hours == float('inf'):
