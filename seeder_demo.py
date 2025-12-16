@@ -427,6 +427,14 @@ def _seed_equipment_units(cursor):
             INSERT OR IGNORE INTO equipment_units (equipment_id, unit_serial, unit_label, level_percent, status)
             VALUES (?, ?, ?, ?, ?)
         """, (eq_id, serial, label, level, status))
+
+    # 同步 equipment 表的 quantity 與實際單位數量
+    cursor.execute("""
+        UPDATE equipment SET quantity = 5 WHERE id = 'RESP-001'
+    """)  # H型 5瓶
+    cursor.execute("""
+        UPDATE equipment SET quantity = 4 WHERE id = 'EMER-EQ-006'
+    """)  # E型 4瓶
     # Add resilience-related columns to equipment if not exist
     columns_to_add = [
         ("tracking_mode", "TEXT DEFAULT 'AGGREGATE'"),
