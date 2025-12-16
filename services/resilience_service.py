@@ -63,15 +63,32 @@ class ResilienceService:
     3. Law of Weakest Link: Effective Days = MIN(volume_days, expiry_days)
     """
 
-    def __init__(self, db_path: str):
-        """初始化服務"""
-        self.db_path = db_path
+    def __init__(self, db_manager_or_path):
+        """
+        初始化服務
+
+        Args:
+            db_manager_or_path: DatabaseManager instance or db_path string
+                For in-memory databases, pass DatabaseManager to share connection
+        """
+        # Support both DatabaseManager instance and direct path
+        if hasattr(db_manager_or_path, 'get_connection'):
+            self._db_manager = db_manager_or_path
+            self.db_path = None
+        else:
+            self._db_manager = None
+            self.db_path = db_manager_or_path
 
     def _get_connection(self) -> sqlite3.Connection:
         """取得資料庫連接"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
+        if self._db_manager:
+            # Use shared connection from DatabaseManager (critical for in-memory mode)
+            return self._db_manager.get_connection()
+        else:
+            # Fallback to direct connection (for file-based databases)
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            return conn
 
     # =========================================================================
     # Configuration Methods

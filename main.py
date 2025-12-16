@@ -6848,8 +6848,8 @@ async def get_expiring_blood_bags(days: int = Query(7, ge=1, le=30)):
 
 from services.resilience_service import ResilienceService, StatusLevel
 
-# Initialize resilience service
-resilience_service = ResilienceService(config.DATABASE_PATH)
+# Initialize resilience service with shared DatabaseManager (critical for in-memory mode)
+resilience_service = ResilienceService(db)
 
 
 class ResilienceConfigUpdate(BaseModel):
