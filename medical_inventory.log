@@ -193,3 +193,554 @@ sqlite3.OperationalError: table equipment has no column named station_id
 2025-11-30 08:13:08,872 - __main__ - ERROR - 資料庫初始化失敗: 
 2025-11-30 08:13:16,221 - __main__ - INFO - 開始初始化資料庫，Profile: logistics_hub
 2025-11-30 08:13:16,321 - __main__ - INFO - 資料庫初始化成功: {'items': 23, 'medicines': 15, 'equipment': 26}
+2025-11-30 13:59:09,162 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 13:59:09,645 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 13:59:09,649 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 13:59:16,813 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 13:59:16,906 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 13:59:16,911 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 13:59:45,349 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 13:59:45,467 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 13:59:45,467 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 14:00:44,749 - __main__ - INFO - 開始初始化資料庫，Profile: logistics_hub
+2025-11-30 14:00:44,868 - __main__ - INFO - 資料庫初始化成功: {'items': 23, 'medicines': 15, 'equipment': 26}
+2025-11-30 14:16:01,327 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 14:16:01,470 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 14:16:01,470 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 14:17:18,993 - __main__ - INFO - 初始化資料庫: medical_inventory.db
+2025-11-30 14:17:18,994 - __main__ - INFO - 開始初始化資料庫結構...
+2025-11-30 14:17:19,015 - __main__ - INFO - 已初始化預設醫院 HOSP-001 與站點 HC-000000
+2025-11-30 14:17:19,015 - __main__ - INFO - 資料庫初始化完成
+2025-11-30 14:17:19,065 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-11-30 14:17:19,065 - __main__ - INFO - 下次設備重置時間: 2025-12-01 07:00:00 (等待 16.7 小時)
+2025-11-30 14:20:23,406 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 14:20:23,561 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 14:20:23,561 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 14:20:31,795 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 14:20:31,902 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 14:20:31,902 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 14:20:32,857 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 14:20:32,957 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 14:20:32,957 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 14:21:22,404 - __main__ - INFO - 開始初始化資料庫，Profile: health_center
+2025-11-30 14:21:22,573 - __main__ - INFO - 資料庫初始化成功: {'items': 0, 'medicines': 15, 'equipment': 4}
+2025-11-30 14:21:28,451 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 14:21:28,576 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 14:21:28,576 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 14:21:31,660 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 14:21:31,769 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 14:21:31,769 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 14:21:42,354 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 14:21:42,443 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 14:21:42,443 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 14:21:57,575 - __main__ - INFO - 開始初始化資料庫，Profile: logistics_hub
+2025-11-30 14:21:57,702 - __main__ - INFO - 資料庫初始化成功: {'items': 23, 'medicines': 15, 'equipment': 26}
+2025-11-30 14:22:21,371 - __main__ - INFO - 站點資訊已更新: LOGI-02 - 後勤站2號
+2025-11-30 14:23:49,753 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 14:23:49,878 - __main__ - ERROR - 資料庫初始化失敗: Traceback (most recent call last):
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 279, in <module>
+    main()
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 269, in main
+    success = initialize_database(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/QmoMBA/Downloads/medical-inventory-system_5/scripts/init_database.py", line 140, in initialize_database
+    cursor.executescript(cleaned_sql)
+sqlite3.OperationalError: table equipment has no column named station_id
+
+2025-11-30 14:23:49,878 - __main__ - ERROR - 資料庫初始化失敗: 
+2025-11-30 14:25:07,136 - __main__ - INFO - 開始初始化資料庫，Profile: logistics_hub
+2025-11-30 14:25:07,255 - __main__ - INFO - 資料庫初始化成功: {'items': 23, 'medicines': 15, 'equipment': 26}
+2025-11-30 14:25:14,061 - __main__ - INFO - 站點資訊已更新: LOGI-04 - 後勤站4號
+2025-11-30 14:34:25,808 - __main__ - INFO - 初始化資料庫: medical_inventory.db
+2025-11-30 14:34:25,809 - __main__ - INFO - 開始初始化資料庫結構...
+2025-11-30 14:34:25,827 - __main__ - INFO - 已初始化預設醫院 HOSP-001 與站點 HC-000000
+2025-11-30 14:34:25,827 - __main__ - INFO - 資料庫初始化完成
+2025-11-30 14:34:25,871 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-11-30 14:34:25,871 - __main__ - INFO - 下次設備重置時間: 2025-12-01 07:00:00 (等待 16.4 小時)
+2025-11-30 14:36:18,201 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 14:36:18,283 - __main__ - INFO - 資料庫初始化成功: {'items': 15, 'medicines': 15, 'equipment': 20}
+2025-11-30 15:20:18,707 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 15:20:18,835 - __main__ - INFO - 資料庫初始化成功: {'items': 15, 'medicines': 15, 'equipment': 20}
+2025-11-30 15:21:07,161 - __main__ - INFO - 站點資訊已更新: VGHBORP-03 - 中榮3號
+2025-11-30 15:21:35,301 - __main__ - ERROR - 設備檢查失敗: no such table: equipment_checks
+2025-11-30 15:21:38,436 - __main__ - ERROR - 設備檢查失敗: no such table: equipment_checks
+2025-11-30 15:23:20,239 - __main__ - ERROR - 設備檢查失敗: no such table: equipment_checks
+2025-11-30 15:24:06,745 - __main__ - ERROR - 設備檢查失敗: no such table: equipment_checks
+2025-11-30 15:24:58,565 - __main__ - ERROR - 設備檢查失敗: no such table: equipment_checks
+2025-11-30 15:28:37,440 - __main__ - INFO - 初始化資料庫: medical_inventory.db
+2025-11-30 15:28:37,440 - __main__ - INFO - 開始初始化資料庫結構...
+2025-11-30 15:28:37,457 - __main__ - INFO - 已初始化預設醫院 HOSP-001 與站點 HC-000000
+2025-11-30 15:28:37,459 - __main__ - INFO - 資料庫初始化完成
+2025-11-30 15:28:37,504 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-11-30 15:28:37,504 - __main__ - INFO - 下次設備重置時間: 2025-12-01 07:00:00 (等待 15.5 小時)
+2025-11-30 15:29:24,712 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 15:29:24,788 - __main__ - INFO - 資料庫初始化成功: {'items': 15, 'medicines': 15, 'equipment': 20}
+2025-11-30 15:29:44,154 - __main__ - INFO - 設備檢查記錄成功: BORP-PHOTO-01 - CHECKED
+2025-11-30 15:31:44,401 - __main__ - INFO - 設備檢查記錄成功: BORP-PHOTO-01 - NORMAL
+2025-11-30 15:31:53,391 - __main__ - INFO - 設備檢查記錄成功: BORP-SURG-ASSET-01 - NORMAL
+2025-11-30 15:32:05,153 - __main__ - INFO - 設備檢查記錄成功: BORP-WATER-01 - NORMAL
+2025-11-30 15:32:08,712 - __main__ - INFO - 設備檢查記錄成功: BORP-FRIDGE-01 - NORMAL
+2025-11-30 15:32:13,433 - __main__ - INFO - 設備檢查記錄成功: BORP-POWER-01 - NORMAL
+2025-11-30 15:33:14,051 - __main__ - INFO - 血袋receive記錄成功: O- +10U
+2025-11-30 15:44:23,641 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 15:44:23,769 - __main__ - INFO - 資料庫初始化成功: {'items': 15, 'medicines': 15, 'equipment': 20}
+2025-11-30 15:44:56,263 - __main__ - INFO - 站點資訊已更新: VGHBORP-03 - 中榮BORP-3號
+2025-11-30 15:46:04,575 - __main__ - INFO - 初始化資料庫: medical_inventory.db
+2025-11-30 15:46:04,575 - __main__ - INFO - 開始初始化資料庫結構...
+2025-11-30 15:46:04,595 - __main__ - INFO - 已初始化預設醫院 HOSP-001 與站點 HC-000000
+2025-11-30 15:46:04,595 - __main__ - INFO - 資料庫初始化完成
+2025-11-30 15:46:04,638 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-11-30 15:46:04,639 - __main__ - INFO - 下次設備重置時間: 2025-12-01 07:00:00 (等待 15.2 小時)
+2025-11-30 15:49:33,612 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 15:49:33,710 - __main__ - INFO - 資料庫初始化成功: {'items': 15, 'medicines': 15, 'equipment': 20}
+2025-11-30 15:51:17,876 - __main__ - INFO - 開始初始化資料庫，Profile: surgical_station
+2025-11-30 15:51:17,990 - __main__ - INFO - 資料庫初始化成功: {'items': 15, 'medicines': 15, 'equipment': 20}
+2025-11-30 15:51:44,855 - __main__ - INFO - 站點資訊已更新: VGHBORP-03 - 中榮BORP-3號
+2025-11-30 15:52:54,497 - __main__ - INFO - 血袋receive記錄成功: O- +10U
+2025-11-30 16:07:19,717 - __main__ - INFO - 初始化資料庫: medical_inventory.db
+2025-11-30 16:07:19,717 - __main__ - INFO - 開始初始化資料庫結構...
+2025-11-30 16:07:19,730 - __main__ - INFO - 已初始化預設醫院 HOSP-001 與站點 HC-000000
+2025-11-30 16:07:19,731 - __main__ - INFO - 資料庫初始化完成
+2025-11-30 16:07:19,772 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-11-30 16:07:19,773 - __main__ - INFO - 下次設備重置時間: 2025-12-01 07:00:00 (等待 14.9 小時)
+2025-12-01 06:49:13,168 - __main__ - INFO - 初始化資料庫: medical_inventory.db
+2025-12-01 06:49:13,214 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-01 06:49:13,262 - __main__ - INFO - 已初始化預設醫院 HOSP-001 與站點 HC-000000
+2025-12-01 06:49:13,263 - __main__ - INFO - 資料庫初始化完成
+2025-12-01 06:49:13,280 - __main__ - INFO - 資料庫初始化中，使用預設站點 ID: HC-000000
+2025-12-01 06:49:13,319 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-01 06:49:13,319 - __main__ - INFO - 下次設備重置時間: 2025-12-01 07:00:00 (等待 0.2 小時)
+2025-12-01 06:49:16,899 - __main__ - INFO - 開始初始化資料庫，Profile: health_center
+2025-12-01 06:49:16,968 - __main__ - INFO - 資料庫初始化成功: {'items': 0, 'medicines': 15, 'equipment': 4}
+2025-12-01 06:49:16,984 - __main__ - INFO - 站點資訊已更新: SURG-TEST - 測試手術站
+2025-12-01 06:49:16,997 - __main__ - INFO - ✓ 已載入站點 ID: SURG-TEST
+2025-12-01 06:49:16,997 - __main__ - INFO - ✓ 配置已重新載入，當前站點 ID: SURG-TEST
+2025-12-01 16:48:57,499 - main - INFO - ✓ 配置載入成功: BORP-VGH-01
+2025-12-01 16:48:57,515 - main - INFO - 初始化資料庫: medical_inventory.db
+2025-12-01 16:48:57,515 - main - INFO - 開始初始化資料庫結構...
+2025-12-01 16:48:57,534 - main - INFO - ✓ 已初始化站點: BORP-VGH-01 (榮總備援手術室 01)
+2025-12-01 16:48:57,534 - main - INFO - 載入 Template: templates/template_borp.sql
+2025-12-01 16:48:57,535 - main - WARNING - Template 載入失敗: table items has no column named code
+2025-12-01 16:48:57,535 - main - INFO - ✓ 資料庫初始化完成: BORP-VGH-01
+2025-12-01 16:50:26,044 - main - INFO - ✓ 配置載入成功: BORP-VGH-01
+2025-12-01 16:50:26,059 - main - INFO - 初始化資料庫: medical_inventory.db
+2025-12-01 16:50:26,059 - main - INFO - 開始初始化資料庫結構...
+2025-12-01 16:50:26,076 - main - INFO - ✓ 已初始化站點: BORP-VGH-01 (榮總備援手術室 01)
+2025-12-01 16:50:26,076 - main - INFO - 載入 Template: templates/template_borp.sql
+2025-12-01 16:50:26,078 - main - INFO - ✓ Template 載入成功: BORP
+2025-12-01 16:50:26,079 - main - INFO - ✓ 資料庫初始化完成: BORP-VGH-01
+2025-12-01 16:50:35,855 - main - INFO - ✓ 配置載入成功: BORP-VGH-01
+2025-12-01 16:50:35,870 - main - INFO - 初始化資料庫: medical_inventory.db
+2025-12-01 16:50:35,870 - main - INFO - 開始初始化資料庫結構...
+2025-12-01 16:50:35,872 - main - INFO - ✓ 已初始化站點: BORP-VGH-01 (榮總備援手術室 01)
+2025-12-01 16:50:35,872 - main - INFO - 載入 Template: templates/template_borp.sql
+2025-12-01 16:50:35,873 - main - INFO - ✓ Template 載入成功: BORP
+2025-12-01 16:50:35,873 - main - INFO - ✓ 資料庫初始化完成: BORP-VGH-01
+2025-12-01 16:50:35,931 - httpx - INFO - HTTP Request: GET http://testserver/api/station/info "HTTP/1.1 200 OK"
+2025-12-01 16:50:35,932 - httpx - INFO - HTTP Request: GET http://testserver/api/health "HTTP/1.1 200 OK"
+2025-12-01 16:50:35,935 - httpx - INFO - HTTP Request: GET http://testserver/api/items "HTTP/1.1 200 OK"
+2025-12-01 17:20:37,177 - __main__ - INFO - ✓ 配置載入成功: BORP-VGH-01
+2025-12-01 17:20:37,193 - __main__ - INFO - 初始化資料庫: medical_inventory.db
+2025-12-01 17:20:37,193 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-01 17:20:37,198 - __main__ - INFO - ✓ 已初始化站點: BORP-VGH-01 (榮總備援手術室 01)
+2025-12-01 17:20:37,199 - __main__ - INFO - 載入 Template: templates/template_borp.sql
+2025-12-01 17:20:37,199 - __main__ - INFO - ✓ Template 載入成功: BORP
+2025-12-01 17:20:37,200 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-VGH-01
+2025-12-01 17:22:43,648 - __main__ - INFO - ✓ 配置載入成功: BORP-VGH-01
+2025-12-01 17:22:43,663 - __main__ - INFO - 初始化資料庫: medical_inventory.db
+2025-12-01 17:22:43,663 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-01 17:22:43,667 - __main__ - INFO - ✓ 已初始化站點: BORP-VGH-01 (榮總備援手術室 01)
+2025-12-01 17:22:43,667 - __main__ - INFO - 載入 Template: templates/template_borp.sql
+2025-12-01 17:22:43,668 - __main__ - INFO - ✓ Template 載入成功: BORP
+2025-12-01 17:22:43,669 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-VGH-01
+2025-12-01 17:22:43,741 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-01 17:22:43,741 - __main__ - INFO - 下次設備重置時間: 2025-12-02 07:00:00 (等待 13.6 小時)
+2025-12-01 18:49:23,875 - main - INFO - ✓ 配置載入成功: BORP-VGH-251201-f1d2
+2025-12-01 18:49:23,889 - main - INFO - 初始化資料庫: medical_inventory.db
+2025-12-01 18:49:23,889 - main - INFO - 開始初始化資料庫結構...
+2025-12-01 18:49:23,891 - main - INFO - ✓ 已初始化站點: BORP-VGH-251201-f1d2 (榮總備援手術室 01)
+2025-12-01 18:49:23,891 - main - INFO - 載入 Template: templates/template_borp.sql
+2025-12-01 18:49:23,892 - main - INFO - ✓ Template 載入成功: BORP
+2025-12-01 18:49:23,893 - main - INFO - ✓ 資料庫初始化完成: BORP-VGH-251201-f1d2
+2025-12-01 18:56:46,160 - __main__ - INFO - ✓ 配置載入成功: BORP-VGH-251201-f1d2
+2025-12-01 18:56:46,175 - __main__ - INFO - 初始化資料庫: medical_inventory.db
+2025-12-01 18:56:46,175 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-01 18:56:46,178 - __main__ - INFO - ✓ 已初始化站點: BORP-VGH-251201-f1d2 (榮總備援手術室 01)
+2025-12-01 18:56:46,178 - __main__ - INFO - 載入 Template: templates/template_borp.sql
+2025-12-01 18:56:46,178 - __main__ - INFO - ✓ Template 載入成功: BORP
+2025-12-01 18:56:46,179 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-VGH-251201-f1d2
+2025-12-01 18:56:46,239 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-01 18:56:46,239 - __main__ - INFO - 下次設備重置時間: 2025-12-02 07:00:00 (等待 12.1 小時)
+2025-12-01 18:58:05,273 - __main__ - INFO - ✓ 配置載入成功: BORP-VGH-251201-f1d2
+2025-12-01 18:58:05,289 - __main__ - INFO - 初始化資料庫: medical_inventory.db
+2025-12-01 18:58:05,289 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-01 18:58:05,292 - __main__ - INFO - ✓ 已初始化站點: BORP-VGH-251201-f1d2 (榮總備援手術室 01)
+2025-12-01 18:58:05,293 - __main__ - INFO - 載入 Template: templates/template_borp.sql
+2025-12-01 18:58:05,294 - __main__ - INFO - ✓ Template 載入成功: BORP
+2025-12-01 18:58:05,294 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-VGH-251201-f1d2
+2025-12-01 18:58:05,343 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-01 18:58:05,343 - __main__ - INFO - 下次設備重置時間: 2025-12-02 07:00:00 (等待 12.0 小時)
+2025-12-01 19:13:27,614 - __main__ - INFO - ✓ 配置載入成功: BORP-VGH-251201-f1d2
+2025-12-01 19:13:27,631 - __main__ - INFO - 初始化資料庫: medical_inventory.db
+2025-12-01 19:13:27,632 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-01 19:13:27,635 - __main__ - INFO - ✓ 已初始化站點: BORP-VGH-251201-f1d2 (榮總備援手術室 01)
+2025-12-01 19:13:27,635 - __main__ - INFO - 載入 Template: templates/template_borp.sql
+2025-12-01 19:13:27,636 - __main__ - INFO - ✓ Template 載入成功: BORP
+2025-12-01 19:13:27,636 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-VGH-251201-f1d2
+2025-12-01 19:13:27,684 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-01 19:13:27,684 - __main__ - INFO - 下次設備重置時間: 2025-12-02 07:00:00 (等待 11.8 小時)
+2025-12-02 07:00:00,485 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-02 07:00:00): 0 個設備已重置
+2025-12-02 07:00:00,488 - __main__ - INFO - 下次設備重置時間: 2025-12-03 07:00:00 (等待 24.0 小時)
+2025-12-03 07:00:08,546 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-03 07:00:08): 0 個設備已重置
+2025-12-03 07:00:08,551 - __main__ - INFO - 下次設備重置時間: 2025-12-04 07:00:00 (等待 24.0 小時)
+2025-12-04 07:02:51,637 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-04 07:02:51): 0 個設備已重置
+2025-12-04 07:02:51,664 - __main__ - INFO - 下次設備重置時間: 2025-12-05 07:00:00 (等待 24.0 小時)
+2025-12-05 07:00:00,349 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-05 07:00:00): 0 個設備已重置
+2025-12-05 07:00:00,358 - __main__ - INFO - 下次設備重置時間: 2025-12-06 07:00:00 (等待 24.0 小時)
+2025-12-06 07:11:51,160 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-06 07:11:51): 0 個設備已重置
+2025-12-06 07:11:51,179 - __main__ - INFO - 下次設備重置時間: 2025-12-07 07:00:00 (等待 23.8 小時)
+2025-12-07 06:59:56,206 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-07 06:59:56): 0 個設備已重置
+2025-12-07 06:59:56,213 - __main__ - INFO - 下次設備重置時間: 2025-12-07 07:00:00 (等待 0.0 小時)
+2025-12-07 07:00:00,010 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-07 07:00:00): 0 個設備已重置
+2025-12-07 07:00:00,010 - __main__ - INFO - 下次設備重置時間: 2025-12-08 07:00:00 (等待 24.0 小時)
+2025-12-08 07:04:53,542 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-08 07:04:53): 0 個設備已重置
+2025-12-08 07:04:53,547 - __main__ - INFO - 下次設備重置時間: 2025-12-09 07:00:00 (等待 23.9 小時)
+2025-12-09 06:59:58,256 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-09 06:59:58): 0 個設備已重置
+2025-12-09 06:59:58,266 - __main__ - INFO - 下次設備重置時間: 2025-12-09 07:00:00 (等待 0.0 小時)
+2025-12-09 07:00:00,014 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-09 07:00:00): 0 個設備已重置
+2025-12-09 07:00:00,014 - __main__ - INFO - 下次設備重置時間: 2025-12-10 07:00:00 (等待 24.0 小時)
+2025-12-10 07:02:29,810 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-10 07:02:29): 0 個設備已重置
+2025-12-10 07:02:29,824 - __main__ - INFO - 下次設備重置時間: 2025-12-11 07:00:00 (等待 24.0 小時)
+2025-12-11 07:02:26,799 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-11 07:02:26): 0 個設備已重置
+2025-12-11 07:02:26,808 - __main__ - INFO - 下次設備重置時間: 2025-12-12 07:00:00 (等待 24.0 小時)
+2025-12-12 07:00:00,403 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-12 07:00:00): 0 個設備已重置
+2025-12-12 07:00:00,410 - __main__ - INFO - 下次設備重置時間: 2025-12-13 07:00:00 (等待 24.0 小時)
+2025-12-13 07:00:00,313 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-13 07:00:00): 0 個設備已重置
+2025-12-13 07:00:00,325 - __main__ - INFO - 下次設備重置時間: 2025-12-14 07:00:00 (等待 24.0 小時)
+2025-12-14 07:00:00,419 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-14 07:00:00): 0 個設備已重置
+2025-12-14 07:00:00,429 - __main__ - INFO - 下次設備重置時間: 2025-12-15 07:00:00 (等待 24.0 小時)
+2025-12-15 18:30:46,946 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 18:30:46,961 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 18:30:46,961 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 18:30:46,971 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 18:30:46,972 - __main__ - INFO - 首次執行，開始預載政府標準資料庫...
+2025-12-15 18:30:46,972 - __main__ - INFO - ✓ 預載 82 種藥品 (MED- 前綴)
+2025-12-15 18:30:46,972 - __main__ - INFO - ✓ 預載 60 種耗材
+2025-12-15 18:30:46,973 - __main__ - INFO - ✓ 預載 51 種設備
+2025-12-15 18:30:46,973 - __main__ - INFO - ✓ 政府標準資料庫預載完成
+2025-12-15 18:30:46,974 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 18:30:47,138 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 18:30:47,138 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 12.5 小時)
+2025-12-15 18:30:58,380 - __main__ - ERROR - 韌性摘要計算失敗: '<' not supported between instances of 'str' and 'float'
+2025-12-15 18:32:05,957 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 18:32:05,971 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 18:32:05,971 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 18:32:05,972 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 18:32:05,973 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 18:32:05,973 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 18:32:06,020 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 18:32:06,021 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 12.5 小時)
+2025-12-15 19:00:22,342 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 19:00:22,356 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 19:00:22,356 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 19:00:22,357 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 19:00:22,358 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 19:00:22,358 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 19:00:22,409 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 19:00:22,409 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 12.0 小時)
+2025-12-15 20:08:23,432 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 20:08:23,447 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 20:08:23,447 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 20:08:23,449 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 20:08:23,449 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 20:08:23,450 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 20:08:23,504 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 20:08:23,504 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 10.9 小時)
+2025-12-15 20:16:05,097 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 20:16:05,111 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 20:16:05,111 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 20:16:05,114 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 20:16:05,115 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 20:16:05,115 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 20:16:05,167 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 20:16:05,167 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 10.7 小時)
+2025-12-15 20:26:15,288 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 20:26:15,301 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 20:26:15,301 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 20:26:15,306 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 20:26:15,307 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 20:26:15,307 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 20:26:15,358 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 20:26:15,358 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 10.6 小時)
+2025-12-15 20:43:13,268 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 20:43:13,283 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 20:43:13,283 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 20:43:13,286 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 20:43:13,287 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 20:43:13,287 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 20:43:13,340 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 20:43:13,340 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 10.3 小時)
+2025-12-15 20:43:23,578 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 20:43:23,592 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 20:43:23,592 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 20:43:23,593 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 20:43:23,593 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 20:43:23,594 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 20:43:23,636 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 20:43:23,636 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 10.3 小時)
+2025-12-15 20:43:31,192 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 20:43:31,206 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 20:43:31,206 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 20:43:31,208 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 20:43:31,208 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 20:43:31,209 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 20:43:31,252 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 20:43:31,252 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 10.3 小時)
+2025-12-15 20:46:32,079 - __main__ - INFO - 設備檢查記錄成功: EMER-EQ-006 - NORMAL
+2025-12-15 20:46:40,049 - __main__ - INFO - 設備檢查記錄成功: RESP-001 - NORMAL
+2025-12-15 20:46:57,069 - __main__ - INFO - 設備檢查記錄成功: EQ-010 - NORMAL
+2025-12-15 20:47:05,697 - __main__ - INFO - 設備檢查記錄成功: UTIL-001 - NORMAL
+2025-12-15 21:16:18,774 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 21:16:18,787 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 21:16:18,788 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 21:16:18,789 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 21:16:18,790 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 21:16:18,790 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 21:16:18,844 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 21:16:18,844 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 9.7 小時)
+2025-12-15 21:18:40,303 - __main__ - INFO - 設備檢查記錄成功: RESP-002 - NORMAL
+2025-12-15 21:54:36,024 - __main__ - INFO - 設備檢查記錄成功: UTIL-002 - NORMAL
+2025-12-15 21:54:49,800 - __main__ - INFO - 設備檢查記錄成功: RESP-002 - NORMAL
+2025-12-15 22:01:17,237 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 22:01:17,252 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 22:01:17,252 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 22:01:17,255 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 22:01:17,255 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 22:01:17,256 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 22:01:17,311 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 22:01:17,311 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 9.0 小時)
+2025-12-15 22:02:15,431 - __main__ - INFO - 設備檢查記錄成功: RESP-001 - NORMAL
+2025-12-15 22:08:05,789 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 22:08:05,804 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 22:08:05,804 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 22:08:05,807 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 22:08:05,807 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 22:08:05,808 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 22:08:05,862 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 22:08:05,862 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 8.9 小時)
+2025-12-15 22:08:15,851 - __main__ - ERROR - 韌性狀態計算失敗: no such column: station_id
+2025-12-15 22:09:19,323 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 22:09:19,337 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 22:09:19,337 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 22:09:19,338 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 22:09:19,339 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 22:09:19,340 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 22:09:19,395 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 22:09:19,395 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 8.8 小時)
+2025-12-15 22:12:22,786 - __main__ - INFO - 設備檢查記錄成功: EMER-EQ-006 - NORMAL
+2025-12-15 22:34:01,577 - __main__ - INFO - 進貨記錄成功: O2-CYL-E +2
+2025-12-15 22:34:41,075 - __main__ - INFO - 進貨記錄成功: O2-CYL-E +2
+2025-12-15 22:40:56,065 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 22:40:56,079 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 22:40:56,079 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 22:40:56,083 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 22:40:56,083 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 22:40:56,084 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 22:40:56,142 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 22:40:56,142 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 8.3 小時)
+2025-12-15 22:41:03,789 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-15 22:41:03,802 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-15 22:41:03,803 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-15 22:41:03,804 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-15 22:41:03,804 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-15 22:41:03,805 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-15 22:41:03,849 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-15 22:41:03,849 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 8.3 小時)
+2025-12-16 06:59:59,996 - __main__ - INFO - 設備每日重置完成: 6 個設備已重置
+2025-12-16 06:59:59,997 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-16 06:59:59): 6 個設備已重置
+2025-12-16 06:59:59,997 - __main__ - INFO - 下次設備重置時間: 2025-12-16 07:00:00 (等待 0.0 小時)
+2025-12-16 07:00:00,002 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-16 07:00:00): 0 個設備已重置
+2025-12-16 07:00:00,002 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 24.0 小時)
+2025-12-16 08:57:34,079 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-16 08:57:34,092 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-16 08:57:34,092 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-16 08:57:34,093 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-16 08:57:34,094 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-16 08:57:34,094 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-16 08:57:34,146 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-16 08:57:34,146 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 22.0 小時)
+2025-12-16 09:02:58,263 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-16 09:02:58,277 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-16 09:02:58,277 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-16 09:02:58,281 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-16 09:02:58,282 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-16 09:02:58,282 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-16 09:02:58,330 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-16 09:02:58,330 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 22.0 小時)
+2025-12-16 10:03:28,155 - __main__ - INFO - 設備檢查記錄成功: RESP-002 - NORMAL
+2025-12-16 10:04:18,412 - __main__ - INFO - 進貨記錄成功: O2-CYL-H +2
+2025-12-16 10:14:38,835 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-16 10:14:38,848 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-16 10:14:38,848 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-16 10:14:38,849 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-16 10:14:38,850 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-16 10:14:38,850 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-16 10:14:38,904 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-16 10:14:38,904 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 20.8 小時)
+2025-12-16 10:14:48,731 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-16 10:14:48,744 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-16 10:14:48,744 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-16 10:14:48,745 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-16 10:14:48,746 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-16 10:14:48,746 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-16 10:14:48,791 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-16 10:14:48,791 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 20.8 小時)
+2025-12-16 10:15:57,278 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-16 10:15:57,292 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-16 10:15:57,292 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-16 10:15:57,293 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-16 10:15:57,294 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-16 10:15:57,294 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-16 10:15:57,343 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-16 10:15:57,343 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 20.7 小時)
+2025-12-16 10:27:58,640 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-16 10:27:58,653 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-16 10:27:58,653 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-16 10:27:58,656 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-16 10:27:58,656 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-16 10:27:58,657 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-16 10:27:58,710 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-16 10:27:58,710 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 20.5 小時)
+2025-12-16 10:33:10,985 - __main__ - INFO - 設備檢查記錄成功: FUEL-001 - NORMAL
+2025-12-16 10:33:21,983 - __main__ - INFO - 設備檢查記錄成功: UTIL-002 - NORMAL
+2025-12-16 10:33:31,275 - __main__ - INFO - 設備檢查記錄成功: UTIL-001 - NORMAL
+2025-12-16 10:43:29,110 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-16 10:43:29,123 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-16 10:43:29,124 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-16 10:43:29,126 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-16 10:43:29,126 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-16 10:43:29,127 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-16 10:43:29,178 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-16 10:43:29,178 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 20.3 小時)
+2025-12-16 10:53:45,257 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-16 10:53:45,272 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-16 10:53:45,272 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-16 10:53:45,273 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-16 10:53:45,274 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-16 10:53:45,274 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-16 10:53:45,326 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-16 10:53:45,326 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 20.1 小時)
+2025-12-16 11:04:18,808 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-16 11:04:18,821 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-16 11:04:18,821 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-16 11:04:18,822 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-16 11:04:18,823 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-16 11:04:18,823 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-16 11:04:18,877 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-16 11:04:18,877 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 19.9 小時)
+2025-12-16 11:10:13,047 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-16 11:10:13,060 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-16 11:10:13,060 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-16 11:10:13,062 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-16 11:10:13,063 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-16 11:10:13,063 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-16 11:10:13,112 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-16 11:10:13,112 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 19.8 小時)
+2025-12-16 11:16:36,551 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-16 11:16:36,563 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-16 11:16:36,563 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-16 11:16:36,567 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-16 11:16:36,568 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-16 11:16:36,568 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-16 11:16:36,618 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-16 11:16:36,618 - __main__ - INFO - 下次設備重置時間: 2025-12-17 07:00:00 (等待 19.7 小時)

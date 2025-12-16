@@ -2923,14 +2923,34 @@ _static_dir = PROJECT_ROOT / "static"
 if _static_dir.exists() and not IS_VERCEL:
     app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
-db = DatabaseManager(config.DATABASE_PATH)
+# ============================================================================
+# 資料庫初始化 - 支援 PostgreSQL (Neon) 或 SQLite
+# ============================================================================
+DATABASE_URL = os.environ.get('DATABASE_URL')
+USE_POSTGRES = DATABASE_URL is not None and IS_VERCEL
 
-# Vercel: 立即在模組載入時初始化 demo 資料 (不等待 startup event)
-if IS_VERCEL:
+if USE_POSTGRES:
+    # 使用 PostgreSQL (Neon)
+    try:
+        from db_postgres import PostgresDatabaseManager
+        db = PostgresDatabaseManager(DATABASE_URL)
+        logger.info("✓ [MIRS] Using PostgreSQL (Neon) database")
+    except Exception as e:
+        logger.error(f"PostgreSQL initialization failed: {e}, falling back to SQLite")
+        db = DatabaseManager(config.DATABASE_PATH)
+        USE_POSTGRES = False
+else:
+    # 使用 SQLite
+    db = DatabaseManager(config.DATABASE_PATH)
+
+# Vercel: 如果使用 SQLite (in-memory)，初始化 demo 資料
+if IS_VERCEL and not USE_POSTGRES:
     from seeder_demo import seed_mirs_demo
     _conn = db.get_connection()
     seed_mirs_demo(_conn)
-    logger.info("✓ [MIRS] Demo mode initialized (module load)")
+    logger.info("✓ [MIRS] Demo mode initialized with SQLite (module load)")
+elif IS_VERCEL and USE_POSTGRES:
+    logger.info("✓ [MIRS] Using Neon PostgreSQL - data persisted")
 
 
 # ========== 背景任務：每日設備重置 (v1.4.5) ==========
