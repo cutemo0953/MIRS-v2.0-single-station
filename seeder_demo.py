@@ -142,6 +142,8 @@ def seed_mirs_demo(conn: sqlite3.Connection):
         cursor.execute("SELECT COUNT(*) FROM items WHERE endurance_type = 'REAGENT'")
         if cursor.fetchone()[0] == 0:
             _seed_reagent_items(cursor)
+        # v1.4.2: 確保電力設備有正確的韌性參數
+        _update_power_equipment(cursor)
         conn.commit()
         return
 
@@ -481,6 +483,41 @@ def _seed_reagent_items(cursor):
             (event_type, item_code, quantity, batch_number, operator, timestamp, station_id)
             VALUES ('RECEIVE', ?, ?, 'DEMO-INIT', 'DEMO_SEED', ?, 'BORP-DNO-01')
         """, (code, current, now.isoformat()))
+
+
+def _update_power_equipment(cursor):
+    """Helper: Set power metadata for power equipment (generator, power station)"""
+    # 行動電源站: 2000Wh capacity, 1000W output
+    cursor.execute("""
+        UPDATE equipment SET
+            capacity_wh = 2000,
+            output_watts = 1000,
+            device_type = 'POWER_STATION'
+        WHERE id = 'UTIL-001'
+    """)
+
+    # 發電機: 3.0 L/hr fuel consumption, 2000W output, 50L tank
+    cursor.execute("""
+        UPDATE equipment SET
+            fuel_rate_lph = 3.0,
+            output_watts = 2000,
+            device_type = 'GENERATOR'
+        WHERE id = 'UTIL-002'
+    """)
+
+    # 設定耗電設備的功率 (呼吸器、冰箱等)
+    power_consumers = [
+        ('RESP-002', 350),    # 氧氣濃縮機 350W
+        ('RESP-003', 50),     # 呼吸器 50W
+        ('OTH-001', 100),     # 冰箱 (藥品) 100W
+        ('OTH-002', 150),     # 冰箱 (血液) 150W
+        ('DIAG-006', 50),     # 心電圖機 50W
+        ('EMER-EQ-007', 100), # 抽吸機 100W
+    ]
+    for eq_id, watts in power_consumers:
+        cursor.execute("""
+            UPDATE equipment SET power_watts = ? WHERE id = ?
+        """, (watts, eq_id))
 
 
 def clear_mirs_demo(conn: sqlite3.Connection):
