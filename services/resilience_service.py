@@ -480,6 +480,27 @@ class ResilienceService:
                     'type': l['type']
                 }
 
+        # v1.4.4: Extract oxygen supplies with unit details for frontend
+        oxygen_items = []
+        for result in oxygen_results:
+            # Check inventory.items for PER_UNIT tracking details
+            inv_items = result.get('inventory', {}).get('items', [])
+            for inv_item in inv_items:
+                if inv_item.get('tracking_mode') == 'PER_UNIT' and inv_item.get('units'):
+                    oxygen_items.append({
+                        'item_code': inv_item.get('item_code', 'O2'),  # 使用設備代碼
+                        'item_name': inv_item.get('name', '氧氣瓶'),
+                        'endurance_type': 'OXYGEN',
+                        'capacity_per_unit': inv_item.get('capacity_each'),
+                        'capacity_unit': inv_item.get('unit', 'L'),
+                        'stock': inv_item.get('qty', 0),
+                        'power_level': inv_item.get('avg_level', 0),
+                        'tracking_mode': 'PER_UNIT',
+                        'units': inv_item['units'],
+                        'total_effective_capacity': inv_item.get('effective_total', 0),
+                        'checked_count': inv_item.get('checked_count', 0)
+                    })
+
         # Build response
         return {
             'system': 'MIRS',
@@ -497,6 +518,10 @@ class ResilienceService:
             },
             'lifelines': lifelines,
             'reagents': reagents,
+            # v1.4.4: Add oxygen_supplies for frontend compatibility
+            'oxygen_supplies': {
+                'items': oxygen_items
+            },
             'summary': {
                 'overall_status': overall_status,
                 'weakest_link': weakest,
@@ -727,6 +752,7 @@ class ResilienceService:
                     # 使用個別追蹤的實際容量
                     total_liters += c['total_effective_capacity']
                     inventory_items.append({
+                        'item_code': c.get('item_code'),  # v1.4.4: 保留設備代碼
                         'name': c['item_name'],
                         'qty': c['stock'],
                         'capacity_each': c['capacity_per_unit'],
@@ -734,13 +760,15 @@ class ResilienceService:
                         'effective_total': c['total_effective_capacity'],
                         'unit': 'liters',
                         'tracking_mode': 'PER_UNIT',
-                        'units': c.get('units', [])  # 個別單位詳情
+                        'units': c.get('units', []),  # 個別單位詳情
+                        'checked_count': c.get('checked_count', 0)  # v1.4.4
                     })
                 else:
                     # AGGREGATE 模式
                     effective = c['capacity_per_unit'] * c['stock']
                     total_liters += effective
                     inventory_items.append({
+                        'item_code': c.get('item_code'),  # v1.4.4
                         'name': c['item_name'],
                         'qty': c['stock'],
                         'capacity_each': c['capacity_per_unit'],
