@@ -3910,9 +3910,16 @@
 
                 async loadResilienceStatus() {
                     try {
-                        const response = await fetch('/api/resilience/status');
+                        // 加入時間戳防止快取
+                        const response = await fetch('/api/resilience/status?t=' + Date.now(), {
+                            cache: 'no-store'
+                        });
                         if (response.ok) {
-                            this.resilienceStatus = await response.json();
+                            const newStatus = await response.json();
+                            // 強制觸發 Alpine.js 重新渲染
+                            this.resilienceStatus = {};
+                            await this.$nextTick();
+                            this.resilienceStatus = newStatus;
                         }
                     } catch (error) {
                         console.error('載入韌性狀態失敗:', error);
@@ -3921,7 +3928,9 @@
 
                 async loadResilienceConfig() {
                     try {
-                        const response = await fetch('/api/resilience/config');
+                        const response = await fetch('/api/resilience/config?t=' + Date.now(), {
+                            cache: 'no-store'
+                        });
                         if (response.ok) {
                             const config = await response.json();
                             this.resilienceConfig = {
