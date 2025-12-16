@@ -301,6 +301,35 @@ def seed_mirs_demo(conn: sqlite3.Connection):
         """, (code, current, now.isoformat()))
 
     # =========================================
+    # 5.5 試劑 (Reagents for resilience calculation)
+    # =========================================
+    # (code, name, category, unit, min_stock, current_stock, tests_per_unit, valid_days_after_open)
+    reagents = [
+        ("REA-CBC-001", "全血球計數試劑", "檢驗試劑", "Kit", 5, 8, 100, 28),
+        ("REA-TROP-001", "心肌旋轉蛋白試劑", "檢驗試劑", "Kit", 3, 5, 25, 14),
+        ("REA-GLU-001", "血糖試紙", "檢驗試劑", "Box", 10, 20, 50, None),  # 個別包裝無效期
+        ("REA-ABG-001", "血氣分析試劑", "檢驗試劑", "Kit", 3, 4, 25, 7),
+        ("REA-COVID-001", "COVID快篩試劑", "檢驗試劑", "Kit", 10, 25, 25, None),
+        ("REA-CRP-001", "C反應蛋白試劑", "檢驗試劑", "Kit", 3, 6, 50, 30),
+    ]
+
+    for reagent in reagents:
+        code, name, cat, unit, min_stock, current, tests_per, valid_days = reagent
+        cursor.execute("""
+            INSERT INTO items
+            (item_code, item_name, item_category, category, unit, min_stock,
+             endurance_type, tests_per_unit, valid_days_after_open, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'REAGENT', ?, ?, ?)
+        """, (code, name, cat, cat, unit, min_stock, tests_per, valid_days, now.isoformat()))
+
+        # Add inventory event
+        cursor.execute("""
+            INSERT INTO inventory_events
+            (event_type, item_code, quantity, batch_number, operator, timestamp, station_id)
+            VALUES ('RECEIVE', ?, ?, 'DEMO-INIT', 'DEMO_SEED', ?, 'BORP-DNO-01')
+        """, (code, current, now.isoformat()))
+
+    # =========================================
     # 6. 手術記錄範例
     # =========================================
     surgeries = [
