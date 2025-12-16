@@ -5550,16 +5550,17 @@
                 // 取得耗電設備 (冰箱、呼吸器、監視器等需要電力運作的設備)
                 getPowerConsumingEquipment() {
                     const powerConsumingCategories = ['儲存設備', '冷藏設備', '監測設備', '呼吸設備', '輸液設備', '手術設備', '麻醉設備'];
-                    const oxygenIds = ['RESP-001', 'RESP-002', 'EMER-EQ-006']; // 氧氣設備獨立歸類
+                    const oxygenCylinderIds = ['RESP-001', 'EMER-EQ-006']; // 氧氣鋼瓶不耗電
                     const powerSupplyIds = ['UTIL-001', 'UTIL-002', 'EQ-010']; // 排除供電設備
                     return this.equipment.filter(eq =>
                         !eq.id.includes('-SURG-') && !eq.id.startsWith('SURG-') &&
                         !powerSupplyIds.includes(eq.id) &&
-                        !oxygenIds.includes(eq.id) &&
+                        !oxygenCylinderIds.includes(eq.id) &&
                         (powerConsumingCategories.includes(eq.category) ||
                          eq.name.includes('冰箱') || eq.name.includes('冷凍') ||
                          eq.name.includes('呼吸') || eq.name.includes('監視') ||
                          eq.name.includes('輸液') || eq.name.includes('抽吸') ||
+                         eq.name.includes('濃縮機') ||  // 氧氣濃縮機需要電力
                          eq.category === '電力設備' && !eq.name.includes('發電機') && !eq.name.includes('電源站'))
                     );
                 },
@@ -5567,14 +5568,16 @@
                 // 取得非耗電設備 (手動設備、擔架、診斷工具等)
                 getNonElectricEquipment() {
                     const nonElectricCategories = ['搬運設備', '診斷設備', '急救設備', '手動設備'];
-                    const oxygenIds = ['RESP-001', 'RESP-002', 'EMER-EQ-006']; // 氧氣設備歸入非耗電
+                    const oxygenCylinderIds = ['RESP-001', 'EMER-EQ-006']; // 氧氣鋼瓶不耗電
                     const powerSupplyIds = ['UTIL-001', 'UTIL-002', 'EQ-010'];
                     const powerConsumingCategories = ['儲存設備', '冷藏設備', '監測設備', '呼吸設備', '輸液設備', '手術設備', '麻醉設備', '電力設備'];
                     return this.equipment.filter(eq => {
                         if (eq.id.includes('-SURG-') || eq.id.startsWith('SURG-')) return false;
                         if (powerSupplyIds.includes(eq.id)) return false;
-                        // 氧氣設備歸入非耗電
-                        if (oxygenIds.includes(eq.id)) return true;
+                        // 氧氣鋼瓶歸入非耗電 (不需要電)
+                        if (oxygenCylinderIds.includes(eq.id)) return true;
+                        // 氧氣濃縮機需要電，不在此列
+                        if (eq.name.includes('濃縮機')) return false;
                         // 明確的非耗電類別
                         if (nonElectricCategories.includes(eq.category)) return true;
                         // 排除耗電設備後的其他設備
