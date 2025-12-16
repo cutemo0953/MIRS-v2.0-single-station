@@ -5436,18 +5436,16 @@
                             const result = await response.json();
                             this.showUnitEditModal = false;
                             this.showToast(`${result.message} (平均${result.avg_level}%)`, 'success');
-                            // v1.2.8: 強制重新渲染展開的項目
+                            // v1.2.8: 強制重新渲染 - 先收合再載入再展開
                             const currentExpanded = this.expandedLifeline;
                             this.expandedLifeline = null;
-                            // 重新載入韌性狀態和設備列表 (auto-sync)
-                            await Promise.all([
-                                this.loadResilienceStatus(),
-                                this.loadEquipment()
-                            ]);
-                            // 恢復展開狀態以觸發 Alpine 重新渲染
-                            this.$nextTick(() => {
+                            // 重新載入韌性狀態和設備列表
+                            await this.loadResilienceStatus();
+                            await this.loadEquipment();
+                            // 延遲恢復展開狀態確保 DOM 更新
+                            setTimeout(() => {
                                 this.expandedLifeline = currentExpanded;
-                            });
+                            }, 100);
                         } else {
                             const error = await response.json();
                             this.showToast(error.detail || '更新失敗', 'error');
@@ -5476,16 +5474,16 @@
                             const result = await response.json();
                             this.showUnitEditModal = false;
                             this.showToast(result.message, 'success');
-                            // 強制重新渲染
+                            // v1.2.8: 強制重新渲染 - 先收合再載入再展開
                             const currentExpanded = this.expandedLifeline;
                             this.expandedLifeline = null;
-                            await Promise.all([
-                                this.loadResilienceStatus(),
-                                this.loadEquipment()
-                            ]);
-                            this.$nextTick(() => {
+                            // 重新載入韌性狀態和設備列表
+                            await this.loadResilienceStatus();
+                            await this.loadEquipment();
+                            // 延遲恢復展開狀態確保 DOM 更新
+                            setTimeout(() => {
                                 this.expandedLifeline = currentExpanded;
-                            });
+                            }, 100);
                         } else {
                             const error = await response.json();
                             this.showToast(error.detail || '重置失敗', 'error');
