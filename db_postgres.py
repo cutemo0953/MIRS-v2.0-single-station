@@ -68,6 +68,13 @@ class PostgresCursorWrapper:
         pg_sql = pg_sql.replace("DATE('now')", "CURRENT_DATE")
         pg_sql = pg_sql.replace("date('now')", "CURRENT_DATE")
 
+        # Handle INSERT OR REPLACE -> PostgreSQL UPSERT
+        # This is a simplified conversion for common patterns
+        if 'INSERT OR REPLACE INTO' in pg_sql.upper():
+            pg_sql = pg_sql.replace('INSERT OR REPLACE INTO', 'INSERT INTO')
+            pg_sql = pg_sql.replace('insert or replace into', 'INSERT INTO')
+            # Note: Caller should handle ON CONFLICT for proper upsert behavior
+
         # Handle INTEGER PRIMARY KEY AUTOINCREMENT -> SERIAL
         # (not needed for queries, only for schema)
 

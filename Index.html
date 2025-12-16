@@ -5476,12 +5476,20 @@
                                 }
                             }
 
-                            // 強制觸發 Alpine.js 重新渲染
+                            // v1.4.5: 強制清除舊狀態並重新載入
+                            // 先清空以觸發響應式更新
+                            const oldExpanded = this.expandedLifeline;
+                            this.expandedLifeline = null;
+                            this.resilienceStatus = {};
                             await this.$nextTick();
 
-                            // 背景重新載入完整狀態確保資料同步
+                            // 重新載入完整狀態
                             await this.loadResilienceStatus();
                             await this.loadEquipment();
+
+                            // 恢復展開狀態
+                            await this.$nextTick();
+                            this.expandedLifeline = oldExpanded;
                         } else {
                             const error = await response.json();
                             this.showToast(error.detail || '更新失敗', 'error');
