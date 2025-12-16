@@ -433,6 +433,22 @@ def _ensure_resilience_equipment(cursor, now):
     if now is None:
         now = datetime.now()
 
+    # 先確保 equipment 表有必要的欄位
+    columns_to_add = [
+        ("tracking_mode", "TEXT DEFAULT 'AGGREGATE'"),
+        ("power_watts", "REAL"),
+        ("capacity_wh", "REAL"),
+        ("output_watts", "REAL"),
+        ("fuel_rate_lph", "REAL"),
+        ("device_type", "TEXT"),
+        ("quantity", "INTEGER DEFAULT 1"),
+    ]
+    for col_name, col_def in columns_to_add:
+        try:
+            cursor.execute(f"ALTER TABLE equipment ADD COLUMN {col_name} {col_def}")
+        except:
+            pass  # Column already exists
+
     resilience_equipment = [
         # (id, name, category, status, quantity, tracking_mode, power_watts, capacity_wh, output_watts, fuel_rate_lph, device_type)
         ("RESP-001", "H型氧氣鋼瓶", "呼吸設備", "READY", 5, "PER_UNIT", None, None, None, None, None),
