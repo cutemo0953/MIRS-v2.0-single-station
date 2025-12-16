@@ -138,6 +138,10 @@ def seed_mirs_demo(conn: sqlite3.Connection):
         cursor.execute("SELECT COUNT(*) FROM resilience_profiles")
         if cursor.fetchone()[0] == 0:
             _seed_resilience_profiles(cursor)
+        # v1.4.2: 確保試劑資料存在
+        cursor.execute("SELECT COUNT(*) FROM items WHERE endurance_type = 'REAGENT'")
+        if cursor.fetchone()[0] == 0:
+            _seed_reagent_items(cursor)
         conn.commit()
         return
 
@@ -445,6 +449,38 @@ def _seed_resilience_profiles(cursor):
             (station_id, endurance_type, profile_name, profile_name_en, burn_rate, burn_rate_unit, population_multiplier, description, is_default, sort_order)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, p)
+
+
+def _seed_reagent_items(cursor):
+    """Helper: Seed reagent items with endurance metadata"""
+    from datetime import datetime
+    now = datetime.now()
+
+    # (code, name, category, unit, min_stock, current_stock, tests_per_unit, valid_days_after_open)
+    reagents = [
+        ("REA-CBC-001", "全血球計數試劑", "檢驗試劑", "Kit", 5, 8, 100, 28),
+        ("REA-TROP-001", "心肌旋轉蛋白試劑", "檢驗試劑", "Kit", 3, 5, 25, 14),
+        ("REA-GLU-001", "血糖試紙", "檢驗試劑", "Box", 10, 20, 50, None),
+        ("REA-ABG-001", "血氣分析試劑", "檢驗試劑", "Kit", 3, 4, 25, 7),
+        ("REA-COVID-001", "COVID快篩試劑", "檢驗試劑", "Kit", 10, 25, 25, None),
+        ("REA-CRP-001", "C反應蛋白試劑", "檢驗試劑", "Kit", 3, 6, 50, 30),
+    ]
+
+    for reagent in reagents:
+        code, name, cat, unit, min_stock, current, tests_per, valid_days = reagent
+        cursor.execute("""
+            INSERT OR IGNORE INTO items
+            (item_code, item_name, item_category, category, unit, min_stock,
+             endurance_type, tests_per_unit, valid_days_after_open, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'REAGENT', ?, ?, ?)
+        """, (code, name, cat, cat, unit, min_stock, tests_per, valid_days, now.isoformat()))
+
+        # Add inventory event with station_id
+        cursor.execute("""
+            INSERT OR IGNORE INTO inventory_events
+            (event_type, item_code, quantity, batch_number, operator, timestamp, station_id)
+            VALUES ('RECEIVE', ?, ?, 'DEMO-INIT', 'DEMO_SEED', ?, 'BORP-DNO-01')
+        """, (code, current, now.isoformat()))
 
 
 def clear_mirs_demo(conn: sqlite3.Connection):
