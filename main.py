@@ -328,6 +328,38 @@ class EquipmentUpdateRequest(BaseModel):
     remarks: Optional[str] = Field(None, description="備註", max_length=500)
 
 
+# ============================================================================
+# v2.1 設備單位管理 API 請求模型
+# ============================================================================
+
+class UnitAddRequest(BaseModel):
+    """新增設備單位請求 (v2.1)"""
+    level_percent: int = Field(default=100, ge=0, le=100, description="電量/充填百分比")
+    status: str = Field(default="AVAILABLE", description="狀態")
+    reason: Optional[str] = Field(None, description="新增原因", max_length=500)
+
+
+class UnitRemoveRequest(BaseModel):
+    """移除設備單位請求 (v2.1 Soft Delete)"""
+    reason: Optional[str] = Field(None, description="移除原因", max_length=500)
+    actor: Optional[str] = Field(None, description="操作者", max_length=100)
+
+
+class UnitUpdateRequest(BaseModel):
+    """更新設備單位屬性請求 (v2.1)"""
+    level_percent: Optional[int] = Field(None, ge=0, le=100, description="電量/充填百分比")
+    status: Optional[str] = Field(None, description="狀態")
+    unit_label: Optional[str] = Field(None, description="單位標籤", max_length=100)
+
+
+class BatchQuantityRequest(BaseModel):
+    """批次調整數量請求 (v2.1)"""
+    target_quantity: int = Field(..., ge=0, description="目標數量")
+    default_level_percent: int = Field(default=100, ge=0, le=100, description="新增單位預設電量")
+    default_status: str = Field(default="AVAILABLE", description="新增單位預設狀態")
+    reason: Optional[str] = Field(None, description="調整原因", max_length=500)
+
+
 class ItemCreateRequest(BaseModel):
     """物品新增請求"""
     code: Optional[str] = Field(None, description="物品代碼(留空自動生成)", max_length=50)
@@ -3028,24 +3060,50 @@ def run_migrations():
                     resilience_category TEXT,
                     tracking_mode TEXT DEFAULT 'PER_UNIT',
                     capacity_config TEXT,
+                    unit_prefix TEXT,
+                    label_template TEXT,
                     icon TEXT,
                     color TEXT DEFAULT 'gray',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             cursor.executemany("""
-                INSERT OR IGNORE INTO equipment_types (type_code, type_name, category, resilience_category, capacity_config) VALUES (?, ?, ?, ?, ?)
+                INSERT OR IGNORE INTO equipment_types (type_code, type_name, category, resilience_category, capacity_config, unit_prefix, label_template) VALUES (?, ?, ?, ?, ?, ?, ?)
             """, [
-                ('POWER_STATION', '行動電源站', '電力設備', 'POWER', '{"strategy":"LINEAR","hours_per_100pct":8,"base_capacity_wh":2000}'),
-                ('GENERATOR', '發電機', '電力設備', 'POWER', '{"strategy":"FUEL_BASED","tank_liters":20,"fuel_rate_lph":2}'),
-                ('O2_CYLINDER_H', 'H型氧氣鋼瓶', '呼吸設備', 'OXYGEN', '{"strategy":"LINEAR","hours_per_100pct":8,"capacity_liters":7000}'),
-                ('O2_CYLINDER_E', 'E型氧氣鋼瓶', '呼吸設備', 'OXYGEN', '{"strategy":"LINEAR","hours_per_100pct":2,"capacity_liters":680}'),
-                ('O2_CONCENTRATOR', '氧氣濃縮機', '呼吸設備', 'OXYGEN', '{"strategy":"POWER_DEPENDENT","output_lpm":5,"requires_power":true}'),
-                ('GENERAL', '一般設備', '一般設備', None, '{"strategy":"NONE"}'),
-                ('MONITOR', '監視器', '監控設備', None, '{"strategy":"NONE"}'),
-                ('VENTILATOR', '呼吸器', '呼吸設備', None, '{"strategy":"NONE"}'),
+                ('POWER_STATION', '行動電源站', '電力設備', 'POWER', '{"strategy":"LINEAR","hours_per_100pct":8,"base_capacity_wh":2000}', 'PS', '電源站{n}號'),
+                ('GENERATOR', '發電機', '電力設備', 'POWER', '{"strategy":"FUEL_BASED","tank_liters":20,"fuel_rate_lph":2}', 'GEN', '發電機{n}號'),
+                ('O2_CYLINDER_H', 'H型氧氣鋼瓶', '呼吸設備', 'OXYGEN', '{"strategy":"LINEAR","hours_per_100pct":8,"capacity_liters":7000}', 'H-CYL', 'H型{n}號'),
+                ('O2_CYLINDER_E', 'E型氧氣鋼瓶', '呼吸設備', 'OXYGEN', '{"strategy":"LINEAR","hours_per_100pct":2,"capacity_liters":680}', 'E-CYL', 'E型{n}號'),
+                ('O2_CONCENTRATOR', '氧氣濃縮機', '呼吸設備', 'OXYGEN', '{"strategy":"POWER_DEPENDENT","output_lpm":5,"requires_power":true}', 'O2C', '濃縮機{n}號'),
+                ('GENERAL', '一般設備', '一般設備', None, '{"strategy":"NONE"}', 'UNIT', '單位{n}號'),
+                ('MONITOR', '監視器', '監控設備', None, '{"strategy":"NONE"}', 'MON', '監視器{n}號'),
+                ('VENTILATOR', '呼吸器', '呼吸設備', None, '{"strategy":"NONE"}', 'VENT', '呼吸器{n}號'),
             ])
             logger.info("✓ Migration: 建立 equipment_types 表")
+
+        # v2.1: 確保 equipment_types 有 unit_prefix 和 label_template 欄位
+        cursor.execute("PRAGMA table_info(equipment_types)")
+        et_columns = [col[1] for col in cursor.fetchall()]
+        if et_columns and 'unit_prefix' not in et_columns:
+            cursor.execute("ALTER TABLE equipment_types ADD COLUMN unit_prefix TEXT")
+            cursor.execute("ALTER TABLE equipment_types ADD COLUMN label_template TEXT")
+            # 更新現有資料
+            prefix_data = [
+                ('O2_CYLINDER_H', 'H-CYL', 'H型{n}號'),
+                ('O2_CYLINDER_E', 'E-CYL', 'E型{n}號'),
+                ('POWER_STATION', 'PS', '電源站{n}號'),
+                ('GENERATOR', 'GEN', '發電機{n}號'),
+                ('O2_CONCENTRATOR', 'O2C', '濃縮機{n}號'),
+                ('VENTILATOR', 'VENT', '呼吸器{n}號'),
+                ('MONITOR', 'MON', '監視器{n}號'),
+                ('GENERAL', 'UNIT', '單位{n}號'),
+            ]
+            for type_code, prefix, template in prefix_data:
+                cursor.execute(
+                    "UPDATE equipment_types SET unit_prefix = ?, label_template = ? WHERE type_code = ?",
+                    (prefix, template, type_code)
+                )
+            logger.info("✓ Migration: 新增 equipment_types.unit_prefix/label_template 欄位")
 
         # v2: 確保 equipment 有 type_code 欄位
         cursor.execute("PRAGMA table_info(equipment)")
@@ -3075,28 +3133,73 @@ def run_migrations():
         cursor.execute("UPDATE equipment SET type_code = 'GENERAL' WHERE type_code IS NULL")
         logger.info("✓ Migration: 設定 equipment.type_code 對應")
 
-        # v2: 建立 v_equipment_status 視圖
+        # v2.1: 確保 equipment_units 有 soft-delete 欄位
+        cursor.execute("PRAGMA table_info(equipment_units)")
+        eu_columns = [col[1] for col in cursor.fetchall()]
+        if eu_columns and 'is_active' not in eu_columns:
+            cursor.execute("ALTER TABLE equipment_units ADD COLUMN is_active INTEGER DEFAULT 1")
+            cursor.execute("ALTER TABLE equipment_units ADD COLUMN removed_at TIMESTAMP")
+            cursor.execute("ALTER TABLE equipment_units ADD COLUMN removed_by TEXT")
+            cursor.execute("ALTER TABLE equipment_units ADD COLUMN removal_reason TEXT")
+            # 設定現有資料為 active
+            cursor.execute("UPDATE equipment_units SET is_active = 1 WHERE is_active IS NULL")
+            logger.info("✓ Migration: 新增 equipment_units soft-delete 欄位")
+
+        # v2.1: 建立 equipment_lifecycle_events 表
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='equipment_lifecycle_events'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE equipment_lifecycle_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    unit_id INTEGER,
+                    equipment_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL CHECK(event_type IN ('CREATE', 'SOFT_DELETE', 'RESTORE', 'UPDATE')),
+                    actor TEXT,
+                    reason TEXT,
+                    snapshot_json TEXT,
+                    correlation_id TEXT,
+                    station_id TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_lifecycle_equipment ON equipment_lifecycle_events(equipment_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_lifecycle_unit ON equipment_lifecycle_events(unit_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_lifecycle_time ON equipment_lifecycle_events(created_at DESC)")
+            logger.info("✓ Migration: 建立 equipment_lifecycle_events 表")
+
+        # v2.1: 建立唯一約束（防止並發衝突）- 只對 active 的單位
+        try:
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_equipment_units_active_serial
+                ON equipment_units(equipment_id, unit_serial) WHERE is_active = 1
+            """)
+        except Exception:
+            pass  # SQLite 版本可能不支援 partial index
+
+        # v2.1: 建立 v_equipment_status 視圖 (只計算 active units)
         cursor.execute("DROP VIEW IF EXISTS v_equipment_status")
         cursor.execute("""
             CREATE VIEW v_equipment_status AS
             SELECT
                 e.id, e.name, e.type_code,
                 et.type_name, et.category, et.resilience_category,
+                et.unit_prefix, et.label_template,
                 COUNT(u.id) as unit_count,
                 ROUND(AVG(u.level_percent)) as avg_level,
                 SUM(CASE WHEN u.last_check IS NOT NULL THEN 1 ELSE 0 END) as checked_count,
                 MAX(u.last_check) as last_check,
                 CASE
+                    WHEN COUNT(u.id) = 0 THEN 'NO_UNITS'
                     WHEN SUM(CASE WHEN u.last_check IS NOT NULL THEN 1 ELSE 0 END) = 0 THEN 'UNCHECKED'
                     WHEN SUM(CASE WHEN u.last_check IS NOT NULL THEN 1 ELSE 0 END) = COUNT(u.id) THEN 'CHECKED'
                     ELSE 'PARTIAL'
                 END as check_status
             FROM equipment e
             LEFT JOIN equipment_types et ON e.type_code = et.type_code
-            LEFT JOIN equipment_units u ON e.id = u.equipment_id
+            LEFT JOIN equipment_units u ON e.id = u.equipment_id AND (u.is_active = 1 OR u.is_active IS NULL)
             GROUP BY e.id
         """)
-        logger.info("✓ Migration: 建立 v_equipment_status 視圖")
+        logger.info("✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)")
 
         conn.commit()
     except Exception as e:
@@ -7731,6 +7834,782 @@ async def reset_equipment_unit_v2(unit_id: int):
         raise
     except Exception as e:
         logger.error(f"重置設備單位失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# v2.1 設備單位管理 API (Unit Management with Soft Delete)
+# ============================================================================
+
+def _generate_next_serial(cursor, equipment_id: str) -> tuple:
+    """
+    生成下一個序號和標籤
+
+    Returns:
+        (unit_serial, unit_label)
+    """
+    # 1. 查詢設備的 type_code 和序號設定
+    cursor.execute("""
+        SELECT e.type_code, et.unit_prefix, et.label_template
+        FROM equipment e
+        LEFT JOIN equipment_types et ON e.type_code = et.type_code
+        WHERE e.id = ?
+    """, (equipment_id,))
+
+    row = cursor.fetchone()
+    if not row:
+        raise ValueError(f"找不到設備 {equipment_id} 或其類型設定")
+
+    type_code = row[0]
+    prefix = row[1] or "UNIT"
+    template = row[2] or "單位{n}號"
+
+    # 2. 找出該設備現有的最大序號（包含已移除的，避免重複）
+    cursor.execute("""
+        SELECT unit_serial FROM equipment_units
+        WHERE equipment_id = ?
+        ORDER BY unit_serial DESC
+    """, (equipment_id,))
+
+    existing_serials = [r[0] for r in cursor.fetchall()]
+
+    # 3. 計算下一個序號
+    max_num = 0
+    for serial in existing_serials:
+        if serial and prefix in serial:
+            try:
+                # 處理格式如 "H-CYL-001" 或 "PS-001"
+                parts = serial.split('-')
+                num = int(parts[-1])
+                max_num = max(max_num, num)
+            except (ValueError, IndexError):
+                pass
+
+    next_num = max_num + 1
+    unit_serial = f"{prefix}-{next_num:03d}"
+
+    # 4. 根據模板生成標籤
+    unit_label = template.replace('{n}', str(next_num))
+
+    return unit_serial, unit_label
+
+
+def _get_equipment_summary(cursor, equipment_id: str) -> dict:
+    """取得設備摘要資訊"""
+    cursor.execute("""
+        SELECT e.id, e.name, et.type_name, et.resilience_category, et.capacity_config,
+               COUNT(u.id) as active_count
+        FROM equipment e
+        LEFT JOIN equipment_types et ON e.type_code = et.type_code
+        LEFT JOIN equipment_units u ON e.id = u.equipment_id AND u.is_active = 1
+        WHERE e.id = ?
+        GROUP BY e.id
+    """, (equipment_id,))
+    row = cursor.fetchone()
+    if not row:
+        return None
+
+    # 計算韌性小時數
+    total_hours = 0
+    if row[4]:  # capacity_config
+        try:
+            config = json.loads(row[4])
+            cursor.execute("""
+                SELECT SUM(level_percent) FROM equipment_units
+                WHERE equipment_id = ? AND is_active = 1
+            """, (equipment_id,))
+            total_level = cursor.fetchone()[0] or 0
+            hours_per_100 = config.get('hours_per_100pct', 0)
+            total_hours = round((total_level / 100) * hours_per_100, 1)
+        except:
+            pass
+
+    return {
+        "equipment_id": row[0],
+        "name": row[1],
+        "type_name": row[2],
+        "resilience_category": row[3],
+        "active_unit_count": row[5],
+        "total_hours": total_hours
+    }
+
+
+def _record_lifecycle_event(cursor, unit_id: int, equipment_id: str, event_type: str,
+                            actor: str = None, reason: str = None, snapshot: dict = None,
+                            correlation_id: str = None):
+    """記錄生命週期事件"""
+    cursor.execute("""
+        INSERT INTO equipment_lifecycle_events
+        (unit_id, equipment_id, event_type, actor, reason, snapshot_json, correlation_id, station_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        unit_id, equipment_id, event_type, actor, reason,
+        json.dumps(snapshot, ensure_ascii=False) if snapshot else None,
+        correlation_id, config.get_station_id()
+    ))
+    return cursor.lastrowid
+
+
+def _get_removal_priority(unit: dict) -> tuple:
+    """
+    計算移除優先順序，值越小越優先移除
+
+    優先序：
+    1. 狀態：EMPTY > MAINTENANCE > IN_USE > CHARGING > AVAILABLE
+    2. 電量：由低到高
+    3. 序號：數字越大越優先
+    """
+    status_priority = {
+        'EMPTY': 0,
+        'MAINTENANCE': 1,
+        'IN_USE': 2,
+        'CHARGING': 3,
+        'AVAILABLE': 4
+    }
+
+    # 提取序號數字
+    serial_num = 0
+    if unit.get('unit_serial'):
+        try:
+            serial_num = int(unit['unit_serial'].split('-')[-1])
+        except:
+            pass
+
+    return (
+        status_priority.get(unit.get('status', 'AVAILABLE'), 5),
+        unit.get('level_percent', 100),
+        -serial_num  # 負號讓大序號優先移除
+    )
+
+
+@app.get("/api/v2/equipment/{equipment_id}/units")
+async def get_equipment_units_v2(
+    equipment_id: str,
+    include_inactive: bool = Query(default=False, description="是否包含已移除單位")
+):
+    """
+    取得設備單位列表 (v2.1)
+
+    Args:
+        equipment_id: 設備ID
+        include_inactive: 是否包含已移除單位
+
+    Returns:
+        設備單位列表及摘要
+    """
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # 檢查設備是否存在
+        cursor.execute("""
+            SELECT e.id, e.name, e.type_code, et.unit_prefix, et.label_template
+            FROM equipment e
+            LEFT JOIN equipment_types et ON e.type_code = et.type_code
+            WHERE e.id = ?
+        """, (equipment_id,))
+        eq_row = cursor.fetchone()
+        if not eq_row:
+            raise HTTPException(status_code=404, detail=f"設備不存在: {equipment_id}")
+
+        # 取得 active units
+        cursor.execute("""
+            SELECT id, unit_serial, unit_label, level_percent, status,
+                   last_check, checked_by, remarks, is_active
+            FROM equipment_units
+            WHERE equipment_id = ? AND (is_active = 1 OR is_active IS NULL)
+            ORDER BY unit_serial
+        """, (equipment_id,))
+        active_units = [dict(row) for row in cursor.fetchall()]
+
+        # 取得 inactive units
+        inactive_units = []
+        if include_inactive:
+            cursor.execute("""
+                SELECT id, unit_serial, unit_label, level_percent, status,
+                       is_active, removed_at, removed_by, removal_reason
+                FROM equipment_units
+                WHERE equipment_id = ? AND is_active = 0
+                ORDER BY removed_at DESC
+            """, (equipment_id,))
+            inactive_units = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            "equipment_id": eq_row[0],
+            "equipment_name": eq_row[1],
+            "type_code": eq_row[2],
+            "unit_prefix": eq_row[3],
+            "label_template": eq_row[4],
+            "active_count": len(active_units),
+            "inactive_count": len(inactive_units) if include_inactive else None,
+            "units": active_units,
+            "inactive_units": inactive_units if include_inactive else None
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"取得設備單位列表失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v2/equipment/{equipment_id}/units", status_code=201)
+async def add_equipment_unit_v2(equipment_id: str, request: UnitAddRequest):
+    """
+    新增設備單位 (v2.1)
+
+    Args:
+        equipment_id: 設備ID
+        request: 新增請求
+
+    Returns:
+        新增的單位資訊及設備摘要
+    """
+    MAX_RETRY = 3
+
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # 檢查設備是否存在
+        cursor.execute("SELECT id, name FROM equipment WHERE id = ?", (equipment_id,))
+        eq_row = cursor.fetchone()
+        if not eq_row:
+            raise HTTPException(status_code=404, detail=f"設備不存在: {equipment_id}")
+
+        # 生成序號（含重試機制）
+        unit_serial = None
+        unit_label = None
+        for attempt in range(MAX_RETRY):
+            try:
+                unit_serial, unit_label = _generate_next_serial(cursor, equipment_id)
+
+                cursor.execute("""
+                    INSERT INTO equipment_units
+                    (equipment_id, unit_serial, unit_label, level_percent, status, is_active, created_at)
+                    VALUES (?, ?, ?, ?, ?, 1, datetime('now'))
+                """, (equipment_id, unit_serial, unit_label, request.level_percent, request.status))
+
+                break
+            except sqlite3.IntegrityError:
+                if attempt == MAX_RETRY - 1:
+                    raise HTTPException(status_code=409, detail="序號生成衝突，請重試")
+                continue
+
+        unit_id = cursor.lastrowid
+
+        # 記錄生命週期事件
+        event_id = _record_lifecycle_event(
+            cursor, unit_id, equipment_id, 'CREATE',
+            reason=request.reason,
+            snapshot={
+                'unit_serial': unit_serial,
+                'unit_label': unit_label,
+                'level_percent': request.level_percent,
+                'status': request.status
+            }
+        )
+
+        conn.commit()
+
+        # 取得設備摘要
+        summary = _get_equipment_summary(cursor, equipment_id)
+
+        return {
+            "success": True,
+            "unit": {
+                "id": unit_id,
+                "equipment_id": equipment_id,
+                "unit_serial": unit_serial,
+                "unit_label": unit_label,
+                "level_percent": request.level_percent,
+                "status": request.status,
+                "is_active": True
+            },
+            "equipment_summary": summary,
+            "event_id": event_id,
+            "message": f"已新增 {unit_label}，目前共 {summary['active_unit_count']} 支"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"新增設備單位失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/api/v2/equipment/units/{unit_id}")
+async def update_equipment_unit_v2(unit_id: int, request: UnitUpdateRequest):
+    """
+    更新設備單位屬性 (v2.1)
+
+    Args:
+        unit_id: 單位ID
+        request: 更新請求
+
+    Returns:
+        更新後的單位資訊及變更紀錄
+    """
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # 取得現有單位資訊
+        cursor.execute("""
+            SELECT equipment_id, unit_serial, unit_label, level_percent, status, is_active
+            FROM equipment_units WHERE id = ?
+        """, (unit_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail=f"單位不存在: {unit_id}")
+
+        if row[5] == 0:
+            raise HTTPException(status_code=400, detail="無法更新已移除的單位")
+
+        equipment_id = row[0]
+        old_values = {
+            'unit_label': row[2],
+            'level_percent': row[3],
+            'status': row[4]
+        }
+
+        # 建構更新語句
+        updates = []
+        params = []
+        changes = {}
+
+        if request.level_percent is not None and request.level_percent != old_values['level_percent']:
+            updates.append("level_percent = ?")
+            params.append(request.level_percent)
+            changes['level_percent'] = {'from': old_values['level_percent'], 'to': request.level_percent}
+
+        if request.status is not None and request.status != old_values['status']:
+            updates.append("status = ?")
+            params.append(request.status)
+            changes['status'] = {'from': old_values['status'], 'to': request.status}
+
+        if request.unit_label is not None and request.unit_label != old_values['unit_label']:
+            updates.append("unit_label = ?")
+            params.append(request.unit_label)
+            changes['unit_label'] = {'from': old_values['unit_label'], 'to': request.unit_label}
+
+        if not updates:
+            return {
+                "success": True,
+                "unit": {
+                    "id": unit_id,
+                    "unit_serial": row[1],
+                    "unit_label": old_values['unit_label'],
+                    "level_percent": old_values['level_percent'],
+                    "status": old_values['status']
+                },
+                "changes": {},
+                "message": "無變更"
+            }
+
+        updates.append("updated_at = datetime('now')")
+        params.append(unit_id)
+
+        cursor.execute(f"""
+            UPDATE equipment_units SET {', '.join(updates)} WHERE id = ?
+        """, params)
+
+        # 記錄生命週期事件
+        _record_lifecycle_event(
+            cursor, unit_id, equipment_id, 'UPDATE',
+            snapshot={'changes': changes}
+        )
+
+        conn.commit()
+
+        # 取得更新後的資料
+        cursor.execute("""
+            SELECT unit_serial, unit_label, level_percent, status
+            FROM equipment_units WHERE id = ?
+        """, (unit_id,))
+        new_row = cursor.fetchone()
+
+        return {
+            "success": True,
+            "unit": {
+                "id": unit_id,
+                "unit_serial": new_row[0],
+                "unit_label": new_row[1],
+                "level_percent": new_row[2],
+                "status": new_row[3]
+            },
+            "changes": changes
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新設備單位失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v2/equipment/units/{unit_id}")
+async def remove_equipment_unit_v2(unit_id: int, request: UnitRemoveRequest = None):
+    """
+    移除設備單位 (Soft Delete) (v2.1)
+
+    Args:
+        unit_id: 單位ID
+        request: 移除請求（可選，包含原因和操作者）
+
+    Returns:
+        移除的單位資訊及設備摘要
+    """
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # 取得現有單位資訊
+        cursor.execute("""
+            SELECT equipment_id, unit_serial, unit_label, level_percent, status, is_active
+            FROM equipment_units WHERE id = ?
+        """, (unit_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail=f"單位不存在: {unit_id}")
+
+        if row[5] == 0:
+            raise HTTPException(status_code=400, detail="單位已被移除")
+
+        equipment_id = row[0]
+        reason = request.reason if request else None
+        actor = request.actor if request else None
+
+        # 執行 soft delete
+        cursor.execute("""
+            UPDATE equipment_units
+            SET is_active = 0, removed_at = datetime('now'),
+                removed_by = ?, removal_reason = ?, updated_at = datetime('now')
+            WHERE id = ?
+        """, (actor, reason, unit_id))
+
+        # 記錄生命週期事件
+        event_id = _record_lifecycle_event(
+            cursor, unit_id, equipment_id, 'SOFT_DELETE',
+            actor=actor, reason=reason,
+            snapshot={
+                'unit_serial': row[1],
+                'unit_label': row[2],
+                'level_percent': row[3],
+                'status': row[4]
+            }
+        )
+
+        conn.commit()
+
+        # 取得設備摘要
+        summary = _get_equipment_summary(cursor, equipment_id)
+
+        return {
+            "success": True,
+            "removed_unit": {
+                "id": unit_id,
+                "unit_serial": row[1],
+                "unit_label": row[2],
+                "level_percent": row[3],
+                "removed_at": datetime.now().isoformat(),
+                "removal_reason": reason
+            },
+            "equipment_summary": summary,
+            "event_id": event_id,
+            "message": f"已移除 {row[2]}，目前剩餘 {summary['active_unit_count']} 支"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"移除設備單位失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v2/equipment/units/{unit_id}/restore")
+async def restore_equipment_unit_v2(unit_id: int):
+    """
+    恢復已移除的設備單位 (v2.1)
+
+    Args:
+        unit_id: 單位ID
+
+    Returns:
+        恢復的單位資訊及設備摘要
+    """
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # 取得現有單位資訊
+        cursor.execute("""
+            SELECT equipment_id, unit_serial, unit_label, level_percent, status, is_active
+            FROM equipment_units WHERE id = ?
+        """, (unit_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail=f"單位不存在: {unit_id}")
+
+        if row[5] == 1 or row[5] is None:
+            raise HTTPException(status_code=400, detail="單位未被移除，無需恢復")
+
+        equipment_id = row[0]
+
+        # 恢復單位
+        cursor.execute("""
+            UPDATE equipment_units
+            SET is_active = 1, removed_at = NULL, removed_by = NULL,
+                removal_reason = NULL, updated_at = datetime('now')
+            WHERE id = ?
+        """, (unit_id,))
+
+        # 記錄生命週期事件
+        _record_lifecycle_event(
+            cursor, unit_id, equipment_id, 'RESTORE',
+            snapshot={
+                'unit_serial': row[1],
+                'unit_label': row[2]
+            }
+        )
+
+        conn.commit()
+
+        # 取得設備摘要
+        summary = _get_equipment_summary(cursor, equipment_id)
+
+        return {
+            "success": True,
+            "restored_unit": {
+                "id": unit_id,
+                "unit_serial": row[1],
+                "unit_label": row[2]
+            },
+            "equipment_summary": summary,
+            "message": f"已恢復 {row[2]}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"恢復設備單位失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v2/equipment/{equipment_id}/quantity")
+async def batch_adjust_quantity_v2(equipment_id: str, request: BatchQuantityRequest):
+    """
+    批次調整設備數量（智慧縮減）(v2.1)
+
+    Args:
+        equipment_id: 設備ID
+        request: 批次調整請求
+
+    Returns:
+        調整結果，包含新增/移除的單位清單
+    """
+    import uuid
+    correlation_id = f"batch-{uuid.uuid4().hex[:8]}"
+
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # 檢查設備是否存在
+        cursor.execute("SELECT id, name FROM equipment WHERE id = ?", (equipment_id,))
+        eq_row = cursor.fetchone()
+        if not eq_row:
+            raise HTTPException(status_code=404, detail=f"設備不存在: {equipment_id}")
+
+        # 取得目前 active 單位
+        cursor.execute("""
+            SELECT id, unit_serial, unit_label, level_percent, status, last_check
+            FROM equipment_units
+            WHERE equipment_id = ? AND (is_active = 1 OR is_active IS NULL)
+            ORDER BY unit_serial
+        """, (equipment_id,))
+        active_units = [dict(row) for row in cursor.fetchall()]
+        current_quantity = len(active_units)
+
+        target = request.target_quantity
+        units_added = []
+        units_removed = []
+
+        if target > current_quantity:
+            # 需要新增
+            add_count = target - current_quantity
+            for _ in range(add_count):
+                unit_serial, unit_label = _generate_next_serial(cursor, equipment_id)
+                cursor.execute("""
+                    INSERT INTO equipment_units
+                    (equipment_id, unit_serial, unit_label, level_percent, status, is_active, created_at)
+                    VALUES (?, ?, ?, ?, ?, 1, datetime('now'))
+                """, (equipment_id, unit_serial, unit_label,
+                      request.default_level_percent, request.default_status))
+
+                unit_id = cursor.lastrowid
+                _record_lifecycle_event(
+                    cursor, unit_id, equipment_id, 'CREATE',
+                    reason=request.reason,
+                    snapshot={'unit_serial': unit_serial, 'unit_label': unit_label,
+                              'level_percent': request.default_level_percent},
+                    correlation_id=correlation_id
+                )
+                units_added.append({
+                    "id": unit_id,
+                    "label": unit_label,
+                    "level_percent": request.default_level_percent
+                })
+
+        elif target < current_quantity:
+            # 需要移除（智慧縮減）
+            remove_count = current_quantity - target
+
+            # 根據優先順序排序
+            sorted_units = sorted(active_units, key=_get_removal_priority)
+            to_remove = sorted_units[:remove_count]
+
+            for unit in to_remove:
+                # 決定移除原因
+                if unit['status'] == 'EMPTY':
+                    reason_note = "空瓶優先移除"
+                elif unit['level_percent'] < 30:
+                    reason_note = "低電量優先移除"
+                else:
+                    reason_note = "依排序移除"
+
+                cursor.execute("""
+                    UPDATE equipment_units
+                    SET is_active = 0, removed_at = datetime('now'),
+                        removal_reason = ?, updated_at = datetime('now')
+                    WHERE id = ?
+                """, (f"批次調整: {reason_note}", unit['id']))
+
+                _record_lifecycle_event(
+                    cursor, unit['id'], equipment_id, 'SOFT_DELETE',
+                    reason=f"批次調整: {request.reason or '數量調整'}",
+                    snapshot={
+                        'unit_serial': unit['unit_serial'],
+                        'level_percent': unit['level_percent'],
+                        'status': unit['status']
+                    },
+                    correlation_id=correlation_id
+                )
+
+                units_removed.append({
+                    "id": unit['id'],
+                    "label": unit['unit_label'],
+                    "level_percent": unit['level_percent'],
+                    "reason": reason_note
+                })
+
+        conn.commit()
+
+        # 取得設備摘要
+        summary = _get_equipment_summary(cursor, equipment_id)
+
+        action = "expand" if target > current_quantity else ("shrink" if target < current_quantity else "no_change")
+
+        return {
+            "success": True,
+            "equipment_id": equipment_id,
+            "previous_quantity": current_quantity,
+            "new_quantity": target,
+            "action": action,
+            "units_added": units_added,
+            "units_removed": units_removed,
+            "equipment_summary": summary,
+            "correlation_id": correlation_id,
+            "message": f"已從 {current_quantity} 支調整為 {target} 支"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"批次調整數量失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v2/equipment/lifecycle-events")
+async def get_lifecycle_events_v2(
+    equipment_id: Optional[str] = Query(None, description="設備ID篩選"),
+    unit_id: Optional[int] = Query(None, description="單位ID篩選"),
+    event_type: Optional[str] = Query(None, description="事件類型篩選"),
+    limit: int = Query(default=50, le=200, description="筆數限制"),
+    offset: int = Query(default=0, ge=0, description="偏移量")
+):
+    """
+    查詢設備生命週期事件 (v2.1)
+
+    Args:
+        equipment_id: 設備ID篩選
+        unit_id: 單位ID篩選
+        event_type: 事件類型篩選 (CREATE, SOFT_DELETE, RESTORE, UPDATE)
+        limit: 筆數限制
+        offset: 偏移量
+
+    Returns:
+        生命週期事件列表
+    """
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # 建構查詢
+        conditions = []
+        params = []
+
+        if equipment_id:
+            conditions.append("equipment_id = ?")
+            params.append(equipment_id)
+        if unit_id:
+            conditions.append("unit_id = ?")
+            params.append(unit_id)
+        if event_type:
+            conditions.append("event_type = ?")
+            params.append(event_type)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        # 計算總數
+        cursor.execute(f"SELECT COUNT(*) FROM equipment_lifecycle_events {where_clause}", params)
+        total = cursor.fetchone()[0]
+
+        # 取得資料
+        params.extend([limit, offset])
+        cursor.execute(f"""
+            SELECT id, unit_id, equipment_id, event_type, actor, reason,
+                   snapshot_json, correlation_id, station_id, created_at
+            FROM equipment_lifecycle_events
+            {where_clause}
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?
+        """, params)
+
+        events = []
+        for row in cursor.fetchall():
+            snapshot = None
+            if row[6]:
+                try:
+                    snapshot = json.loads(row[6])
+                except:
+                    snapshot = row[6]
+
+            events.append({
+                "id": row[0],
+                "unit_id": row[1],
+                "equipment_id": row[2],
+                "event_type": row[3],
+                "actor": row[4],
+                "reason": row[5],
+                "snapshot": snapshot,
+                "correlation_id": row[7],
+                "station_id": row[8],
+                "created_at": row[9]
+            })
+
+        return {
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "events": events
+        }
+    except Exception as e:
+        logger.error(f"查詢生命週期事件失敗: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

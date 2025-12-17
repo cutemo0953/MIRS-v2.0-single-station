@@ -51,6 +51,10 @@ def seed_mirs_demo(conn: sqlite3.Connection):
             last_check TIMESTAMP,
             checked_by TEXT,
             remarks TEXT,
+            is_active INTEGER DEFAULT 1,
+            removed_at TIMESTAMP,
+            removed_by TEXT,
+            removal_reason TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -521,13 +525,15 @@ def _seed_equipment_units(cursor):
         ('UTIL-002', 'GEN-001', '發電機1號', 100, 'AVAILABLE'),  # 油箱滿
     ]
 
-    # 插入所有單位
+    # 插入所有單位 (v2.1: 加入 is_active)
     all_units = h_cylinders + e_cylinders + power_stations + generators
     for eq_id, serial, label, level, status in all_units:
         cursor.execute("""
-            INSERT OR IGNORE INTO equipment_units (equipment_id, unit_serial, unit_label, level_percent, status)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT OR IGNORE INTO equipment_units (equipment_id, unit_serial, unit_label, level_percent, status, is_active)
+            VALUES (?, ?, ?, ?, ?, 1)
         """, (eq_id, serial, label, level, status))
+    # 確保所有現有單位都標記為 active
+    cursor.execute("UPDATE equipment_units SET is_active = 1 WHERE is_active IS NULL")
 
     # 同步 equipment 表的 quantity 與實際單位數量
     cursor.execute("UPDATE equipment SET quantity = 5 WHERE id = 'RESP-001'")   # H型 5瓶

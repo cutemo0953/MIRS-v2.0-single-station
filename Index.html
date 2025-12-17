@@ -1460,9 +1460,18 @@
                                     <td class="px-3 py-2 text-xs text-gray-500 hidden lg:table-cell" x-text="eq.last_check ? new Date(eq.last_check).toLocaleString('zh-TW') : '-'"></td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
-                                            <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="檢查">✓</button>
-                                            <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
-                                            <button @click="deleteEquipment(eq.id, eq.name)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                            <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-1.5 sm:px-2 py-1 bg-equipment-100 rounded" title="檢查">✓</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-1.5 sm:px-2 py-1 bg-equipment-100 rounded" title="管理單位">⊞</button>
+                                            <button @click="editEquipment(eq)" class="hidden sm:inline-block text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
+                                            <button @click="deleteEquipment(eq.id, eq.name)" class="hidden sm:inline-block text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                            <!-- 手機版更多選單 -->
+                                            <div class="relative sm:hidden" x-data="{ open: false }">
+                                                <button @click="open = !open" class="text-gray-500 hover:text-gray-700 text-xs font-medium px-1.5 py-1 bg-gray-100 rounded" title="更多">⋯</button>
+                                                <div x-show="open" @click.away="open = false" class="absolute right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 py-1 min-w-[80px]">
+                                                    <button @click="editEquipment(eq); open = false" class="block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100">✎ 編輯</button>
+                                                    <button @click="deleteEquipment(eq.id, eq.name); open = false" class="block w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">✕ 刪除</button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -1510,9 +1519,18 @@
                                     <td class="px-3 py-2 text-xs text-gray-500 hidden lg:table-cell" x-text="eq.last_check ? new Date(eq.last_check).toLocaleString('zh-TW') : '-'"></td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
-                                            <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="檢查">✓</button>
-                                            <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
-                                            <button @click="deleteEquipment(eq.id, eq.name)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                            <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-1.5 sm:px-2 py-1 bg-equipment-100 rounded" title="檢查">✓</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-1.5 sm:px-2 py-1 bg-equipment-100 rounded" title="管理單位">⊞</button>
+                                            <button @click="editEquipment(eq)" class="hidden sm:inline-block text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
+                                            <button @click="deleteEquipment(eq.id, eq.name)" class="hidden sm:inline-block text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                            <!-- 手機版更多選單 -->
+                                            <div class="relative sm:hidden" x-data="{ open: false }">
+                                                <button @click="open = !open" class="text-gray-500 hover:text-gray-700 text-xs font-medium px-1.5 py-1 bg-gray-100 rounded" title="更多">⋯</button>
+                                                <div x-show="open" @click.away="open = false" class="absolute right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 py-1 min-w-[80px]">
+                                                    <button @click="editEquipment(eq); open = false" class="block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100">✎ 編輯</button>
+                                                    <button @click="deleteEquipment(eq.id, eq.name); open = false" class="block w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">✕ 刪除</button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -1561,9 +1579,18 @@
                                     <td class="px-3 py-2 text-xs text-gray-500 hidden lg:table-cell" x-text="eq.last_check ? new Date(eq.last_check).toLocaleString('zh-TW') : '-'"></td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
-                                            <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="檢查">✓</button>
-                                            <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
-                                            <button @click="deleteEquipment(eq.id, eq.name)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                            <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-1.5 sm:px-2 py-1 bg-equipment-100 rounded" title="檢查">✓</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-1.5 sm:px-2 py-1 bg-equipment-100 rounded" title="管理單位">⊞</button>
+                                            <button @click="editEquipment(eq)" class="hidden sm:inline-block text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
+                                            <button @click="deleteEquipment(eq.id, eq.name)" class="hidden sm:inline-block text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                            <!-- 手機版更多選單 -->
+                                            <div class="relative sm:hidden" x-data="{ open: false }">
+                                                <button @click="open = !open" class="text-gray-500 hover:text-gray-700 text-xs font-medium px-1.5 py-1 bg-gray-100 rounded" title="更多">⋯</button>
+                                                <div x-show="open" @click.away="open = false" class="absolute right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 py-1 min-w-[80px]">
+                                                    <button @click="editEquipment(eq); open = false" class="block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100">✎ 編輯</button>
+                                                    <button @click="deleteEquipment(eq.id, eq.name); open = false" class="block w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">✕ 刪除</button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -1618,9 +1645,18 @@
                                     <td class="px-3 py-2 text-xs text-gray-500 hidden md:table-cell" x-text="eq.last_check ? new Date(eq.last_check).toLocaleString('zh-TW') : '-'"></td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
-                                            <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="檢查">✓</button>
-                                            <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
-                                            <button @click="deleteEquipment(eq.id, eq.name)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                            <button @click="checkEquipment(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-1.5 sm:px-2 py-1 bg-equipment-100 rounded" title="檢查">✓</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-equipment-500 hover:text-[#5a6155] text-xs font-medium px-1.5 sm:px-2 py-1 bg-equipment-100 rounded" title="管理單位">⊞</button>
+                                            <button @click="editEquipment(eq)" class="hidden sm:inline-block text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
+                                            <button @click="deleteEquipment(eq.id, eq.name)" class="hidden sm:inline-block text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                            <!-- 手機版更多選單 -->
+                                            <div class="relative sm:hidden" x-data="{ open: false }">
+                                                <button @click="open = !open" class="text-gray-500 hover:text-gray-700 text-xs font-medium px-1.5 py-1 bg-gray-100 rounded" title="更多">⋯</button>
+                                                <div x-show="open" @click.away="open = false" class="absolute right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 py-1 min-w-[80px]">
+                                                    <button @click="editEquipment(eq); open = false" class="block w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100">✎ 編輯</button>
+                                                    <button @click="deleteEquipment(eq.id, eq.name); open = false" class="block w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">✕ 刪除</button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -2732,6 +2768,157 @@
             </div>
         </div>
 
+        <!-- v2.1: 設備單位管理 Modal -->
+        <div x-show="showUnitManageModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4" style="display: none;">
+            <div @click.away="showUnitManageModal = false" class="bg-white rounded-xl shadow-2xl p-4 sm:p-5 md:p-6 max-w-2xl w-full mx-4 my-4 max-h-[95vh] overflow-y-auto">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-equipment-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    <span>單位管理 - </span>
+                    <span x-text="unitManageForm.equipment_name"></span>
+                </h3>
+
+                <!-- 載入中 -->
+                <div x-show="unitManageForm.loading" class="text-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-equipment-500 mx-auto"></div>
+                    <p class="text-gray-500 mt-2">載入中...</p>
+                </div>
+
+                <div x-show="!unitManageForm.loading" class="space-y-4">
+                    <!-- 快速數量調整 -->
+                    <div class="bg-equipment-50 border border-equipment-200 rounded-lg p-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">快速數量調整</label>
+                        <div class="flex items-center gap-3">
+                            <button type="button" @click="unitManageForm.targetQuantity = Math.max(0, unitManageForm.targetQuantity - 1)"
+                                    class="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-xl font-bold">
+                                −
+                            </button>
+                            <input type="number" x-model="unitManageForm.targetQuantity" min="0"
+                                   class="w-20 text-center text-xl font-bold border-2 border-equipment-300 rounded-lg py-2">
+                            <button type="button" @click="unitManageForm.targetQuantity++"
+                                    class="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-xl font-bold">
+                                +
+                            </button>
+                            <button type="button" @click="batchAdjustQuantity()"
+                                    :disabled="unitManageForm.targetQuantity === unitManageForm.units.length"
+                                    :class="unitManageForm.targetQuantity === unitManageForm.units.length ? 'bg-gray-300 cursor-not-allowed' : 'bg-equipment-500 hover:bg-equipment-600'"
+                                    class="px-4 py-2 text-white rounded-lg transition-colors">
+                                套用
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            目前: <span x-text="unitManageForm.units.length"></span> 個單位
+                            <span x-show="unitManageForm.targetQuantity !== unitManageForm.units.length" class="text-equipment-600 font-medium">
+                                → <span x-text="unitManageForm.targetQuantity"></span>
+                            </span>
+                        </p>
+                    </div>
+
+                    <!-- 現有單位列表 -->
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-2">現有單位 (<span x-text="unitManageForm.units.length"></span>)</h4>
+                        <div class="space-y-2 max-h-48 overflow-y-auto">
+                            <template x-for="unit in unitManageForm.units" :key="unit.id">
+                                <div class="flex items-center justify-between bg-gray-50 rounded-lg p-3 border">
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-medium" x-text="unit.unit_label || unit.unit_serial"></span>
+                                        <span class="text-sm text-gray-500" x-text="unit.level_percent + '%'"></span>
+                                        <span class="text-xs px-2 py-1 rounded-full" :class="getStatusBadgeClass(unit.status)" x-text="unit.status"></span>
+                                    </div>
+                                    <button type="button" @click="removeUnit(unit)"
+                                            class="text-red-500 hover:text-red-700 p-1" title="移除">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                            <div x-show="unitManageForm.units.length === 0" class="text-center text-gray-400 py-4">
+                                目前沒有可用單位
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 移除原因 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">移除原因（可選）</label>
+                        <input type="text" x-model="unitManageForm.removeReason" placeholder="例如：設備故障、送修"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+
+                    <!-- 新增單位 -->
+                    <div class="border-t pt-4">
+                        <h4 class="font-medium text-gray-700 mb-2">新增單位</h4>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">電量 %</label>
+                                <input type="number" x-model="unitManageForm.addForm.level_percent" min="0" max="100"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">狀態</label>
+                                <select x-model="unitManageForm.addForm.status"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="AVAILABLE">可用</option>
+                                    <option value="IN_USE">使用中</option>
+                                    <option value="CHARGING">充電中</option>
+                                    <option value="MAINTENANCE">維護中</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button type="button" @click="addUnit()"
+                                        class="w-full bg-equipment-500 text-white px-4 py-2 rounded-lg hover:bg-[#5a6155] transition-colors text-sm">
+                                    + 新增
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <label class="block text-xs text-gray-500 mb-1">新增原因（可選）</label>
+                            <input type="text" x-model="unitManageForm.addForm.reason" placeholder="例如：演習增援"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                        </div>
+                    </div>
+
+                    <!-- 已移除單位 -->
+                    <div class="border-t pt-4">
+                        <button type="button" @click="unitManageForm.showInactive = !unitManageForm.showInactive"
+                                class="flex items-center gap-2 text-gray-600 hover:text-gray-800">
+                            <svg class="w-4 h-4 transition-transform" :class="unitManageForm.showInactive ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                            <span class="text-sm font-medium">已移除單位 (<span x-text="unitManageForm.inactive_units.length"></span>)</span>
+                        </button>
+                        <div x-show="unitManageForm.showInactive" x-collapse class="mt-2 space-y-2 max-h-32 overflow-y-auto">
+                            <template x-for="unit in unitManageForm.inactive_units" :key="unit.id">
+                                <div class="flex items-center justify-between bg-red-50 rounded-lg p-3 border border-red-200">
+                                    <div>
+                                        <span class="font-medium text-gray-600 line-through" x-text="unit.unit_label || unit.unit_serial"></span>
+                                        <span class="text-xs text-red-500 ml-2" x-text="unit.removal_reason || '已移除'"></span>
+                                    </div>
+                                    <button type="button" @click="restoreUnit(unit)"
+                                            class="text-green-600 hover:text-green-800 px-3 py-1 text-sm bg-green-100 rounded-lg">
+                                        恢復
+                                    </button>
+                                </div>
+                            </template>
+                            <div x-show="unitManageForm.inactive_units.length === 0" class="text-center text-gray-400 py-2 text-sm">
+                                沒有已移除的單位
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 關閉按鈕 -->
+                    <div class="flex justify-end pt-4 border-t">
+                        <button type="button" @click="showUnitManageModal = false"
+                                class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                            關閉
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 新增處置記錄 Modal -->
         <div x-show="showAddSurgeryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4" style="display: none;">
             <div @click.away="showAddSurgeryModal = false" class="bg-white rounded-xl shadow-2xl p-4 sm:p-5 md:p-6 max-w-2xl w-full mx-4 my-4 max-h-[95vh] overflow-y-auto">
@@ -3837,6 +4024,26 @@
                 showPharmacistApprovalModal: false,
                 showBloodBagSelectModal: false,  // v1.4.2-plus: 血袋選擇出庫
                 showUpgradeModal: false,  // 升級至多站版
+                showUnitManageModal: false,  // v2.1: 設備單位管理
+
+                // v2.1: 設備單位管理表單
+                unitManageForm: {
+                    equipment_id: '',
+                    equipment_name: '',
+                    type_code: '',
+                    unit_prefix: '',
+                    units: [],
+                    inactive_units: [],
+                    loading: false,
+                    showInactive: false,
+                    addForm: {
+                        level_percent: 100,
+                        status: 'AVAILABLE',
+                        reason: ''
+                    },
+                    removeReason: '',
+                    targetQuantity: null
+                },
 
                 // 血袋選擇出庫 (v1.4.2-plus)
                 availableBagsForConsume: [],  // 該血型可用的血袋列表
@@ -6189,6 +6396,211 @@
 
                         console.log('✓ Dashboard updated optimistically');
                     }
+                },
+
+                // ============================================
+                // v2.1: 設備單位管理功能
+                // ============================================
+
+                async openUnitManageModal(eq) {
+                    this.unitManageForm.equipment_id = eq.id;
+                    this.unitManageForm.equipment_name = eq.name;
+                    this.unitManageForm.type_code = eq.type_code;
+                    this.unitManageForm.loading = true;
+                    this.unitManageForm.showInactive = false;
+                    this.unitManageForm.units = [];
+                    this.unitManageForm.inactive_units = [];
+                    this.showUnitManageModal = true;
+
+                    try {
+                        const response = await fetch(`${this.apiUrl}/v2/equipment/${eq.id}/units?include_inactive=true`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.unitManageForm.units = data.units || [];
+                            this.unitManageForm.inactive_units = data.inactive_units || [];
+                            this.unitManageForm.unit_prefix = data.unit_prefix;
+                            this.unitManageForm.targetQuantity = data.active_count;
+                        } else {
+                            this.toast('載入單位列表失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('載入設備單位失敗:', error);
+                        this.toast('載入設備單位失敗', 'error');
+                    } finally {
+                        this.unitManageForm.loading = false;
+                    }
+                },
+
+                async addUnit() {
+                    const equipmentId = this.unitManageForm.equipment_id;
+                    const form = this.unitManageForm.addForm;
+
+                    try {
+                        const response = await fetch(`${this.apiUrl}/v2/equipment/${equipmentId}/units`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                level_percent: parseInt(form.level_percent) || 100,
+                                status: form.status || 'AVAILABLE',
+                                reason: form.reason || null
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.toast(data.message || '已新增單位', 'success');
+                            // 新增到列表
+                            this.unitManageForm.units.push(data.unit);
+                            this.unitManageForm.targetQuantity = data.equipment_summary?.active_unit_count;
+                            // 重置表單
+                            this.unitManageForm.addForm = { level_percent: 100, status: 'AVAILABLE', reason: '' };
+                            // 更新主列表
+                            await this.loadEquipment();
+                            await this.loadResilienceStatus();
+                        } else {
+                            this.toast(data.detail || '新增失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('新增單位失敗:', error);
+                        this.toast('新增單位失敗', 'error');
+                    }
+                },
+
+                async removeUnit(unit) {
+                    const reason = this.unitManageForm.removeReason || '演習調整';
+
+                    if (!confirm(`確定要移除「${unit.unit_label}」？\n原因: ${reason}`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${this.apiUrl}/v2/equipment/units/${unit.id}`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ reason: reason })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.toast(data.message || '已移除單位', 'success');
+                            // 從 active 列表移除
+                            this.unitManageForm.units = this.unitManageForm.units.filter(u => u.id !== unit.id);
+                            // 加入 inactive 列表
+                            this.unitManageForm.inactive_units.unshift({
+                                ...unit,
+                                is_active: false,
+                                removed_at: new Date().toISOString(),
+                                removal_reason: reason
+                            });
+                            this.unitManageForm.targetQuantity = data.equipment_summary?.active_unit_count;
+                            // 更新主列表
+                            await this.loadEquipment();
+                            await this.loadResilienceStatus();
+                        } else {
+                            this.toast(data.detail || '移除失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('移除單位失敗:', error);
+                        this.toast('移除單位失敗', 'error');
+                    }
+                },
+
+                async restoreUnit(unit) {
+                    if (!confirm(`確定要恢復「${unit.unit_label}」？`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${this.apiUrl}/v2/equipment/units/${unit.id}/restore`, {
+                            method: 'POST'
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.toast(data.message || '已恢復單位', 'success');
+                            // 從 inactive 列表移除
+                            this.unitManageForm.inactive_units = this.unitManageForm.inactive_units.filter(u => u.id !== unit.id);
+                            // 加入 active 列表
+                            this.unitManageForm.units.push({
+                                ...unit,
+                                is_active: true,
+                                removed_at: null,
+                                removal_reason: null
+                            });
+                            this.unitManageForm.targetQuantity = data.equipment_summary?.active_unit_count;
+                            // 更新主列表
+                            await this.loadEquipment();
+                            await this.loadResilienceStatus();
+                        } else {
+                            this.toast(data.detail || '恢復失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('恢復單位失敗:', error);
+                        this.toast('恢復單位失敗', 'error');
+                    }
+                },
+
+                async batchAdjustQuantity() {
+                    const equipmentId = this.unitManageForm.equipment_id;
+                    const target = parseInt(this.unitManageForm.targetQuantity);
+                    const current = this.unitManageForm.units.length;
+
+                    if (target === current) {
+                        this.toast('數量未變更', 'info');
+                        return;
+                    }
+
+                    const action = target > current ? '新增' : '移除';
+                    const diff = Math.abs(target - current);
+
+                    if (!confirm(`確定要${action} ${diff} 個單位？\n(${current} → ${target})`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${this.apiUrl}/v2/equipment/${equipmentId}/quantity`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                target_quantity: target,
+                                reason: '批次數量調整'
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.toast(data.message || '調整完成', 'success');
+                            // 重新載入單位列表
+                            await this.openUnitManageModal({
+                                id: equipmentId,
+                                name: this.unitManageForm.equipment_name,
+                                type_code: this.unitManageForm.type_code
+                            });
+                            // 更新主列表
+                            await this.loadEquipment();
+                            await this.loadResilienceStatus();
+                        } else {
+                            this.toast(data.detail || '調整失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('批次調整失敗:', error);
+                        this.toast('批次調整失敗', 'error');
+                    }
+                },
+
+                getStatusBadgeClass(status) {
+                    const classes = {
+                        'AVAILABLE': 'bg-green-100 text-green-800',
+                        'IN_USE': 'bg-blue-100 text-blue-800',
+                        'CHARGING': 'bg-yellow-100 text-yellow-800',
+                        'MAINTENANCE': 'bg-gray-100 text-gray-800',
+                        'EMPTY': 'bg-red-100 text-red-800'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
                 },
 
                 // 手術記錄
