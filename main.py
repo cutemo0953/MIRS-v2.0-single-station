@@ -1291,13 +1291,13 @@ class DatabaseManager:
                 logger.info(f"✓ 預載 {len(medicines)} 種藥品 (MED- 前綴)")
                 logger.info(f"✓ 預載 {len(consumables)} 種耗材")
 
-                # 預載設備
+                # 預載設備 (v2.0 新增 type_code)
                 for e in EQUIPMENT_DATA:
                     cursor.execute("""
                         INSERT OR IGNORE INTO equipment
-                        (id, name, category, quantity, status)
-                        VALUES (?, ?, ?, ?, 'UNCHECKED')
-                    """, (e['id'], e['name'], e['category'], e['quantity']))
+                        (id, name, category, quantity, status, type_code)
+                        VALUES (?, ?, ?, ?, 'UNCHECKED', ?)
+                    """, (e['id'], e['name'], e['category'], e['quantity'], e.get('type_code', 'GENERAL')))
 
                 logger.info(f"✓ 預載 {len(EQUIPMENT_DATA)} 種設備")
                 logger.info("✓ 政府標準資料庫預載完成")
