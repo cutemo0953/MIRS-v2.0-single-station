@@ -2323,20 +2323,34 @@ class DatabaseManager:
             conn.close()
 
     def get_equipment_status(self, station_id: str = None) -> List[Dict[str, Any]]:
-        """取得所有設備狀態"""
+        """取得所有設備狀態 (v2.0 新增 type_code 與韌性相關欄位)"""
         conn = self.get_connection()
         cursor = conn.cursor()
 
         try:
-            # v1.4.5 單站版本：equipment 表無 station_id 欄位
+            # v2.0: 使用 v_equipment_status 視圖取得設備狀態 (含 type_code 與韌性分類)
+            cursor.execute("""
+                SELECT
+                    v.id, v.name, v.type_code, v.type_name, v.category,
+                    v.resilience_category, v.unit_count, v.avg_level,
+                    v.checked_count, v.last_check, v.check_status,
+                    e.quantity, e.status, e.power_level, e.remarks
+                FROM v_equipment_status v
+                LEFT JOIN equipment e ON v.id = e.id
+                ORDER BY v.resilience_category DESC NULLS LAST, v.category, v.name
+            """)
+
+            return [dict(row) for row in cursor.fetchall()]
+        except Exception as e:
+            # 降級到舊版查詢 (如果 view 不存在)
+            logger.warning(f"v_equipment_status 視圖查詢失敗，使用降級查詢: {e}")
             cursor.execute("""
                 SELECT
                     id, name, category, quantity, status,
-                    last_check, power_level, remarks
+                    last_check, power_level, remarks, type_code
                 FROM equipment
                 ORDER BY name
             """)
-
             return [dict(row) for row in cursor.fetchall()]
         finally:
             conn.close()
