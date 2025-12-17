@@ -2983,9 +2983,30 @@ async def daily_equipment_reset():
             await asyncio.sleep(3600)
 
 
+def run_migrations():
+    """執行資料庫遷移 - 確保 schema 更新"""
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    try:
+        # Phase 4.3: 確保 equipment_check_history 有 unit_id 欄位
+        cursor.execute("PRAGMA table_info(equipment_check_history)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if 'unit_id' not in columns:
+            cursor.execute("ALTER TABLE equipment_check_history ADD COLUMN unit_id INTEGER REFERENCES equipment_units(id)")
+            logger.info("✓ Migration: 新增 equipment_check_history.unit_id 欄位")
+        conn.commit()
+    except Exception as e:
+        logger.warning(f"Migration warning: {e}")
+    finally:
+        conn.close()
+
+
 @app.on_event("startup")
 async def startup_event():
     """應用啟動時執行"""
+    # 執行資料庫遷移
+    run_migrations()
+
     # Seed demo data if running on Vercel
     if IS_VERCEL:
         from seeder_demo import seed_mirs_demo
