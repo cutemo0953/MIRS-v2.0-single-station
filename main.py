@@ -2991,12 +2991,78 @@ def run_migrations():
         # Phase 4.3: 確保 equipment_check_history 有 unit_id 欄位
         cursor.execute("PRAGMA table_info(equipment_check_history)")
         columns = [col[1] for col in cursor.fetchall()]
-        if 'unit_id' not in columns:
-            cursor.execute("ALTER TABLE equipment_check_history ADD COLUMN unit_id INTEGER REFERENCES equipment_units(id)")
+        if columns and 'unit_id' not in columns:
+            cursor.execute("ALTER TABLE equipment_check_history ADD COLUMN unit_id INTEGER")
             logger.info("✓ Migration: 新增 equipment_check_history.unit_id 欄位")
+
+        # v2: 確保 equipment_types 表存在
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='equipment_types'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE equipment_types (
+                    type_code TEXT PRIMARY KEY,
+                    type_name TEXT NOT NULL,
+                    category TEXT,
+                    resilience_category TEXT,
+                    tracking_mode TEXT DEFAULT 'PER_UNIT',
+                    capacity_config TEXT,
+                    icon TEXT,
+                    color TEXT DEFAULT 'gray',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cursor.executemany("""
+                INSERT OR IGNORE INTO equipment_types (type_code, type_name, category, resilience_category, capacity_config) VALUES (?, ?, ?, ?, ?)
+            """, [
+                ('POWER_STATION', '行動電源站', '電力設備', 'POWER', '{"strategy":"LINEAR","hours_per_100pct":8,"base_capacity_wh":2000}'),
+                ('GENERATOR', '發電機', '電力設備', 'POWER', '{"strategy":"FUEL_BASED","tank_liters":20,"fuel_rate_lph":2}'),
+                ('O2_CYLINDER_H', 'H型氧氣鋼瓶', '呼吸設備', 'OXYGEN', '{"strategy":"LINEAR","hours_per_100pct":8,"capacity_liters":7000}'),
+                ('O2_CYLINDER_E', 'E型氧氣鋼瓶', '呼吸設備', 'OXYGEN', '{"strategy":"LINEAR","hours_per_100pct":2,"capacity_liters":680}'),
+                ('O2_CONCENTRATOR', '氧氣濃縮機', '呼吸設備', 'OXYGEN', '{"strategy":"POWER_DEPENDENT","output_lpm":5,"requires_power":true}'),
+                ('GENERAL', '一般設備', '一般設備', None, '{"strategy":"NONE"}'),
+                ('MONITOR', '監視器', '監控設備', None, '{"strategy":"NONE"}'),
+                ('VENTILATOR', '呼吸器', '呼吸設備', None, '{"strategy":"NONE"}'),
+            ])
+            logger.info("✓ Migration: 建立 equipment_types 表")
+
+        # v2: 確保 equipment 有 type_code 欄位
+        cursor.execute("PRAGMA table_info(equipment)")
+        eq_columns = [col[1] for col in cursor.fetchall()]
+        if eq_columns and 'type_code' not in eq_columns:
+            cursor.execute("ALTER TABLE equipment ADD COLUMN type_code TEXT")
+            logger.info("✓ Migration: 新增 equipment.type_code 欄位")
+        if eq_columns and 'capacity_override' not in eq_columns:
+            cursor.execute("ALTER TABLE equipment ADD COLUMN capacity_override TEXT")
+            logger.info("✓ Migration: 新增 equipment.capacity_override 欄位")
+
+        # v2: 建立 v_equipment_status 視圖
+        cursor.execute("DROP VIEW IF EXISTS v_equipment_status")
+        cursor.execute("""
+            CREATE VIEW v_equipment_status AS
+            SELECT
+                e.id, e.name, e.type_code,
+                et.type_name, et.category, et.resilience_category,
+                COUNT(u.id) as unit_count,
+                ROUND(AVG(u.level_percent)) as avg_level,
+                SUM(CASE WHEN u.last_check IS NOT NULL THEN 1 ELSE 0 END) as checked_count,
+                MAX(u.last_check) as last_check,
+                CASE
+                    WHEN SUM(CASE WHEN u.last_check IS NOT NULL THEN 1 ELSE 0 END) = 0 THEN 'UNCHECKED'
+                    WHEN SUM(CASE WHEN u.last_check IS NOT NULL THEN 1 ELSE 0 END) = COUNT(u.id) THEN 'CHECKED'
+                    ELSE 'PARTIAL'
+                END as check_status
+            FROM equipment e
+            LEFT JOIN equipment_types et ON e.type_code = et.type_code
+            LEFT JOIN equipment_units u ON e.id = u.equipment_id
+            GROUP BY e.id
+        """)
+        logger.info("✓ Migration: 建立 v_equipment_status 視圖")
+
         conn.commit()
     except Exception as e:
         logger.warning(f"Migration warning: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         conn.close()
 
