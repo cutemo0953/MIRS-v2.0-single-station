@@ -758,7 +758,7 @@ class DatabaseManager:
                 )
             """)
 
-            # 設備主檔
+            # 設備主檔 (v2.0 新增 type_code, tracking_mode 等韌性欄位)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS equipment (
                     id TEXT PRIMARY KEY,
@@ -769,6 +769,14 @@ class DatabaseManager:
                     last_check TIMESTAMP,
                     power_level INTEGER,
                     remarks TEXT,
+                    type_code TEXT,
+                    tracking_mode TEXT DEFAULT 'AGGREGATE',
+                    device_type TEXT,
+                    power_watts REAL,
+                    capacity_wh REAL,
+                    output_watts REAL,
+                    fuel_rate_lph REAL,
+                    capacity_override TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
