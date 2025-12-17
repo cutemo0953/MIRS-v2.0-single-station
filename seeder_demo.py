@@ -479,7 +479,7 @@ def _ensure_resilience_equipment(cursor, now):
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (eq_id, name, category, status, qty, tracking, pw, cap_wh, out_w, fuel, dev_type, type_code, now.isoformat(), now.isoformat()))
         else:
-            # Update existing equipment with resilience columns including type_code
+            # Update existing equipment with resilience columns - force set type_code
             cursor.execute("""
                 UPDATE equipment SET
                     tracking_mode = COALESCE(tracking_mode, ?),
@@ -488,7 +488,7 @@ def _ensure_resilience_equipment(cursor, now):
                     output_watts = COALESCE(output_watts, ?),
                     fuel_rate_lph = COALESCE(fuel_rate_lph, ?),
                     device_type = COALESCE(device_type, ?),
-                    type_code = COALESCE(type_code, ?)
+                    type_code = ?
                 WHERE id = ?
             """, (tracking, pw, cap_wh, out_w, fuel, dev_type, type_code, eq_id))
 

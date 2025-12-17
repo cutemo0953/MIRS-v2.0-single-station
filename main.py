@@ -3035,14 +3035,20 @@ def run_migrations():
             cursor.execute("ALTER TABLE equipment ADD COLUMN capacity_override TEXT")
             logger.info("✓ Migration: 新增 equipment.capacity_override 欄位")
 
-        # v2: 設定 equipment 的 type_code (根據 device_type 或 id 模式)
-        # 每次都執行，確保新增的設備也能被正確標記
-        cursor.execute("UPDATE equipment SET type_code = 'POWER_STATION' WHERE (device_type = 'POWER_STATION' OR id = 'UTIL-001') AND type_code IS NULL")
-        cursor.execute("UPDATE equipment SET type_code = 'GENERATOR' WHERE (device_type = 'GENERATOR' OR id = 'UTIL-002') AND type_code IS NULL")
-        cursor.execute("UPDATE equipment SET type_code = 'O2_CONCENTRATOR' WHERE (device_type = 'O2_CONCENTRATOR' OR id = 'RESP-002') AND type_code IS NULL")
-        cursor.execute("UPDATE equipment SET type_code = 'O2_CYLINDER_H' WHERE (id = 'RESP-001' OR name LIKE '%H型%氧氣%') AND type_code IS NULL")
-        cursor.execute("UPDATE equipment SET type_code = 'O2_CYLINDER_E' WHERE (id = 'EMER-EQ-006' OR name LIKE '%E型%氧氣%') AND type_code IS NULL")
-        cursor.execute("UPDATE equipment SET type_code = 'VENTILATOR' WHERE (id IN ('RESP-003', 'RESP-004') OR name LIKE '%呼吸器%') AND type_code IS NULL")
+        # v2: 設定 equipment 的 type_code (根據 id 直接映射，確保總是正確)
+        # 關鍵韌性設備：直接根據 ID 設定 type_code
+        type_code_by_id = [
+            ('UTIL-001', 'POWER_STATION'),
+            ('UTIL-002', 'GENERATOR'),
+            ('RESP-001', 'O2_CYLINDER_H'),
+            ('EMER-EQ-006', 'O2_CYLINDER_E'),
+            ('RESP-002', 'O2_CONCENTRATOR'),
+            ('RESP-003', 'VENTILATOR'),
+            ('RESP-004', 'VENTILATOR'),
+        ]
+        for eq_id, tc in type_code_by_id:
+            cursor.execute("UPDATE equipment SET type_code = ? WHERE id = ?", (tc, eq_id))
+        # 其他設備根據模式設定
         cursor.execute("UPDATE equipment SET type_code = 'MONITOR' WHERE (id LIKE 'DIAG-%' OR name LIKE '%監視器%') AND type_code IS NULL")
         cursor.execute("UPDATE equipment SET type_code = 'GENERAL' WHERE type_code IS NULL")
         logger.info("✓ Migration: 設定 equipment.type_code 對應")
