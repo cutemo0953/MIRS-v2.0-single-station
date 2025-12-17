@@ -3035,6 +3035,18 @@ def run_migrations():
             cursor.execute("ALTER TABLE equipment ADD COLUMN capacity_override TEXT")
             logger.info("✓ Migration: 新增 equipment.capacity_override 欄位")
 
+        # v2: 設定 equipment 的 type_code (根據 device_type 或 id 模式)
+        # 每次都執行，確保新增的設備也能被正確標記
+        cursor.execute("UPDATE equipment SET type_code = 'POWER_STATION' WHERE (device_type = 'POWER_STATION' OR id = 'UTIL-001') AND type_code IS NULL")
+        cursor.execute("UPDATE equipment SET type_code = 'GENERATOR' WHERE (device_type = 'GENERATOR' OR id = 'UTIL-002') AND type_code IS NULL")
+        cursor.execute("UPDATE equipment SET type_code = 'O2_CONCENTRATOR' WHERE (device_type = 'O2_CONCENTRATOR' OR id = 'RESP-002') AND type_code IS NULL")
+        cursor.execute("UPDATE equipment SET type_code = 'O2_CYLINDER_H' WHERE (id = 'RESP-001' OR name LIKE '%H型%氧氣%') AND type_code IS NULL")
+        cursor.execute("UPDATE equipment SET type_code = 'O2_CYLINDER_E' WHERE (id = 'EMER-EQ-006' OR name LIKE '%E型%氧氣%') AND type_code IS NULL")
+        cursor.execute("UPDATE equipment SET type_code = 'VENTILATOR' WHERE (id IN ('RESP-003', 'RESP-004') OR name LIKE '%呼吸器%') AND type_code IS NULL")
+        cursor.execute("UPDATE equipment SET type_code = 'MONITOR' WHERE (id LIKE 'DIAG-%' OR name LIKE '%監視器%') AND type_code IS NULL")
+        cursor.execute("UPDATE equipment SET type_code = 'GENERAL' WHERE type_code IS NULL")
+        logger.info("✓ Migration: 設定 equipment.type_code 對應")
+
         # v2: 建立 v_equipment_status 視圖
         cursor.execute("DROP VIEW IF EXISTS v_equipment_status")
         cursor.execute("""
