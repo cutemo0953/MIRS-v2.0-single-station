@@ -584,25 +584,27 @@ class ResilienceService:
         config: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """
-        計算電力韌性 - v1.2.5: 設備瓦數累計計算
+        計算電力韌性 - v1.4.7: 支援 PER_UNIT 追蹤模式
 
         計算邏輯：
         1. 總負載 = Σ(設備.power_watts) 從所有耗電設備
         2. 電源站時數 = capacity_wh × (power_level/100) ÷ 總負載
         3. 發電機時數 = 油量 ÷ fuel_rate_lph
         4. 總時數 = 電源站時數 + 發電機時數 (依序使用)
+
+        v1.4.7: 支援 PER_UNIT 追蹤，個別追蹤每台電源站/發電機電量
         """
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        # 1. 計算總負載 (所有有 power_watts 的設備)
+        # 1. 計算總負載 (所有有 power_watts 的設備，考慮數量)
         cursor.execute("""
-            SELECT id, name, power_watts
+            SELECT id, name, power_watts, COALESCE(quantity, 1) as qty
             FROM equipment
             WHERE power_watts IS NOT NULL AND power_watts > 0
         """)
         consuming_equipment = cursor.fetchall()
-        total_load_watts = sum(row['power_watts'] for row in consuming_equipment)
+        total_load_watts = sum(row['power_watts'] * row['qty'] for row in consuming_equipment)
 
         # 如果沒有耗電設備，使用預設負載
         if total_load_watts == 0:
@@ -610,7 +612,8 @@ class ResilienceService:
 
         # 2. 取得電源站 (有 capacity_wh 的設備)
         cursor.execute("""
-            SELECT id, name, capacity_wh, output_watts, power_level
+            SELECT id, name, capacity_wh, output_watts, power_level,
+                   COALESCE(quantity, 1) as qty, tracking_mode
             FROM equipment
             WHERE capacity_wh IS NOT NULL AND capacity_wh > 0
         """)
@@ -618,7 +621,8 @@ class ResilienceService:
 
         # 3. 取得發電機 (有 fuel_rate_lph 的設備)
         cursor.execute("""
-            SELECT id, name, output_watts, fuel_rate_lph, power_level
+            SELECT id, name, output_watts, fuel_rate_lph, power_level,
+                   COALESCE(quantity, 1) as qty, tracking_mode
             FROM equipment
             WHERE fuel_rate_lph IS NOT NULL AND fuel_rate_lph > 0
         """)
@@ -635,45 +639,209 @@ class ResilienceService:
         fuel_row = cursor.fetchone()
         extra_fuel = fuel_row['total_fuel'] if fuel_row and fuel_row['total_fuel'] else 0
 
+        # 5. 取得所有電力設備的 equipment_units (PER_UNIT 用)
+        power_eq_ids = [ps['id'] for ps in power_stations] + [g['id'] for g in generators]
+        units_by_equipment = {}
+        if power_eq_ids:
+            placeholders = ','.join(['?' for _ in power_eq_ids])
+            cursor.execute(f"""
+                SELECT equipment_id, unit_serial, unit_label, level_percent, status, last_check
+                FROM equipment_units
+                WHERE equipment_id IN ({placeholders})
+                ORDER BY equipment_id, unit_serial
+            """, power_eq_ids)
+            for row in cursor.fetchall():
+                eq_id = row['equipment_id']
+                if eq_id not in units_by_equipment:
+                    units_by_equipment[eq_id] = []
+                units_by_equipment[eq_id].append({
+                    'serial': row['unit_serial'],
+                    'label': row['unit_label'],
+                    'level': row['level_percent'] or 0,
+                    'status': row['status'] or 'AVAILABLE',
+                    'last_check': row['last_check']
+                })
+
         conn.close()
 
         # 計算各電源可用時數
         sources = []
+        power_items = []  # v1.4.7: 詳細電力設備清單
         total_battery_wh = 0
         total_fuel_liters = extra_fuel
+        charging_warnings = []  # 充電中提醒
 
-        # 電源站計算
+        # 電源站計算 (支援 PER_UNIT)
         for ps in power_stations:
-            capacity = ps['capacity_wh']
-            level = ps['power_level'] if ps['power_level'] is not None else 100
-            available_wh = capacity * (level / 100.0)
-            hours = available_wh / total_load_watts if total_load_watts > 0 else 0
-            total_battery_wh += available_wh
+            capacity_per_unit = ps['capacity_wh']
+            qty = ps['qty']
+            tracking_mode = ps['tracking_mode'] or 'AGGREGATE'
+            eq_id = ps['id']
 
-            sources.append({
-                'name': f"{ps['name']} ({level}%)",
-                'capacity': f"{capacity} Wh",
-                'available': f"{available_wh:.1f} Wh",
-                'hours': round(hours, 1)
-            })
+            if tracking_mode == 'PER_UNIT' and eq_id in units_by_equipment:
+                # PER_UNIT 模式：計算個別單位
+                units = units_by_equipment[eq_id]
+                unit_details = []
+                ps_available_wh = 0
+                charging_count = 0
 
-        # 發電機計算 (假設有足夠油料)
+                for unit in units:
+                    level = unit['level']
+                    status = unit['status']
+                    unit_wh = capacity_per_unit * (level / 100.0)
+
+                    # CHARGING 狀態：計入容量但標記提醒
+                    if status == 'CHARGING':
+                        charging_count += 1
+                        ps_available_wh += unit_wh
+                    # AVAILABLE, IN_USE: 正常計入
+                    elif status in ('AVAILABLE', 'IN_USE'):
+                        ps_available_wh += unit_wh
+                    # MAINTENANCE, OFFLINE: 不計入
+
+                    unit_details.append({
+                        'label': unit['label'],
+                        'level': level,
+                        'status': status,
+                        'capacity': round(unit_wh, 1),
+                        'last_check': unit['last_check']
+                    })
+
+                total_battery_wh += ps_available_wh
+                hours = ps_available_wh / total_load_watts if total_load_watts > 0 else 0
+                avg_level = sum(u['level'] for u in unit_details) / len(unit_details) if unit_details else 0
+
+                if charging_count > 0:
+                    charging_warnings.append(f"{ps['name']} 有 {charging_count} 台充電中，請於充電完成後更新設備狀態")
+
+                sources.append({
+                    'name': f"{ps['name']} ({avg_level:.0f}%)",
+                    'capacity': f"{capacity_per_unit * len(unit_details):.1f} Wh",
+                    'available': f"{ps_available_wh:.1f} Wh",
+                    'hours': round(hours, 1)
+                })
+
+                power_items.append({
+                    'item_code': eq_id,
+                    'name': ps['name'],
+                    'device_type': 'POWER_STATION',
+                    'qty': len(unit_details),
+                    'capacity_each': capacity_per_unit,
+                    'avg_level': round(avg_level, 1),
+                    'effective_total': round(ps_available_wh, 1),
+                    'unit': 'Wh',
+                    'tracking_mode': 'PER_UNIT',
+                    'units': unit_details
+                })
+            else:
+                # AGGREGATE 模式：原有邏輯
+                level = ps['power_level'] if ps['power_level'] is not None else 100
+                total_capacity = capacity_per_unit * qty
+                available_wh = total_capacity * (level / 100.0)
+                hours = available_wh / total_load_watts if total_load_watts > 0 else 0
+                total_battery_wh += available_wh
+
+                qty_label = f" ×{qty}" if qty > 1 else ""
+                sources.append({
+                    'name': f"{ps['name']}{qty_label} ({level}%)",
+                    'capacity': f"{total_capacity:.1f} Wh",
+                    'available': f"{available_wh:.1f} Wh",
+                    'hours': round(hours, 1)
+                })
+
+                power_items.append({
+                    'item_code': eq_id,
+                    'name': ps['name'],
+                    'device_type': 'POWER_STATION',
+                    'qty': qty,
+                    'capacity_each': capacity_per_unit,
+                    'avg_level': level,
+                    'effective_total': round(available_wh, 1),
+                    'unit': 'Wh',
+                    'tracking_mode': 'AGGREGATE'
+                })
+
+        # 發電機計算 (支援 PER_UNIT)
         for gen in generators:
             fuel_rate = gen['fuel_rate_lph']
-            # 發電機油量：power_level 代表油箱百分比，假設 50L 油箱
+            qty = gen['qty']
+            tracking_mode = gen['tracking_mode'] or 'AGGREGATE'
+            eq_id = gen['id']
             tank_capacity = 50  # 預設 50L 油箱
-            level = gen['power_level'] if gen['power_level'] is not None else 100
-            tank_fuel = tank_capacity * (level / 100.0)
-            total_fuel_liters += tank_fuel
 
-            gen_hours = (tank_fuel + extra_fuel) / fuel_rate if fuel_rate > 0 else 0
+            if tracking_mode == 'PER_UNIT' and eq_id in units_by_equipment:
+                # PER_UNIT 模式
+                units = units_by_equipment[eq_id]
+                unit_details = []
+                gen_total_fuel = 0
 
-            sources.append({
-                'name': f"{gen['name']} (燃油 {tank_fuel + extra_fuel:.1f}L)",
-                'capacity': f"{gen['output_watts']}W, {fuel_rate}L/hr",
-                'available': f"{gen_hours:.1f} hr 運轉",
-                'hours': round(gen_hours, 1)
-            })
+                for unit in units:
+                    level = unit['level']
+                    status = unit['status']
+                    unit_fuel = tank_capacity * (level / 100.0)
+
+                    if status in ('AVAILABLE', 'IN_USE', 'CHARGING'):
+                        gen_total_fuel += unit_fuel
+
+                    unit_details.append({
+                        'label': unit['label'],
+                        'level': level,
+                        'status': status,
+                        'capacity': round(unit_fuel, 1),
+                        'last_check': unit['last_check']
+                    })
+
+                total_fuel_liters += gen_total_fuel
+                gen_hours = (gen_total_fuel + extra_fuel) / fuel_rate if fuel_rate > 0 else 0
+                avg_level = sum(u['level'] for u in unit_details) / len(unit_details) if unit_details else 0
+
+                sources.append({
+                    'name': f"{gen['name']} (燃油 {gen_total_fuel + extra_fuel:.1f}L)",
+                    'capacity': f"{gen['output_watts']}W, {fuel_rate}L/hr",
+                    'available': f"{gen_hours:.1f} hr 運轉",
+                    'hours': round(gen_hours, 1)
+                })
+
+                power_items.append({
+                    'item_code': eq_id,
+                    'name': gen['name'],
+                    'device_type': 'GENERATOR',
+                    'qty': len(unit_details),
+                    'capacity_each': tank_capacity,
+                    'avg_level': round(avg_level, 1),
+                    'effective_total': round(gen_total_fuel, 1),
+                    'unit': 'L',
+                    'tracking_mode': 'PER_UNIT',
+                    'units': unit_details,
+                    'fuel_rate_lph': fuel_rate
+                })
+            else:
+                # AGGREGATE 模式
+                level = gen['power_level'] if gen['power_level'] is not None else 100
+                tank_fuel = tank_capacity * qty * (level / 100.0)
+                total_fuel_liters += tank_fuel
+                gen_hours = (tank_fuel + extra_fuel) / fuel_rate if fuel_rate > 0 else 0
+
+                qty_label = f" ×{qty}" if qty > 1 else ""
+                sources.append({
+                    'name': f"{gen['name']}{qty_label} (燃油 {tank_fuel + extra_fuel:.1f}L)",
+                    'capacity': f"{gen['output_watts']}W, {fuel_rate}L/hr",
+                    'available': f"{gen_hours:.1f} hr 運轉",
+                    'hours': round(gen_hours, 1)
+                })
+
+                power_items.append({
+                    'item_code': eq_id,
+                    'name': gen['name'],
+                    'device_type': 'GENERATOR',
+                    'qty': qty,
+                    'capacity_each': tank_capacity,
+                    'avg_level': level,
+                    'effective_total': round(tank_fuel, 1),
+                    'unit': 'L',
+                    'tracking_mode': 'AGGREGATE',
+                    'fuel_rate_lph': fuel_rate
+                })
 
         # 總時數 = 電池時數 + 發電機時數
         battery_hours = total_battery_wh / total_load_watts if total_load_watts > 0 else 0
@@ -694,12 +862,21 @@ class ResilienceService:
         can_survive = ratio >= 1.0
         gap = max(0, isolation_hours - total_hours)
 
+        # v1.4.7: 組合充電提醒訊息
+        base_message = self._generate_message('POWER', total_hours, isolation_hours, status)
+        if charging_warnings:
+            charging_note = " | 🔌 " + "; ".join(charging_warnings)
+            full_message = base_message + charging_note
+        else:
+            full_message = base_message
+
         return {
             'item_code': 'POWER-TOTAL',
             'name': '電力供應',
             'type': 'POWER',
             'inventory': {
                 'sources': sources,
+                'items': power_items,  # v1.4.7: 詳細電力設備清單 (類似氧氣鋼瓶)
                 'total_battery_wh': round(total_battery_wh, 1),
                 'total_fuel_liters': round(total_fuel_liters, 1),
                 'capacity_unit': 'Wh'
@@ -726,7 +903,8 @@ class ResilienceService:
                 'gap_hours': round(gap, 1) if not can_survive else 0,
                 'gap_display': f"缺口 {gap:.1f} 小時" if not can_survive else None
             },
-            'message': self._generate_message('POWER', total_hours, isolation_hours, status)
+            'charging_warnings': charging_warnings if charging_warnings else None,  # v1.4.7
+            'message': full_message
         }
 
     def _calculate_oxygen_endurance(

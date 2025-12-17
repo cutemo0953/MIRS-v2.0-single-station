@@ -1,9 +1,57 @@
-# MIRS 設備韌性整合規格 v1.4.6
+# MIRS 設備韌性整合規格 v1.4.8
 
-> Updated: 2025-12-16
-> Part of: MIRS v1.4.6 Single Station
+> Updated: 2025-12-17
+> Part of: MIRS v1.4.8 Single Station
+
+---
+
+## ⚠️ 架構重構計畫
+
+> **重要**: 本規格將於 v2.0 進行重大架構重構，解決資料同步與擴展性問題。
+
+詳見: **[EQUIPMENT_ARCHITECTURE_REDESIGN.md](./EQUIPMENT_ARCHITECTURE_REDESIGN.md)**
+
+| 現況問題 | v2.0 解決方案 |
+|---------|--------------|
+| equipment / equipment_units 狀態不一致 | Single Source of Truth (只存 units) |
+| AGGREGATE / PER_UNIT 雙軌邏輯 | Unit-Centric (全部統一為 units) |
+| 設備類型硬編碼於程式碼 | equipment_types 表 + Calculator Strategy |
+| 前端需 refreshKey 技巧 | API 回傳即時計算的聚合值 |
+
+**狀態**: ✅ 已通過外部評審 (Gemini)，可開始實作
+
+---
 
 ## Changelog
+
+### v1.4.8 (2025-12-17)
+- **架構重構計畫**: 新增 EQUIPMENT_ARCHITECTURE_REDESIGN.md
+  - 解決 equipment / equipment_units 狀態同步問題
+  - 設計 equipment_types 表支援可配置設備類型
+  - 規劃 v2 API 與 Calculator Strategy 模式
+  - 通過 Gemini 外部評審，確認可執行
+
+### v1.4.7 (2025-12-16)
+- **電力設備 PER_UNIT 追蹤**: 支援個別追蹤每台電源站/發電機
+  - 電源站、發電機可設定 `tracking_mode = 'PER_UNIT'`
+  - 個別單位有獨立電量/油量百分比和狀態
+  - UI 顯示各單位進度條和狀態標籤
+- **電力設備狀態選項**: 新增適合電力設備的狀態
+  - `AVAILABLE` - 待命可用
+  - `IN_USE` - 供電中 (綠色)
+  - `CHARGING` - 充電中 (藍色，會計入容量但顯示提醒)
+  - `MAINTENANCE` - 維護中 (橘色，不計入容量)
+  - `OFFLINE` - 離線/故障 (紅色，不計入容量)
+- **充電提醒**: CHARGING 狀態的設備會計入當前電量
+  - API 回傳 `charging_warnings` 提醒用戶
+  - 訊息：「請於充電完成後記得更新設備狀態」
+- **電力設備編輯 Modal**: 新增專屬電力設備的編輯介面
+  - 可調整電量/油量百分比
+  - 可選擇 5 種狀態
+  - 發電機顯示「油量百分比」，電源站顯示「電量百分比」
+- **Seeder 更新**: Demo 資料新增電力設備單位
+  - 行動電源站 ×2 (95% IN_USE, 60% CHARGING)
+  - 發電機 ×1 (100% AVAILABLE)
 
 ### v1.4.6 (2025-12-16)
 - **最弱環節修正**: 氧氣濃縮機不再覆蓋鋼瓶計算
@@ -548,5 +596,5 @@ UI 輸入框現支援 `step="0.1"` 小數輸入。
 ---
 
 *Created: 2025-12-15*
-*Updated: 2025-12-16*
+*Updated: 2025-12-17*
 *Author: Claude Code*

@@ -486,7 +486,8 @@ def _ensure_resilience_equipment(cursor, now):
 
 
 def _seed_equipment_units(cursor):
-    """Helper: Seed oxygen cylinder units"""
+    """Helper: Seed oxygen cylinder units and power equipment units (v1.4.7)"""
+    # === 氧氣鋼瓶單位 ===
     h_cylinders = [
         ('RESP-001', 'H-CYL-001', 'H型1號', 100, 'AVAILABLE'),
         ('RESP-001', 'H-CYL-002', 'H型2號', 85, 'AVAILABLE'),
@@ -500,19 +501,32 @@ def _seed_equipment_units(cursor):
         ('EMER-EQ-006', 'E-CYL-003', 'E型3號', 60, 'IN_USE'),
         ('EMER-EQ-006', 'E-CYL-004', 'E型4號', 30, 'AVAILABLE'),
     ]
-    for eq_id, serial, label, level, status in h_cylinders + e_cylinders:
+
+    # === v1.4.7: 電力設備單位 ===
+    # 行動電源站 (2台，各 2048Wh)
+    power_stations = [
+        ('UTIL-001', 'PS-001', '電源站1號', 95, 'IN_USE'),      # 95% 供電中
+        ('UTIL-001', 'PS-002', '電源站2號', 60, 'CHARGING'),    # 60% 充電中
+    ]
+    # 發電機 (1台，50L油箱)
+    generators = [
+        ('UTIL-002', 'GEN-001', '發電機1號', 100, 'AVAILABLE'),  # 油箱滿
+    ]
+
+    # 插入所有單位
+    all_units = h_cylinders + e_cylinders + power_stations + generators
+    for eq_id, serial, label, level, status in all_units:
         cursor.execute("""
             INSERT OR IGNORE INTO equipment_units (equipment_id, unit_serial, unit_label, level_percent, status)
             VALUES (?, ?, ?, ?, ?)
         """, (eq_id, serial, label, level, status))
 
     # 同步 equipment 表的 quantity 與實際單位數量
-    cursor.execute("""
-        UPDATE equipment SET quantity = 5 WHERE id = 'RESP-001'
-    """)  # H型 5瓶
-    cursor.execute("""
-        UPDATE equipment SET quantity = 4 WHERE id = 'EMER-EQ-006'
-    """)  # E型 4瓶
+    cursor.execute("UPDATE equipment SET quantity = 5 WHERE id = 'RESP-001'")   # H型 5瓶
+    cursor.execute("UPDATE equipment SET quantity = 4 WHERE id = 'EMER-EQ-006'")  # E型 4瓶
+    cursor.execute("UPDATE equipment SET quantity = 2 WHERE id = 'UTIL-001'")   # 電源站 2台
+    cursor.execute("UPDATE equipment SET quantity = 1 WHERE id = 'UTIL-002'")   # 發電機 1台
+
     # Add resilience-related columns to equipment if not exist
     columns_to_add = [
         ("tracking_mode", "TEXT DEFAULT 'AGGREGATE'"),
@@ -527,7 +541,12 @@ def _seed_equipment_units(cursor):
             cursor.execute(f"ALTER TABLE equipment ADD COLUMN {col_name} {col_def}")
         except:
             pass  # Column already exists
-    cursor.execute("UPDATE equipment SET tracking_mode = 'PER_UNIT' WHERE id IN ('RESP-001', 'EMER-EQ-006')")
+
+    # v1.4.7: 設定 PER_UNIT 追蹤模式 (氧氣鋼瓶 + 電力設備)
+    cursor.execute("""
+        UPDATE equipment SET tracking_mode = 'PER_UNIT'
+        WHERE id IN ('RESP-001', 'EMER-EQ-006', 'UTIL-001', 'UTIL-002')
+    """)
 
 
 def _seed_resilience_profiles(cursor):

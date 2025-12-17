@@ -3826,7 +3826,7 @@ async def update_equipment_unit(request: EquipmentUnitUpdateRequest):
     try:
         # 0. 取得更新前的狀態 (用於歷史記錄)
         cursor.execute("""
-            SELECT level_percent, status
+            SELECT id, level_percent, status
             FROM equipment_units
             WHERE equipment_id = ? AND unit_label = ?
         """, (request.equipment_id, request.unit_label))
@@ -3834,6 +3834,7 @@ async def update_equipment_unit(request: EquipmentUnitUpdateRequest):
         if not old_state:
             raise HTTPException(status_code=404, detail=f"找不到單位 {request.unit_label}")
 
+        unit_id = old_state['id']
         level_before = old_state['level_percent']
         status_before = old_state['status']
 
@@ -3847,9 +3848,9 @@ async def update_equipment_unit(request: EquipmentUnitUpdateRequest):
         # 2. 記錄檢查歷史
         cursor.execute("""
             INSERT INTO equipment_check_history
-            (equipment_id, unit_label, check_date, check_time, level_before, level_after, status_before, status_after, station_id)
-            VALUES (?, ?, DATE('now'), CURRENT_TIMESTAMP, ?, ?, ?, ?, ?)
-        """, (request.equipment_id, request.unit_label, level_before, request.level_percent,
+            (equipment_id, unit_label, unit_id, check_date, check_time, level_before, level_after, status_before, status_after, station_id)
+            VALUES (?, ?, ?, DATE('now'), CURRENT_TIMESTAMP, ?, ?, ?, ?, ?)
+        """, (request.equipment_id, request.unit_label, unit_id, level_before, request.level_percent,
               status_before, request.status, config.get_station_id()))
 
         # 3. 計算該設備所有單位的平均 level
@@ -3906,7 +3907,7 @@ async def reset_unit_check(request: UnitResetRequest):
     try:
         # 1. 取得目前狀態
         cursor.execute("""
-            SELECT level_percent, status, last_check
+            SELECT id, level_percent, status, last_check
             FROM equipment_units
             WHERE equipment_id = ? AND unit_label = ?
         """, (request.equipment_id, request.unit_label))
@@ -3917,9 +3918,9 @@ async def reset_unit_check(request: UnitResetRequest):
         # 2. 記錄重置操作到歷史 (status_after = 'RESET')
         cursor.execute("""
             INSERT INTO equipment_check_history
-            (equipment_id, unit_label, check_date, check_time, level_before, level_after, status_before, status_after, station_id, remarks)
-            VALUES (?, ?, DATE('now'), CURRENT_TIMESTAMP, ?, ?, ?, 'RESET', ?, '檢查狀態重置')
-        """, (request.equipment_id, request.unit_label, current['level_percent'], current['level_percent'],
+            (equipment_id, unit_label, unit_id, check_date, check_time, level_before, level_after, status_before, status_after, station_id, remarks)
+            VALUES (?, ?, ?, DATE('now'), CURRENT_TIMESTAMP, ?, ?, ?, 'RESET', ?, '檢查狀態重置')
+        """, (request.equipment_id, request.unit_label, current['id'], current['level_percent'], current['level_percent'],
               current['status'], config.get_station_id()))
 
         # 3. 清除 last_check (設為未檢查)
@@ -7028,6 +7029,581 @@ async def get_resilience_summary(station_id: Optional[str] = Query(None)):
         }
     except Exception as e:
         logger.error(f"韌性摘要計算失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# API v2: 設備架構重構 (Equipment Architecture v2)
+# Based on: EQUIPMENT_ARCHITECTURE_REDESIGN.md
+# ============================================================================
+
+from services.capacity_calculator import (
+    calculate_equipment_hours,
+    aggregate_unit_hours,
+    get_calculator
+)
+
+@app.get("/api/v2/equipment-types")
+async def get_equipment_types_v2():
+    """
+    取得所有設備類型定義
+
+    Returns:
+        List of equipment types with capacity configurations
+    """
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT type_code, type_name, category, resilience_category,
+                   unit_label, capacity_config, status_options, icon, color
+            FROM equipment_types
+            ORDER BY resilience_category DESC, category, type_name
+        """)
+
+        types = []
+        for row in cursor.fetchall():
+            types.append({
+                "type_code": row[0],
+                "type_name": row[1],
+                "category": row[2],
+                "resilience_category": row[3],
+                "unit_label": row[4],
+                "capacity_config": json.loads(row[5]) if row[5] else None,
+                "status_options": json.loads(row[6]) if row[6] else [],
+                "icon": row[7],
+                "color": row[8]
+            })
+
+        return {"types": types, "count": len(types)}
+    except Exception as e:
+        logger.error(f"取得設備類型失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v2/equipment")
+async def get_equipment_v2():
+    """
+    取得所有設備及其聚合狀態 (使用 v_equipment_status View)
+
+    Returns:
+        List of equipment with aggregated status from units
+    """
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, name, type_code, type_name, category, resilience_category,
+                   unit_count, avg_level, checked_count, last_check, check_status
+            FROM v_equipment_status
+            ORDER BY resilience_category DESC, category, name
+        """)
+
+        equipment = []
+        for row in cursor.fetchall():
+            equipment.append({
+                "id": row[0],
+                "name": row[1],
+                "type_code": row[2],
+                "type_name": row[3],
+                "category": row[4],
+                "resilience_category": row[5],
+                "unit_count": row[6],
+                "avg_level": row[7],
+                "checked_count": row[8],
+                "last_check": row[9],
+                "check_status": row[10]
+            })
+
+        return {"equipment": equipment, "count": len(equipment)}
+    except Exception as e:
+        logger.error(f"取得設備列表失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v2/equipment/{equipment_id}")
+async def get_equipment_detail_v2(equipment_id: str):
+    """
+    取得單一設備詳情及其所有單位
+
+    Args:
+        equipment_id: 設備ID
+
+    Returns:
+        Equipment details with all units
+    """
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # Get equipment with type info
+        cursor.execute("""
+            SELECT e.id, e.name, e.type_code, et.type_name, et.category,
+                   et.resilience_category, et.capacity_config, et.status_options,
+                   e.remarks
+            FROM equipment e
+            LEFT JOIN equipment_types et ON e.type_code = et.type_code
+            WHERE e.id = ?
+        """, (equipment_id,))
+
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail=f"設備不存在: {equipment_id}")
+
+        equipment = {
+            "id": row[0],
+            "name": row[1],
+            "type_code": row[2],
+            "type_name": row[3],
+            "category": row[4],
+            "resilience_category": row[5],
+            "capacity_config": json.loads(row[6]) if row[6] else None,
+            "status_options": json.loads(row[7]) if row[7] else [],
+            "remarks": row[8]
+        }
+
+        # Get units
+        cursor.execute("""
+            SELECT id, unit_serial, unit_label, level_percent, status,
+                   last_check, checked_by, remarks
+            FROM equipment_units
+            WHERE equipment_id = ?
+            ORDER BY unit_serial
+        """, (equipment_id,))
+
+        units = []
+        for unit_row in cursor.fetchall():
+            # Calculate hours for this unit
+            hours_result = calculate_equipment_hours(
+                unit_row[3] or 0,
+                row[6]  # capacity_config
+            )
+
+            units.append({
+                "id": unit_row[0],
+                "unit_serial": unit_row[1],
+                "unit_label": unit_row[2],
+                "level_percent": unit_row[3],
+                "status": unit_row[4],
+                "last_check": unit_row[5],
+                "checked_by": unit_row[6],
+                "remarks": unit_row[7],
+                "hours": hours_result.hours
+            })
+
+        equipment["units"] = units
+        equipment["unit_count"] = len(units)
+
+        # Calculate aggregated hours
+        if units:
+            total_hours = sum(u["hours"] for u in units)
+            avg_level = sum(u["level_percent"] or 0 for u in units) / len(units)
+            equipment["total_hours"] = round(total_hours, 2)
+            equipment["avg_level"] = round(avg_level, 1)
+
+        return equipment
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"取得設備詳情失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v2/resilience/dashboard")
+async def get_resilience_dashboard_v2(station_id: Optional[str] = Query(None)):
+    """
+    韌性儀表板 API (v2)
+
+    提供預先計算好的韌性數據，前端可直接使用。
+    使用 v_resilience_equipment View 和 Calculator Strategy。
+
+    Returns:
+        {
+            summary: { overall_status, min_hours, check_progress },
+            lifelines: [ { category, name, total_hours, items: [...] } ]
+        }
+    """
+    try:
+        sid = station_id or config.get_station_id()
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # Get resilience config
+        cursor.execute("""
+            SELECT isolation_target_days, population_count
+            FROM resilience_config WHERE station_id = ?
+        """, (sid,))
+        config_row = cursor.fetchone()
+
+        isolation_days = config_row[0] if config_row else 3
+        population_count = config_row[1] if config_row else 1
+
+        # Get all resilience equipment from view
+        cursor.execute("""
+            SELECT equipment_id, name, type_code, type_name, resilience_category,
+                   capacity_config, unit_id, unit_serial, unit_label,
+                   level_percent, status, last_check
+            FROM v_resilience_equipment
+        """)
+
+        # Organize by category and equipment
+        categories = {}
+        equipment_map = {}
+
+        for row in cursor.fetchall():
+            eq_id = row[0]
+            category = row[4]
+            capacity_config = row[5]
+
+            if category not in categories:
+                categories[category] = {
+                    "category": category,
+                    "name": "電力供應" if category == "POWER" else "氧氣供應",
+                    "items": []
+                }
+
+            if eq_id not in equipment_map:
+                equipment_map[eq_id] = {
+                    "equipment_id": eq_id,
+                    "name": row[1],
+                    "type_code": row[2],
+                    "type_name": row[3],
+                    "capacity_config": capacity_config,
+                    "units": [],
+                    "category": category
+                }
+
+            # Add unit
+            level = row[9] or 0
+            hours_result = calculate_equipment_hours(level, capacity_config)
+
+            # Phase 3.4b: Normalize timestamp to UTC+Z format
+            last_check_raw = row[11]
+            last_check_utc = None
+            if last_check_raw:
+                try:
+                    # Parse and convert to UTC+Z format
+                    if isinstance(last_check_raw, str):
+                        dt = datetime.fromisoformat(last_check_raw.replace('Z', '+00:00'))
+                        last_check_utc = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    else:
+                        last_check_utc = last_check_raw
+                except:
+                    last_check_utc = last_check_raw
+
+            equipment_map[eq_id]["units"].append({
+                "unit_id": row[6],
+                "serial": row[7],
+                "label": row[8],
+                "level_percent": level,
+                "status": row[10],
+                "hours": hours_result.hours,
+                "last_check": last_check_utc  # UTC+Z format
+            })
+
+        # Calculate totals per category
+        lifelines = []
+        total_checked = 0
+        total_units = 0
+
+        for category, cat_data in categories.items():
+            cat_hours = 0
+            cat_items = []
+            charging_warnings = []
+
+            for eq_id, eq_data in equipment_map.items():
+                if eq_data["category"] != category:
+                    continue
+
+                eq_hours = sum(u["hours"] for u in eq_data["units"])
+                checked = sum(1 for u in eq_data["units"] if u["last_check"])
+
+                # Check for charging units
+                charging_units = [u for u in eq_data["units"] if u["status"] == "CHARGING"]
+                if charging_units:
+                    charging_warnings.append(
+                        f"{eq_data['name']} 有 {len(charging_units)} 台充電中，請於充電完成後更新狀態"
+                    )
+
+                cat_items.append({
+                    "equipment_id": eq_id,
+                    "name": eq_data["name"],
+                    "type_code": eq_data["type_code"],
+                    "check_status": "CHECKED" if checked == len(eq_data["units"]) else (
+                        "PARTIAL" if checked > 0 else "UNCHECKED"
+                    ),
+                    "units": eq_data["units"]
+                })
+
+                cat_hours += eq_hours
+                total_checked += checked
+                total_units += len(eq_data["units"])
+
+            # Determine status
+            target_hours = isolation_days * 24
+            if cat_hours >= target_hours * 1.2:
+                status = "SAFE"
+            elif cat_hours >= target_hours:
+                status = "WARNING"
+            else:
+                status = "CRITICAL"
+
+            lifelines.append({
+                "category": category,
+                "name": cat_data["name"],
+                "status": status,
+                "total_hours": round(cat_hours, 2),
+                "items": cat_items,
+                "charging_warnings": charging_warnings
+            })
+
+        # Calculate overall status
+        if lifelines:
+            min_hours = min(ll["total_hours"] for ll in lifelines)
+            limiting = min(lifelines, key=lambda x: x["total_hours"])
+
+            if all(ll["status"] == "SAFE" for ll in lifelines):
+                overall_status = "SAFE"
+            elif any(ll["status"] == "CRITICAL" for ll in lifelines):
+                overall_status = "CRITICAL"
+            else:
+                overall_status = "WARNING"
+        else:
+            min_hours = 0
+            limiting = None
+            overall_status = "UNKNOWN"
+
+        return {
+            "station_id": sid,
+            "summary": {
+                "overall_status": overall_status,
+                "min_hours": round(min_hours, 2),
+                "min_days": round(min_hours / 24, 1),
+                "limiting_factor": limiting["category"] if limiting else None,
+                "isolation_target_days": isolation_days,
+                "check_progress": {
+                    "total": total_units,
+                    "checked": total_checked,
+                    "percentage": round(total_checked / total_units * 100) if total_units else 0
+                }
+            },
+            "lifelines": lifelines
+        }
+    except Exception as e:
+        logger.error(f"韌性儀表板計算失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class UnitCheckRequest(BaseModel):
+    level_percent: int = Field(..., ge=0, le=100)
+    status: str = Field(default="AVAILABLE")
+    remarks: Optional[str] = None
+
+
+@app.post("/api/v2/equipment/units/{unit_id}/check")
+async def check_equipment_unit_v2(unit_id: int, request: UnitCheckRequest):
+    """
+    檢查/更新設備單位狀態 (v2)
+
+    自動記錄歷史並回傳更新後的聚合狀態。
+
+    Args:
+        unit_id: 單位ID
+        request: { level_percent, status, remarks }
+
+    Returns:
+        Updated unit and equipment aggregate status
+    """
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # Get current unit info
+        cursor.execute("""
+            SELECT u.equipment_id, u.unit_serial, u.level_percent, u.status,
+                   e.name, et.capacity_config
+            FROM equipment_units u
+            JOIN equipment e ON u.equipment_id = e.id
+            LEFT JOIN equipment_types et ON e.type_code = et.type_code
+            WHERE u.id = ?
+        """, (unit_id,))
+
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail=f"單位不存在: {unit_id}")
+
+        equipment_id = row[0]
+        unit_serial = row[1]
+        old_level = row[2]
+        old_status = row[3]
+        equipment_name = row[4]
+        capacity_config = row[5]
+
+        # Record history
+        cursor.execute("""
+            INSERT INTO equipment_check_history
+            (equipment_id, unit_label, unit_id, check_date, check_time, level_before, level_after,
+             status_before, status_after, remarks)
+            VALUES (?, ?, ?, date('now'), datetime('now'), ?, ?, ?, ?, ?)
+        """, (
+            equipment_id, unit_serial, unit_id,
+            old_level, request.level_percent,
+            old_status, request.status,
+            request.remarks
+        ))
+
+        # Update unit
+        cursor.execute("""
+            UPDATE equipment_units
+            SET level_percent = ?, status = ?, last_check = datetime('now'),
+                remarks = ?, updated_at = datetime('now')
+            WHERE id = ?
+        """, (request.level_percent, request.status, request.remarks, unit_id))
+
+        conn.commit()
+
+        # Calculate new hours
+        hours_result = calculate_equipment_hours(request.level_percent, capacity_config)
+
+        # Get updated equipment aggregate
+        cursor.execute("""
+            SELECT unit_count, avg_level, checked_count, check_status
+            FROM v_equipment_status
+            WHERE id = ?
+        """, (equipment_id,))
+        agg_row = cursor.fetchone()
+
+        # Phase 3.4a: Calculate dashboard delta for optimistic UI
+        dashboard_delta = None
+        cursor.execute("""
+            SELECT et.resilience_category
+            FROM equipment e
+            JOIN equipment_types et ON e.type_code = et.type_code
+            WHERE e.id = ?
+        """, (equipment_id,))
+        cat_row = cursor.fetchone()
+
+        if cat_row and cat_row[0]:  # If resilience equipment
+            resilience_category = cat_row[0]
+
+            # Calculate updated total hours for this category
+            cursor.execute("""
+                SELECT SUM(
+                    CASE
+                        WHEN u.status IN ('AVAILABLE', 'IN_USE') THEN
+                            json_extract(et.capacity_config, '$.hours_per_100pct') * u.level_percent / 100.0
+                        ELSE 0
+                    END
+                ) as total_hours,
+                COUNT(DISTINCT e.id) as equipment_count,
+                SUM(CASE WHEN u.last_check IS NOT NULL THEN 1 ELSE 0 END) as checked_count,
+                COUNT(u.id) as total_units
+                FROM equipment e
+                JOIN equipment_types et ON e.type_code = et.type_code
+                JOIN equipment_units u ON e.id = u.equipment_id
+                WHERE et.resilience_category = ?
+            """, (resilience_category,))
+            delta_row = cursor.fetchone()
+
+            dashboard_delta = {
+                "category": resilience_category,
+                "total_hours": round(delta_row[0] or 0, 2),
+                "equipment_count": delta_row[1] or 0,
+                "checked_count": delta_row[2] or 0,
+                "total_units": delta_row[3] or 0
+            }
+
+        # Phase 3.4b: Use UTC timestamp with Z suffix
+        now_utc = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        return {
+            "success": True,
+            "unit": {
+                "id": unit_id,
+                "equipment_id": equipment_id,
+                "level_percent": request.level_percent,
+                "status": request.status,
+                "hours": hours_result.hours,
+                "last_check": now_utc  # UTC+Z format
+            },
+            "equipment_aggregate": {
+                "equipment_id": equipment_id,
+                "name": equipment_name,
+                "unit_count": agg_row[0] if agg_row else 0,
+                "avg_level": agg_row[1] if agg_row else 0,
+                "checked_count": agg_row[2] if agg_row else 0,
+                "check_status": agg_row[3] if agg_row else "UNKNOWN"
+            },
+            "dashboard_delta": dashboard_delta  # Phase 3.4a: For optimistic UI
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新設備單位失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v2/equipment/units/{unit_id}/reset")
+async def reset_equipment_unit_v2(unit_id: int):
+    """
+    重置設備單位檢查狀態
+
+    Args:
+        unit_id: 單位ID
+
+    Returns:
+        Updated unit status
+    """
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # Get current unit info
+        cursor.execute("""
+            SELECT equipment_id, unit_serial, level_percent, status
+            FROM equipment_units WHERE id = ?
+        """, (unit_id,))
+
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail=f"單位不存在: {unit_id}")
+
+        equipment_id = row[0]
+        unit_serial = row[1]
+
+        # Record reset in history
+        cursor.execute("""
+            INSERT INTO equipment_check_history
+            (equipment_id, unit_label, unit_id, check_date, check_time, level_before, level_after,
+             status_before, status_after, remarks)
+            VALUES (?, ?, ?, date('now'), datetime('now'), ?, ?, ?, ?, 'RESET')
+        """, (
+            equipment_id, unit_serial, unit_id,
+            row[2], row[2],
+            row[3], row[3]
+        ))
+
+        # Reset last_check
+        cursor.execute("""
+            UPDATE equipment_units
+            SET last_check = NULL, updated_at = datetime('now')
+            WHERE id = ?
+        """, (unit_id,))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "unit_id": unit_id,
+            "equipment_id": equipment_id,
+            "message": "檢查狀態已重置"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"重置設備單位失敗: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
