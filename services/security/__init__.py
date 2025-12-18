@@ -10,6 +10,7 @@ Library: PyNaCl (libsodium binding)
 from .crypto_engine import KeyManager, SecureEnvelopeBuilder
 from .envelope_verifier import EnvelopeVerifier
 from .models import SecureEnvelope, EnvelopeHeader
+from .exchange_routes import router as exchange_router
 
 __all__ = [
     'KeyManager',
@@ -17,4 +18,5 @@ __all__ = [
     'EnvelopeVerifier',
     'SecureEnvelope',
     'EnvelopeHeader',
+    'exchange_router',
 ]
