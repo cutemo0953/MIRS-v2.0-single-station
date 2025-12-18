@@ -1,10 +1,26 @@
-# MIRS Mobile PWA 開發規格書 v0.1
+# MIRS Mobile PWA 開發規格書 v0.2
 
 > 巡房助手：醫護人員的行動物資管理工具
 
 **狀態**: Draft
 **日期**: 2025-12-18
+**版本**: 0.2 (根據 AI Review 更新)
 **參考**: CIRS Satellite PWA v1.3.1
+
+---
+
+## 變更記錄
+
+### v0.2 (2025-12-18)
+- **API 命名空間**：從 `/api/mobile/` 改為 `/api/mirs-mobile/v1/`
+- **緊急發藥**：新增醫療級稽核欄位（staff_id, patient_id, reason_code, witness_id）
+- **同步協議**：定義三種回應狀態（ACCEPTED, ACCEPTED_WITH_ADJUSTMENT, REJECTED）
+- **安全範圍**：細化 Token Scopes 並新增裝置撤銷機制
+- **手動輸入**：新增 iOS Safari 相機失敗的 Fallback 流程
+- **新增章節**：資料模型、緊急發藥政策、同步協議
+
+### v0.1 (2025-12-18)
+- 初版規格書
 
 ---
 
@@ -21,11 +37,14 @@
 | **移動範圍** | 大（門口、發放區、休息區） | 中（病床、藥局、設備區） |
 | **專業度** | 低（簡化操作） | 中（允許專業術語） |
 | **離線頻率** | 高（災區網路不穩） | 中（離島/偏遠地區） |
+| **稽核要求** | 中（物資發放記錄） | **高**（藥品發放需完整追溯） |
+
+> ⚠️ **重要提醒**：「不能把發藥當發便當設計」—— MIRS 的藥品發放涉及醫療責任，必須有完整的稽核追溯。
 
 ### 1.2 核心價值
 
 1. **設備巡檢行動化** - 走到哪檢查到哪，不用回護理站登記
-2. **緊急發藥無延遲** - 病床邊直接授權發藥
+2. **緊急發藥無延遲** - 病床邊直接授權發藥（含完整稽核）
 3. **韌性即時監控** - 氧氣、電力剩餘時數一目了然
 4. **離線不中斷** - 網路斷線仍可操作，恢復後自動同步
 
@@ -35,6 +54,7 @@
 2. **錯誤容忍** - 按錯可撤銷，離線可重試
 3. **專業友善** - 使用醫療縮寫（PRN, CBC），但有解釋
 4. **韌性優先** - 電力/氧氣狀態永遠在首頁可見
+5. **稽核完整** - 所有操作記錄「誰、對誰、何時、為何」
 
 ---
 
@@ -67,17 +87,20 @@
 ### 2.2 資料流
 
 ```
-Satellite PWA (手機)          Hub (MIRS Backend)           Web Dashboard
-      │                              │                           │
-      │  POST /api/mobile/check      │                           │
-      │  { equipment_id, status }    │                           │
-      ├─────────────────────────────>│                           │
-      │                              │  Update equipment table   │
-      │                              │  Broadcast via WebSocket  │
-      │                              ├──────────────────────────>│
-      │                              │                           │  Dashboard
-      │  200 OK                      │                           │  auto-refresh
-      │<─────────────────────────────┤                           │
+MIRS Mobile (手機)                Hub (MIRS Backend)           Web Dashboard
+      │                                  │                           │
+      │  POST /api/mirs-mobile/v1/check  │                           │
+      │  { action_id, equipment_id, ... }│                           │
+      ├─────────────────────────────────>│                           │
+      │                                  │  Validate action_id       │
+      │                                  │  Check revoked_devices    │
+      │                                  │  Update equipment table   │
+      │                                  │  Log to action_logs       │
+      │                                  │  Broadcast via WebSocket  │
+      │                                  ├──────────────────────────>│
+      │                                  │                           │  Dashboard
+      │  { status: "ACCEPTED" }          │                           │  auto-refresh
+      │<─────────────────────────────────┤                           │
 ```
 
 ### 2.3 技術選型
@@ -88,13 +111,64 @@ Satellite PWA (手機)          Hub (MIRS Backend)           Web Dashboard
 | **PWA** | Service Worker + IndexedDB | 離線支援 |
 | **認證** | 6 位數配對碼 + JWT | 沿用 CIRS 成熟方案 |
 | **通訊** | REST API | 簡單可靠，離線友善 |
-| **後端** | FastAPI (已有) | 新增 `/api/mobile/*` 端點 |
+| **後端** | FastAPI (已有) | 新增 `/api/mirs-mobile/v1/*` 端點 |
 
 ---
 
-## 3. 功能規格
+## 3. 資料模型（v0.2 新增）
 
-### 3.1 功能優先級
+### 3.1 Mobile Actions 資料表
+
+```sql
+CREATE TABLE IF NOT EXISTS mirs_mobile_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action_id TEXT UNIQUE NOT NULL,      -- UUID，冪等性保證
+    action_type TEXT NOT NULL,           -- 'equipment_check', 'emergency_dispense', etc.
+    device_id TEXT NOT NULL,             -- 裝置 UUID
+    staff_id TEXT NOT NULL,              -- 操作人員 ID
+    patient_id TEXT,                     -- 病患 ID (發藥時必填)
+    payload TEXT NOT NULL,               -- JSON 格式的操作內容
+
+    -- 時間戳記
+    created_at DATETIME NOT NULL,        -- 操作在裝置上建立的時間
+    hub_received_at DATETIME,            -- Hub 收到的時間
+
+    -- 處理狀態
+    status TEXT DEFAULT 'PENDING',       -- PENDING, ACCEPTED, ACCEPTED_WITH_ADJUSTMENT, REJECTED
+    adjustment_note TEXT,                -- 如有調整，說明原因
+
+    -- 稽核覆核
+    review_status TEXT DEFAULT 'PENDING_REVIEW',  -- PENDING_REVIEW, REVIEWED, NOT_REQUIRED
+    reviewer_staff_id TEXT,              -- 覆核人員 ID
+    reviewed_at DATETIME,
+
+    -- 索引欄位
+    station_id TEXT NOT NULL
+);
+
+CREATE INDEX idx_mobile_actions_device ON mirs_mobile_actions(device_id);
+CREATE INDEX idx_mobile_actions_staff ON mirs_mobile_actions(staff_id);
+CREATE INDEX idx_mobile_actions_status ON mirs_mobile_actions(status);
+CREATE INDEX idx_mobile_actions_review ON mirs_mobile_actions(review_status);
+```
+
+### 3.2 裝置撤銷清單
+
+```sql
+CREATE TABLE IF NOT EXISTS mirs_revoked_devices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_id TEXT UNIQUE NOT NULL,
+    revoked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    revoked_by TEXT NOT NULL,
+    reason TEXT
+);
+```
+
+---
+
+## 4. 功能規格
+
+### 4.1 功能優先級
 
 | 功能 | 優先級 | 說明 |
 |------|--------|------|
@@ -102,13 +176,13 @@ Satellite PWA (手機)          Hub (MIRS Backend)           Web Dashboard
 | 韌性儀表板 | P0 | 氧氣/電力剩餘時數首頁顯示 |
 | 設備快速檢查 | P0 | 一鍵更新設備狀態 |
 | 庫存查詢 | P1 | 唯讀查看藥品/耗材庫存 |
-| 緊急發藥 | P1 | Break-the-Glass 緊急發藥 |
+| 緊急發藥 | P1 | **含完整稽核欄位** |
 | 氧氣瓶狀態 | P1 | 個別瓶位 % 更新 |
 | 正常發藥 | P2 | 需 PIN 碼審核 |
 | 血袋領用 | P2 | 記錄病患+血型 |
 | 手術耗材 | P3 | 手術中即時記錄耗材 |
 
-### 3.2 首頁：韌性狀態總覽
+### 4.2 首頁：韌性狀態總覽
 
 ```
 ┌─────────────────────────────────────┐
@@ -139,10 +213,11 @@ Satellite PWA (手機)          Hub (MIRS Backend)           Web Dashboard
 ├─────────────────────────────────────┤
 │  📡 連線狀態: ✅ 已連線              │
 │  🔄 最後同步: 14:30:25              │
+│  ⏳ 待同步: 0 筆 | 待覆核: 2 筆      │
 └─────────────────────────────────────┘
 ```
 
-### 3.3 設備巡檢
+### 4.3 設備巡檢
 
 #### 流程
 
@@ -157,7 +232,12 @@ Satellite PWA (手機)          Hub (MIRS Backend)           Web Dashboard
 │  🔧 設備巡檢                   [返回] │
 ├─────────────────────────────────────┤
 │  📍 篩選: [全部▾] [待檢查優先✓]       │
+│  🔍 搜尋: [輸入設備名稱或編號...]     │
 ├─────────────────────────────────────┤
+│                                     │
+│  ⚡ 最近檢查                         │
+│  ├─ UTIL-001 行動電源站             │
+│  └─ RESP-001-A H型氧氣瓶 #1         │
 │                                     │
 │  ┌─────────────────────────────────┐│
 │  │ ⚠️ 行動電源站 (UTIL-001)        ││
@@ -173,46 +253,14 @@ Satellite PWA (手機)          Hub (MIRS Backend)           Web Dashboard
 │  │    檢查: 今日 09:15            ││
 │  └─────────────────────────────────┘│
 │                                     │
-│  ┌─────────────────────────────────┐│
-│  │ 🟡 氧氣濃縮機 (RESP-002)        ││
-│  │    狀態: 警告                   ││
-│  │    備註: 濾網需更換             ││
-│  │                    [檢查 >]     ││
-│  └─────────────────────────────────┘│
-│                                     │
 └─────────────────────────────────────┘
 ```
 
-#### 檢查表單
+> **手動 Fallback**：當 QR 掃描無法使用時，可透過搜尋欄輸入設備編號，或從「最近檢查」列表快速選擇。
 
-```
-┌─────────────────────────────────────┐
-│  🔧 設備檢查                         │
-│  H型氧氣瓶 #1 (RESP-001-A)          │
-├─────────────────────────────────────┤
-│                                     │
-│  狀態:                              │
-│  ┌────┐ ┌────┐ ┌────┐ ┌────┐       │
-│  │ ✅ │ │ ⚠️ │ │ ❌ │ │ 🔧 │       │
-│  │正常│ │警告│ │故障│ │維修│       │
-│  └────┘ └────┘ └────┘ └────┘       │
-│                                     │
-│  充填百分比: [  95  ] %             │
-│  ────────────────●────              │
-│                                     │
-│  備註 (選填):                       │
-│  ┌─────────────────────────────────┐│
-│  │                                 ││
-│  └─────────────────────────────────┘│
-│                                     │
-│         [ 確認檢查 ]                 │
-│                                     │
-└─────────────────────────────────────┘
-```
+### 4.4 藥品發放（v0.2 重新設計）
 
-### 3.4 藥品發放
-
-#### 緊急發藥 (Break-the-Glass)
+#### 緊急發藥 (Break-the-Glass) - 醫療級稽核
 
 ```
 ┌─────────────────────────────────────┐
@@ -222,108 +270,129 @@ Satellite PWA (手機)          Hub (MIRS Backend)           Web Dashboard
 │  ⚠️ 緊急模式：跳過藥師審核          │
 │     操作將被記錄供事後稽核          │
 │                                     │
-│  藥品: [搜尋或選擇藥品...]          │
+│  ─────────────────────────────────  │
+│  👤 發藥人: 護理師A (NURSE-001)      │
+│     [已登入，無法更改]              │
+│                                     │
+│  ─────────────────────────────────  │
+│  🛏️ 病患:                           │
+│  ┌─────────────────────────────────┐│
+│  │ 🔍 [搜尋病患ID或姓名...]        ││
+│  │ ⚡ 最近: P-001 張小明 | P-002 李大華 │
+│  │ ☐ 未知病患 (事後補登)           ││
+│  └─────────────────────────────────┘│
+│                                     │
+│  ─────────────────────────────────  │
+│  💊 藥品:                           │
+│  ┌─────────────────────────────────┐│
+│  │ 🔍 [搜尋藥品名稱或代碼...]       ││
+│  │ ⭐ 常用: Morphine | Paracetamol ││
+│  └─────────────────────────────────┘│
 │                                     │
 │  ┌─────────────────────────────────┐│
 │  │ Morphine 10mg/mL (MED-003)     ││
-│  │ 庫存: 15 支                     ││
+│  │ 庫存: 15 支  ⚠️ 管制藥品        ││
 │  └─────────────────────────────────┘│
 │                                     │
 │  數量: [ 2 ]  支                    │
 │        [-]  [+]                     │
 │                                     │
-│  領藥人: [護理師 A ▾]               │
-│                                     │
-│  緊急原因: (必填)                   │
+│  ─────────────────────────────────  │
+│  📋 緊急原因: (必選)                │
 │  ┌─────────────────────────────────┐│
-│  │ 大量傷患湧入，需立即止痛        ││
+│  │ ○ 嚴重疼痛 (PAIN_SEVERE)        ││
+│  │ ○ 創傷處置 (TRAUMA_TREATMENT)   ││
+│  │ ○ ACLS 急救 (ACLS_PROTOCOL)     ││
+│  │ ○ 大量傷患 (MASS_CASUALTY)      ││
+│  │ ○ 其他 (OTHER)                  ││
 │  └─────────────────────────────────┘│
+│                                     │
+│  補充說明 (選填):                   │
+│  ┌─────────────────────────────────┐│
+│  │                                 ││
+│  └─────────────────────────────────┘│
+│                                     │
+│  ─────────────────────────────────  │
+│  👁️ 見證人: (管制藥品必填)          │
+│  [選擇見證人 ▾]                     │
 │                                     │
 │      [ 🚨 確認緊急發藥 ]            │
 │                                     │
 └─────────────────────────────────────┘
 ```
 
-### 3.5 庫存查詢
-
-```
-┌─────────────────────────────────────┐
-│  📦 庫存查詢                   [返回] │
-├─────────────────────────────────────┤
-│  🔍 [搜尋藥品/耗材...]              │
-│  篩選: [全部▾] [低庫存⚠️]           │
-├─────────────────────────────────────┤
-│                                     │
-│  💊 藥品                            │
-│  ├─ Morphine 10mg     15支    🟡   │
-│  ├─ Paracetamol 500mg 200顆   🟢   │
-│  ├─ Amoxicillin 500mg 80顆    🟢   │
-│  └─ Insulin Regular   5瓶     🟡   │
-│                                     │
-│  🩹 耗材                            │
-│  ├─ 紗布 4x4         150片   🟢   │
-│  ├─ IV Set           25組    🟡   │
-│  └─ 導尿管 #16       10根    🔴   │
-│                                     │
-│  🩸 血庫                            │
-│  ├─ A+               3袋     🟡   │
-│  ├─ O-               5袋     🟢   │
-│  └─ B+               0袋     🔴   │
-│                                     │
-└─────────────────────────────────────┘
-```
-
 ---
 
-## 4. API 規格
+## 5. API 規格（v0.2 更新）
 
-### 4.1 認證 API（沿用 CIRS）
+### 5.1 API 命名空間
+
+**Base URL**: `/api/mirs-mobile/v1`
+
+> 與 CIRS Satellite (`/api/satellite`) 分離，避免混淆。
+
+### 5.2 認證 API
 
 ```http
 # 產生配對碼（Hub 端）
-POST /api/auth/mobile-pairing
+POST /api/mirs-mobile/v1/auth/pairing
 Authorization: Bearer {admin_token}
 Content-Type: application/json
 
 {
-  "allowed_roles": "nurse,doctor",  // 可選
-  "expires_minutes": 5              // 預設 5 分鐘
+  "allowed_roles": ["nurse", "doctor"],
+  "expires_minutes": 5,
+  "scopes": ["equipment:write", "medication:emergency", "inventory:read"]
 }
 
 Response:
 {
   "code": "384756",
   "expires_at": "2025-12-18T15:35:00Z",
-  "allowed_roles": "nurse,doctor"
+  "allowed_roles": ["nurse", "doctor"],
+  "scopes": ["equipment:write", "medication:emergency", "inventory:read"]
 }
 ```
 
 ```http
 # 交換配對碼（Mobile 端）
-POST /api/auth/mobile/exchange
+POST /api/mirs-mobile/v1/auth/exchange
 Content-Type: application/json
 
 {
   "pairing_code": "384756",
   "device_id": "uuid-xxxx-xxxx",
-  "device_name": "iPhone 護理師A"  // 選填
+  "device_name": "iPhone 護理師A"
 }
 
 Response:
 {
   "access_token": "eyJhbG...",
-  "expires_in": 43200,  // 12 小時
+  "expires_in": 43200,
   "station_id": "TC-01",
   "station_name": "蘭嶼衛生所",
-  "user_role": "nurse"
+  "staff_id": "NURSE-001",
+  "staff_name": "護理師A",
+  "role": "nurse",
+  "scopes": ["equipment:write", "medication:emergency", "inventory:read"]
 }
 ```
 
-### 4.2 韌性 API
+### 5.3 Token Scopes（v0.2 新增）
+
+| Scope | 說明 | 角色 |
+|-------|------|------|
+| `mirs:equipment:read` | 唯讀設備狀態 | 所有 |
+| `mirs:equipment:write` | 更新設備狀態 | nurse, doctor, admin |
+| `mirs:medication:emergency` | 緊急發藥 ⚠️ 高敏感 | nurse, doctor |
+| `mirs:medication:standard` | 一般發藥 (需 PIN) | nurse, doctor |
+| `mirs:inventory:read` | 唯讀庫存 | 所有 |
+| `mirs:resilience:read` | 韌性狀態 | 所有 |
+
+### 5.4 韌性 API
 
 ```http
-# 取得韌性狀態
-GET /api/mobile/resilience
+GET /api/mirs-mobile/v1/resilience
 Authorization: Bearer {token}
 
 Response:
@@ -351,186 +420,322 @@ Response:
 }
 ```
 
-### 4.3 設備 API
+### 5.5 設備 API
 
 ```http
-# 取得設備列表
-GET /api/mobile/equipment?filter=pending  // pending=待檢查
+GET /api/mirs-mobile/v1/equipment?filter=pending
 Authorization: Bearer {token}
 
 Response:
 {
-  "equipment": [
-    {
-      "id": "UTIL-001",
-      "name": "行動電源站",
-      "category": "power",
-      "status": "pending",
-      "power_level": null,
-      "last_check": null
-    },
-    {
-      "id": "RESP-001-A",
-      "name": "H型氧氣瓶 #1",
-      "category": "oxygen",
-      "status": "normal",
-      "power_level": 95,
-      "last_check": "2025-12-18T09:15:00Z"
-    }
-  ],
+  "equipment": [...],
   "pending_count": 3,
-  "total_count": 12
+  "total_count": 12,
+  "recent": [
+    {"id": "UTIL-001", "name": "行動電源站", "last_check": "..."},
+    {"id": "RESP-001-A", "name": "H型氧氣瓶 #1", "last_check": "..."}
+  ]
 }
 ```
 
 ```http
-# 更新設備狀態
-POST /api/mobile/equipment/{equipment_id}/check
+POST /api/mirs-mobile/v1/equipment/{equipment_id}/check
 Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "status": "normal",       // normal, warning, fault, maintenance
-  "power_level": 95,        // 0-100, 可選
-  "notes": "濾網已更換"      // 可選
+  "action_id": "uuid-xxxx",
+  "status": "normal",
+  "power_level": 95,
+  "notes": "濾網已更換"
 }
 
 Response:
 {
-  "success": true,
+  "status": "ACCEPTED",
+  "action_id": "uuid-xxxx",
   "equipment_id": "RESP-001-A",
   "checked_at": "2025-12-18T14:30:00Z",
-  "checked_by": "護理師A"
+  "checked_by": "NURSE-001"
 }
 ```
 
-### 4.4 發藥 API
+### 5.6 緊急發藥 API（v0.2 重新設計）
 
 ```http
-# 緊急發藥
-POST /api/mobile/dispense/emergency
+POST /api/mirs-mobile/v1/dispense/emergency
 Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "item_code": "MED-003",
+  "action_id": "uuid-xxxx",
+  "staff_id": "NURSE-001",
+  "patient_id": "P-2025-009",
+  "unknown_patient": false,
+  "item_code": "MED-MORPHINE-10",
   "quantity": 2,
-  "dispenser": "護理師A",
-  "emergency_reason": "大量傷患湧入"
+  "reason_code": "PAIN_SEVERE",
+  "reason_note": "車禍傷患，骨折疼痛",
+  "witness_id": "DOC-002",
+  "timestamp": 1734512400
 }
 
-Response:
+Response (Success):
 {
-  "success": true,
-  "dispense_id": "DISP-2025-1218-001",
+  "status": "ACCEPTED_PENDING_REVIEW",
+  "action_id": "uuid-xxxx",
+  "audit_id": "AUD-2025-1218-001",
   "item_name": "Morphine 10mg/mL",
-  "quantity": 2,
+  "quantity_dispensed": 2,
   "remaining_stock": 13,
-  "audit_note": "緊急發藥，待藥師確認"
+  "requires_pharmacist_review": true,
+  "review_sla_hours": 2
 }
-```
 
-### 4.5 庫存 API
-
-```http
-# 查詢庫存
-GET /api/mobile/inventory?type=medication&low_stock=true
-Authorization: Bearer {token}
-
-Response:
+Response (Stock Adjusted):
 {
-  "items": [
-    {
-      "code": "MED-001",
-      "name": "Paracetamol 500mg",
-      "category": "medication",
-      "quantity": 200,
-      "unit": "顆",
-      "min_stock": 50,
-      "status": "normal"
-    }
-  ],
-  "low_stock_count": 3,
-  "total_count": 45
+  "status": "ACCEPTED_WITH_ADJUSTMENT",
+  "action_id": "uuid-xxxx",
+  "audit_id": "AUD-2025-1218-002",
+  "item_name": "Morphine 10mg/mL",
+  "quantity_requested": 5,
+  "quantity_dispensed": 3,
+  "adjustment_reason": "庫存不足，僅發放 3 支",
+  "remaining_stock": 0,
+  "requires_pharmacist_review": true
+}
+
+Response (Rejected):
+{
+  "status": "REJECTED",
+  "action_id": "uuid-xxxx",
+  "error_code": "ITEM_NOT_FOUND",
+  "error_message": "藥品代碼不存在"
 }
 ```
+
+#### 緊急原因代碼 (Enum)
+
+| 代碼 | 中文 | 說明 |
+|------|------|------|
+| `PAIN_SEVERE` | 嚴重疼痛 | 疼痛評分 ≥7 |
+| `TRAUMA_TREATMENT` | 創傷處置 | 外傷、燒燙傷等 |
+| `ACLS_PROTOCOL` | ACLS 急救 | 心肺復甦流程用藥 |
+| `MASS_CASUALTY` | 大量傷患 | MCI 情境 |
+| `INFECTION_SEVERE` | 嚴重感染 | 敗血症等 |
+| `RESPIRATORY_DISTRESS` | 呼吸窘迫 | 插管、呼吸衰竭 |
+| `OTHER` | 其他 | 需填寫說明 |
 
 ---
 
-## 5. 離線策略
+## 6. 同步協議（v0.2 新增）
 
-### 5.1 離線可用功能
+### 6.1 同步回應狀態
 
-| 功能 | 離線支援 | 同步策略 |
-|------|----------|----------|
-| 韌性儀表板 | ✅ 顯示快取資料 | 每次連線刷新 |
-| 設備檢查 | ✅ 暫存操作 | 連線後依序上傳 |
-| 緊急發藥 | ✅ 暫存操作 | 連線後依序上傳 |
-| 庫存查詢 | ✅ 顯示快取資料 | 每次連線刷新 |
-| 正常發藥 | ❌ 需線上審核 | - |
+| 狀態 | 說明 | 前端處理 |
+|------|------|----------|
+| `ACCEPTED` | 成功處理 | ✅ 標記完成 |
+| `ACCEPTED_WITH_ADJUSTMENT` | 成功但有調整 | ⚠️ 顯示調整說明，更新本地數據 |
+| `REJECTED` | 拒絕處理 | ❌ 顯示錯誤，保留待人工處理 |
 
-### 5.2 Action Envelope Pattern（沿用 CIRS）
+### 6.2 冪等性保證
 
-```javascript
-// 離線操作暫存格式
-{
-  "action_id": "uuid-xxxx",           // 冪等性保證
-  "action_type": "equipment_check",
-  "payload": {
-    "equipment_id": "RESP-001-A",
-    "status": "normal",
-    "power_level": 95
-  },
-  "device_id": "device-uuid",
-  "created_at": "2025-12-18T14:30:00Z",
-  "synced": false,
-  "retry_count": 0
-}
+- 每個操作必須有唯一的 `action_id` (UUID)
+- 重複提交相同 `action_id` 返回相同結果
+- Hub 維護 `processed_action_ids` 防止重複處理
+
+### 6.3 離線庫存顯示規則
+
+```
+┌─────────────────────────────────────────────────┐
+│  離線時庫存顯示規則                              │
+├─────────────────────────────────────────────────┤
+│  1. 顯示最後同步的庫存數量                        │
+│  2. 標註「離線快取」提示                          │
+│  3. 顯示「已暫存 N 筆發藥待同步」                  │
+│  4. 暫存發藥不預扣本地庫存（Hub 為準）            │
+│  5. 同步後，根據 ACCEPTED_WITH_ADJUSTMENT        │
+│     更新本地快取                                 │
+└─────────────────────────────────────────────────┘
 ```
 
-### 5.3 同步流程
+### 6.4 同步流程圖
 
 ```
 PWA 啟動
     │
+    ├─ 檢查 device_id 是否在 revoked 清單
+    │   ├─ 是 → 顯示「裝置已被撤銷」，清除 Token，強制登出
+    │   └─ 否 → 繼續
+    │
     ├─ 檢查網路狀態
     │
     ├─ 如果線上:
-    │   ├─ 上傳所有 pending actions
+    │   ├─ 逐筆上傳 pending actions
+    │   │   ├─ ACCEPTED → 標記完成
+    │   │   ├─ ACCEPTED_WITH_ADJUSTMENT → 標記完成 + 更新本地
+    │   │   └─ REJECTED → 保留並顯示錯誤
     │   ├─ 刷新韌性/庫存快取
     │   └─ 更新 lastSyncTime
     │
     └─ 如果離線:
         ├─ 載入快取資料
-        └─ 顯示離線指示器
+        ├─ 顯示離線指示器
+        └─ 顯示「待同步」計數
 ```
 
 ---
 
-## 6. 實作階段
+## 7. 緊急發藥政策（v0.2 新增）
+
+### 7.1 管制藥品規則
+
+| 規則 | 說明 |
+|------|------|
+| 見證人必填 | 管制藥品（如 Morphine）必須有第二人見證 |
+| 單次上限 | 每種管制藥品單次發放上限（可設定，例：5 支） |
+| 覆核 SLA | 緊急發藥後 2 小時內需藥師覆核（演習模式） |
+
+### 7.2 覆核流程
+
+```
+緊急發藥完成
+    │
+    ├─ 產生 audit_id
+    ├─ 標記 review_status = PENDING_REVIEW
+    │
+    └─ Hub Dashboard 顯示「待覆核清單」
+        │
+        ├─ 藥師開啟覆核介面
+        ├─ 確認：發藥人、病患、藥品、數量、原因、見證人
+        ├─ 標記 review_status = REVIEWED
+        └─ 記錄 reviewer_staff_id, reviewed_at
+```
+
+### 7.3 後補病患流程
+
+當 `unknown_patient = true` 時：
+1. 發藥完成，audit_id 產生
+2. Hub Dashboard 顯示「待補登病患」清單
+3. 管理員於 2 小時內補登病患 ID
+4. 系統關聯 audit_id 與 patient_id
+
+---
+
+## 8. 安全考量（v0.2 強化）
+
+### 8.1 認證
+
+- 6 位數配對碼，5 分鐘有效
+- API Rate Limiting: 5 次/分鐘/IP
+- JWT Token: 12 小時有效，可手動登出
+- Device ID 綁定，防止 Token 複製
+
+### 8.2 裝置撤銷機制
+
+```http
+# 撤銷裝置（Hub 管理介面）
+POST /api/mirs-mobile/v1/admin/revoke-device
+Authorization: Bearer {admin_token}
+Content-Type: application/json
+
+{
+  "device_id": "uuid-xxxx",
+  "reason": "裝置遺失"
+}
+
+Response:
+{
+  "success": true,
+  "device_id": "uuid-xxxx",
+  "revoked_at": "2025-12-18T15:00:00Z"
+}
+```
+
+被撤銷的裝置：
+1. 下次同步時收到 `403 Forbidden`
+2. 前端清除所有 Token 和快取
+3. 顯示「裝置已被撤銷，請重新配對」
+
+### 8.3 稽核日誌
+
+每筆寫入操作必須記錄：
+- `action_id` (操作唯一識別)
+- `device_id` (裝置識別)
+- `staff_id` (操作人員)
+- `timestamp` (操作時間)
+- `payload` (操作內容)
+
+### 8.4 權限控制
+
+| 角色 | 設備檢查 | 庫存查詢 | 緊急發藥 | 正常發藥 |
+|------|----------|----------|----------|----------|
+| nurse | ✅ | ✅ | ✅ | ✅ (需PIN) |
+| doctor | ✅ | ✅ | ✅ | ✅ |
+| admin | ✅ | ✅ | ✅ | ✅ |
+| readonly | ❌ | ✅ | ❌ | ❌ |
+
+---
+
+## 9. iOS 安裝與 Fallback（v0.2 新增）
+
+### 9.1 安裝指南
+
+> ⚠️ **iPhone 必須使用 Safari**，Chrome/Firefox 無法安裝 PWA
+
+1. 開啟 Safari
+2. 前往 MIRS Mobile 網址
+3. 點擊分享按鈕 (⬆️)
+4. 選擇「加入主畫面」
+5. 點擊「新增」
+
+### 9.2 相機權限
+
+如果相機無法使用：
+- iPhone: 設定 → Safari → 相機 → 允許
+- Android: 設定 → 應用程式 → Chrome → 權限 → 相機 → 允許
+
+### 9.3 手動輸入 Fallback
+
+當 QR 掃描失敗時，所有功能都有手動輸入備援：
+
+| 功能 | 手動 Fallback |
+|------|---------------|
+| 設備選擇 | 搜尋欄 + 最近使用清單 |
+| 藥品選擇 | 搜尋欄 + 常用清單 |
+| 病患選擇 | 搜尋欄 + 最近清單 + 「未知病患」選項 |
+
+---
+
+## 10. 實作階段
 
 ### Phase 1: 核心功能 (MVP)
 
 **目標**: 可用於現場測試的最小版本
 
 **範圍**:
-- [ ] 配對認證（沿用 CIRS 模式）
+- [ ] 配對認證（使用 `/api/mirs-mobile/v1` 命名空間）
 - [ ] 韌性儀表板首頁
-- [ ] 設備快速檢查
-- [ ] 離線暫存 + 自動同步
+- [ ] 設備快速檢查（含手動 Fallback）
+- [ ] 離線暫存 + 自動同步（含狀態處理）
+- [ ] 裝置撤銷檢查
 
-**預估工時**: 2-3 天
+**先決條件**: 無
 
 ### Phase 2: 藥品功能
 
 **目標**: 支援藥品發放流程
 
-**範圍**:
-- [ ] 緊急發藥
-- [ ] 庫存查詢
-- [ ] 正常發藥（需 PIN）
+**先決條件**:
+- ✅ Phase 1 完成
+- ✅ 緊急發藥資料結構定案（v0.2 已定義）
+- ✅ 覆核流程 UI 完成（Hub Dashboard）
 
-**預估工時**: 2-3 天
+**範圍**:
+- [ ] 緊急發藥（含完整稽核欄位）
+- [ ] 庫存查詢（含離線快取）
+- [ ] 正常發藥（需 PIN）
+- [ ] 覆核佇列（Hub Dashboard）
 
 ### Phase 3: 進階功能
 
@@ -542,39 +747,11 @@ PWA 啟動
 - [ ] 手術耗材記錄
 - [ ] WebSocket 即時更新
 
-**預估工時**: 3-5 天
-
 ---
 
-## 7. 安全考量
+## 11. 與 CIRS Satellite 的程式碼共用
 
-### 7.1 認證
-
-- 6 位數配對碼，5 分鐘有效
-- API Rate Limiting: 5 次/分鐘/IP
-- JWT Token: 12 小時有效，可手動登出
-- Device ID 綁定，防止 Token 複製
-
-### 7.2 資料保護
-
-- 離線資料僅存於 IndexedDB，不含敏感個資
-- 藥品發放記錄包含操作者 ID，供事後稽核
-- 緊急發藥必須填寫原因
-
-### 7.3 權限控制
-
-| 角色 | 設備檢查 | 庫存查詢 | 緊急發藥 | 正常發藥 |
-|------|----------|----------|----------|----------|
-| nurse | ✅ | ✅ | ✅ | ✅ (需PIN) |
-| doctor | ✅ | ✅ | ✅ | ✅ |
-| admin | ✅ | ✅ | ✅ | ✅ |
-| readonly | ❌ | ✅ | ❌ | ❌ |
-
----
-
-## 8. 與 CIRS Satellite 的程式碼共用
-
-### 8.1 可共用模組
+### 11.1 可共用模組
 
 ```
 /shared/
@@ -583,95 +760,85 @@ PWA 啟動
 │   └── jwt-storage.js         # Token 管理
 ├── sync/
 │   ├── action-envelope.js     # 離線操作暫存
-│   ├── sync-manager.js        # 同步排程
+│   ├── sync-manager.js        # 同步排程（v0.2: 加入狀態處理）
 │   └── network-status.js      # 連線狀態偵測
 └── ui/
     ├── loading-screen.js      # CDN 載入偵測
-    └── offline-indicator.js   # 離線提示
+    ├── offline-indicator.js   # 離線提示
+    └── manual-fallback.js     # 手動輸入元件（v0.2 新增）
 ```
 
-### 8.2 MIRS 專用模組
+### 11.2 MIRS 專用模組
 
 ```
 /mirs-mobile/
 ├── pages/
-│   ├── resilience-dashboard.js  # 韌性首頁
-│   ├── equipment-check.js       # 設備檢查
-│   ├── dispense-emergency.js    # 緊急發藥
-│   └── inventory-query.js       # 庫存查詢
-└── services/
-    ├── resilience-api.js        # 韌性 API
-    └── equipment-api.js         # 設備 API
+│   ├── resilience-dashboard.js
+│   ├── equipment-check.js
+│   ├── dispense-emergency.js    # v0.2: 重新設計
+│   └── inventory-query.js
+├── services/
+│   ├── resilience-api.js
+│   ├── equipment-api.js
+│   └── dispense-api.js          # v0.2: 新增稽核邏輯
+└── components/
+    ├── patient-selector.js      # v0.2: 病患選擇器
+    ├── medication-selector.js   # v0.2: 藥品選擇器
+    └── witness-selector.js      # v0.2: 見證人選擇器
 ```
 
 ---
 
-## 9. 測試計畫
+## 12. 測試計畫
 
-### 9.1 功能測試
+### 12.1 功能測試
 
 - [ ] 配對流程（正常 / 過期 / 錯誤碼）
-- [ ] 設備檢查流程（線上 / 離線）
-- [ ] 緊急發藥流程
-- [ ] 離線→線上同步
+- [ ] 設備檢查流程（線上 / 離線 / 手動輸入）
+- [ ] 緊急發藥流程（含管制藥、未知病患）
+- [ ] 離線→線上同步（ACCEPTED / ADJUSTED / REJECTED）
+- [ ] 裝置撤銷流程
 
-### 9.2 裝置測試
+### 12.2 裝置測試
 
 - [ ] iPhone Safari (iOS 15+)
 - [ ] Android Chrome (Android 8+)
 - [ ] iPad Safari
 - [ ] Android 平板
 
-### 9.3 網路測試
+### 12.3 稽核測試
 
-- [ ] WiFi 穩定
-- [ ] WiFi 不穩（斷斷續續）
-- [ ] 完全離線 → 恢復
-- [ ] 低頻寬環境
-
----
-
-## 10. 未來擴展
-
-### 10.1 v1.0 之後考慮
-
-1. **通知推播** - 低庫存/設備異常主動通知
-2. **語音輸入** - 戴手套時語音操作
-3. **NFC 支援** - 掃描設備 NFC Tag
-4. **多站同步** - 跨站點調撥支援
-
-### 10.2 與 CIRS 整合
-
-- 醫療物資從 MIRS 調撥至 CIRS 收容所
-- 共用 xIRS 安全資料交換協議
-- 統一的韌性估算框架
+- [ ] 覆核佇列功能
+- [ ] 後補病患流程
+- [ ] 稽核日誌完整性
 
 ---
 
 ## 附錄 A: 現有 MIRS API 盤點
 
-需要新增或修改的 API：
-
 | 端點 | 狀態 | 說明 |
 |------|------|------|
-| `/api/auth/mobile-pairing` | 🆕 新增 | 產生配對碼 |
-| `/api/auth/mobile/exchange` | 🆕 新增 | 交換 Token |
-| `/api/mobile/resilience` | 🆕 新增 | 韌性狀態 |
-| `/api/mobile/equipment` | 🆕 新增 | 設備列表 |
-| `/api/mobile/equipment/{id}/check` | 🆕 新增 | 更新狀態 |
-| `/api/mobile/dispense/emergency` | 📝 修改 | 加入 Mobile 支援 |
-| `/api/mobile/inventory` | 🆕 新增 | 簡化庫存查詢 |
-| `/api/equipment` | ✅ 現有 | 可能需加欄位 |
-| `/api/dispense/emergency` | ✅ 現有 | 可共用邏輯 |
+| `/api/mirs-mobile/v1/auth/pairing` | 🆕 新增 | 產生配對碼 |
+| `/api/mirs-mobile/v1/auth/exchange` | 🆕 新增 | 交換 Token |
+| `/api/mirs-mobile/v1/resilience` | 🆕 新增 | 韌性狀態 |
+| `/api/mirs-mobile/v1/equipment` | 🆕 新增 | 設備列表 |
+| `/api/mirs-mobile/v1/equipment/{id}/check` | 🆕 新增 | 更新狀態 |
+| `/api/mirs-mobile/v1/dispense/emergency` | 🆕 新增 | 緊急發藥（醫療級稽核） |
+| `/api/mirs-mobile/v1/inventory` | 🆕 新增 | 簡化庫存查詢 |
+| `/api/mirs-mobile/v1/admin/revoke-device` | 🆕 新增 | 撤銷裝置 |
 
 ---
 
-## 附錄 B: 設計稿連結
+## 附錄 B: 審查回饋來源
 
-（待補充 Figma / 截圖）
+本 v0.2 版本根據以下 AI 審查意見更新：
+
+1. **ChatGPT** - 指出緊急發藥 API 稽核不足、同步協議未定義、安全範圍不夠細緻
+2. **Gemini** - 強調「不能把發藥當發便當設計」，建議暫緩 Phase 2 直到資料結構定案
 
 ---
 
-*Document Version: 0.1*
+*Document Version: 0.2*
 *Created: 2025-12-18*
+*Updated: 2025-12-18*
 *Author: De Novo Orthopedics Inc.*
