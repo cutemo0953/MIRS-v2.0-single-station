@@ -122,6 +122,15 @@
 <body class="min-h-screen">
     <div x-data="medicalInventory()" x-init="init()" x-cloak class="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
 
+        <!-- Back to Home Link -->
+        <a href="https://denovortho-site.vercel.app" target="_blank"
+           class="inline-flex items-center text-sm text-teal-600 hover:text-teal-700 mb-4">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            回到主頁
+        </a>
+
         <!-- Demo Mode Banner -->
         <div x-show="demoMode" class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 shadow-sm">
             <div class="flex items-center justify-between flex-wrap gap-3">
