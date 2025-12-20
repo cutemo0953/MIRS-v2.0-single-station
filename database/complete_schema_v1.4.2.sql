@@ -769,14 +769,14 @@ INSERT OR IGNORE INTO resilience_profiles (station_id, endurance_type, profile_n
 -- ============================================
 -- 展示設備
 -- ============================================
-INSERT OR IGNORE INTO equipment (id, name, type_code, category, status) VALUES
-('UTIL-001', '行動電源站', 'POWER_STATION', '電力設備', 'UNCHECKED'),
-('UTIL-002', '發電機 (備用)', 'GENERATOR', '電力設備', 'UNCHECKED'),
-('RESP-001', '氧氣鋼瓶', 'O2_CYLINDER_H', '呼吸設備', 'UNCHECKED'),
-('EMER-EQ-006', '氧氣瓶 (E size)', 'O2_CYLINDER_E', '呼吸設備', 'UNCHECKED'),
-('RESP-002', '氧氣濃縮機', 'O2_CONCENTRATOR', '呼吸設備', 'UNCHECKED'),
-('DIAG-001', '血壓計 (電子式)', 'MONITOR', '監控設備', 'UNCHECKED'),
-('EMER-EQ-001', 'AED 自動體外除顫器', 'GENERAL', '急救設備', 'UNCHECKED');
+INSERT OR IGNORE INTO equipment (id, name, type_code, category, status, tracking_mode, capacity_wh, fuel_rate_lph, output_watts) VALUES
+('UTIL-001', '行動電源站', 'POWER_STATION', '電力設備', 'UNCHECKED', 'PER_UNIT', 2048, NULL, 500),
+('UTIL-002', '發電機 (備用)', 'GENERATOR', '電力設備', 'UNCHECKED', 'PER_UNIT', NULL, 1.5, 2000),
+('RESP-001', '氧氣鋼瓶', 'O2_CYLINDER_H', '呼吸設備', 'UNCHECKED', 'PER_UNIT', NULL, NULL, NULL),
+('EMER-EQ-006', '氧氣瓶 (E size)', 'O2_CYLINDER_E', '呼吸設備', 'UNCHECKED', 'PER_UNIT', NULL, NULL, NULL),
+('RESP-002', '氧氣濃縮機', 'O2_CONCENTRATOR', '呼吸設備', 'UNCHECKED', 'AGGREGATE', NULL, NULL, NULL),
+('DIAG-001', '血壓計 (電子式)', 'MONITOR', '監控設備', 'UNCHECKED', 'AGGREGATE', NULL, NULL, NULL),
+('EMER-EQ-001', 'AED 自動體外除顫器', 'GENERAL', '急救設備', 'UNCHECKED', 'AGGREGATE', NULL, NULL, NULL);
 
 -- ============================================
 -- 展示設備單位
