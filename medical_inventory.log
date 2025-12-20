@@ -861,3 +861,377 @@ sqlite3.OperationalError: table equipment has no column named station_id
 2025-12-18 07:00:00,135 - __main__ - INFO - 設備每日重置完成: 6 個設備已重置
 2025-12-18 07:00:00,136 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-18 07:00:00): 6 個設備已重置
 2025-12-18 07:00:00,136 - __main__ - INFO - 下次設備重置時間: 2025-12-19 07:00:00 (等待 24.0 小時)
+2025-12-18 20:44:40,121 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-18 20:44:40,138 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-18 20:44:40,138 - main - INFO - 開始初始化資料庫結構...
+2025-12-18 20:44:40,142 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-18 20:44:40,143 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-18 20:44:40,144 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-18 20:44:40,171 - main - WARNING - MIRS Mobile API 未啟用: No module named 'jwt'
+2025-12-18 20:44:53,308 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-18 20:44:53,325 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-18 20:44:53,325 - main - INFO - 開始初始化資料庫結構...
+2025-12-18 20:44:53,328 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-18 20:44:53,329 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-18 20:44:53,329 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-18 20:44:53,409 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-18 20:44:53,410 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-18 20:44:53,413 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-18 20:49:08,272 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-18 20:49:08,288 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-18 20:49:08,288 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-18 20:49:08,292 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-18 20:49:08,293 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-18 20:49:08,293 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-18 20:49:08,382 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-18 20:49:08,382 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-18 20:49:08,385 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-18 20:49:08,429 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-18 20:49:08,429 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-18 20:49:08,430 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-18 20:49:08,430 - __main__ - INFO - 下次設備重置時間: 2025-12-19 07:00:00 (等待 10.2 小時)
+2025-12-18 20:49:45,354 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-18 20:49:45,371 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-18 20:49:45,371 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-18 20:49:45,379 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-18 20:49:45,379 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-18 20:49:45,380 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-18 20:49:45,461 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-18 20:49:45,462 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-18 20:49:45,465 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-18 20:49:45,511 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-18 20:49:45,511 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-18 20:49:45,517 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-18 20:49:45,517 - __main__ - INFO - 下次設備重置時間: 2025-12-19 07:00:00 (等待 10.2 小時)
+2025-12-18 20:49:49,611 - services.mobile.auth - INFO - 產生配對碼 996461 for station BORP-DNO-01, expires 2025-12-18 20:54:49.609338
+2025-12-18 20:49:49,680 - services.mobile.auth - INFO - 裝置 test-device-001 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-18 20:49:49,760 - services.mobile.routes - ERROR - 取得韌性狀態失敗: 'list' object has no attribute 'get'
+2025-12-18 20:49:49,779 - services.mobile.routes - ERROR - 取得設備清單失敗: no such column: e.location
+2025-12-18 20:52:39,977 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-18 20:52:39,993 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-18 20:52:39,993 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-18 20:52:40,001 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-18 20:52:40,002 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-18 20:52:40,003 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-18 20:52:40,067 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-18 20:52:40,069 - services.mobile.auth - INFO - 清理了 1 個過期/已使用的配對碼
+2025-12-18 20:52:40,069 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-18 20:52:40,073 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-18 20:52:40,116 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-18 20:52:40,116 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-18 20:52:40,117 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-18 20:52:40,117 - __main__ - INFO - 下次設備重置時間: 2025-12-19 07:00:00 (等待 10.1 小時)
+2025-12-18 20:52:44,198 - services.mobile.auth - INFO - 產生配對碼 918732 for station BORP-DNO-01, expires 2025-12-18 20:57:44.196309
+2025-12-18 20:52:44,236 - services.mobile.auth - INFO - 裝置 test-001 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-18 20:52:44,286 - services.mobile.routes - ERROR - 取得韌性狀態失敗: 'list' object has no attribute 'get'
+2025-12-18 20:52:44,302 - services.mobile.routes - ERROR - 取得設備清單失敗: no such column: e.location
+2025-12-18 20:53:45,994 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-18 20:53:46,011 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-18 20:53:46,011 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-18 20:53:46,018 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-18 20:53:46,018 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-18 20:53:46,019 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-18 20:53:46,094 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-18 20:53:46,096 - services.mobile.auth - INFO - 清理了 1 個過期/已使用的配對碼
+2025-12-18 20:53:46,096 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-18 20:53:46,099 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-18 20:53:46,147 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-18 20:53:46,147 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-18 20:53:46,148 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-18 20:53:46,148 - __main__ - INFO - 下次設備重置時間: 2025-12-19 07:00:00 (等待 10.1 小時)
+2025-12-18 20:53:51,205 - services.mobile.auth - INFO - 產生配對碼 080876 for station BORP-DNO-01, expires 2025-12-18 20:58:51.203647
+2025-12-18 20:53:51,252 - services.mobile.auth - INFO - 裝置 test-001 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-18 21:00:52,237 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-18 21:00:52,255 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-18 21:00:52,255 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-18 21:00:52,260 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-18 21:00:52,260 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-18 21:00:52,261 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-18 21:00:52,319 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-18 21:00:52,320 - services.mobile.auth - INFO - 清理了 1 個過期/已使用的配對碼
+2025-12-18 21:00:52,320 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-18 21:00:52,323 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-18 21:00:52,366 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-18 21:00:52,366 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-18 21:00:52,366 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-18 21:00:52,366 - __main__ - INFO - 下次設備重置時間: 2025-12-19 07:00:00 (等待 10.0 小時)
+2025-12-18 21:01:41,285 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-18 21:01:41,302 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-18 21:01:41,302 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-18 21:01:41,309 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-18 21:01:41,309 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-18 21:01:41,316 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-18 21:01:41,391 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-18 21:01:41,392 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-18 21:01:41,396 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-18 21:01:41,441 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-18 21:01:41,442 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-18 21:01:41,442 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-18 21:01:41,443 - __main__ - INFO - 下次設備重置時間: 2025-12-19 07:00:00 (等待 10.0 小時)
+2025-12-18 21:04:00,645 - services.mobile.auth - INFO - 產生配對碼 038809 for station BORP-DNO-01, expires 2025-12-18 21:09:00.640877
+2025-12-18 21:04:46,544 - services.mobile.auth - INFO - 產生配對碼 686330 for station BORP-VGH-251201-f1d2, expires 2025-12-18 21:09:46.539656
+2025-12-18 21:29:39,425 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-18 21:29:39,441 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-18 21:29:39,442 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-18 21:29:39,450 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-18 21:29:39,450 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-18 21:29:39,451 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-18 21:29:39,533 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-18 21:29:39,533 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-18 21:29:39,536 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-18 21:29:39,580 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-18 21:29:39,580 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-18 21:29:39,581 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-18 21:29:39,581 - __main__ - INFO - 下次設備重置時間: 2025-12-19 07:00:00 (等待 9.5 小時)
+2025-12-18 21:30:26,774 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-18 21:30:26,792 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-18 21:30:26,792 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-18 21:30:26,798 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-18 21:30:26,799 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-18 21:30:26,800 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-18 21:30:26,857 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-18 21:30:26,857 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-18 21:30:26,861 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-18 21:30:26,900 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-18 21:30:26,900 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-18 21:30:26,901 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-18 21:30:26,901 - __main__ - INFO - 下次設備重置時間: 2025-12-19 07:00:00 (等待 9.5 小時)
+2025-12-18 21:43:10,904 - services.mobile.auth - INFO - 產生配對碼 462601 for station BORP-DNO-01, expires 2025-12-18 21:48:10.898980
+2025-12-18 22:19:49,526 - services.mobile.auth - INFO - 產生配對碼 809792 for station BORP-DNO-01, expires 2025-12-18 22:24:49.519977
+2025-12-18 22:21:08,670 - services.mobile.auth - INFO - 產生配對碼 473218 for station BORP-DNO-01, expires 2025-12-18 22:26:08.663090
+2025-12-18 22:21:24,141 - services.mobile.auth - INFO - 產生配對碼 708019 for station BORP-DNO-01, expires 2025-12-18 22:26:24.138192
+2025-12-18 22:27:23,855 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-18 22:27:23,872 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-18 22:27:23,872 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-18 22:27:23,879 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-18 22:27:23,880 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-18 22:27:23,883 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-18 22:27:23,963 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-18 22:27:23,964 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-18 22:27:23,967 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-18 22:27:24,012 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-18 22:27:24,012 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-18 22:27:24,013 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-18 22:27:24,013 - __main__ - INFO - 下次設備重置時間: 2025-12-19 07:00:00 (等待 8.5 小時)
+2025-12-18 22:27:31,098 - services.mobile.auth - INFO - 產生配對碼 456603 for station BORP-DNO-01, expires 2025-12-18 22:32:31.096455
+2025-12-18 22:28:02,983 - services.mobile.auth - INFO - 產生配對碼 021307 for station BORP-DNO-01, expires 2025-12-18 22:33:02.978951
+2025-12-19 07:00:00,002 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-19 06:59:59): 0 個設備已重置
+2025-12-19 07:00:00,012 - __main__ - INFO - 下次設備重置時間: 2025-12-20 07:00:00 (等待 24.0 小時)
+2025-12-19 07:19:14,585 - services.mobile.auth - INFO - 裝置 test-device-001 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 07:19:47,381 - services.mobile.auth - INFO - 產生配對碼 340392 for station BORP-DNO-01, expires 2025-12-19 07:24:47.377043
+2025-12-19 07:20:25,303 - services.mobile.auth - INFO - 產生配對碼 951437 for station BORP-DNO-01, expires 2025-12-19 07:25:25.301019
+2025-12-19 07:20:59,745 - services.mobile.auth - INFO - 產生配對碼 746275 for station BORP-DNO-01, expires 2025-12-19 07:25:59.741010
+2025-12-19 07:21:23,074 - services.mobile.auth - INFO - 產生配對碼 863737 for station BORP-DNO-01, expires 2025-12-19 07:26:23.071101
+2025-12-19 07:21:57,301 - services.mobile.auth - INFO - 產生配對碼 193891 for station BORP-DNO-01, expires 2025-12-19 07:26:57.297832
+2025-12-19 07:23:02,197 - services.mobile.auth - INFO - 產生配對碼 628063 for station BORP-DNO-01, expires 2025-12-19 07:28:02.195472
+2025-12-19 07:23:30,327 - services.mobile.auth - INFO - 產生配對碼 181323 for station BORP-DNO-01, expires 2025-12-19 07:28:30.320308
+2025-12-19 07:24:12,049 - services.mobile.auth - INFO - 產生配對碼 975952 for station BORP-DNO-01, expires 2025-12-19 07:29:12.045141
+2025-12-19 07:24:24,771 - services.mobile.auth - INFO - 裝置 mobile-test 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 11:22:06,743 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-19 11:22:06,761 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-19 11:22:06,761 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-19 11:22:06,767 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-19 11:22:06,767 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-19 11:22:06,768 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-19 11:22:06,854 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-19 11:22:06,855 - services.mobile.auth - INFO - 清理了 9 個過期/已使用的配對碼
+2025-12-19 11:22:06,855 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-19 11:22:06,858 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-19 11:22:06,904 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-19 11:22:06,905 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-19 11:22:06,905 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-19 11:22:06,905 - __main__ - INFO - 下次設備重置時間: 2025-12-20 07:00:00 (等待 19.6 小時)
+2025-12-19 11:22:14,081 - services.mobile.auth - INFO - 產生配對碼 207439 for station BORP-DNO-01, expires 2025-12-19 11:27:14.078687
+2025-12-19 11:22:33,071 - services.mobile.auth - INFO - 產生配對碼 038657 for station BORP-DNO-01, expires 2025-12-19 11:27:33.069135
+2025-12-19 11:23:24,302 - services.mobile.auth - INFO - 產生配對碼 382028 for station BORP-DNO-01, expires 2025-12-19 11:28:24.298800
+2025-12-19 11:25:22,740 - services.mobile.auth - INFO - 產生配對碼 059819 for station BORP-DNO-01, expires 2025-12-19 11:30:22.737056
+2025-12-19 11:27:47,552 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-19 11:27:47,572 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-19 11:27:47,572 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-19 11:27:47,578 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-19 11:27:47,578 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-19 11:27:47,579 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-19 11:27:47,651 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-19 11:27:47,652 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-19 11:27:47,656 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-19 11:27:47,710 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-19 11:27:47,711 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-19 11:27:47,712 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-19 11:27:47,712 - __main__ - INFO - 下次設備重置時間: 2025-12-20 07:00:00 (等待 19.5 小時)
+2025-12-19 11:28:23,354 - services.mobile.auth - INFO - 產生配對碼 578293 for station BORP-DNO-01, expires 2025-12-19 11:33:23.349869
+2025-12-19 11:30:38,638 - services.mobile.auth - INFO - 產生配對碼 786163 for station BORP-DNO-01, expires 2025-12-19 11:35:38.634787
+2025-12-19 11:32:30,217 - services.mobile.auth - INFO - 產生配對碼 922532 for station BORP-DNO-01, expires 2025-12-19 11:37:30.209793
+2025-12-19 11:33:01,106 - services.mobile.auth - INFO - 產生配對碼 728483 for station BORP-DNO-01, expires 2025-12-19 11:38:01.100709
+2025-12-19 11:33:18,297 - services.mobile.routes - WARNING - DEBUG exchange from 10.101.1.137: {"pairing_code":"728483","device_id":"20785779-d3a8-40d0-9e3b-4cc417339b82","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 11:33:18,314 - services.mobile.routes - INFO - Exchange request from 10.101.1.137: code=728483, device=20785779-d3a8-40d0-9e3b-4cc417339b82
+2025-12-19 11:33:18,324 - services.mobile.auth - INFO - 裝置 20785779-d3a8-40d0-9e3b-4cc417339b82 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 11:54:02,587 - services.mobile.auth - INFO - 產生配對碼 686125 for station BORP-DNO-01, expires 2025-12-19 11:59:02.584747
+2025-12-19 11:54:18,618 - services.mobile.routes - WARNING - DEBUG exchange from 10.101.1.137: {"pairing_code":"686125","device_id":"f7f2930c-279c-4ee4-9b91-0a3767939313","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 11:54:18,633 - services.mobile.routes - INFO - Exchange request from 10.101.1.137: code=686125, device=f7f2930c-279c-4ee4-9b91-0a3767939313
+2025-12-19 11:54:18,640 - services.mobile.auth - INFO - 裝置 f7f2930c-279c-4ee4-9b91-0a3767939313 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 14:13:12,138 - services.mobile.auth - INFO - 產生配對碼 544851 for station BORP-DNO-01, expires 2025-12-19 14:18:12.134415
+2025-12-19 14:13:25,555 - services.mobile.routes - WARNING - DEBUG exchange from 172.20.10.1: {"pairing_code":"544851","device_id":"73aa6d41-751e-4101-a017-ea64b52ab704","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 14:13:25,564 - services.mobile.routes - INFO - Exchange request from 172.20.10.1: code=544851, device=73aa6d41-751e-4101-a017-ea64b52ab704
+2025-12-19 14:13:25,571 - services.mobile.auth - INFO - 裝置 73aa6d41-751e-4101-a017-ea64b52ab704 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 14:23:19,891 - services.mobile.auth - INFO - 產生配對碼 972371 for station BORP-DNO-01, expires 2025-12-19 14:28:19.882954
+2025-12-19 14:23:26,749 - services.mobile.routes - WARNING - DEBUG exchange from 172.20.10.1: {"pairing_code":"972371","device_id":"be9a848c-1373-4b3e-bc43-b0272ebfd158","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 14:23:26,760 - services.mobile.routes - INFO - Exchange request from 172.20.10.1: code=972371, device=be9a848c-1373-4b3e-bc43-b0272ebfd158
+2025-12-19 14:23:26,767 - services.mobile.auth - INFO - 裝置 be9a848c-1373-4b3e-bc43-b0272ebfd158 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 14:47:28,786 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-19 14:47:28,803 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-19 14:47:28,803 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-19 14:47:28,808 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-19 14:47:28,809 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-19 14:47:28,809 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-19 14:47:28,888 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-19 14:47:28,889 - services.mobile.auth - INFO - 清理了 4 個過期/已使用的配對碼
+2025-12-19 14:47:28,890 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-19 14:47:28,893 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-19 14:47:28,937 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-19 14:47:28,937 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-19 14:47:28,938 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-19 14:47:28,938 - __main__ - INFO - 下次設備重置時間: 2025-12-20 07:00:00 (等待 16.2 小時)
+2025-12-19 14:51:55,891 - services.mobile.auth - WARNING - Token 無效: Not enough segments
+2025-12-19 14:52:07,600 - services.mobile.auth - INFO - 產生配對碼 880912 for station BORP-DNO-01, expires 2025-12-19 14:57:07.597378
+2025-12-19 14:53:13,451 - services.mobile.auth - INFO - 產生配對碼 061110 for station BORP-DNO-01, expires 2025-12-19 14:58:13.446917
+2025-12-19 14:53:33,755 - services.mobile.routes - WARNING - DEBUG exchange from 172.20.10.1: {"pairing_code":"061110","device_id":"72632a6d-90a3-4ed7-8691-7cd9792aa54d","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 14:53:33,768 - services.mobile.routes - INFO - Exchange request from 172.20.10.1: code=061110, device=72632a6d-90a3-4ed7-8691-7cd9792aa54d
+2025-12-19 14:53:33,772 - services.mobile.auth - INFO - 裝置 72632a6d-90a3-4ed7-8691-7cd9792aa54d 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 14:53:52,495 - services.mobile.auth - ERROR - 記錄操作失敗: database is locked
+2025-12-19 15:00:43,786 - __main__ - INFO - 🩸 建立 2 袋血袋追蹤: ['BB-ON-251219-001', 'BB-ON-251219-002']
+2025-12-19 15:00:43,789 - __main__ - INFO - 血袋receive記錄成功: O- +2U
+2025-12-19 17:28:17,918 - services.mobile.auth - INFO - 產生配對碼 793588 for station BORP-DNO-01, expires 2025-12-19 17:33:17.913162
+2025-12-19 17:28:37,874 - services.mobile.routes - WARNING - DEBUG exchange from 172.20.10.1: {"pairing_code":"793588","device_id":"bb0e91ad-114f-464b-be97-8b8e6558dd7d","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 17:28:37,889 - services.mobile.routes - INFO - Exchange request from 172.20.10.1: code=793588, device=bb0e91ad-114f-464b-be97-8b8e6558dd7d
+2025-12-19 17:28:37,899 - services.mobile.auth - INFO - 裝置 bb0e91ad-114f-464b-be97-8b8e6558dd7d 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 17:29:06,321 - services.mobile.auth - ERROR - 記錄操作失敗: database is locked
+2025-12-19 17:50:07,868 - services.mobile.auth - INFO - 產生配對碼 129548 for station BORP-DNO-01, expires 2025-12-19 17:55:07.863606
+2025-12-19 17:50:18,559 - services.mobile.routes - WARNING - DEBUG exchange from 10.101.1.137: {"pairing_code":"129548","device_id":"47bb41f2-37ef-47b0-bb49-2dc73a78fafb","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 17:50:18,576 - services.mobile.routes - INFO - Exchange request from 10.101.1.137: code=129548, device=47bb41f2-37ef-47b0-bb49-2dc73a78fafb
+2025-12-19 17:50:18,584 - services.mobile.auth - INFO - 裝置 47bb41f2-37ef-47b0-bb49-2dc73a78fafb 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 18:34:22,202 - services.mobile.auth - INFO - 產生配對碼 587772 for station BORP-DNO-01, expires 2025-12-19 18:39:22.194529
+2025-12-19 18:34:28,643 - services.mobile.routes - WARNING - DEBUG exchange from 10.101.1.137: {"pairing_code":"587772","device_id":"841d497f-1be3-4e19-a139-7234d181346d","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 18:34:28,660 - services.mobile.routes - INFO - Exchange request from 10.101.1.137: code=587772, device=841d497f-1be3-4e19-a139-7234d181346d
+2025-12-19 18:34:28,665 - services.mobile.auth - INFO - 裝置 841d497f-1be3-4e19-a139-7234d181346d 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 21:18:36,469 - services.mobile.auth - INFO - 產生配對碼 619986 for station BORP-DNO-01, expires 2025-12-19 21:23:36.464530
+2025-12-19 21:18:52,282 - services.mobile.auth - INFO - 產生配對碼 557125 for station BORP-DNO-01, expires 2025-12-19 21:23:52.275696
+2025-12-19 21:19:00,058 - services.mobile.routes - WARNING - DEBUG exchange from 192.168.100.105: {"pairing_code":"557125","device_id":"95fdea2f-e594-4dea-8fff-ea2b309ff510","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 21:19:00,074 - services.mobile.routes - INFO - Exchange request from 192.168.100.105: code=557125, device=95fdea2f-e594-4dea-8fff-ea2b309ff510
+2025-12-19 21:19:00,081 - services.mobile.auth - INFO - 裝置 95fdea2f-e594-4dea-8fff-ea2b309ff510 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 21:32:51,662 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-19 21:32:51,680 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-19 21:32:51,680 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-19 21:32:51,684 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-19 21:32:51,684 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-19 21:32:51,685 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-19 21:32:51,766 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-19 21:32:51,767 - services.mobile.auth - INFO - 清理了 5 個過期/已使用的配對碼
+2025-12-19 21:32:51,767 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-19 21:32:51,770 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-19 21:32:51,817 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-19 21:32:51,817 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-19 21:32:51,817 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-19 21:32:51,817 - __main__ - INFO - 下次設備重置時間: 2025-12-20 07:00:00 (等待 9.5 小時)
+2025-12-19 21:37:25,038 - services.mobile.auth - INFO - 產生配對碼 168298 for station BORP-DNO-01, expires 2025-12-19 21:42:25.037035
+2025-12-19 21:37:38,413 - services.mobile.auth - INFO - 產生配對碼 848865 for station BORP-DNO-01, expires 2025-12-19 21:42:38.409820
+2025-12-19 21:38:02,174 - services.mobile.routes - WARNING - DEBUG exchange from 172.20.10.1: {"pairing_code":"848865","device_id":"7c165eb5-78d1-405e-af15-d5d64b9cd023","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 21:38:02,189 - services.mobile.routes - INFO - Exchange request from 172.20.10.1: code=848865, device=7c165eb5-78d1-405e-af15-d5d64b9cd023
+2025-12-19 21:38:02,195 - services.mobile.auth - INFO - 裝置 7c165eb5-78d1-405e-af15-d5d64b9cd023 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-19 21:40:20,458 - services.mobile.auth - INFO - 產生配對碼 980974 for station BORP-DNO-01, expires 2025-12-19 21:45:20.455262
+2025-12-19 21:40:40,217 - services.mobile.auth - INFO - 產生配對碼 135921 for station BORP-DNO-01, expires 2025-12-19 21:45:40.213087
+2025-12-19 21:42:46,925 - services.mobile.auth - INFO - 產生配對碼 746781 for station BORP-DNO-01, expires 2025-12-19 21:47:46.918615
+2025-12-19 21:43:02,762 - services.mobile.routes - WARNING - DEBUG exchange from 172.20.10.1: {"pairing_code":"776781","device_id":"eb4e2abf-3d7f-410d-bc44-6bfef7386586","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 21:43:02,771 - services.mobile.routes - INFO - Exchange request from 172.20.10.1: code=776781, device=eb4e2abf-3d7f-410d-bc44-6bfef7386586
+2025-12-19 21:43:02,774 - services.mobile.auth - WARNING - 配對碼 776781 無效或已過期
+2025-12-19 21:43:10,631 - services.mobile.routes - WARNING - DEBUG exchange from 172.20.10.1: {"pairing_code":"746781","device_id":"eb4e2abf-3d7f-410d-bc44-6bfef7386586","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 21:43:10,644 - services.mobile.routes - INFO - Exchange request from 172.20.10.1: code=746781, device=eb4e2abf-3d7f-410d-bc44-6bfef7386586
+2025-12-19 21:43:10,648 - services.mobile.auth - WARNING - 角色 nurse 不在允許清單中: ['admin']
+2025-12-19 21:43:38,377 - services.mobile.auth - INFO - 產生配對碼 495840 for station BORP-DNO-01, expires 2025-12-19 21:48:38.370249
+2025-12-19 21:43:45,610 - services.mobile.routes - WARNING - DEBUG exchange from 172.20.10.1: {"pairing_code":"495840","device_id":"eb4e2abf-3d7f-410d-bc44-6bfef7386586","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 21:43:45,622 - services.mobile.routes - INFO - Exchange request from 172.20.10.1: code=495840, device=eb4e2abf-3d7f-410d-bc44-6bfef7386586
+2025-12-19 21:43:45,625 - services.mobile.auth - WARNING - 角色 nurse 不在允許清單中: ['admin']
+2025-12-19 21:44:56,640 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-19 21:44:56,657 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-19 21:44:56,657 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-19 21:44:56,662 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-19 21:44:56,663 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-19 21:44:56,663 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-19 21:44:56,724 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-19 21:44:56,725 - services.mobile.auth - INFO - 清理了 1 個過期/已使用的配對碼
+2025-12-19 21:44:56,725 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-19 21:44:56,728 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-19 21:44:56,769 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-19 21:44:56,769 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-19 21:44:56,770 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-19 21:44:56,770 - __main__ - INFO - 下次設備重置時間: 2025-12-20 07:00:00 (等待 9.3 小時)
+2025-12-19 21:45:15,968 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-19 21:45:15,985 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-19 21:45:15,985 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-19 21:45:15,988 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-19 21:45:15,988 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-19 21:45:15,989 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-19 21:45:16,045 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-19 21:45:16,046 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-19 21:45:16,049 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-19 21:45:16,084 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-19 21:45:16,084 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-19 21:45:16,084 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-19 21:45:16,084 - __main__ - INFO - 下次設備重置時間: 2025-12-20 07:00:00 (等待 9.2 小時)
+2025-12-19 21:45:50,865 - services.mobile.auth - INFO - 產生配對碼 377397 for station BORP-DNO-01, expires 2025-12-19 21:50:50.861550
+2025-12-19 21:46:10,552 - services.mobile.routes - WARNING - DEBUG exchange from 172.20.10.1: {"pairing_code":"377397","device_id":"ae4fd510-5dc8-4971-84f8-0216e1542145","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 21:46:10,564 - services.mobile.routes - INFO - Exchange request from 172.20.10.1: code=377397, device=ae4fd510-5dc8-4971-84f8-0216e1542145
+2025-12-19 21:46:10,569 - services.mobile.auth - INFO - 角色 nurse 不在允許清單中 ['admin']，使用配對碼指定角色: admin
+2025-12-19 21:46:10,571 - services.mobile.auth - INFO - 裝置 ae4fd510-5dc8-4971-84f8-0216e1542145 配對成功，角色: admin, 站點: BORP-DNO-01
+2025-12-19 22:04:07,684 - services.mobile.auth - INFO - 產生配對碼 308382 for station BORP-DNO-01, expires 2025-12-19 22:09:07.677218
+2025-12-19 22:04:17,919 - services.mobile.routes - WARNING - DEBUG exchange from 10.101.1.137: {"pairing_code":"308382","device_id":"833a3c4d-bab7-43c7-b72e-b57e41737d1f","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-19 22:04:17,937 - services.mobile.routes - INFO - Exchange request from 10.101.1.137: code=308382, device=833a3c4d-bab7-43c7-b72e-b57e41737d1f
+2025-12-19 22:04:17,941 - services.mobile.auth - INFO - 角色 nurse 不在允許清單中 ['admin']，使用配對碼指定角色: admin
+2025-12-19 22:04:17,946 - services.mobile.auth - INFO - 裝置 833a3c4d-bab7-43c7-b72e-b57e41737d1f 配對成功，角色: admin, 站點: BORP-DNO-01
+2025-12-19 22:05:08,843 - __main__ - INFO - ✓ 盤點記錄已接收: CHK-20251219-220508-001, 確認: 1, 錯誤: 0
+2025-12-20 07:00:00,183 - __main__ - INFO - 設備每日重置完成: 2 個設備已重置
+2025-12-20 07:00:00,192 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-20 07:00:00): 2 個設備已重置
+2025-12-20 07:00:00,194 - __main__ - INFO - 下次設備重置時間: 2025-12-21 07:00:00 (等待 24.0 小時)
+2025-12-20 08:43:31,338 - services.mobile.auth - INFO - 產生配對碼 961142 for station BORP-DNO-01, expires 2025-12-20 08:48:31.326437
+2025-12-20 08:43:41,410 - services.mobile.routes - WARNING - DEBUG exchange from 10.101.1.137: {"pairing_code":"961142","device_id":"b0acc02e-d82e-480e-a589-db54801b27c1","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-20 08:43:41,430 - services.mobile.routes - INFO - Exchange request from 10.101.1.137: code=961142, device=b0acc02e-d82e-480e-a589-db54801b27c1
+2025-12-20 08:43:41,434 - services.mobile.auth - INFO - 角色 nurse 不在允許清單中 ['admin']，使用配對碼指定角色: admin
+2025-12-20 08:43:41,441 - services.mobile.auth - INFO - 裝置 b0acc02e-d82e-480e-a589-db54801b27c1 配對成功，角色: admin, 站點: BORP-DNO-01
+2025-12-20 08:44:57,502 - __main__ - INFO - ✓ 盤點記錄已接收: CHK-20251220-084457-002, 確認: 1, 錯誤: 0
+2025-12-20 08:48:09,064 - services.mobile.auth - WARNING - Token 已過期
+2025-12-20 08:48:16,947 - services.mobile.auth - INFO - 產生配對碼 762102 for station BORP-DNO-01, expires 2025-12-20 08:53:16.940117
+2025-12-20 08:48:21,745 - services.mobile.routes - WARNING - DEBUG exchange from 10.101.1.137: {"pairing_code":"762102","device_id":"841d497f-1be3-4e19-a139-7234d181346d","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-20 08:48:21,760 - services.mobile.routes - INFO - Exchange request from 10.101.1.137: code=762102, device=841d497f-1be3-4e19-a139-7234d181346d
+2025-12-20 08:48:21,762 - services.mobile.auth - INFO - 角色 nurse 不在允許清單中 ['admin']，使用配對碼指定角色: admin
+2025-12-20 08:48:21,765 - services.mobile.auth - INFO - 裝置 841d497f-1be3-4e19-a139-7234d181346d 配對成功，角色: admin, 站點: BORP-DNO-01
+2025-12-20 08:53:06,628 - __main__ - INFO - ✓ 盤點記錄已接收: CHK-20251220-085306-003, 確認: 0, 錯誤: 1
+2025-12-20 08:56:04,112 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-20 08:56:04,128 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-20 08:56:04,128 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-20 08:56:04,133 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-20 08:56:04,134 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-20 08:56:04,135 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-20 08:56:04,213 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-20 08:56:04,214 - services.mobile.auth - INFO - 清理了 25 個過期/已使用的配對碼
+2025-12-20 08:56:04,214 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-20 08:56:04,218 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-20 08:56:04,262 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-20 08:56:04,262 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-20 08:56:04,263 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-20 08:56:04,263 - __main__ - INFO - 下次設備重置時間: 2025-12-21 07:00:00 (等待 22.1 小時)
+2025-12-20 08:56:29,367 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-20 08:56:29,384 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-20 08:56:29,384 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-20 08:56:29,396 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-20 08:56:29,396 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-20 08:56:29,398 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-20 08:56:29,477 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-20 08:56:29,478 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-20 08:56:29,481 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-20 08:56:29,523 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-20 08:56:29,523 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-20 08:56:29,523 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-20 08:56:29,524 - __main__ - INFO - 下次設備重置時間: 2025-12-21 07:00:00 (等待 22.1 小時)
+2025-12-20 09:01:56,369 - __main__ - INFO - ✓ 盤點記錄已接收: CHK-20251220-090156-001, 確認: 0, 錯誤: 1
+2025-12-20 09:06:56,318 - __main__ - INFO - ✓ 錯誤項目已處理: CHK-20251220-090156-001/AIRWAY-007 by Admin
+2025-12-20 09:08:02,599 - services.mobile.auth - ERROR - 記錄操作失敗: database is locked
+2025-12-20 09:08:18,106 - services.mobile.auth - ERROR - 記錄操作失敗: database is locked

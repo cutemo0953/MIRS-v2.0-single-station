@@ -3,7 +3,103 @@
 > 記錄待解決問題、設計討論、與未來規劃
 
 **更新日期**: 2025-12-20
-**版本**: v0.2 (Phase 2.1 完成)
+**版本**: v0.3 (樹莓派部署修復)
+
+---
+
+## 0. 2025-12-20 樹莓派部署修復日誌
+
+### 0.1 SQLite Schema 問題 ✅ 已解決
+
+**問題描述**：
+- 在樹莓派執行 `sqlite3 medical_inventory.db < database/complete_schema_v1.4.2.sql` 失敗
+- 錯誤訊息：`object name reserved for internal use: sqlite_sequence`
+- 錯誤訊息：`no such column: type_name_en`
+
+**根本原因**：
+- `sqlite_sequence` 是 SQLite 保留的系統表，不能手動建立
+- `equipment_types` 表缺少 `type_name_en` 欄位
+
+**修復內容**：
+- 從 schema SQL 移除 `CREATE TABLE sqlite_sequence` 語句
+- 在 `equipment_types` CREATE TABLE 加入 `type_name_en` 欄位
+
+---
+
+### 0.2 韌性估算電力/氧氣未顯示 ✅ 已解決
+
+**問題描述**：
+- 韌性估算頁面未偵測到電力/氧氣設備
+- 設備狀態列和編輯按鈕未顯示
+
+**根本原因**：
+1. 設備 `tracking_mode` 為 AGGREGATE，需要 PER_UNIT 才有 unit 管理功能
+2. 設備缺少 `capacity_wh`、`fuel_rate_lph` 等必要欄位
+3. `capacity_config` 使用不支援的策略（如 BATTERY, CAPACITY_BASED）
+
+**修復內容**：
+- 更新 equipment 的 tracking_mode 為 PER_UNIT
+- 設定正確的 capacity_wh、fuel_rate_lph、output_watts 值
+- 更新 equipment_types.capacity_config 使用支援的策略（LINEAR, FUEL_BASED, POWER_DEPENDENT, NONE）
+
+---
+
+### 0.3 氧氣供應時數計算錯誤 ✅ 已解決
+
+**問題描述**：
+- 氧氣鋼瓶 152.8h + 氧氣濃縮機 41.5h（受電力限制）
+- 系統顯示 41.5h（取最小值），應顯示 152.8h（鋼瓶獨立供應）
+
+**根本原因**：
+- `getOxygenHours()` 使用 `Math.min()` 取所有氧氣來源的最小值
+- 未區分「獨立來源」與「依賴電力的來源」
+
+**修復內容**：
+- 修改 Index.html 的 `getOxygenHours()` 邏輯
+- 排除 `dependency.is_limiting = true` 的來源
+- 對獨立來源使用加總，非取最小值
+
+---
+
+### 0.4 人數不影響氧氣消耗 ✅ 已解決
+
+**問題描述**：
+- 調整插管患者人數，氧氣供應時數不變
+- 電力供應時數會正確響應人數變化
+
+**根本原因**：
+- `resilience_profiles` 中氧氣相關的 `population_multiplier` 設為 0
+
+**修復內容**：
+- 更新 OXYGEN 類型 profile 的 `population_multiplier = 1`
+
+---
+
+### 0.5 PWA QR Code 無法產生 ✅ 已解決
+
+**問題描述**：
+- Hub 配對模態窗可選擇身分與功能開關
+- QR Code 圖片無法顯示（404 錯誤）
+- curl localhost 可以，curl 10.42.0.1 返回 404
+
+**根本原因**：
+- 缺少 `PyJWT` 套件
+- 導致 `services/mobile/auth.py` import jwt 失敗
+- 整個 mobile router 未載入，所有 `/api/mirs-mobile/v1/*` 端點返回 404
+
+**修復內容**：
+1. 安裝 PyJWT：`./venv/bin/pip install PyJWT`
+2. 更新 requirements_v1.4.5.txt 加入 `PyJWT>=2.8.0`
+3. 更新 api/requirements.txt 加入 `PyJWT>=2.8.0`
+
+**診斷指令**：
+```bash
+# 檢查 Mobile API 是否啟用
+sudo journalctl -u mirs -n 50 | grep -i "mobile\|jwt"
+
+# 應看到「✓ MIRS Mobile API v1 已啟用」
+# 而非「WARNING - MIRS Mobile API 未啟用: No module named 'jwt'」
+```
 
 ---
 

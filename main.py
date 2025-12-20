@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 醫療站庫存管理系統 - 後端 API
-版本: v1.4.2-plus
+版本: v1.4.8
 新增: 藥品分流管理、血袋標籤列印、政府標準預載資料庫
+v1.4.8: 樹莓派部署修復、韌性估算修正、PWA 配對修正
 """
 
 import logging
@@ -97,8 +98,8 @@ class StationType(str, Enum):
     HOSP = "HOSP"       # Hospital Custom 醫院自訂
 
 class Config:
-    """系統配置 - v1.4.2-plus 穩定單站點架構"""
-    VERSION = "1.4.2-plus-demo" if IS_VERCEL else "1.4.2-plus"
+    """系統配置 - v1.4.8 穩定單站點架構"""
+    VERSION = "1.4.8-demo" if IS_VERCEL else "1.4.8"
     DATABASE_PATH = ":memory:" if IS_VERCEL else "medical_inventory.db"
     TEMPLATES_PATH = str(PROJECT_ROOT / "templates")
 
@@ -8861,7 +8862,7 @@ async def get_lifecycle_events_v2(
 # ============================================================================
 
 if __name__ == "__main__":
-    # v1.4.2-plus 單站版
+    # v1.4.8 單站版
 
     print("=" * 70)
     print(f"🏥 BORP備援手術站庫存管理系統（單站版）v{config.VERSION}")
@@ -8874,7 +8875,7 @@ if __name__ == "__main__":
     print(f"📖 API文件: http://localhost:8000/docs")
     print(f"📊 健康檢查: http://localhost:8000/api/health")
     print("=" * 70)
-    print("✨ v1.4.2-plus 功能:")
+    print("✨ v1.4.8 功能:")
     print("   - 藥品整合至庫存查詢 (MED- 前綴區分)")
     print("   - 庫存查詢分類篩選 (全部/藥品/耗材)")
     print("   - 血袋標籤多張排列列印 (A4紙 ~12張/頁)")

@@ -35,6 +35,9 @@ requests>=2.31.0
 # 簽章: Ed25519
 pynacl>=1.5.0
 
+# JWT 驗證 (Mobile API 配對)
+PyJWT>=2.8.0
+
 # 安裝指令 (Raspberry Pi 5):
 # python3 -m venv venv
 # source venv/bin/activate
