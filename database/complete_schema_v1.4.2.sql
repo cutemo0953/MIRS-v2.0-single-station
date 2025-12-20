@@ -37,7 +37,7 @@ CREATE TABLE inventory_events (
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (item_code) REFERENCES items(item_code)
                 );
-CREATE TABLE sqlite_sequence(name,seq);
+-- sqlite_sequence is auto-created by SQLite, do not create manually
 CREATE INDEX idx_inventory_events_item 
                 ON inventory_events(item_code)
             ;
@@ -591,17 +591,22 @@ FROM equipment_check_history
 GROUP BY check_date, station_id
 /* v_daily_check_summary(check_date,station_id,equipment_checked,total_checks,units_checked,checkers,first_check,last_check) */;
 CREATE TABLE equipment_types (
-    type_code       TEXT PRIMARY KEY,
-    type_name       TEXT NOT NULL,
-    category        TEXT NOT NULL,
+    type_code           TEXT PRIMARY KEY,
+    type_name           TEXT NOT NULL,
+    type_name_en        TEXT,
+    category            TEXT NOT NULL,
     resilience_category TEXT,
-    unit_label      TEXT,
-    capacity_config TEXT,
-    status_options  TEXT DEFAULT '["AVAILABLE", "IN_USE", "MAINTENANCE"]',
-    icon            TEXT,
-    color           TEXT DEFAULT 'gray',
-    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-, unit_prefix TEXT, label_template TEXT);
+    tracking_mode       TEXT DEFAULT 'AGGREGATE',
+    unit_label          TEXT,
+    unit_prefix         TEXT,
+    label_template      TEXT,
+    capacity_config     TEXT,
+    status_options      TEXT DEFAULT '["AVAILABLE", "IN_USE", "MAINTENANCE"]',
+    icon                TEXT,
+    color               TEXT DEFAULT 'gray',
+    sort_order          INTEGER DEFAULT 99,
+    created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 CREATE VIEW v_resilience_equipment AS
 SELECT
     e.id as equipment_id,
