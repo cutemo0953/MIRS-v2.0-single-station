@@ -6781,13 +6781,25 @@
                     return 'UNKNOWN';
                 },
 
-                // v1.2.6: 取得氧氣區時數 (取最小的有效時數)
+                // v1.2.6: 取得氧氣區時數
+                // v1.4.8: 修正邏輯 - 排除受依賴限制的來源（如濃縮機受電力限制）
+                //         氧氣鋼瓶是獨立來源，應顯示其時數
                 getOxygenHours() {
                     const oxygenLifelines = (this.resilienceStatus.lifelines || []).filter(l => l.type === 'OXYGEN');
-                    const hours = oxygenLifelines
+                    // 只取獨立來源（沒有 dependency 或 dependency.is_limiting 為 false）
+                    const independentHours = oxygenLifelines
+                        .filter(l => !l.dependency || !l.dependency.is_limiting)
                         .map(l => l.endurance?.effective_hours)
                         .filter(h => h !== '∞' && typeof h === 'number');
-                    return hours.length > 0 ? Math.min(...hours) : 0;
+                    // 如果有獨立來源，加總它們；否則取所有來源的最大值
+                    if (independentHours.length > 0) {
+                        return independentHours.reduce((sum, h) => sum + h, 0);
+                    }
+                    // Fallback: 取最大值（避免 0）
+                    const allHours = oxygenLifelines
+                        .map(l => l.endurance?.effective_hours)
+                        .filter(h => h !== '∞' && typeof h === 'number');
+                    return allHours.length > 0 ? Math.max(...allHours) : 0;
                 },
 
                 // v1.2.7: 開啟單位編輯 Modal
