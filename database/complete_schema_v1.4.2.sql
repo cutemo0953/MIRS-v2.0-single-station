@@ -739,13 +739,13 @@ CREATE VIEW v_equipment_status AS
 -- ============================================
 -- 預設設備類型
 -- ============================================
-INSERT OR IGNORE INTO equipment_types (type_code, type_name, type_name_en, category, resilience_category, tracking_mode, capacity_config, sort_order) VALUES
-('POWER_STATION', '行動電源站', 'Portable Power Station', '電力設備', 'POWER', 'PER_UNIT', '{"strategy":"BATTERY","hours_per_100pct":8}', 1),
-('GENERATOR', '發電機', 'Generator', '電力設備', 'POWER', 'PER_UNIT', '{"strategy":"FUEL_BASED","tank_liters":20,"fuel_rate_lph":2}', 2),
-('UPS', '不斷電系統', 'UPS', '電力設備', 'POWER', 'PER_UNIT', '{"strategy":"BATTERY","hours_per_100pct":2}', 3),
-('O2_CYLINDER_H', 'H型氧氣鋼瓶', 'H-type O2 Cylinder', '呼吸設備', 'OXYGEN', 'PER_UNIT', '{"strategy":"CAPACITY_BASED","hours_per_100pct":24}', 10),
-('O2_CYLINDER_E', 'E型氧氣鋼瓶', 'E-type O2 Cylinder', '呼吸設備', 'OXYGEN', 'PER_UNIT', '{"strategy":"CAPACITY_BASED","hours_per_100pct":6}', 11),
-('O2_CONCENTRATOR', '氧氣濃縮機', 'O2 Concentrator', '呼吸設備', 'OXYGEN', 'AGGREGATE', '{"strategy":"CONTINUOUS"}', 12),
+INSERT OR REPLACE INTO equipment_types (type_code, type_name, type_name_en, category, resilience_category, tracking_mode, capacity_config, sort_order) VALUES
+('POWER_STATION', '行動電源站', 'Portable Power Station', '電力設備', 'POWER', 'PER_UNIT', '{"strategy":"LINEAR","base_capacity_wh":2048,"output_watts":100,"hours_per_100pct":20.48,"schema_version":1}', 1),
+('GENERATOR', '發電機', 'Generator', '電力設備', 'POWER', 'PER_UNIT', '{"strategy":"FUEL_BASED","tank_liters":50,"fuel_rate_lph":1.5,"output_watts":2000,"hours_per_100pct":33.3,"schema_version":1}', 2),
+('UPS', '不斷電系統', 'UPS', '電力設備', 'POWER', 'PER_UNIT', '{"strategy":"LINEAR","base_capacity_wh":500,"output_watts":250,"hours_per_100pct":2,"schema_version":1}', 3),
+('O2_CYLINDER_H', 'H型氧氣鋼瓶', 'H-type O2 Cylinder', '呼吸設備', 'OXYGEN', 'PER_UNIT', '{"strategy":"LINEAR","capacity_liters":6900,"flow_rate_lpm":10,"hours_per_100pct":11.5,"schema_version":1}', 10),
+('O2_CYLINDER_E', 'E型氧氣鋼瓶', 'E-type O2 Cylinder', '呼吸設備', 'OXYGEN', 'PER_UNIT', '{"strategy":"LINEAR","capacity_liters":680,"flow_rate_lpm":5,"hours_per_100pct":2.27,"schema_version":1}', 11),
+('O2_CONCENTRATOR', '氧氣濃縮機', 'O2 Concentrator', '呼吸設備', 'OXYGEN', 'AGGREGATE', '{"strategy":"POWER_DEPENDENT","output_lpm":5,"requires_power":true,"hours_unlimited":true,"schema_version":1}', 12),
 ('VENTILATOR', '呼吸器', 'Ventilator', '呼吸設備', NULL, 'AGGREGATE', NULL, 20),
 ('MONITOR', '監視器', 'Patient Monitor', '監控設備', NULL, 'AGGREGATE', NULL, 30),
 ('GENERAL', '一般設備', 'General Equipment', '一般設備', NULL, 'AGGREGATE', NULL, 99);
