@@ -2971,6 +2971,45 @@ async def serve_debug():
         raise HTTPException(status_code=404, detail="debug.html not found")
 
 
+@app.get("/mobile")
+@app.get("/mobile/")
+async def serve_mobile_pwa():
+    """
+    Serve MIRS Mobile PWA (巡房助手)
+    """
+    mobile_file = PROJECT_ROOT / "static" / "mobile" / "index.html"
+    if mobile_file.exists():
+        return FileResponse(
+            mobile_file,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Mobile PWA not found")
+
+
+@app.get("/mobile/manifest.json")
+async def serve_mobile_manifest():
+    """Serve PWA manifest"""
+    manifest_file = PROJECT_ROOT / "static" / "mobile" / "manifest.json"
+    if manifest_file.exists():
+        return FileResponse(manifest_file, media_type="application/manifest+json")
+    raise HTTPException(status_code=404)
+
+
+@app.get("/mobile/icons/{filename}")
+async def serve_mobile_icon(filename: str):
+    """Serve PWA icons"""
+    icon_file = PROJECT_ROOT / "static" / "mobile" / "icons" / filename
+    if icon_file.exists() and icon_file.suffix in ['.png', '.svg', '.ico']:
+        media_type = "image/png" if filename.endswith('.png') else "image/svg+xml"
+        return FileResponse(icon_file, media_type=media_type)
+    raise HTTPException(status_code=404)
+
+
 # 掛載靜態文件(Logo圖片等)
 # Mount static files with pathlib for cross-platform path safety
 _static_dir = PROJECT_ROOT / "static"
@@ -4492,6 +4531,188 @@ async def export_surgery_csv(
         )
     except Exception as e:
         logger.error(f"匯出 CSV 失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# MIRS v0.7 - Inventory Check API (PWA盤點核對)
+# ============================================================================
+
+# 全域變數儲存盤點記錄（正式環境應存入資料庫）
+_inventory_check_records = []
+
+@app.post("/api/inventory-check")
+async def submit_inventory_check(request: dict):
+    """
+    接收 PWA 盤點核對結果
+    """
+    try:
+        check_id = f"CHK-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{len(_inventory_check_records)+1:03d}"
+
+        check_record = {
+            "check_id": check_id,
+            "station_id": request.get("station_id", "STATION-001"),
+            "checker_id": request.get("checker_id"),
+            "checker_name": request.get("checker_name"),
+            "checked_at": request.get("checked_at", datetime.now().isoformat()),
+            "total_items": request.get("total_items", 0),
+            "confirmed_count": request.get("confirmed_count", 0),
+            "error_count": request.get("error_count", 0),
+            "errors": request.get("errors", []),
+            "errors_pending": len(request.get("errors", [])),
+            "received_at": datetime.now().isoformat()
+        }
+
+        _inventory_check_records.append(check_record)
+
+        # 也存到 localStorage 供後續查詢
+        logger.info(f"✓ 盤點記錄已接收: {check_id}, 確認: {check_record['confirmed_count']}, 錯誤: {check_record['error_count']}")
+
+        return {
+            "status": "ACCEPTED",
+            "check_id": check_id,
+            "station_id": check_record["station_id"],
+            "checker_name": check_record["checker_name"],
+            "summary": {
+                "total": check_record["total_items"],
+                "confirmed": check_record["confirmed_count"],
+                "errors": check_record["error_count"]
+            },
+            "errors_queued": check_record["error_count"],
+            "received_at": check_record["received_at"]
+        }
+    except Exception as e:
+        logger.error(f"盤點記錄提交失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/inventory-check/history")
+async def get_inventory_check_history(
+    station_id: Optional[str] = Query(None),
+    from_date: Optional[str] = Query(None),
+    to_date: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    limit: int = Query(50)
+):
+    """
+    查詢盤點記錄歷史
+    """
+    try:
+        checks = _inventory_check_records.copy()
+
+        # 篩選
+        if station_id:
+            checks = [c for c in checks if c.get("station_id") == station_id]
+
+        if from_date:
+            checks = [c for c in checks if c.get("checked_at", "")[:10] >= from_date]
+
+        if to_date:
+            checks = [c for c in checks if c.get("checked_at", "")[:10] <= to_date]
+
+        if status == "has_errors":
+            checks = [c for c in checks if c.get("error_count", 0) > 0]
+        elif status == "all_confirmed":
+            checks = [c for c in checks if c.get("error_count", 0) == 0]
+
+        # 排序（最新的在前）
+        checks = sorted(checks, key=lambda x: x.get("checked_at", ""), reverse=True)[:limit]
+
+        return {
+            "checks": checks,
+            "total_count": len(checks)
+        }
+    except Exception as e:
+        logger.error(f"查詢盤點記錄失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/inventory-check/resolve-error")
+async def resolve_inventory_error(request: dict):
+    """
+    處理盤點錯誤項目
+    """
+    try:
+        check_id = request.get("check_id")
+        item_code = request.get("item_code")
+        resolution = request.get("resolution", "ADJUSTED")
+        resolver_name = request.get("resolver_name")
+        notes = request.get("notes", "")
+
+        # 找到對應的盤點記錄並更新
+        for check in _inventory_check_records:
+            if check["check_id"] == check_id:
+                for error in check.get("errors", []):
+                    if error.get("item_code") == item_code:
+                        error["resolved"] = True
+                        error["resolution"] = resolution
+                        error["resolver_name"] = resolver_name
+                        error["resolved_at"] = datetime.now().isoformat()
+                        error["resolution_notes"] = notes
+
+                # 更新待處理數量
+                check["errors_pending"] = len([e for e in check.get("errors", []) if not e.get("resolved")])
+                break
+
+        logger.info(f"✓ 錯誤項目已處理: {check_id}/{item_code} by {resolver_name}")
+
+        return {
+            "status": "RESOLVED",
+            "check_id": check_id,
+            "item_code": item_code,
+            "resolution": resolution,
+            "resolved_at": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"處理錯誤項目失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/inventory-check/export/csv")
+async def export_inventory_check_csv(
+    station_id: Optional[str] = Query(None),
+    from_date: Optional[str] = Query(None),
+    to_date: Optional[str] = Query(None)
+):
+    """
+    匯出盤點記錄 CSV
+    """
+    try:
+        checks = _inventory_check_records.copy()
+
+        if station_id:
+            checks = [c for c in checks if c.get("station_id") == station_id]
+        if from_date:
+            checks = [c for c in checks if c.get("checked_at", "")[:10] >= from_date]
+        if to_date:
+            checks = [c for c in checks if c.get("checked_at", "")[:10] <= to_date]
+
+        # 建立 CSV
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["盤點ID", "盤點時間", "盤點人員", "總項目", "已確認", "錯誤", "待處理"])
+
+        for check in checks:
+            writer.writerow([
+                check.get("check_id", ""),
+                check.get("checked_at", ""),
+                check.get("checker_name", ""),
+                check.get("total_items", 0),
+                check.get("confirmed_count", 0),
+                check.get("error_count", 0),
+                check.get("errors_pending", 0)
+            ])
+
+        csv_content = output.getvalue()
+        filename = f"inventory_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+        return StreamingResponse(
+            iter([csv_content]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        logger.error(f"匯出盤點記錄失敗: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -7102,6 +7323,28 @@ from services.resilience_service import ResilienceService, StatusLevel
 # Initialize resilience service with shared DatabaseManager (critical for in-memory mode)
 resilience_service = ResilienceService(db)
 
+# ============================================================================
+# MIRS Mobile API v1
+# ============================================================================
+
+try:
+    from services.mobile import mobile_router, init_mobile_services
+
+    # Initialize mobile services with shared resources
+    init_mobile_services(
+        db_path=config.DATABASE_PATH,
+        resilience_service=resilience_service,
+        db_manager=db
+    )
+
+    # Include mobile router
+    app.include_router(mobile_router)
+    logger.info("✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)")
+except ImportError as e:
+    logger.warning(f"MIRS Mobile API 未啟用: {e}")
+except Exception as e:
+    logger.error(f"MIRS Mobile API 初始化失敗: {e}")
+
 
 class ResilienceConfigUpdate(BaseModel):
     """韌性設定更新請求"""
@@ -8637,6 +8880,9 @@ if __name__ == "__main__":
     print("   - 血袋標籤多張排列列印 (A4紙 ~12張/頁)")
     print("   - 動態 API URL (支援遠端存取)")
     print("   - 單站版簡化架構")
+    print("   - 📱 Mobile API v1 (巡房助手 PWA)")
+    print("=" * 70)
+    print("📱 Mobile API: http://localhost:8000/api/mirs-mobile/v1/info")
     print("=" * 70)
     print("按 Ctrl+C 停止服務")
     print("=" * 70)

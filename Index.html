@@ -192,10 +192,313 @@
                         </div>
                     </div>
                 </div>
-                <div class="text-right space-y-2">
-                    <p class="text-xs text-gray-400">
-                        <span x-text="currentTime"></span>
-                    </p>
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <!-- Mobile 配對按鈕 -->
+                    <button @click="showMobilePairing = true; pairingInfo = null; pairingError = null"
+                            class="flex items-center gap-1.5 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="hidden sm:inline">行動配對</span>
+                    </button>
+                    <!-- 配對記錄按鈕 -->
+                    <button @click="showPairedDevices = true; loadPairedDevices()"
+                            class="flex items-center gap-1.5 px-2 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            title="配對記錄">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        <span class="hidden sm:inline">配對記錄</span>
+                    </button>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-400">
+                            <span x-text="currentTime"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile 配對 Modal (GitHub Device Flow 風格) -->
+        <div x-show="showMobilePairing" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             @click.self="showMobilePairing = false">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-teal-600 text-white px-6 py-4 z-10">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        MIRS Mobile 配對
+                    </h3>
+                    <p class="text-teal-100 text-sm mt-1">讓人員使用手機進行巡房檢查</p>
+                </div>
+
+                <!-- 配置步驟：選擇角色與權限 -->
+                <div x-show="!pairingInfo && !pairingLoading && !pairingError" class="p-6">
+                    <div class="space-y-4">
+                        <!-- 角色選擇 -->
+                        <div>
+                            <label class="text-sm font-medium text-gray-700 block mb-2">配對角色</label>
+                            <select x-model="pairingConfig.role"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+                                <option value="nurse">護理師</option>
+                                <option value="warehouse">庫房人員</option>
+                                <option value="maintenance">工務 / 設備維護</option>
+                                <option value="admin">管理員</option>
+                            </select>
+                        </div>
+
+                        <!-- 功能權限開關 -->
+                        <div>
+                            <label class="text-sm font-medium text-gray-700 block mb-2">啟用功能</label>
+                            <div class="space-y-3 bg-gray-50 rounded-xl p-4">
+                                <!-- 設備檢查 -->
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center">
+                                            <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                        <span class="text-gray-700">設備檢查</span>
+                                    </div>
+                                    <div class="relative">
+                                        <input type="checkbox" x-model="pairingConfig.scopes.equipment" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                                    </div>
+                                </label>
+                                <!-- 庫存盤點 -->
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
+                                            <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                            </svg>
+                                        </div>
+                                        <span class="text-gray-700">庫存盤點</span>
+                                    </div>
+                                    <div class="relative">
+                                        <input type="checkbox" x-model="pairingConfig.scopes.inventory" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                                    </div>
+                                </label>
+                                <!-- 血袋入庫 -->
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                            <svg class="w-4 h-4 text-[#D96754]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                                            </svg>
+                                        </div>
+                                        <span class="text-gray-700">血袋入庫</span>
+                                    </div>
+                                    <div class="relative">
+                                        <input type="checkbox" x-model="pairingConfig.scopes.bloodReceive" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D96754]"></div>
+                                    </div>
+                                </label>
+                                <!-- 耗材入庫 -->
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 bg-sky-100 rounded-lg flex items-center justify-center">
+                                            <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                                            </svg>
+                                        </div>
+                                        <span class="text-gray-700">耗材入庫</span>
+                                    </div>
+                                    <div class="relative">
+                                        <input type="checkbox" x-model="pairingConfig.scopes.supplyReceive" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 產生配對碼按鈕 -->
+                        <button @click="generatePairingCode()"
+                                class="w-full bg-teal-600 text-white rounded-xl py-3 font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                            </svg>
+                            產生配對碼
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loading 狀態 -->
+                <div x-show="pairingLoading" class="p-8 text-center">
+                    <div class="animate-spin w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-gray-500">產生配對碼中...</p>
+                </div>
+
+                <!-- 錯誤狀態 -->
+                <div x-show="pairingError && !pairingLoading" class="p-6 text-center">
+                    <div class="text-red-500 text-4xl mb-4">⚠️</div>
+                    <p class="text-red-600 mb-4" x-text="pairingError"></p>
+                    <button @click="pairingError = null"
+                            class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
+                        重試
+                    </button>
+                </div>
+
+                <!-- 成功狀態：QR Code + 配對碼 -->
+                <div x-show="pairingInfo && !pairingLoading && !pairingError" class="p-6">
+                    <!-- 步驟說明 -->
+                    <div class="flex items-start gap-4 mb-6 p-4 bg-teal-50 rounded-xl">
+                        <div class="flex-shrink-0 w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                        <div>
+                            <p class="font-medium text-gray-800">用手機掃描 QR Code</p>
+                            <p class="text-sm text-gray-500">開啟 MIRS Mobile 網頁</p>
+                        </div>
+                    </div>
+
+                    <!-- 兩欄：QR Code + 配對碼 -->
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <!-- QR Code -->
+                        <div class="text-center">
+                            <div class="bg-white border-2 border-gray-200 rounded-xl p-2 inline-block">
+                                <img :src="pairingQRUrl" alt="Mobile PWA QR Code" class="w-32 h-32">
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">掃描開啟網頁</p>
+                        </div>
+
+                        <!-- 配對碼 -->
+                        <div class="text-center flex flex-col justify-center">
+                            <div class="flex items-start gap-4 mb-2 p-3 bg-gray-50 rounded-xl">
+                                <div class="flex-shrink-0 w-6 h-6 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                                <p class="text-sm text-gray-600 text-left">輸入配對碼</p>
+                            </div>
+                            <div class="bg-gray-100 rounded-xl py-4 px-2">
+                                <div class="text-3xl font-mono font-bold tracking-[0.3em] text-teal-600" x-text="pairingInfo?.pairing_code || '------'"></div>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-2">
+                                有效時間：<span class="font-medium text-orange-600" x-text="pairingExpiry"></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Hub IP 資訊 -->
+                    <div class="bg-gray-50 rounded-xl p-4 mb-4">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-500">Hub IP:</span>
+                            <span class="font-mono font-medium text-gray-800" x-text="pairingInfo?.hub_ip || 'N/A'"></span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm mt-2">
+                            <span class="text-gray-500">Mobile URL:</span>
+                            <code class="text-xs bg-white px-2 py-1 rounded text-gray-700" x-text="pairingInfo?.mobile_url || ''"></code>
+                        </div>
+                    </div>
+
+                    <!-- WiFi 提醒 -->
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-sm">
+                        <p class="text-yellow-800">
+                            <span class="font-medium">⚠️ 確認手機與此電腦在同一個 WiFi 網路</span>
+                        </p>
+                    </div>
+
+                    <!-- 重新產生按鈕 -->
+                    <div class="text-center mt-4">
+                        <button @click="generatePairingCode()"
+                                class="text-teal-600 hover:text-teal-700 text-sm font-medium">
+                            🔄 重新產生配對碼
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 px-6 py-3 flex justify-end border-t">
+                    <button @click="showMobilePairing = false; pairingInfo = null; pairingQRUrl = ''"
+                            class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
+                        關閉
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 配對記錄 Modal -->
+        <div x-show="showPairedDevices" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             @click.self="showPairedDevices = false">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-gray-700 text-white px-6 py-4 z-10">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        已配對裝置記錄
+                    </h3>
+                    <p class="text-gray-300 text-sm mt-1">查看和管理已配對的行動裝置</p>
+                </div>
+
+                <div class="p-6">
+                    <!-- 載入中 -->
+                    <div x-show="pairedDevicesLoading" class="text-center py-8">
+                        <div class="animate-spin w-8 h-8 border-4 border-gray-300 border-t-teal-600 rounded-full mx-auto mb-3"></div>
+                        <p class="text-gray-500">載入中...</p>
+                    </div>
+
+                    <!-- 無記錄 -->
+                    <div x-show="!pairedDevicesLoading && pairedDevices.length === 0" class="text-center py-8">
+                        <svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        <p class="text-gray-500">尚無配對記錄</p>
+                    </div>
+
+                    <!-- 裝置列表 -->
+                    <div x-show="!pairedDevicesLoading && pairedDevices.length > 0" class="space-y-3">
+                        <template x-for="device in pairedDevices" :key="device.device_id">
+                            <div class="bg-gray-50 rounded-xl p-4 border" :class="device.revoked ? 'border-red-200 opacity-60' : 'border-gray-200'">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                                             :class="device.revoked ? 'bg-gray-400' : 'bg-teal-600'">
+                                            <span x-text="(device.staff_name || 'U')[0]"></span>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="font-semibold text-gray-800 flex items-center gap-2">
+                                                <span x-text="device.staff_name || '未知'"></span>
+                                                <span x-show="device.revoked" class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">已撤銷</span>
+                                            </div>
+                                            <div class="text-sm text-gray-500" x-text="device.role === 'admin' ? '管理員' : device.role === 'nurse' ? '護理師' : device.role"></div>
+                                            <div class="text-xs text-gray-400 mt-1">
+                                                <span>裝置 ID: </span>
+                                                <span x-text="device.device_id.substring(0, 8) + '...'"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right text-xs text-gray-400">
+                                        <div>配對: <span x-text="new Date(device.paired_at).toLocaleString('zh-TW')"></span></div>
+                                        <div x-show="device.last_seen">
+                                            最後活動: <span x-text="device.last_seen ? new Date(device.last_seen).toLocaleString('zh-TW') : '-'"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 撤銷按鈕 -->
+                                <div x-show="!device.revoked" class="mt-3 pt-3 border-t border-gray-200 flex justify-end">
+                                    <button @click="revokeDevice(device.device_id)"
+                                            class="text-sm text-red-600 hover:text-red-800 font-medium">
+                                        撤銷配對
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 px-6 py-3 flex justify-between items-center border-t">
+                    <button @click="loadPairedDevices()"
+                            class="text-sm text-teal-600 hover:text-teal-800 font-medium flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        重新整理
+                    </button>
+                    <button @click="showPairedDevices = false"
+                            class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
+                        關閉
+                    </button>
                 </div>
             </div>
         </div>
@@ -375,6 +678,12 @@
                     庫存查詢
                 </h2>
                 <div class="flex gap-2">
+                    <button @click="showInventoryCheckHistoryModal = true; loadInventoryCheckHistory()" class="bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-700 transition-colors flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                        </svg>
+                        <span>核對記錄</span>
+                    </button>
                     <button @click="showAddItemModal = true" class="bg-teal-custom-500 text-white px-4 py-2 rounded-lg hover:bg-teal-custom-600 transition-colors flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -3450,6 +3759,197 @@
             </div>
         </div>
 
+        <!-- 庫存盤點核對記錄 Modal -->
+        <div x-show="showInventoryCheckHistoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4" style="display: none;">
+            <div @click.away="showInventoryCheckHistoryModal = false" class="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-6 max-w-6xl w-full mx-4 my-4 max-h-[95vh] overflow-y-auto">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                    </svg>
+                    庫存盤點核對記錄
+                </h3>
+
+                <!-- 統計摘要 -->
+                <div class="mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="bg-gray-100 rounded-xl p-4 text-center">
+                        <div class="text-2xl font-bold text-gray-800" x-text="inventoryCheckStats.totalChecks || 0"></div>
+                        <div class="text-sm text-gray-500">總盤點次數</div>
+                    </div>
+                    <div class="bg-gray-100 rounded-xl p-4 text-center">
+                        <div class="text-2xl font-bold text-teal-custom-600" x-text="inventoryCheckStats.totalConfirmed || 0"></div>
+                        <div class="text-sm text-gray-500">已確認項目</div>
+                    </div>
+                    <div class="bg-gray-100 rounded-xl p-4 text-center">
+                        <div class="text-2xl font-bold text-[#D96754]" x-text="inventoryCheckStats.totalErrors || 0"></div>
+                        <div class="text-sm text-gray-500">錯誤項目</div>
+                    </div>
+                    <div class="bg-gray-100 rounded-xl p-4 text-center">
+                        <div class="text-2xl font-bold text-teal-custom-600" x-text="inventoryCheckStats.pendingErrors || 0"></div>
+                        <div class="text-sm text-gray-500">待處理</div>
+                    </div>
+                </div>
+
+                <!-- 篩選條件 -->
+                <div class="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">開始日期</label>
+                        <input type="date" x-model="inventoryCheckSearch.startDate" @change="loadInventoryCheckHistory()"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">結束日期</label>
+                        <input type="date" x-model="inventoryCheckSearch.endDate" @change="loadInventoryCheckHistory()"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">狀態</label>
+                        <select x-model="inventoryCheckSearch.status" @change="loadInventoryCheckHistory()"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
+                            <option value="">全部</option>
+                            <option value="has_errors">有錯誤</option>
+                            <option value="all_confirmed">全部確認</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 歷史記錄表格 -->
+                <div class="overflow-x-auto max-h-96">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">盤點時間</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">盤點人員</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">總項目</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">已確認</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">錯誤</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">狀態</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="check in inventoryCheckHistory" :key="check.check_id">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-2 text-sm" x-text="new Date(check.checked_at).toLocaleString('zh-TW')"></td>
+                                    <td class="px-4 py-2 text-sm font-medium" x-text="check.checker_name"></td>
+                                    <td class="px-4 py-2 text-sm" x-text="check.total_items"></td>
+                                    <td class="px-4 py-2 text-sm text-teal-custom-600 font-medium" x-text="check.confirmed_count"></td>
+                                    <td class="px-4 py-2 text-sm text-[#D96754] font-medium" x-text="check.error_count"></td>
+                                    <td class="px-4 py-2 text-sm">
+                                        <span x-show="check.error_count === 0" class="bg-gray-100 text-teal-custom-600 px-2 py-1 rounded-full text-xs font-medium">
+                                            全部確認
+                                        </span>
+                                        <span x-show="check.error_count > 0 && check.errors_pending === 0" class="bg-gray-100 text-teal-custom-600 px-2 py-1 rounded-full text-xs font-medium">
+                                            已處理
+                                        </span>
+                                        <span x-show="check.errors_pending > 0" class="bg-gray-100 text-[#D96754] px-2 py-1 rounded-full text-xs font-medium">
+                                            待處理 (<span x-text="check.errors_pending"></span>)
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-2 text-sm">
+                                        <button @click="viewInventoryCheckDetail(check)" class="text-cyan-600 hover:text-cyan-800 font-medium">
+                                            詳情
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+
+                    <div x-show="!inventoryCheckHistory || inventoryCheckHistory.length === 0" class="text-center py-8 text-gray-400">
+                        無盤點記錄
+                    </div>
+                </div>
+
+                <div class="mt-4 flex justify-between items-center">
+                    <button @click="exportInventoryCheckCSV()" class="bg-teal-custom-500 text-white px-4 py-2 rounded-lg hover:bg-teal-custom-600 transition-colors flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        匯出 CSV
+                    </button>
+                    <button type="button" @click="showInventoryCheckHistoryModal = false" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                        關閉
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 盤點錯誤詳情 Modal -->
+        <div x-show="showInventoryCheckDetailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4" style="display: none;">
+            <div @click.away="showInventoryCheckDetailModal = false" class="bg-white rounded-xl shadow-2xl p-3 sm:p-4 md:p-6 max-w-2xl w-full mx-4 my-4 max-h-[95vh] overflow-y-auto">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    盤點詳情
+                </h3>
+
+                <!-- 盤點摘要 -->
+                <div class="bg-gray-50 rounded-xl p-4 mb-4" x-show="selectedInventoryCheck">
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-500">盤點人員：</span>
+                            <span class="font-medium" x-text="selectedInventoryCheck?.checker_name"></span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">盤點時間：</span>
+                            <span class="font-medium" x-text="selectedInventoryCheck ? new Date(selectedInventoryCheck.checked_at).toLocaleString('zh-TW') : ''"></span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">確認項目：</span>
+                            <span class="font-medium text-teal-custom-600" x-text="selectedInventoryCheck?.confirmed_count"></span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">錯誤項目：</span>
+                            <span class="font-medium text-[#D96754]" x-text="selectedInventoryCheck?.error_count"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 錯誤項目列表 -->
+                <div x-show="selectedInventoryCheck?.errors?.length > 0">
+                    <h4 class="font-semibold text-[#D96754] mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        錯誤項目
+                    </h4>
+                    <div class="space-y-3">
+                        <template x-for="error in selectedInventoryCheck?.errors || []" :key="error.item_code">
+                            <div class="bg-gray-100 border border-gray-200 rounded-lg p-3">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <div class="font-medium text-[#D96754]" x-text="error.item_name || error.item_code"></div>
+                                        <div class="text-xs text-gray-500" x-text="error.item_code"></div>
+                                        <div class="text-sm text-gray-600 mt-1" x-text="error.notes"></div>
+                                    </div>
+                                    <div x-show="!error.resolved">
+                                        <button @click="resolveInventoryError(selectedInventoryCheck.check_id, error.item_code)"
+                                                class="bg-cyan-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-cyan-700">
+                                            處理
+                                        </button>
+                                    </div>
+                                    <div x-show="error.resolved" class="text-green-600 text-sm font-medium">
+                                        ✓ 已處理
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div x-show="!selectedInventoryCheck?.errors?.length" class="text-center py-4 text-gray-400">
+                    此次盤點無錯誤項目
+                </div>
+
+                <div class="mt-4 flex justify-end">
+                    <button type="button" @click="showInventoryCheckDetailModal = false" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                        關閉
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast 通知 -->
         <div x-show="showToast" x-transition class="fixed bottom-4 right-4 z-50" style="display: none;">
             <div :class="{
@@ -4006,6 +4506,27 @@
                 checkReportDate: new Date().toISOString().split('T')[0],
                 checkReportData: null,
 
+                // Mobile 配對
+                showMobilePairing: false,
+                pairingInfo: null,
+                pairingQRUrl: '',
+                pairingExpiry: null,
+                pairingLoading: false,
+                pairingError: null,
+                pairingConfig: {
+                    role: 'nurse',
+                    scopes: {
+                        equipment: true,
+                        inventory: true,
+                        bloodReceive: false,
+                        supplyReceive: false
+                    }
+                },
+                // 配對記錄
+                showPairedDevices: false,
+                pairedDevices: [],
+                pairedDevicesLoading: false,
+
                 // 搜尋與篩選
                 itemSearchText: '',
                 itemCategoryFilter: '',  // 分類篩選 (空字串=全部, 'medicine'=藥品, 'consumable'=耗材)
@@ -4028,6 +4549,8 @@
                 showEmergencyReasonModal: false,
                 showPharmacistApprovalModal: false,
                 showBloodBagSelectModal: false,  // v1.4.2-plus: 血袋選擇出庫
+                showInventoryCheckHistoryModal: false,  // v0.7: 庫存盤點核對記錄
+                showInventoryCheckDetailModal: false,   // v0.7: 盤點詳情
                 showUpgradeModal: false,  // 升級至多站版
                 showUnitManageModal: false,  // v2.1: 設備單位管理
 
@@ -4063,6 +4586,22 @@
                     eventType: ''
                 },
                 selectedBloodRecord: null,
+
+                // 庫存盤點核對記錄 (v0.7)
+                inventoryCheckHistory: [],
+                inventoryCheckStats: {
+                    totalChecks: 0,
+                    totalConfirmed: 0,
+                    totalErrors: 0,
+                    pendingErrors: 0
+                },
+                lastKnownCheckCount: 0, // 用於偵測新同步記錄
+                inventoryCheckSearch: {
+                    startDate: '',
+                    endDate: '',
+                    status: ''
+                },
+                selectedInventoryCheck: null,
 
                 // 個別血袋追蹤 (v1.4.2-plus)
                 bloodBags: [],
@@ -4275,6 +4814,10 @@
 
                     // 根據當前標籤載入對應資料
                     await this.lazyLoadTabData(this.currentTab);
+
+                    // 初始化同步通知輪詢 (每 30 秒檢查一次 PWA 同步)
+                    await this.initSyncNotifications();
+                    setInterval(() => this.checkForNewSyncs(), 30000);
                 },
 
                 // Reset demo data (Vercel demo mode only)
@@ -4291,6 +4834,139 @@
                         }
                     } catch (e) {
                         alert('重置失敗：' + e.message);
+                    }
+                },
+
+                // 產生 Mobile 配對碼與 QR Code
+                async generatePairingCode() {
+                    this.pairingLoading = true;
+                    this.pairingError = null;
+                    this.pairingInfo = null;
+                    this.pairingQRUrl = '';
+
+                    // 將功能開關轉換為 scope 字串陣列
+                    const scopes = ['mirs:resilience:read'];
+                    if (this.pairingConfig.scopes.equipment) {
+                        scopes.push('mirs:equipment:read', 'mirs:equipment:write');
+                    }
+                    if (this.pairingConfig.scopes.inventory) {
+                        scopes.push('mirs:inventory:read', 'mirs:inventory:check');
+                    }
+                    if (this.pairingConfig.scopes.bloodReceive) {
+                        scopes.push('mirs:blood:receive');
+                    }
+                    if (this.pairingConfig.scopes.supplyReceive) {
+                        scopes.push('mirs:items:receive');
+                    }
+
+                    try {
+                        // 1. 取得 QR Code 圖片
+                        const qrRes = await fetch(`${this.apiUrl}/mirs-mobile/v1/auth/pairing-qr`);
+                        if (qrRes.ok) {
+                            const blob = await qrRes.blob();
+                            this.pairingQRUrl = URL.createObjectURL(blob);
+                        } else {
+                            throw new Error('無法產生 QR Code');
+                        }
+
+                        // 2. 產生配對碼（帶上角色與權限）
+                        const pairingReq = {
+                            role: this.pairingConfig.role,
+                            scopes: scopes
+                        };
+
+                        // 嘗試 POST（新版 API），如果失敗則退回 GET（舊版 API）
+                        let infoRes = await fetch(`${this.apiUrl}/mirs-mobile/v1/auth/pairing-info`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(pairingReq)
+                        });
+
+                        // 如果 POST 不支援 (405)，退回 GET（使用預設權限）
+                        if (infoRes.status === 405) {
+                            console.warn('POST /auth/pairing-info not supported, falling back to GET');
+                            infoRes = await fetch(`${this.apiUrl}/mirs-mobile/v1/auth/pairing-info`);
+                        }
+
+                        if (!infoRes.ok) {
+                            const err = await infoRes.json();
+                            throw new Error(err.detail || '產生配對碼失敗');
+                        }
+
+                        this.pairingInfo = await infoRes.json();
+
+                        // 計算剩餘時間
+                        const expiresAt = new Date(this.pairingInfo.expires_at);
+                        const updateExpiry = () => {
+                            const now = new Date();
+                            const diff = Math.max(0, Math.floor((expiresAt - now) / 1000));
+                            const mins = Math.floor(diff / 60);
+                            const secs = diff % 60;
+                            this.pairingExpiry = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+                            if (diff <= 0) {
+                                this.pairingExpiry = '已過期';
+                            }
+                        };
+                        updateExpiry();
+                        const timer = setInterval(() => {
+                            updateExpiry();
+                            if (this.pairingExpiry === '已過期' || !this.showMobilePairing) {
+                                clearInterval(timer);
+                            }
+                        }, 1000);
+
+                    } catch (e) {
+                        console.error('Generate pairing code error:', e);
+                        this.pairingError = e.message || '無法連接到 Mobile API';
+                    } finally {
+                        this.pairingLoading = false;
+                    }
+                },
+
+                // 載入已配對裝置列表
+                async loadPairedDevices() {
+                    this.pairedDevicesLoading = true;
+                    try {
+                        const response = await fetch(`${this.apiUrl}/mirs-mobile/v1/devices`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.pairedDevices = data.devices || [];
+                            console.log('✓ 已載入配對裝置:', this.pairedDevices.length, '筆');
+                        } else {
+                            console.error('載入配對裝置失敗:', response.status);
+                            this.pairedDevices = [];
+                        }
+                    } catch (e) {
+                        console.error('載入配對裝置錯誤:', e);
+                        this.pairedDevices = [];
+                    } finally {
+                        this.pairedDevicesLoading = false;
+                    }
+                },
+
+                // 撤銷裝置配對
+                async revokeDevice(deviceId) {
+                    const reason = prompt('請輸入撤銷原因（選填）：');
+                    if (reason === null) return; // 使用者取消
+
+                    try {
+                        const response = await fetch(`${this.apiUrl}/mirs-mobile/v1/devices/${deviceId}/revoke`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ reason: reason || '管理員撤銷' })
+                        });
+
+                        if (response.ok) {
+                            this.toast('裝置已撤銷', 'success');
+                            this.loadPairedDevices(); // 重新載入列表
+                        } else {
+                            const err = await response.json();
+                            this.toast(err.detail || '撤銷失敗', 'error');
+                        }
+                    } catch (e) {
+                        console.error('撤銷裝置失敗:', e);
+                        this.toast('撤銷失敗: ' + e.message, 'error');
                     }
                 },
 
@@ -5344,6 +6020,134 @@
 
                     window.open(url, '_blank');
                     this.toast('血庫記錄匯出成功', 'success');
+                },
+
+                // ========== 庫存盤點核對記錄 (v0.7) ==========
+                async loadInventoryCheckHistory() {
+                    try {
+                        let url = `${this.apiUrl}/inventory-check/history`;
+                        const params = [];
+
+                        if (this.inventoryCheckSearch.startDate) {
+                            params.push(`from_date=${this.inventoryCheckSearch.startDate}`);
+                        }
+                        if (this.inventoryCheckSearch.endDate) {
+                            params.push(`to_date=${this.inventoryCheckSearch.endDate}`);
+                        }
+                        if (this.inventoryCheckSearch.status) {
+                            params.push(`status=${this.inventoryCheckSearch.status}`);
+                        }
+                        if (params.length > 0) {
+                            url += '?' + params.join('&');
+                        }
+
+                        const response = await fetch(url);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.inventoryCheckHistory = data.checks || [];
+
+                            // 計算統計
+                            this.inventoryCheckStats = {
+                                totalChecks: this.inventoryCheckHistory.length,
+                                totalConfirmed: this.inventoryCheckHistory.reduce((sum, c) => sum + (c.confirmed_count || 0), 0),
+                                totalErrors: this.inventoryCheckHistory.reduce((sum, c) => sum + (c.error_count || 0), 0),
+                                pendingErrors: this.inventoryCheckHistory.reduce((sum, c) => sum + (c.errors_pending || 0), 0)
+                            };
+
+                            console.log('✓ 盤點記錄已載入:', this.inventoryCheckHistory.length, '筆');
+                        } else {
+                            // API 尚未實作時使用模擬資料
+                            console.log('盤點記錄 API 尚未實作，使用本地記錄');
+                            this.loadLocalInventoryChecks();
+                        }
+                    } catch (error) {
+                        console.error('載入盤點記錄失敗:', error);
+                        this.loadLocalInventoryChecks();
+                    }
+                },
+
+                loadLocalInventoryChecks() {
+                    // 從 localStorage 載入本地暫存的盤點記錄
+                    const saved = localStorage.getItem('mirs_inventory_check_history');
+                    if (saved) {
+                        try {
+                            this.inventoryCheckHistory = JSON.parse(saved);
+                            this.inventoryCheckStats = {
+                                totalChecks: this.inventoryCheckHistory.length,
+                                totalConfirmed: this.inventoryCheckHistory.reduce((sum, c) => sum + (c.confirmed_count || 0), 0),
+                                totalErrors: this.inventoryCheckHistory.reduce((sum, c) => sum + (c.error_count || 0), 0),
+                                pendingErrors: this.inventoryCheckHistory.reduce((sum, c) => sum + (c.errors_pending || 0), 0)
+                            };
+                        } catch (e) {
+                            this.inventoryCheckHistory = [];
+                        }
+                    } else {
+                        this.inventoryCheckHistory = [];
+                        this.inventoryCheckStats = { totalChecks: 0, totalConfirmed: 0, totalErrors: 0, pendingErrors: 0 };
+                    }
+                },
+
+                viewInventoryCheckDetail(check) {
+                    this.selectedInventoryCheck = check;
+                    this.showInventoryCheckDetailModal = true;
+                },
+
+                async resolveInventoryError(checkId, itemCode) {
+                    const notes = prompt('請輸入處理說明：');
+                    if (notes === null) return;
+
+                    try {
+                        const response = await fetch(`${this.apiUrl}/inventory-check/resolve-error`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                check_id: checkId,
+                                item_code: itemCode,
+                                resolution: 'ADJUSTED',
+                                resolver_name: this.currentUser || 'Admin',
+                                notes: notes || '已處理'
+                            })
+                        });
+
+                        if (response.ok) {
+                            this.toast('錯誤項目已處理', 'success');
+                            // 更新本地狀態
+                            if (this.selectedInventoryCheck?.errors) {
+                                const error = this.selectedInventoryCheck.errors.find(e => e.item_code === itemCode);
+                                if (error) error.resolved = true;
+                            }
+                            await this.loadInventoryCheckHistory();
+                        } else {
+                            // API 尚未實作時，直接更新本地狀態
+                            if (this.selectedInventoryCheck?.errors) {
+                                const error = this.selectedInventoryCheck.errors.find(e => e.item_code === itemCode);
+                                if (error) error.resolved = true;
+                            }
+                            this.toast('錯誤項目已標記處理（本地）', 'success');
+                        }
+                    } catch (error) {
+                        console.error('處理錯誤失敗:', error);
+                        // 本地處理
+                        if (this.selectedInventoryCheck?.errors) {
+                            const error = this.selectedInventoryCheck.errors.find(e => e.item_code === itemCode);
+                            if (error) error.resolved = true;
+                        }
+                        this.toast('錯誤項目已標記處理（本地）', 'info');
+                    }
+                },
+
+                exportInventoryCheckCSV() {
+                    let url = `${this.apiUrl}/inventory-check/export/csv?station_id=${this.stationId}`;
+
+                    if (this.inventoryCheckSearch.startDate) {
+                        url += `&from_date=${this.inventoryCheckSearch.startDate}`;
+                    }
+                    if (this.inventoryCheckSearch.endDate) {
+                        url += `&to_date=${this.inventoryCheckSearch.endDate}`;
+                    }
+
+                    window.open(url, '_blank');
+                    this.toast('盤點記錄匯出成功', 'success');
                 },
 
                 // 匯出消耗記錄
@@ -6766,6 +7570,64 @@
                     setTimeout(() => {
                         this.showToast = false;
                     }, 3000);
+                },
+
+                // ========== PWA 同步通知 (v0.8) ==========
+                async initSyncNotifications() {
+                    // 初始化時記錄當前的盤點記錄數量
+                    try {
+                        const response = await fetch(`${this.apiUrl}/inventory-check/history`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.lastKnownCheckCount = (data.checks || []).length;
+                            console.log('✓ 同步通知已初始化, 當前盤點記錄:', this.lastKnownCheckCount);
+                        }
+                    } catch (e) {
+                        console.log('同步通知初始化略過');
+                    }
+                },
+
+                async checkForNewSyncs() {
+                    // 定期檢查是否有新的 PWA 同步資料
+                    try {
+                        const response = await fetch(`${this.apiUrl}/inventory-check/history`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            const currentCount = (data.checks || []).length;
+
+                            if (currentCount > this.lastKnownCheckCount) {
+                                const newCount = currentCount - this.lastKnownCheckCount;
+
+                                // 計算新同步的確認和錯誤數量
+                                const newChecks = (data.checks || []).slice(0, newCount);
+                                const newConfirmed = newChecks.reduce((sum, c) => sum + (c.confirmed_count || 0), 0);
+                                const newErrors = newChecks.reduce((sum, c) => sum + (c.error_count || 0), 0);
+
+                                // 顯示同步通知
+                                let msg = `📱 PWA 同步: ${newCount} 筆新盤點記錄`;
+                                if (newConfirmed > 0 || newErrors > 0) {
+                                    msg += ` (確認 ${newConfirmed}, 錯誤 ${newErrors})`;
+                                }
+
+                                this.toast(msg, newErrors > 0 ? 'error' : 'success');
+
+                                // 更新已知數量
+                                this.lastKnownCheckCount = currentCount;
+
+                                // 如果盤點記錄模態窗開啟中，自動刷新
+                                if (this.showInventoryCheckHistoryModal) {
+                                    this.loadInventoryCheckHistory();
+                                }
+
+                                // 刷新統計數據
+                                this.loadStats();
+
+                                console.log(`✓ PWA 同步通知: ${newCount} 筆新記錄`);
+                            }
+                        }
+                    } catch (e) {
+                        // 靜默失敗，不影響正常使用
+                    }
                 },
 
                 // 緊急功能 (v1.4.5新增)

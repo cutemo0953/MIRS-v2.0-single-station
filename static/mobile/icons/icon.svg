@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="102" fill="#0d9488"/>
+
+  <!-- Outer circle (resilience ring) -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="white" stroke-width="24" opacity="0.3"/>
+
+  <!-- Medical cross -->
+  <path d="M224 136h64v88h88v64h-88v88h-64v-88h-88v-64h88z" fill="white"/>
+
+  <!-- Pulse line (resilience indicator) -->
+  <path d="M96 340 L160 340 L180 300 L200 380 L220 280 L240 360 L260 340 L416 340"
+        stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.9"/>
+
+  <!-- Small power bolt (resilience) -->
+  <path d="M380 100 L360 140 L380 140 L355 185 L375 145 L355 145 Z" fill="#fbbf24"/>
+</svg>

@@ -1,0 +1,3161 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MIRS Mobile">
+    <meta name="theme-color" content="#0d9488">
+    <title>MIRS Mobile - 巡房助手</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/mobile/manifest.json">
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/mobile/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/mobile/icons/icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="96x96" href="/mobile/icons/icon-96x96.png">
+    <link rel="apple-touch-icon" sizes="128x128" href="/mobile/icons/icon-128x128.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/mobile/icons/icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/mobile/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/mobile/icons/icon-192x192.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/mobile/icons/icon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/mobile/icons/icon-72x72.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom Styles -->
+    <style>
+        /* PWA 全螢幕樣式 */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .app-container {
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 狀態色彩 */
+        .status-safe { background-color: #22c55e; }
+        .status-warning { background-color: #eab308; }
+        .status-critical { background-color: #ef4444; }
+        .status-unknown { background-color: #6b7280; }
+
+        /* 頁面切換動畫 */
+        .page {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .page.active {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* 設備列表捲動容器 */
+        .scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            min-height: 0;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 配對碼輸入框 */
+        .pairing-input {
+            font-size: 2rem;
+            letter-spacing: 0.5rem;
+            text-align: center;
+            font-family: monospace;
+        }
+
+        /* 設備卡片 */
+        .equipment-card {
+            transition: transform 0.1s ease;
+        }
+        .equipment-card:active {
+            transform: scale(0.98);
+        }
+
+        /* 離線指示器 */
+        .offline-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #f59e0b;
+            color: white;
+            text-align: center;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+            z-index: 1000;
+            display: none;
+        }
+        .offline-indicator.show {
+            display: block;
+        }
+
+        /* 同步徽章 */
+        .sync-badge {
+            position: absolute;
+            top: -0.25rem;
+            right: -0.25rem;
+            background: #ef4444;
+            color: white;
+            border-radius: 9999px;
+            min-width: 1.25rem;
+            height: 1.25rem;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-200">
+    <!-- 離線指示器 -->
+    <div id="offlineIndicator" class="offline-indicator">
+        離線模式 - 操作將在網路恢復後同步
+    </div>
+
+    <div class="app-container">
+        <!-- ========================================== -->
+        <!-- 配對頁面 -->
+        <!-- ========================================== -->
+        <div id="pairingPage" class="page active">
+            <div class="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-teal-800 to-teal-900">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-white mb-2">MIRS Mobile</h1>
+                    <p class="text-teal-200">巡房助手</p>
+                </div>
+
+                <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 text-center">輸入配對碼</h2>
+                    <p class="text-sm text-gray-500 mb-4 text-center">請輸入管理員提供的 6 位數配對碼</p>
+
+                    <input type="text"
+                           id="pairingCodeInput"
+                           class="pairing-input w-full border-2 border-gray-300 rounded-xl p-4 focus:border-teal-500 focus:outline-none"
+                           maxlength="6"
+                           inputmode="numeric"
+                           pattern="[0-9]*"
+                           placeholder="______"
+                           autocomplete="off">
+
+                    <div id="pairingError" class="text-red-500 text-sm mt-2 text-center hidden"></div>
+
+                    <button id="pairingSubmitBtn"
+                            class="w-full bg-teal-600 text-white rounded-xl py-4 mt-4 font-semibold hover:bg-teal-700 active:bg-teal-800"
+                            type="button"
+                            onclick="submitPairing()">
+                        配對裝置
+                    </button>
+                </div>
+
+                <!-- 人員資訊區（隱藏，用於demo） -->
+                <div id="staffInfoSection" class="mt-6 w-full max-w-sm">
+                    <div class="bg-teal-800/50 rounded-xl p-4">
+                        <label class="text-teal-200 text-sm">人員ID</label>
+                        <input type="text" id="staffIdInput" value="STAFF-001"
+                               class="w-full bg-teal-900/50 text-white rounded-lg p-2 mt-1 text-sm">
+                        <label class="text-teal-200 text-sm mt-2 block">姓名</label>
+                        <input type="text" id="staffNameInput" value="護理師"
+                               class="w-full bg-teal-900/50 text-white rounded-lg p-2 mt-1 text-sm">
+                    </div>
+                </div>
+
+                <div id="debugOutput" class="mt-4 text-xs text-teal-200 text-center"></div>
+
+                <div class="mt-4 text-center">
+                    <p class="text-teal-300 text-sm">版本 1.6.0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 主頁面（韌性儀表板） -->
+        <!-- ========================================== -->
+        <div id="dashboardPage" class="page">
+            <!-- 頂部導航 -->
+            <header class="bg-teal-800 text-white px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
+                        <span id="userInitial" class="font-bold">N</span>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm" id="userNameDisplay">護理師</div>
+                        <div class="text-xs text-teal-200" id="stationNameDisplay">站點</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- 同步按鈕（有待同步時高亮） -->
+                    <button id="headerSyncBtn" onclick="manualSync()" class="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-600 transition-colors">
+                        <svg id="headerSyncIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <span id="headerSyncText" class="text-xs font-medium">已同步</span>
+                        <span id="headerSyncBadge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-amber-400 text-teal-900 text-xs font-bold rounded-full flex items-center justify-center">0</span>
+                    </button>
+                    <button onclick="refreshDashboard()" class="text-teal-200 hover:text-white p-1.5">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
+                    <button id="logoutBtn" class="text-teal-200 hover:text-white p-1.5">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 韌性狀態卡片 -->
+            <div class="scroll-container p-4 space-y-4">
+                <!-- 總體狀態 -->
+                <div id="overallStatusCard" class="bg-white rounded-xl shadow-md p-4 border border-gray-200">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-semibold text-gray-800">韌性狀態</h3>
+                        <span id="lastUpdateTime" class="text-xs text-gray-500"></span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div id="overallStatusBadge" class="w-16 h-16 rounded-full status-unknown flex items-center justify-center">
+                            <span class="text-white text-2xl font-bold">?</span>
+                        </div>
+                        <div class="flex-1">
+                            <div id="overallStatusText" class="text-lg font-semibold text-gray-800">載入中...</div>
+                            <div id="weakestLinkText" class="text-sm text-gray-500">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 即時統計（灰階設計，2x2 grid，大字體） -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+                            </svg>
+                            <span class="text-lg text-gray-700 font-semibold">氧氣</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="oxygenDays" class="text-5xl font-bold text-gray-800">--</span>
+                            <span class="text-xl text-gray-500">天</span>
+                        </div>
+                    </div>
+                    <div class="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            <span class="text-lg text-gray-700 font-semibold">電力</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="powerDays" class="text-5xl font-bold text-gray-800">--</span>
+                            <span class="text-xl text-gray-500">天</span>
+                        </div>
+                    </div>
+                    <div class="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                            </svg>
+                            <span class="text-lg text-gray-700 font-semibold">試劑</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="reagentDays" class="text-5xl font-bold text-gray-800">--</span>
+                            <span class="text-xl text-gray-500">天</span>
+                        </div>
+                    </div>
+                    <div class="bg-gray-100 rounded-xl p-4 border border-gray-200">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            </svg>
+                            <span class="text-lg text-gray-700 font-semibold">血袋</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="bloodBagCount" class="text-5xl font-bold text-gray-800">--</span>
+                            <span class="text-xl text-gray-500">U</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 待檢查警示卡片 -->
+                <div id="alertCard" class="bg-amber-50 border border-amber-200 rounded-xl p-4 hidden">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-amber-800">待檢查項目</div>
+                            <div id="alertText" class="text-sm text-amber-600 space-y-0.5">
+                                <div id="alertEquipmentLine" class="hidden">• <span id="alertEquipmentCount">0</span> 台設備待檢查</div>
+                                <div id="alertLowStockLine" class="hidden">• <span id="alertLowStockCount">0</span> 項庫存警戒</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <button id="alertEquipmentBtn" onclick="goToEquipmentPending()" class="flex-1 bg-amber-500 text-white px-3 py-2 rounded-lg text-sm font-medium hidden">
+                            設備
+                        </button>
+                        <button id="alertLowStockBtn" onclick="goToLowStock()" class="flex-1 bg-amber-500 text-white px-3 py-2 rounded-lg text-sm font-medium hidden">
+                            低庫存
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 快捷操作 -->
+                <div id="mainFunctionRow" class="grid grid-cols-2 gap-3">
+                    <button id="btnInventory" onclick="showPage('inventoryPage')"
+                            class="bg-cyan-600 rounded-2xl shadow-md p-5 text-center hover:bg-cyan-700 active:bg-cyan-800 transition-colors">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                        </div>
+                        <div class="font-semibold text-white">庫存盤點</div>
+                        <div class="text-xs text-cyan-100 mt-1">物資查詢</div>
+                    </button>
+                    <button id="btnEquipment" onclick="showPage('equipmentPage')"
+                            class="bg-teal-600 rounded-2xl shadow-md p-5 text-center hover:bg-teal-700 active:bg-teal-800 transition-colors">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                            </svg>
+                        </div>
+                        <div class="font-semibold text-white">設備檢查</div>
+                        <div class="text-xs text-teal-100 mt-1">每日巡房</div>
+                    </button>
+                </div>
+
+                <!-- 入庫操作 -->
+                <div id="receiveRow" class="grid grid-cols-2 gap-3">
+                    <button id="btnBloodReceive" onclick="showBloodReceiveModal()"
+                            class="bg-[#D96754] rounded-2xl shadow-md p-5 text-center hover:bg-[#C85A49] active:bg-[#B84F3E] transition-colors">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                            </svg>
+                        </div>
+                        <div class="font-semibold text-white">血袋入庫</div>
+                        <div class="text-xs text-red-100 mt-1">接收登記</div>
+                    </button>
+                    <button id="btnSupplyReceive" onclick="showSupplyReceiveModal()"
+                            class="bg-sky-600 rounded-2xl shadow-md p-5 text-center hover:bg-sky-700 active:bg-sky-800 transition-colors">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                            </svg>
+                        </div>
+                        <div class="font-semibold text-white">耗材入庫</div>
+                        <div class="text-xs text-sky-100 mt-1">進貨登記</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 底部同步狀態 -->
+            <div id="syncStatusBar" class="bg-white border-t px-4 py-2 flex items-center justify-between text-sm">
+                <div class="flex items-center gap-2">
+                    <span id="syncStatusIcon" class="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span id="syncStatusText" class="text-gray-600">已連線</span>
+                </div>
+                <div id="pendingActionsCount" class="text-gray-400 hidden">
+                    待同步: <span class="font-semibold">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 設備檢查頁面 -->
+        <!-- ========================================== -->
+        <div id="equipmentPage" class="page">
+            <!-- 頂部導航 -->
+            <header class="bg-teal-800 text-white px-4 py-3 flex items-center gap-3">
+                <button onclick="showPage('dashboardPage')" class="p-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                <h1 class="font-semibold">設備檢查</h1>
+            </header>
+
+            <!-- 篩選器 -->
+            <div class="bg-white border-b px-4 py-2 flex items-center gap-2 overflow-x-auto flex-shrink-0">
+                <button onclick="filterEquipment('all')"
+                        class="filter-btn px-3 py-1 rounded-full text-sm bg-teal-600 text-white font-medium whitespace-nowrap"
+                        data-filter="all">
+                    全部
+                </button>
+                <button onclick="filterEquipment('needs_check')"
+                        class="filter-btn px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600 whitespace-nowrap"
+                        data-filter="needs_check">
+                    待檢查
+                </button>
+                <button onclick="filterEquipment('power_supply')"
+                        class="filter-btn px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600 whitespace-nowrap"
+                        data-filter="power_supply">
+                    供電
+                </button>
+                <button onclick="filterEquipment('power_consume')"
+                        class="filter-btn px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600 whitespace-nowrap"
+                        data-filter="power_consume">
+                    耗電
+                </button>
+                <button onclick="filterEquipment('non_power')"
+                        class="filter-btn px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600 whitespace-nowrap"
+                        data-filter="non_power">
+                    非耗電
+                </button>
+                <button onclick="filterEquipment('surgical')"
+                        class="filter-btn px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600 whitespace-nowrap"
+                        data-filter="surgical">
+                    手術包
+                </button>
+            </div>
+
+            <!-- 設備列表 -->
+            <div class="scroll-container p-4 pb-24">
+                <div id="equipmentList" class="space-y-3">
+                    <!-- 動態載入 -->
+                    <div class="text-center py-8 text-gray-500">
+                        載入中...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 庫存盤點頁面（Phase 2） -->
+        <!-- ========================================== -->
+        <div id="inventoryPage" class="page">
+            <header class="bg-cyan-700 text-white px-4 py-3">
+                <div class="flex items-center gap-3">
+                    <button onclick="showPage('dashboardPage')" class="p-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <h1 class="font-semibold flex-1">庫存盤點</h1>
+                    <button onclick="refreshInventory()" class="p-1">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
+                    <button onclick="showInventoryCheckSummary()" class="p-1 bg-white/20 rounded-lg px-2">
+                        <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="text-sm ml-1">完成</span>
+                    </button>
+                </div>
+                <!-- 盤點進度 -->
+                <div id="inventoryCheckProgress" class="mt-2 text-xs text-cyan-100 text-center">
+                    <span class="text-green-300">0 確認</span>
+                    <span class="text-gray-300">/ 0 總計</span>
+                </div>
+            </header>
+
+            <!-- 搜尋列 -->
+            <div class="bg-white border-b px-4 py-3">
+                <div class="relative">
+                    <input type="text" id="inventorySearch" placeholder="搜尋藥品或物資名稱..."
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                           oninput="filterInventory()">
+                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- 篩選標籤 - 分類 -->
+            <div class="bg-white border-b px-4 py-2 flex gap-2 overflow-x-auto">
+                <button onclick="setInventoryFilter('all')" data-inv-filter="all"
+                        class="inv-filter-btn px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-cyan-600 text-white">
+                    全部
+                </button>
+                <button onclick="setInventoryFilter('unchecked')" data-inv-filter="unchecked"
+                        class="inv-filter-btn px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 text-gray-600">
+                    待核對
+                </button>
+                <button onclick="setInventoryFilter('checked')" data-inv-filter="checked"
+                        class="inv-filter-btn px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 text-gray-600">
+                    已確認
+                </button>
+                <button onclick="setInventoryFilter('check_error')" data-inv-filter="check_error"
+                        class="inv-filter-btn px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 text-gray-600">
+                    錯誤
+                </button>
+                <button onclick="setInventoryFilter('low_stock')" data-inv-filter="low_stock"
+                        class="inv-filter-btn px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 text-gray-600">
+                    低庫存
+                </button>
+            </div>
+            <!-- 篩選標籤 - 類別 -->
+            <div class="bg-gray-50 border-b px-4 py-2 flex gap-2 overflow-x-auto">
+                <button onclick="setInventoryTypeFilter('all')" data-inv-type-filter="all"
+                        class="inv-type-filter-btn px-2 py-1 rounded text-xs font-medium whitespace-nowrap bg-cyan-100 text-cyan-700">
+                    全類別
+                </button>
+                <button onclick="setInventoryTypeFilter('medication')" data-inv-type-filter="medication"
+                        class="inv-type-filter-btn px-2 py-1 rounded text-xs font-medium whitespace-nowrap bg-gray-200 text-gray-600">
+                    藥品
+                </button>
+                <button onclick="setInventoryTypeFilter('emergency')" data-inv-type-filter="emergency"
+                        class="inv-type-filter-btn px-2 py-1 rounded text-xs font-medium whitespace-nowrap bg-gray-200 text-gray-600">
+                    急救
+                </button>
+                <button onclick="setInventoryTypeFilter('reagent')" data-inv-type-filter="reagent"
+                        class="inv-type-filter-btn px-2 py-1 rounded text-xs font-medium whitespace-nowrap bg-gray-200 text-gray-600">
+                    試劑
+                </button>
+                <button onclick="setInventoryTypeFilter('supply')" data-inv-type-filter="supply"
+                        class="inv-type-filter-btn px-2 py-1 rounded text-xs font-medium whitespace-nowrap bg-gray-200 text-gray-600">
+                    耗材
+                </button>
+            </div>
+
+            <!-- 庫存統計摘要 -->
+            <div class="bg-gray-100 px-4 py-2 flex justify-between text-sm text-gray-600">
+                <span id="inventoryCountText">載入中...</span>
+                <span id="lowStockWarning" class="text-amber-600 hidden">
+                    <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <span id="lowStockCount">0</span> 項低庫存
+                </span>
+            </div>
+
+            <!-- 庫存清單 -->
+            <div class="scroll-container bg-gray-100">
+                <div id="inventoryList" class="p-4 space-y-3">
+                    <!-- 動態渲染 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 設備詳情/檢查 Modal -->
+        <!-- ========================================== -->
+        <div id="equipmentModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+            <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-auto">
+                <div class="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between">
+                    <h2 id="modalTitle" class="font-semibold text-gray-800">設備詳情</h2>
+                    <button onclick="closeEquipmentModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="p-4 space-y-4">
+                    <div id="modalEquipmentInfo" class="space-y-2">
+                        <!-- 動態填入 -->
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <h3 class="font-semibold text-gray-800 mb-3">檢查結果</h3>
+
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-sm text-gray-600 block mb-1">檢查模式</label>
+                                <select id="checkModeSelect" class="w-full border rounded-lg p-2">
+                                    <option value="FULL">完整檢查</option>
+                                    <option value="QUICK">快速檢查</option>
+                                    <option value="VISUAL">目視檢查</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-sm text-gray-600 block mb-1">狀態</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button type="button" onclick="selectStatus('CHECKED_OK')"
+                                            class="status-option border-2 rounded-xl p-3 text-center border-gray-200"
+                                            data-status="CHECKED_OK">
+                                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                                            <!-- Heroicon: check-circle -->
+                                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                        <div class="text-xs mt-2 font-medium">正常</div>
+                                    </button>
+                                    <button type="button" onclick="selectStatus('NEEDS_SERVICE')"
+                                            class="status-option border-2 rounded-xl p-3 text-center border-gray-200"
+                                            data-status="NEEDS_SERVICE">
+                                        <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+                                            <!-- Heroicon: wrench -->
+                                            <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            </svg>
+                                        </div>
+                                        <div class="text-xs mt-2 font-medium">需維修</div>
+                                    </button>
+                                    <button type="button" onclick="selectStatus('OUT_OF_SERVICE')"
+                                            class="status-option border-2 rounded-xl p-3 text-center border-gray-200"
+                                            data-status="OUT_OF_SERVICE">
+                                        <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                                            <!-- Heroicon: x-circle -->
+                                            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                        <div class="text-xs mt-2 font-medium">停用</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 電量/容量輸入（僅供電/供氧設備顯示） -->
+                            <div id="levelPercentSection" class="hidden">
+                                <label class="text-sm text-gray-600 block mb-1">
+                                    <span id="levelPercentLabel">電量</span> <span id="levelPercentValue" class="font-semibold text-teal-600">100%</span>
+                                </label>
+                                <div class="flex items-center gap-3">
+                                    <input type="range" id="levelPercentSlider"
+                                           min="0" max="100" value="100" step="5"
+                                           class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
+                                           oninput="updateLevelDisplay(this.value)">
+                                    <input type="number" id="levelPercentInput"
+                                           min="0" max="100" value="100"
+                                           class="w-16 border rounded-lg p-2 text-center text-sm"
+                                           oninput="updateLevelFromInput(this.value)">
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-400 mt-1">
+                                    <span>0%</span>
+                                    <span>50%</span>
+                                    <span>100%</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-sm text-gray-600 block mb-1">備註（選填）</label>
+                                <textarea id="checkNotesInput" rows="2"
+                                          class="w-full border rounded-lg p-2 text-sm"
+                                          placeholder="輸入檢查備註..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="submitCheckBtn"
+                            onclick="submitEquipmentCheck()"
+                            class="w-full bg-teal-600 text-white rounded-xl py-3 font-semibold hover:bg-teal-700 disabled:opacity-50"
+                            disabled>
+                        提交檢查結果
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 庫存項目詳情 Modal -->
+    <!-- ========================================== -->
+    <div id="inventoryModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-auto">
+            <div class="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between">
+                <h2 id="inventoryModalTitle" class="font-semibold text-gray-800">項目詳情</h2>
+                <button onclick="closeInventoryModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-4">
+                <!-- 項目基本資訊 -->
+                <div id="inventoryModalInfo" class="space-y-2">
+                    <!-- 動態填入 -->
+                </div>
+
+                <!-- 庫存狀態 -->
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <div class="text-center">
+                        <div id="inventoryModalQuantity" class="text-4xl font-bold text-gray-800">0</div>
+                        <div id="inventoryModalUnit" class="text-gray-500">單位</div>
+                    </div>
+                    <div id="inventoryModalStockStatus" class="mt-2 text-center text-sm"></div>
+                </div>
+
+                <!-- 效期資訊（如有） -->
+                <div id="inventoryModalExpiry" class="hidden">
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                        <div class="flex items-center gap-2 text-amber-700">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="font-medium">效期資訊</span>
+                        </div>
+                        <div id="inventoryModalExpiryDate" class="mt-1 text-amber-600"></div>
+                    </div>
+                </div>
+
+                <!-- 備註 -->
+                <div id="inventoryModalNotes" class="hidden">
+                    <div class="text-sm text-gray-600 mb-1">備註</div>
+                    <div id="inventoryModalNotesText" class="text-gray-800 bg-gray-50 rounded-lg p-3"></div>
+                </div>
+
+                <!-- 盤點檢查狀態顯示 -->
+                <div id="inventoryCheckStatus" class="hidden">
+                    <div class="flex items-center justify-between py-2 px-3 rounded-lg" id="inventoryCheckStatusContent">
+                        <!-- 動態填入 -->
+                    </div>
+                </div>
+
+                <!-- 錯誤備註輸入（僅錯誤時顯示） -->
+                <div id="inventoryCheckNotesInput" class="hidden">
+                    <label class="text-sm text-gray-600 block mb-1">錯誤說明</label>
+                    <textarea id="inventoryCheckNotesTextarea"
+                              class="w-full border border-gray-300 rounded-lg p-3 text-sm"
+                              rows="2"
+                              placeholder="請說明庫存差異（如：實際數量、位置錯誤等）"></textarea>
+                </div>
+            </div>
+
+            <div class="sticky bottom-0 bg-white border-t p-4 space-y-2">
+                <!-- 盤點操作按鈕 - 正常模式 -->
+                <div id="inventoryCheckButtons" class="grid grid-cols-2 gap-3">
+                    <button onclick="showErrorInput()"
+                            class="bg-gray-100 text-[#D96754] border-2 border-gray-200 rounded-xl py-3 font-semibold hover:bg-gray-200 hover:border-gray-300 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        錯誤
+                    </button>
+                    <button onclick="markInventoryConfirmed()"
+                            class="bg-cyan-600 text-white rounded-xl py-3 font-semibold hover:bg-cyan-700 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        確認
+                    </button>
+                </div>
+                <!-- 錯誤回報模式 - 顯示確認錯誤按鈕 -->
+                <div id="inventoryErrorButtons" class="hidden space-y-2">
+                    <button onclick="confirmInventoryError()"
+                            class="w-full bg-[#D96754] text-white rounded-xl py-3 font-semibold hover:bg-[#c55a49] flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        確認回報錯誤
+                    </button>
+                    <button onclick="cancelErrorInput()"
+                            class="w-full bg-gray-100 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-200">
+                        取消
+                    </button>
+                </div>
+                <button id="inventoryCloseBtn" onclick="closeInventoryModal()"
+                        class="w-full bg-gray-100 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-200">
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 盤點摘要/簽名 Modal -->
+    <!-- ========================================== -->
+    <div id="inventoryCheckSummaryModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-auto">
+            <div class="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between">
+                <h2 class="font-semibold text-gray-800">盤點摘要</h2>
+                <button onclick="closeInventoryCheckSummary()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-4">
+                <!-- 統計摘要 -->
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="bg-gray-100 rounded-xl p-3">
+                        <div id="checkSummaryTotal" class="text-2xl font-bold text-gray-800">0</div>
+                        <div class="text-xs text-gray-500">總項目</div>
+                    </div>
+                    <div class="bg-cyan-100 rounded-xl p-3">
+                        <div id="checkSummaryConfirmed" class="text-2xl font-bold text-cyan-600">0</div>
+                        <div class="text-xs text-cyan-600">已確認</div>
+                    </div>
+                    <div class="bg-gray-100 rounded-xl p-3 border border-gray-200">
+                        <div id="checkSummaryErrors" class="text-2xl font-bold text-[#D96754]">0</div>
+                        <div class="text-xs text-[#D96754]">錯誤</div>
+                    </div>
+                </div>
+
+                <!-- 錯誤清單 -->
+                <div id="checkSummaryErrorList" class="hidden">
+                    <h3 class="font-semibold text-[#D96754] mb-2 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        待處理錯誤項目
+                    </h3>
+                    <div id="checkSummaryErrorItems" class="space-y-2 max-h-40 overflow-y-auto">
+                        <!-- 動態填入 -->
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">* 錯誤項目需至 Hub 主控台處理</p>
+                </div>
+
+                <!-- 盤點人員確認 -->
+                <div class="border-t pt-4">
+                    <label class="text-sm text-gray-600 block mb-2">盤點人員確認</label>
+                    <div class="bg-gray-50 rounded-xl p-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-cyan-600 text-white rounded-full flex items-center justify-center font-semibold" id="checkSummaryInitial">U</div>
+                            <div>
+                                <div id="checkSummaryCheckerName" class="font-semibold text-gray-800">使用者</div>
+                                <div id="checkSummaryTime" class="text-xs text-gray-500">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sticky bottom-0 bg-white border-t p-4 space-y-2">
+                <button onclick="submitInventoryCheck()"
+                        class="w-full bg-cyan-600 text-white rounded-xl py-3 font-semibold hover:bg-cyan-700 flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    確認送出盤點結果
+                </button>
+                <button onclick="closeInventoryCheckSummary()"
+                        class="w-full bg-gray-100 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-200">
+                    繼續盤點
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 血袋入庫 Modal -->
+    <!-- ========================================== -->
+    <div id="bloodReceiveModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-auto">
+            <div class="sticky top-0 bg-[#D96754] text-white px-4 py-3 flex items-center justify-between rounded-t-2xl">
+                <h2 class="font-semibold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                    </svg>
+                    血袋入庫
+                </h2>
+                <button onclick="closeBloodReceiveModal()" class="text-white/80 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-4">
+                <!-- 血型選擇 -->
+                <div>
+                    <label class="text-sm text-gray-600 block mb-2">血型 *</label>
+                    <div class="grid grid-cols-4 gap-2" id="bloodTypeGrid">
+                        <button type="button" onclick="selectBloodType('A+')" class="blood-type-btn px-3 py-2 border-2 border-gray-200 rounded-lg text-center font-bold hover:border-red-400">A+</button>
+                        <button type="button" onclick="selectBloodType('A-')" class="blood-type-btn px-3 py-2 border-2 border-gray-200 rounded-lg text-center font-bold hover:border-red-400">A-</button>
+                        <button type="button" onclick="selectBloodType('B+')" class="blood-type-btn px-3 py-2 border-2 border-gray-200 rounded-lg text-center font-bold hover:border-red-400">B+</button>
+                        <button type="button" onclick="selectBloodType('B-')" class="blood-type-btn px-3 py-2 border-2 border-gray-200 rounded-lg text-center font-bold hover:border-red-400">B-</button>
+                        <button type="button" onclick="selectBloodType('O+')" class="blood-type-btn px-3 py-2 border-2 border-gray-200 rounded-lg text-center font-bold hover:border-red-400">O+</button>
+                        <button type="button" onclick="selectBloodType('O-')" class="blood-type-btn px-3 py-2 border-2 border-gray-200 rounded-lg text-center font-bold hover:border-red-400">O-</button>
+                        <button type="button" onclick="selectBloodType('AB+')" class="blood-type-btn px-3 py-2 border-2 border-gray-200 rounded-lg text-center font-bold hover:border-red-400">AB+</button>
+                        <button type="button" onclick="selectBloodType('AB-')" class="blood-type-btn px-3 py-2 border-2 border-gray-200 rounded-lg text-center font-bold hover:border-red-400">AB-</button>
+                    </div>
+                </div>
+
+                <!-- 數量 -->
+                <div>
+                    <label class="text-sm text-gray-600 block mb-2">數量 (袋) *</label>
+                    <div class="flex items-center gap-3">
+                        <button type="button" onclick="adjustBloodQty(-1)" class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-2xl font-bold hover:bg-gray-200">-</button>
+                        <input type="number" id="bloodQuantityInput" value="1" min="1" max="20" class="flex-1 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl py-2">
+                        <button type="button" onclick="adjustBloodQty(1)" class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-2xl font-bold hover:bg-gray-200">+</button>
+                    </div>
+                </div>
+
+                <!-- 來源 -->
+                <div>
+                    <label class="text-sm text-gray-600 block mb-2">來源 *</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="selectBloodSource('blood_center')" id="bloodSourceCenter" class="blood-source-btn px-4 py-3 border-2 border-[#D96754] bg-[#D96754]/10 text-[#D96754] rounded-xl font-medium">
+                            捐血中心
+                        </button>
+                        <button type="button" onclick="selectBloodSource('walking_donor')" id="bloodSourceDonor" class="blood-source-btn px-4 py-3 border-2 border-gray-200 rounded-xl font-medium text-gray-600 hover:border-gray-400">
+                            緊急捐血者
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 捐血者資訊（僅緊急捐血者時顯示） -->
+                <div id="donorInfoSection" class="hidden space-y-3 bg-red-50 rounded-xl p-3 border border-red-200">
+                    <div class="text-sm font-medium text-red-700">緊急捐血者資訊</div>
+                    <div>
+                        <label class="text-xs text-gray-600 block mb-1">姓名</label>
+                        <input type="text" id="donorNameInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="捐血者姓名">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-600 block mb-1">電話</label>
+                        <input type="tel" id="donorPhoneInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="聯絡電話">
+                    </div>
+                </div>
+
+                <!-- 備註 -->
+                <div>
+                    <label class="text-sm text-gray-600 block mb-2">備註</label>
+                    <input type="text" id="bloodRemarksInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="批號、來源說明等">
+                </div>
+            </div>
+
+            <div class="sticky bottom-0 bg-white border-t p-4 space-y-2">
+                <button onclick="submitBloodReceive()"
+                        class="w-full bg-[#D96754] text-white rounded-xl py-3 font-semibold hover:bg-[#C85A49] flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    確認入庫
+                </button>
+                <button onclick="closeBloodReceiveModal()"
+                        class="w-full bg-gray-100 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-200">
+                    取消
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 耗材入庫 Modal -->
+    <!-- ========================================== -->
+    <div id="supplyReceiveModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-auto">
+            <div class="sticky top-0 bg-sky-600 text-white px-4 py-3 flex items-center justify-between rounded-t-2xl">
+                <h2 class="font-semibold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                    </svg>
+                    耗材入庫
+                </h2>
+                <button onclick="closeSupplyReceiveModal()" class="text-white/80 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-4">
+                <!-- 物品搜尋/選擇 -->
+                <div>
+                    <label class="text-sm text-gray-600 block mb-2">物品 *</label>
+                    <input type="text" id="supplySearchInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="搜尋物品代碼或名稱..." oninput="searchSupplyItems()">
+                    <div id="supplySearchResults" class="mt-2 max-h-40 overflow-y-auto hidden">
+                        <!-- 動態填入搜尋結果 -->
+                    </div>
+                    <div id="selectedSupplyItem" class="mt-2 hidden">
+                        <!-- 已選擇的物品 -->
+                    </div>
+                </div>
+
+                <!-- 數量 -->
+                <div>
+                    <label class="text-sm text-gray-600 block mb-2">數量 *</label>
+                    <div class="flex items-center gap-3">
+                        <button type="button" onclick="adjustSupplyQty(-1)" class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-2xl font-bold hover:bg-gray-200">-</button>
+                        <input type="number" id="supplyQuantityInput" value="1" min="1" class="flex-1 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl py-2">
+                        <button type="button" onclick="adjustSupplyQty(1)" class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-2xl font-bold hover:bg-gray-200">+</button>
+                    </div>
+                </div>
+
+                <!-- 批號 -->
+                <div>
+                    <label class="text-sm text-gray-600 block mb-2">批號</label>
+                    <input type="text" id="supplyBatchInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="選填">
+                </div>
+
+                <!-- 效期 -->
+                <div>
+                    <label class="text-sm text-gray-600 block mb-2">效期</label>
+                    <input type="date" id="supplyExpiryInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+
+                <!-- 備註 -->
+                <div>
+                    <label class="text-sm text-gray-600 block mb-2">備註</label>
+                    <input type="text" id="supplyRemarksInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="供應商、訂單編號等">
+                </div>
+            </div>
+
+            <div class="sticky bottom-0 bg-white border-t p-4 space-y-2">
+                <button onclick="submitSupplyReceive()"
+                        class="w-full bg-sky-600 text-white rounded-xl py-3 font-semibold hover:bg-sky-700 flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    確認入庫
+                </button>
+                <button onclick="closeSupplyReceiveModal()"
+                        class="w-full bg-gray-100 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-200">
+                    取消
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // ========================================
+        // 全域狀態
+        // ========================================
+        const state = {
+            token: null,
+            deviceId: null,
+            staffId: null,
+            staffName: null,
+            stationId: null,
+            role: null,
+            scopes: [],
+            isOnline: navigator.onLine,
+            pendingActions: [],
+            currentEquipment: null,
+            selectedStatus: null,
+            equipmentData: [],
+            inventoryData: [],
+            // 庫存盤點檢查狀態
+            inventoryChecks: {},  // { itemCode: { status: 'confirmed'|'error', checkedAt: timestamp, notes: '' } }
+            inventoryCheckSession: null,  // { startedAt, checkerName, checkerId }
+            inventoryFilter: 'all',
+            inventoryTypeFilter: 'all',
+            // 血袋入庫表單
+            bloodReceiveForm: {
+                bloodType: '',
+                quantity: 1,
+                source: 'blood_center',
+                donorName: '',
+                donorPhone: '',
+                remarks: ''
+            },
+            // 耗材入庫表單
+            supplyReceiveForm: {
+                itemCode: '',
+                itemName: '',
+                quantity: 1,
+                batch: '',
+                expiry: '',
+                remarks: ''
+            }
+        };
+
+        const API_BASE = '/api/mirs-mobile/v1';
+
+        // 相容舊版瀏覽器的 UUID 產生函數
+        function generateUUID() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            // Fallback for older browsers (iOS < 15.4)
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // ========================================
+        // 初始化
+        // ========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // 生成或取得裝置 ID
+            state.deviceId = localStorage.getItem('mirs_device_id');
+            if (!state.deviceId) {
+                state.deviceId = generateUUID();
+                localStorage.setItem('mirs_device_id', state.deviceId);
+            }
+
+            // 嘗試從 localStorage 恢復 session
+            const savedToken = localStorage.getItem('mirs_token');
+            const savedSession = localStorage.getItem('mirs_session');
+            if (savedToken && savedSession) {
+                try {
+                    const session = JSON.parse(savedSession);
+                    state.token = savedToken;
+                    state.staffId = session.staff_id;
+                    state.staffName = session.staff_name;
+                    state.stationId = session.station_id;
+                    state.role = session.role;
+                    state.scopes = session.scopes || [];
+
+                    // 驗證 token 是否仍有效
+                    verifyToken().then(valid => {
+                        if (valid) {
+                            showPage('dashboardPage');
+                            loadDashboard();
+                        } else {
+                            clearSession();
+                        }
+                    });
+                } catch (e) {
+                    clearSession();
+                }
+            }
+
+            // 載入待同步操作
+            const savedActions = localStorage.getItem('mirs_pending_actions');
+            if (savedActions) {
+                try {
+                    state.pendingActions = JSON.parse(savedActions);
+                    updateSyncStatus();
+                } catch (e) {}
+            }
+
+            // 載入庫存盤點記錄
+            loadInventoryChecks();
+
+            // 監聽網路狀態
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+
+            // 配對碼輸入事件
+            const pairingInput = document.getElementById('pairingCodeInput');
+            pairingInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                document.getElementById('pairingError').classList.add('hidden');
+            });
+
+            // 配對按鈕 - 支援 click 和 touchend
+            const submitBtn = document.getElementById('pairingSubmitBtn');
+            console.log('Found submit button:', submitBtn);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                console.log('Submit triggered!');
+                submitPairing();
+            };
+
+            submitBtn.addEventListener('click', handleSubmit);
+            submitBtn.addEventListener('touchend', handleSubmit);
+
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+
+            // 設備卡片事件委派（解決動態生成元素的點擊問題）
+            document.getElementById('equipmentList').addEventListener('click', (e) => {
+                const card = e.target.closest('.equipment-card');
+                if (card) {
+                    const equipmentId = card.dataset.equipmentId;
+                    console.log('Card clicked, equipmentId:', equipmentId);
+                    if (equipmentId) {
+                        openEquipmentModal(equipmentId);
+                    }
+                }
+            });
+
+            // 庫存卡片事件委派
+            document.getElementById('inventoryList').addEventListener('click', (e) => {
+                const card = e.target.closest('.inventory-card');
+                if (card) {
+                    const itemCode = card.dataset.itemCode;
+                    console.log('Inventory card clicked, itemCode:', itemCode);
+                    if (itemCode) {
+                        openInventoryModal(itemCode);
+                    }
+                }
+            });
+        });
+
+        // ========================================
+        // 頁面切換
+        // ========================================
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+
+            if (pageId === 'equipmentPage') {
+                loadEquipmentList();
+            } else if (pageId === 'inventoryPage') {
+                loadInventory();
+                updateInventoryCheckProgress();
+            }
+        }
+
+        // ========================================
+        // 配對流程
+        // ========================================
+        function debugLog(msg) {
+            const el = document.getElementById('debugOutput');
+            if (el) el.innerHTML += msg + '<br>';
+            console.log(msg);
+        }
+
+        let isSubmitting = false;
+
+        async function submitPairing() {
+            if (isSubmitting) {
+                debugLog('Already submitting...');
+                return;
+            }
+            isSubmitting = true;
+
+            debugLog('submitPairing() called');
+            const code = document.getElementById('pairingCodeInput').value;
+            const staffId = document.getElementById('staffIdInput')?.value;
+            const staffName = document.getElementById('staffNameInput')?.value;
+            const btn = document.getElementById('pairingSubmitBtn');
+            const errorEl = document.getElementById('pairingError');
+
+            debugLog('Code: ' + code);
+
+            if (!code || code.length !== 6) {
+                debugLog('Invalid code length');
+                alert('請輸入 6 位數配對碼');
+                isSubmitting = false;
+                return;
+            }
+
+            btn.textContent = '配對中...';
+
+            try {
+                // 確保 deviceId 已初始化
+                if (!state.deviceId) {
+                    state.deviceId = localStorage.getItem('mirs_device_id');
+                    if (!state.deviceId) {
+                        state.deviceId = generateUUID();
+                        localStorage.setItem('mirs_device_id', state.deviceId);
+                    }
+                }
+
+                debugLog('DeviceID: ' + state.deviceId);
+
+                const requestBody = {
+                    pairing_code: code,
+                    device_id: state.deviceId,
+                    device_name: navigator.userAgent.slice(0, 50),
+                    staff_id: staffId || 'MOBILE-USER',
+                    staff_name: staffName || '行動使用者',
+                    role: 'nurse'
+                };
+                debugLog('Sending: ' + JSON.stringify(requestBody).substring(0, 80) + '...');
+
+                // 先呼叫 debug 端點確認請求格式
+                const debugRes = await fetch(`${API_BASE}/auth/exchange-debug`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+                const debugData = await debugRes.json();
+                debugLog('Debug: ' + JSON.stringify(debugData).substring(0, 80));
+
+                const response = await fetch(`${API_BASE}/auth/exchange`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                debugLog('Response: ' + response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    debugLog('Error: ' + errorText.substring(0, 100));
+                    try {
+                        const error = JSON.parse(errorText);
+                        throw new Error(error.detail?.[0]?.msg || error.detail || '配對失敗');
+                    } catch (parseErr) {
+                        throw new Error('配對失敗: ' + response.status);
+                    }
+                }
+
+                const data = await response.json();
+
+                // 儲存 session
+                state.token = data.access_token;
+                state.staffId = data.staff_id;
+                state.staffName = data.staff_name;
+                state.stationId = data.station_id;
+                state.role = data.role;
+                state.scopes = data.scopes || [];
+
+                localStorage.setItem('mirs_token', state.token);
+                localStorage.setItem('mirs_session', JSON.stringify({
+                    staff_id: state.staffId,
+                    staff_name: state.staffName,
+                    station_id: state.stationId,
+                    station_name: data.station_name,
+                    role: state.role,
+                    scopes: state.scopes
+                }));
+
+                // 切換到儀表板
+                showPage('dashboardPage');
+                loadDashboard();
+
+            } catch (e) {
+                debugLog('Error: ' + e.message);
+                errorEl.textContent = e.message;
+                errorEl.classList.remove('hidden');
+                btn.textContent = '配對裝置';
+                isSubmitting = false;
+            }
+        }
+
+        async function verifyToken() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/verify`, {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+                return response.ok;
+            } catch {
+                return false;
+            }
+        }
+
+        function clearSession() {
+            state.token = null;
+            state.staffId = null;
+            state.staffName = null;
+            state.stationId = null;
+            localStorage.removeItem('mirs_token');
+            localStorage.removeItem('mirs_session');
+        }
+
+        function logout() {
+            if (confirm('確定要登出嗎？')) {
+                clearSession();
+                showPage('pairingPage');
+                document.getElementById('pairingCodeInput').value = '';
+            }
+        }
+
+        // ========================================
+        // 儀表板
+        // ========================================
+        async function loadDashboard() {
+            updateUserDisplay();
+            updateFunctionButtons();
+            await refreshDashboard();
+            await checkAlerts();
+        }
+
+        function updateUserDisplay() {
+            const session = JSON.parse(localStorage.getItem('mirs_session') || '{}');
+            document.getElementById('userNameDisplay').textContent = session.staff_name || '使用者';
+            document.getElementById('stationNameDisplay').textContent = session.station_name || session.station_id || '站點';
+            document.getElementById('userInitial').textContent = (session.staff_name || 'U')[0];
+        }
+
+        // 根據權限顯示/隱藏功能按鈕
+        function updateFunctionButtons() {
+            const scopes = state.scopes || [];
+
+            // 檢查權限的輔助函數
+            const hasScope = (prefix) => scopes.some(s => s.startsWith(prefix));
+
+            // 設備檢查按鈕
+            const btnEquipment = document.getElementById('btnEquipment');
+            if (hasScope('mirs:equipment')) {
+                btnEquipment.classList.remove('hidden');
+            } else {
+                btnEquipment.classList.add('hidden');
+            }
+
+            // 庫存盤點按鈕
+            const btnInventory = document.getElementById('btnInventory');
+            if (hasScope('mirs:inventory')) {
+                btnInventory.classList.remove('hidden');
+            } else {
+                btnInventory.classList.add('hidden');
+            }
+
+            // 血袋入庫按鈕
+            const btnBloodReceive = document.getElementById('btnBloodReceive');
+            if (hasScope('mirs:blood')) {
+                btnBloodReceive.classList.remove('hidden');
+            } else {
+                btnBloodReceive.classList.add('hidden');
+            }
+
+            // 耗材入庫按鈕
+            const btnSupplyReceive = document.getElementById('btnSupplyReceive');
+            if (hasScope('mirs:items')) {
+                btnSupplyReceive.classList.remove('hidden');
+            } else {
+                btnSupplyReceive.classList.add('hidden');
+            }
+
+            // 調整 grid 佈局：如果同一列只有一個按鈕，調整為置中
+            const mainRow = document.getElementById('mainFunctionRow');
+            const mainVisible = [btnEquipment, btnInventory].filter(b => !b.classList.contains('hidden')).length;
+            mainRow.classList.toggle('hidden', mainVisible === 0);
+
+            const receiveRow = document.getElementById('receiveRow');
+            const receiveVisible = [btnBloodReceive, btnSupplyReceive].filter(b => !b.classList.contains('hidden')).length;
+            receiveRow.classList.toggle('hidden', receiveVisible === 0);
+        }
+
+        async function refreshDashboard() {
+            try {
+                const response = await fetch(`${API_BASE}/resilience`, {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+
+                if (!response.ok) throw new Error('載入失敗');
+
+                const data = await response.json();
+
+                // 更新總體狀態
+                const statusBadge = document.getElementById('overallStatusBadge');
+                const statusText = document.getElementById('overallStatusText');
+                const weakestText = document.getElementById('weakestLinkText');
+
+                statusBadge.className = `w-16 h-16 rounded-full flex items-center justify-center status-${data.overall_status.toLowerCase()}`;
+
+                const statusLabels = {
+                    'SAFE': '安全',
+                    'WARNING': '警戒',
+                    'CRITICAL': '危急',
+                    'UNKNOWN': '未知'
+                };
+                const statusIcons = {
+                    'SAFE': '✓',
+                    'WARNING': '!',
+                    'CRITICAL': '✕',
+                    'UNKNOWN': '?'
+                };
+
+                statusBadge.innerHTML = `<span class="text-white text-2xl font-bold">${statusIcons[data.overall_status] || '?'}</span>`;
+                statusText.textContent = statusLabels[data.overall_status] || '未知';
+
+                if (data.weakest_link) {
+                    weakestText.textContent = `受限因素: ${data.weakest_link}`;
+                } else {
+                    weakestText.textContent = '--';
+                }
+
+                // 更新分類狀態
+                const cats = data.categories || {};
+                document.getElementById('oxygenDays').textContent = cats.oxygen?.effective_days?.toFixed(1) || '--';
+                document.getElementById('powerDays').textContent = cats.power?.effective_days?.toFixed(1) || '--';
+                document.getElementById('reagentDays').textContent = cats.reagents?.effective_days?.toFixed(1) || '--';
+
+                // 載入血袋數量（從 /api/stats）
+                try {
+                    const statsRes = await fetch('/api/stats');
+                    if (statsRes.ok) {
+                        const stats = await statsRes.json();
+                        document.getElementById('bloodBagCount').textContent = stats.totalBlood ?? '--';
+                    }
+                } catch (e) {
+                    console.log('Blood bag stats not available');
+                }
+
+                // 更新時間
+                document.getElementById('lastUpdateTime').textContent = new Date().toLocaleTimeString('zh-TW');
+
+            } catch (e) {
+                console.error('Dashboard load error:', e);
+            }
+        }
+
+        async function checkAlerts() {
+            let equipmentCount = 0;
+            let lowStockCount = 0;
+
+            try {
+                // 檢查設備
+                const eqResponse = await fetch(`${API_BASE}/equipment?needs_check=true`, {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+                if (eqResponse.ok) {
+                    const eqData = await eqResponse.json();
+                    equipmentCount = eqData.needs_check_count || 0;
+                }
+
+                // 檢查低庫存
+                const invResponse = await fetch('/api/items', {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+                if (invResponse.ok) {
+                    const invData = await invResponse.json();
+                    const items = invData.items || invData || [];
+                    lowStockCount = items.filter(item => {
+                        const qty = item.quantity || 0;
+                        const minLevel = item.min_quantity || item.min_level || 10;
+                        return qty <= minLevel;
+                    }).length;
+                }
+            } catch (e) {
+                console.error('Alert check error:', e);
+            }
+
+            // 更新警示卡片
+            const alertCard = document.getElementById('alertCard');
+            const eqLine = document.getElementById('alertEquipmentLine');
+            const stockLine = document.getElementById('alertLowStockLine');
+            const eqBtn = document.getElementById('alertEquipmentBtn');
+            const stockBtn = document.getElementById('alertLowStockBtn');
+
+            if (equipmentCount > 0 || lowStockCount > 0) {
+                alertCard.classList.remove('hidden');
+
+                if (equipmentCount > 0) {
+                    document.getElementById('alertEquipmentCount').textContent = equipmentCount;
+                    eqLine.classList.remove('hidden');
+                    eqBtn.classList.remove('hidden');
+                } else {
+                    eqLine.classList.add('hidden');
+                    eqBtn.classList.add('hidden');
+                }
+
+                if (lowStockCount > 0) {
+                    document.getElementById('alertLowStockCount').textContent = lowStockCount;
+                    stockLine.classList.remove('hidden');
+                    stockBtn.classList.remove('hidden');
+                } else {
+                    stockLine.classList.add('hidden');
+                    stockBtn.classList.add('hidden');
+                }
+            } else {
+                alertCard.classList.add('hidden');
+            }
+        }
+
+        function goToEquipmentPending() {
+            showPage('equipmentPage');
+            setTimeout(() => {
+                filterEquipment('needs_check');
+            }, 100);
+        }
+
+        function goToLowStock() {
+            showPage('inventoryPage');
+            setTimeout(() => {
+                setInventoryFilter('low_stock');
+            }, 100);
+        }
+
+        // ========================================
+        // 血袋入庫功能
+        // ========================================
+        function showBloodReceiveModal() {
+            // 重置表單
+            state.bloodReceiveForm = {
+                bloodType: '',
+                quantity: 1,
+                source: 'blood_center',
+                donorName: '',
+                donorPhone: '',
+                remarks: ''
+            };
+
+            // 重置 UI
+            document.querySelectorAll('.blood-type-btn').forEach(btn => {
+                btn.classList.remove('border-[#D96754]', 'bg-[#D96754]/10', 'text-[#D96754]');
+                btn.classList.add('border-gray-200', 'text-gray-800');
+            });
+            document.getElementById('bloodQuantityInput').value = 1;
+            document.getElementById('bloodSourceCenter').classList.add('border-[#D96754]', 'bg-[#D96754]/10', 'text-[#D96754]');
+            document.getElementById('bloodSourceCenter').classList.remove('border-gray-200', 'text-gray-600');
+            document.getElementById('bloodSourceDonor').classList.remove('border-[#D96754]', 'bg-[#D96754]/10', 'text-[#D96754]');
+            document.getElementById('bloodSourceDonor').classList.add('border-gray-200', 'text-gray-600');
+            document.getElementById('donorInfoSection').classList.add('hidden');
+            document.getElementById('donorNameInput').value = '';
+            document.getElementById('donorPhoneInput').value = '';
+            document.getElementById('bloodRemarksInput').value = '';
+
+            // 顯示 Modal
+            const modal = document.getElementById('bloodReceiveModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeBloodReceiveModal() {
+            const modal = document.getElementById('bloodReceiveModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function selectBloodType(type) {
+            state.bloodReceiveForm.bloodType = type;
+
+            // 更新按鈕樣式
+            document.querySelectorAll('.blood-type-btn').forEach(btn => {
+                btn.classList.remove('border-[#D96754]', 'bg-[#D96754]/10', 'text-[#D96754]');
+                btn.classList.add('border-gray-200', 'text-gray-800');
+            });
+
+            // 找到被點擊的按鈕並設定選中樣式
+            const buttons = document.querySelectorAll('.blood-type-btn');
+            buttons.forEach(btn => {
+                if (btn.textContent.trim() === type) {
+                    btn.classList.remove('border-gray-200', 'text-gray-800');
+                    btn.classList.add('border-[#D96754]', 'bg-[#D96754]/10', 'text-[#D96754]');
+                }
+            });
+        }
+
+        function adjustBloodQty(delta) {
+            const input = document.getElementById('bloodQuantityInput');
+            let value = parseInt(input.value) || 1;
+            value = Math.max(1, Math.min(20, value + delta));
+            input.value = value;
+            state.bloodReceiveForm.quantity = value;
+        }
+
+        function selectBloodSource(source) {
+            state.bloodReceiveForm.source = source;
+
+            const centerBtn = document.getElementById('bloodSourceCenter');
+            const donorBtn = document.getElementById('bloodSourceDonor');
+            const donorSection = document.getElementById('donorInfoSection');
+
+            if (source === 'blood_center') {
+                centerBtn.classList.add('border-[#D96754]', 'bg-[#D96754]/10', 'text-[#D96754]');
+                centerBtn.classList.remove('border-gray-200', 'text-gray-600');
+                donorBtn.classList.remove('border-[#D96754]', 'bg-[#D96754]/10', 'text-[#D96754]');
+                donorBtn.classList.add('border-gray-200', 'text-gray-600');
+                donorSection.classList.add('hidden');
+            } else {
+                donorBtn.classList.add('border-[#D96754]', 'bg-[#D96754]/10', 'text-[#D96754]');
+                donorBtn.classList.remove('border-gray-200', 'text-gray-600');
+                centerBtn.classList.remove('border-[#D96754]', 'bg-[#D96754]/10', 'text-[#D96754]');
+                centerBtn.classList.add('border-gray-200', 'text-gray-600');
+                donorSection.classList.remove('hidden');
+            }
+        }
+
+        async function submitBloodReceive() {
+            // 更新表單資料
+            state.bloodReceiveForm.quantity = parseInt(document.getElementById('bloodQuantityInput').value) || 1;
+            state.bloodReceiveForm.donorName = document.getElementById('donorNameInput').value;
+            state.bloodReceiveForm.donorPhone = document.getElementById('donorPhoneInput').value;
+            state.bloodReceiveForm.remarks = document.getElementById('bloodRemarksInput').value;
+
+            // 驗證
+            if (!state.bloodReceiveForm.bloodType) {
+                alert('請選擇血型');
+                return;
+            }
+
+            if (state.bloodReceiveForm.source === 'walking_donor' && !state.bloodReceiveForm.donorName) {
+                alert('請填寫捐血者姓名');
+                return;
+            }
+
+            // 建立待同步操作
+            const action = {
+                id: generateUUID(),
+                type: 'blood_receive',
+                data: {
+                    blood_type: state.bloodReceiveForm.bloodType,
+                    quantity: state.bloodReceiveForm.quantity,
+                    source: state.bloodReceiveForm.source,
+                    donor_name: state.bloodReceiveForm.donorName,
+                    donor_phone: state.bloodReceiveForm.donorPhone,
+                    remarks: state.bloodReceiveForm.remarks,
+                    received_by: state.staffId,
+                    received_by_name: state.staffName,
+                    received_at: new Date().toISOString()
+                },
+                created_at: new Date().toISOString()
+            };
+
+            // 嘗試直接提交到 API
+            if (state.isOnline) {
+                try {
+                    const response = await fetch(`${API_BASE}/blood/receive`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${state.token}`
+                        },
+                        body: JSON.stringify(action.data)
+                    });
+
+                    if (response.ok) {
+                        closeBloodReceiveModal();
+                        alert(`已登記 ${state.bloodReceiveForm.quantity} 袋 ${state.bloodReceiveForm.bloodType} 血袋入庫`);
+                        loadDashboard(); // 重新載入儀表板
+                        return;
+                    } else {
+                        // API 失敗，加入待同步
+                        throw new Error('API request failed');
+                    }
+                } catch (e) {
+                    console.log('血袋入庫同步失敗，加入離線佇列', e);
+                }
+            }
+
+            // 離線或 API 失敗：加入待同步佇列
+            state.pendingActions.push(action);
+            localStorage.setItem('mirs_pending_actions', JSON.stringify(state.pendingActions));
+            updateSyncStatus();
+
+            closeBloodReceiveModal();
+            alert(`已登記 ${state.bloodReceiveForm.quantity} 袋 ${state.bloodReceiveForm.bloodType} 血袋入庫\n（待同步）`);
+            loadDashboard();
+        }
+
+        // ========================================
+        // 耗材入庫功能
+        // ========================================
+        let supplySearchTimeout = null;
+
+        function showSupplyReceiveModal() {
+            // 重置表單
+            state.supplyReceiveForm = {
+                itemCode: '',
+                itemName: '',
+                quantity: 1,
+                batch: '',
+                expiry: '',
+                remarks: ''
+            };
+
+            // 重置 UI
+            document.getElementById('supplySearchInput').value = '';
+            document.getElementById('supplyQuantityInput').value = 1;
+            document.getElementById('supplyBatchInput').value = '';
+            document.getElementById('supplyExpiryInput').value = '';
+            document.getElementById('supplyRemarksInput').value = '';
+            document.getElementById('supplySearchResults').classList.add('hidden');
+            document.getElementById('supplySearchResults').innerHTML = '';
+            document.getElementById('selectedSupplyItem').classList.add('hidden');
+            document.getElementById('selectedSupplyItem').innerHTML = '';
+
+            // 顯示 Modal
+            const modal = document.getElementById('supplyReceiveModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeSupplyReceiveModal() {
+            const modal = document.getElementById('supplyReceiveModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function searchSupplyItems() {
+            const query = document.getElementById('supplySearchInput').value.trim();
+            const resultsContainer = document.getElementById('supplySearchResults');
+
+            if (query.length < 1) {
+                resultsContainer.classList.add('hidden');
+                resultsContainer.innerHTML = '';
+                return;
+            }
+
+            // 防抖
+            if (supplySearchTimeout) clearTimeout(supplySearchTimeout);
+
+            supplySearchTimeout = setTimeout(async () => {
+                try {
+                    // 使用庫存資料搜尋（已載入的 inventoryData）
+                    let items = state.inventoryData;
+
+                    // 如果還沒有庫存資料，嘗試載入
+                    if (!items || items.length === 0) {
+                        const response = await fetch(`${API_BASE}/items`, {
+                            headers: { 'Authorization': `Bearer ${state.token}` }
+                        });
+                        if (response.ok) {
+                            const data = await response.json();
+                            items = data.items || [];
+                        }
+                    }
+
+                    // 過濾物品
+                    const queryLower = query.toLowerCase();
+                    const filtered = items.filter(item =>
+                        (item.item_code && item.item_code.toLowerCase().includes(queryLower)) ||
+                        (item.name && item.name.toLowerCase().includes(queryLower)) ||
+                        (item.zh_name && item.zh_name.toLowerCase().includes(queryLower))
+                    ).slice(0, 10); // 最多顯示 10 個
+
+                    if (filtered.length === 0) {
+                        resultsContainer.innerHTML = '<div class="px-3 py-2 text-gray-500 text-sm">找不到符合的物品</div>';
+                        resultsContainer.classList.remove('hidden');
+                        return;
+                    }
+
+                    resultsContainer.innerHTML = filtered.map(item => `
+                        <button type="button"
+                                onclick='selectSupplyItem(${JSON.stringify(item).replace(/'/g, "\\'")})'
+                                class="w-full px-3 py-2 text-left hover:bg-sky-50 border-b border-gray-100 last:border-b-0">
+                            <div class="font-medium text-gray-800">${item.zh_name || item.name}</div>
+                            <div class="text-xs text-gray-500">${item.item_code} · 現有: ${item.quantity || 0} ${item.unit || ''}</div>
+                        </button>
+                    `).join('');
+
+                    resultsContainer.classList.remove('hidden');
+                } catch (e) {
+                    console.error('搜尋物品失敗', e);
+                    resultsContainer.innerHTML = '<div class="px-3 py-2 text-red-500 text-sm">搜尋失敗</div>';
+                    resultsContainer.classList.remove('hidden');
+                }
+            }, 300);
+        }
+
+        function selectSupplyItem(item) {
+            state.supplyReceiveForm.itemCode = item.item_code;
+            state.supplyReceiveForm.itemName = item.zh_name || item.name;
+
+            // 隱藏搜尋結果，顯示已選物品
+            document.getElementById('supplySearchResults').classList.add('hidden');
+            document.getElementById('supplySearchInput').classList.add('hidden');
+
+            const selectedContainer = document.getElementById('selectedSupplyItem');
+            selectedContainer.innerHTML = `
+                <div class="flex items-center justify-between bg-sky-50 rounded-lg px-3 py-2 border border-sky-200">
+                    <div>
+                        <div class="font-medium text-gray-800">${item.zh_name || item.name}</div>
+                        <div class="text-xs text-gray-500">${item.item_code}</div>
+                    </div>
+                    <button type="button" onclick="clearSupplySelection()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            selectedContainer.classList.remove('hidden');
+        }
+
+        function clearSupplySelection() {
+            state.supplyReceiveForm.itemCode = '';
+            state.supplyReceiveForm.itemName = '';
+
+            document.getElementById('selectedSupplyItem').classList.add('hidden');
+            document.getElementById('selectedSupplyItem').innerHTML = '';
+            document.getElementById('supplySearchInput').classList.remove('hidden');
+            document.getElementById('supplySearchInput').value = '';
+            document.getElementById('supplySearchInput').focus();
+        }
+
+        function adjustSupplyQty(delta) {
+            const input = document.getElementById('supplyQuantityInput');
+            let value = parseInt(input.value) || 1;
+            value = Math.max(1, value + delta);
+            input.value = value;
+            state.supplyReceiveForm.quantity = value;
+        }
+
+        async function submitSupplyReceive() {
+            // 更新表單資料
+            state.supplyReceiveForm.quantity = parseInt(document.getElementById('supplyQuantityInput').value) || 1;
+            state.supplyReceiveForm.batch = document.getElementById('supplyBatchInput').value;
+            state.supplyReceiveForm.expiry = document.getElementById('supplyExpiryInput').value;
+            state.supplyReceiveForm.remarks = document.getElementById('supplyRemarksInput').value;
+
+            // 驗證
+            if (!state.supplyReceiveForm.itemCode) {
+                alert('請選擇物品');
+                return;
+            }
+
+            // 建立待同步操作
+            const action = {
+                id: generateUUID(),
+                type: 'supply_receive',
+                data: {
+                    item_code: state.supplyReceiveForm.itemCode,
+                    item_name: state.supplyReceiveForm.itemName,
+                    quantity: state.supplyReceiveForm.quantity,
+                    batch: state.supplyReceiveForm.batch,
+                    expiry: state.supplyReceiveForm.expiry,
+                    remarks: state.supplyReceiveForm.remarks,
+                    received_by: state.staffId,
+                    received_by_name: state.staffName,
+                    received_at: new Date().toISOString()
+                },
+                created_at: new Date().toISOString()
+            };
+
+            // 嘗試直接提交到 API
+            if (state.isOnline) {
+                try {
+                    const response = await fetch(`${API_BASE}/items/receive`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${state.token}`
+                        },
+                        body: JSON.stringify(action.data)
+                    });
+
+                    if (response.ok) {
+                        closeSupplyReceiveModal();
+                        alert(`已登記 ${state.supplyReceiveForm.quantity} ${state.supplyReceiveForm.itemName} 入庫`);
+                        loadDashboard();
+                        return;
+                    } else {
+                        throw new Error('API request failed');
+                    }
+                } catch (e) {
+                    console.log('耗材入庫同步失敗，加入離線佇列', e);
+                }
+            }
+
+            // 離線或 API 失敗：加入待同步佇列
+            state.pendingActions.push(action);
+            localStorage.setItem('mirs_pending_actions', JSON.stringify(state.pendingActions));
+            updateSyncStatus();
+
+            closeSupplyReceiveModal();
+            alert(`已登記 ${state.supplyReceiveForm.quantity} ${state.supplyReceiveForm.itemName} 入庫\n（待同步）`);
+            loadDashboard();
+        }
+
+        // ========================================
+        // 設備檢查
+        // ========================================
+        async function loadEquipmentList() {
+            const container = document.getElementById('equipmentList');
+            container.innerHTML = '<div class="text-center py-8 text-gray-500">載入中...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/equipment`, {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+
+                if (!response.ok) throw new Error('載入失敗');
+
+                const data = await response.json();
+                state.equipmentData = data.equipment || [];
+
+                renderEquipmentList(state.equipmentData);
+            } catch (e) {
+                container.innerHTML = `<div class="text-center py-8 text-red-500">${e.message}</div>`;
+            }
+        }
+
+        // 設備分類判斷函數
+        function getEquipmentCategory(eq) {
+            const typeName = (eq.type_name || '').toUpperCase();
+            const typeCode = (eq.type_code || '').toUpperCase();
+            const name = (eq.name || '').toUpperCase();
+            const category = (eq.category || '').toUpperCase();
+            const combined = typeName + ' ' + typeCode + ' ' + name + ' ' + category;
+
+            // 手術包（優先檢查，避免被其他分類誤判）
+            if (combined.includes('手術') || combined.includes('SURG') ||
+                combined.includes('器械') || typeCode.includes('SURG')) {
+                return 'surgical';
+            }
+
+            // 供電設備：發電機、UPS、電池、太陽能板、行動電源
+            if (typeCode.includes('GENERATOR') || typeCode.includes('UPS') ||
+                typeCode.includes('POWER_STATION') || typeCode.includes('BATTERY') ||
+                combined.includes('發電') || combined.includes('電源站') ||
+                combined.includes('太陽能') || combined.includes('SOLAR')) {
+                return 'power_supply';
+            }
+
+            // 耗電設備：監視器、呼吸器、抽吸機等需要插電的醫療設備
+            const powerConsumeKeywords = ['MONITOR', '監視', 'VENTILATOR', '呼吸機', 'PUMP', '幫浦',
+                                          'SUCTION', '抽吸', 'DEFIBRILLATOR', '電擊', 'WARMER', '保溫',
+                                          'LIGHT', '無影燈', 'INFUSION', '輸液', 'CONCENTRATOR', '濃縮機'];
+            if (powerConsumeKeywords.some(k => combined.includes(k))) {
+                return 'power_consume';
+            }
+
+            // 非耗電設備：氧氣瓶、手推車、擔架、輪椅等
+            const nonPowerKeywords = ['O2_CYLINDER', 'OXYGEN', '氧氣瓶', '鋼瓶', 'STRETCHER', '擔架',
+                                      'WHEELCHAIR', '輪椅', 'CART', '推車', 'BED', '病床', 'TANK'];
+            if (nonPowerKeywords.some(k => combined.includes(k))) {
+                return 'non_power';
+            }
+
+            // 預設根據 resilience_category
+            if (eq.resilience_category === 'POWER') return 'power_supply';
+            if (eq.resilience_category === 'OXYGEN') return 'non_power';
+
+            // 最終預設
+            return 'non_power';
+        }
+
+        // 取得分類標籤
+        function getCategoryLabel(category) {
+            const labels = {
+                'power_supply': '供電',
+                'power_consume': '耗電',
+                'non_power': '非耗電',
+                'surgical': '手術包'
+            };
+            return labels[category] || '其他';
+        }
+
+        // 取得分類顏色
+        function getCategoryColor(category) {
+            const colors = {
+                'power_supply': 'bg-amber-500',
+                'power_consume': 'bg-blue-500',
+                'non_power': 'bg-gray-500',
+                'surgical': 'bg-purple-500'
+            };
+            return colors[category] || 'bg-gray-500';
+        }
+
+        function renderEquipmentList(equipment, showSections = true) {
+            const container = document.getElementById('equipmentList');
+
+            if (equipment.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-500">沒有設備</div>';
+                return;
+            }
+
+            // 按分類分組
+            const grouped = {
+                power_supply: equipment.filter(eq => getEquipmentCategory(eq) === 'power_supply'),
+                power_consume: equipment.filter(eq => getEquipmentCategory(eq) === 'power_consume'),
+                non_power: equipment.filter(eq => getEquipmentCategory(eq) === 'non_power'),
+                surgical: equipment.filter(eq => getEquipmentCategory(eq) === 'surgical')
+            };
+
+            const renderCard = (eq) => {
+                const category = getEquipmentCategory(eq);
+                return `
+                <div class="equipment-card bg-white rounded-xl shadow-md p-4 border border-gray-200 active:bg-gray-50 cursor-pointer" data-equipment-id="${eq.id}">
+                    <div class="flex items-start justify-between pointer-events-none">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 ${getCategoryColor(category)} rounded-full"></span>
+                                <div class="font-semibold text-gray-800">${eq.name}</div>
+                            </div>
+                            <div class="text-sm text-gray-600">${eq.type_name}</div>
+                            <div class="text-xs text-gray-500 mt-1">${eq.location || '位置未設定'}</div>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            ${eq.needs_check
+                                ? '<span class="inline-block px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium border border-amber-200">待檢查</span>'
+                                : '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium border border-green-200">已檢查</span>'
+                            }
+                            <div class="text-xs text-gray-500 mt-1">
+                                ${eq.last_check_date || '從未檢查'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            };
+
+            const categoryIcons = {
+                power_supply: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>',
+                power_consume: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>',
+                non_power: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>',
+                surgical: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>'
+            };
+
+            let html = '';
+
+            if (showSections) {
+                // 顯示分組
+                const categoryOrder = ['power_supply', 'power_consume', 'non_power', 'surgical'];
+                categoryOrder.forEach(cat => {
+                    const items = grouped[cat];
+                    if (items.length > 0) {
+                        html += `
+                            <div class="flex items-center gap-2 mt-4 mb-3 first:mt-0">
+                                <div class="w-6 h-6 ${getCategoryColor(cat)} rounded flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        ${categoryIcons[cat]}
+                                    </svg>
+                                </div>
+                                <span class="text-sm font-semibold text-gray-700">${getCategoryLabel(cat)}</span>
+                                <span class="text-xs text-gray-500">(${items.length})</span>
+                            </div>
+                        `;
+                        html += items.map(renderCard).join('');
+                    }
+                });
+            } else {
+                // 不分組，直接顯示
+                html = equipment.map(renderCard).join('');
+            }
+
+            container.innerHTML = html;
+        }
+
+        function filterEquipment(filter) {
+            // 更新按鈕樣式
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.filter === filter) {
+                    btn.className = 'filter-btn px-3 py-1 rounded-full text-sm bg-teal-600 text-white font-medium whitespace-nowrap';
+                } else {
+                    btn.className = 'filter-btn px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600 whitespace-nowrap';
+                }
+            });
+
+            // 篩選設備
+            let filtered = state.equipmentData;
+            let showSections = false;
+
+            if (filter === 'all') {
+                filtered = state.equipmentData;
+                showSections = true;
+            } else if (filter === 'needs_check') {
+                filtered = state.equipmentData.filter(eq => eq.needs_check);
+            } else if (filter === 'power_supply') {
+                filtered = state.equipmentData.filter(eq => getEquipmentCategory(eq) === 'power_supply');
+            } else if (filter === 'power_consume') {
+                filtered = state.equipmentData.filter(eq => getEquipmentCategory(eq) === 'power_consume');
+            } else if (filter === 'non_power') {
+                filtered = state.equipmentData.filter(eq => getEquipmentCategory(eq) === 'non_power');
+            } else if (filter === 'surgical') {
+                filtered = state.equipmentData.filter(eq => getEquipmentCategory(eq) === 'surgical');
+            }
+
+            renderEquipmentList(filtered, showSections);
+        }
+
+        function openEquipmentModal(equipmentId) {
+            console.log('openEquipmentModal called with:', equipmentId);
+            console.log('Equipment data:', state.equipmentData.map(e => e.id));
+            const equipment = state.equipmentData.find(e => String(e.id) === String(equipmentId));
+            console.log('Found equipment:', equipment);
+            if (!equipment) {
+                console.error('Equipment not found for id:', equipmentId);
+                return;
+            }
+
+            state.currentEquipment = equipment;
+            state.selectedStatus = null;
+
+            // 填入設備資訊
+            document.getElementById('modalTitle').textContent = equipment.name;
+            document.getElementById('modalEquipmentInfo').innerHTML = `
+                <div class="flex justify-between py-2 border-b">
+                    <span class="text-gray-500">類型</span>
+                    <span class="font-medium">${equipment.type_name}</span>
+                </div>
+                <div class="flex justify-between py-2 border-b">
+                    <span class="text-gray-500">位置</span>
+                    <span class="font-medium">${equipment.location || '未設定'}</span>
+                </div>
+                <div class="flex justify-between py-2 border-b">
+                    <span class="text-gray-500">上次檢查</span>
+                    <span class="font-medium">${equipment.last_check_date || '從未'}</span>
+                </div>
+                <div class="flex justify-between py-2">
+                    <span class="text-gray-500">目前狀態</span>
+                    <span class="font-medium">${equipment.status || 'N/A'}</span>
+                </div>
+            `;
+
+            // 重置表單
+            document.getElementById('checkModeSelect').value = 'QUICK';
+            document.getElementById('checkNotesInput').value = '';
+            document.querySelectorAll('.status-option').forEach(btn => {
+                btn.classList.remove('border-teal-500', 'bg-teal-50');
+                btn.classList.add('border-gray-200');
+            });
+            document.getElementById('submitCheckBtn').disabled = true;
+
+            // 判斷是否需要顯示電量/容量輸入
+            const levelSection = document.getElementById('levelPercentSection');
+            const levelLabel = document.getElementById('levelPercentLabel');
+            const needsLevelInput = isEquipmentNeedsLevel(equipment);
+
+            if (needsLevelInput) {
+                levelSection.classList.remove('hidden');
+                // 設定標籤文字
+                const levelType = getEquipmentLevelType(equipment);
+                levelLabel.textContent = levelType === 'oxygen' ? '氧氣容量' :
+                                          levelType === 'fuel' ? '油量' : '電量';
+                // 設定初始值
+                const currentLevel = equipment.power_level || 100;
+                document.getElementById('levelPercentSlider').value = currentLevel;
+                document.getElementById('levelPercentInput').value = currentLevel;
+                document.getElementById('levelPercentValue').textContent = currentLevel + '%';
+            } else {
+                levelSection.classList.add('hidden');
+            }
+
+            // 顯示 Modal
+            document.getElementById('equipmentModal').classList.remove('hidden');
+            document.getElementById('equipmentModal').classList.add('flex');
+        }
+
+        // 判斷設備是否需要電量/容量輸入
+        function isEquipmentNeedsLevel(equipment) {
+            const category = equipment.resilience_category || equipment.category || '';
+            const typeCode = (equipment.type_code || '').toUpperCase();
+
+            // 供電類設備
+            if (category === 'POWER_SUPPLY' || category === 'power_supply') return true;
+            // 供氧類設備
+            if (category === 'OXYGEN' || category === 'oxygen') return true;
+            // 特定設備類型
+            if (['UTIL-001', 'EQ-010', 'EMER-EQ-001', 'GENERATOR', 'UPS', 'OXYGEN_TANK'].includes(typeCode)) return true;
+            // 設備名稱包含關鍵字
+            const name = (equipment.name || '').toLowerCase();
+            if (name.includes('電源') || name.includes('電池') || name.includes('發電') ||
+                name.includes('ups') || name.includes('氧氣') || name.includes('鋼瓶')) return true;
+
+            return false;
+        }
+
+        // 取得設備的電量類型
+        function getEquipmentLevelType(equipment) {
+            const name = (equipment.name || '').toLowerCase();
+            const typeCode = (equipment.type_code || '').toUpperCase();
+
+            if (name.includes('氧氣') || name.includes('鋼瓶') || typeCode.includes('OXYGEN')) {
+                return 'oxygen';
+            }
+            if (name.includes('發電') || name.includes('油') || typeCode.includes('GENERATOR')) {
+                return 'fuel';
+            }
+            return 'power';
+        }
+
+        // 更新電量顯示（從滑桿）
+        function updateLevelDisplay(value) {
+            document.getElementById('levelPercentValue').textContent = value + '%';
+            document.getElementById('levelPercentInput').value = value;
+        }
+
+        // 更新電量（從輸入框）
+        function updateLevelFromInput(value) {
+            let level = parseInt(value) || 0;
+            level = Math.max(0, Math.min(100, level));
+            document.getElementById('levelPercentSlider').value = level;
+            document.getElementById('levelPercentValue').textContent = level + '%';
+        }
+
+        function closeEquipmentModal() {
+            document.getElementById('equipmentModal').classList.add('hidden');
+            document.getElementById('equipmentModal').classList.remove('flex');
+            state.currentEquipment = null;
+        }
+
+        function selectStatus(status) {
+            state.selectedStatus = status;
+            document.querySelectorAll('.status-option').forEach(btn => {
+                if (btn.dataset.status === status) {
+                    btn.classList.add('border-teal-500', 'bg-teal-50');
+                    btn.classList.remove('border-gray-200');
+                } else {
+                    btn.classList.remove('border-teal-500', 'bg-teal-50');
+                    btn.classList.add('border-gray-200');
+                }
+            });
+            document.getElementById('submitCheckBtn').disabled = false;
+        }
+
+        async function submitEquipmentCheck() {
+            if (!state.currentEquipment || !state.selectedStatus) return;
+
+            const btn = document.getElementById('submitCheckBtn');
+            btn.disabled = true;
+            btn.textContent = '提交中...';
+
+            // 取得電量值（如果有顯示電量輸入區塊）
+            const levelSection = document.getElementById('levelPercentSection');
+            const levelPercent = !levelSection.classList.contains('hidden')
+                ? parseInt(document.getElementById('levelPercentInput').value) || null
+                : null;
+
+            const checkData = {
+                equipment_id: state.currentEquipment.id,
+                check_mode: document.getElementById('checkModeSelect').value,
+                status: state.selectedStatus,
+                notes: document.getElementById('checkNotesInput').value || null,
+                level_percent: levelPercent
+            };
+
+            // ===== Optimistic UI: 立即更新本地狀態 =====
+            const equipmentId = state.currentEquipment.id;
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+
+            // 更新 equipmentData 中對應的設備
+            const eqIndex = state.equipmentData.findIndex(e => String(e.id) === String(equipmentId));
+            if (eqIndex !== -1) {
+                state.equipmentData[eqIndex].status = state.selectedStatus;
+                state.equipmentData[eqIndex].last_check_date = todayStr;
+                state.equipmentData[eqIndex].needs_check = false;
+                if (levelPercent !== null) {
+                    state.equipmentData[eqIndex].power_level = levelPercent;
+                }
+            }
+
+            // 立即重新渲染設備列表（不等待 API）
+            const currentFilter = document.querySelector('.eq-filter-btn.bg-teal-600')?.dataset.eqFilter || 'all';
+            filterEquipment(currentFilter);
+
+            // 關閉 Modal
+            closeEquipmentModal();
+
+            if (state.isOnline) {
+                // 線上模式：背景同步
+                try {
+                    const response = await fetch(`${API_BASE}/equipment/${equipmentId}/check`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(checkData)
+                    });
+
+                    if (!response.ok) {
+                        console.error('設備檢查同步失敗，將重新載入');
+                        // 同步失敗時重新載入以確保資料一致
+                        await loadEquipmentList();
+                    }
+
+                    // 背景檢查警示（不阻塞 UI）
+                    checkAlerts().catch(console.error);
+
+                    // 顯示簡短提示
+                    showToast('檢查結果已提交');
+
+                } catch (e) {
+                    console.error('設備檢查提交失敗:', e);
+                    // 失敗時重新載入
+                    await loadEquipmentList();
+                    showToast('同步失敗，請重試', 'error');
+                }
+            } else {
+                // 離線模式：暫存
+                const action = {
+                    action_id: generateUUID(),
+                    action_type: 'EQUIPMENT_CHECK',
+                    payload: checkData,
+                    created_at: new Date().toISOString()
+                };
+
+                state.pendingActions.push(action);
+                savePendingActions();
+                updateSyncStatus();
+
+                showToast('已暫存，將在網路恢復後同步');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '提交檢查結果';
+        }
+
+        // 簡易 Toast 提示
+        function showToast(message, type = 'success') {
+            // 移除現有的 toast
+            const existing = document.getElementById('pwaToast');
+            if (existing) existing.remove();
+
+            const bgColor = type === 'error' ? 'bg-red-600' : 'bg-teal-600';
+            const toast = document.createElement('div');
+            toast.id = 'pwaToast';
+            toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+
+        // ========================================
+        // 庫存盤點功能 (Phase 2)
+        // ========================================
+        async function loadInventory() {
+            try {
+                const response = await fetch('/api/items', {
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('載入庫存失敗');
+
+                const data = await response.json();
+                state.inventoryData = data.items || data || [];
+
+                // 快取到 localStorage
+                localStorage.setItem('mirs_inventory_cache', JSON.stringify({
+                    data: state.inventoryData,
+                    timestamp: Date.now()
+                }));
+
+                renderInventoryList();
+            } catch (error) {
+                console.error('載入庫存錯誤:', error);
+
+                // 嘗試使用快取
+                const cached = localStorage.getItem('mirs_inventory_cache');
+                if (cached) {
+                    const { data } = JSON.parse(cached);
+                    state.inventoryData = data;
+                    renderInventoryList();
+                }
+            }
+        }
+
+        function refreshInventory() {
+            loadInventory();
+        }
+
+        function setInventoryFilter(filter) {
+            state.inventoryFilter = filter;
+
+            // 更新篩選按鈕樣式
+            document.querySelectorAll('.inv-filter-btn').forEach(btn => {
+                if (btn.dataset.invFilter === filter) {
+                    btn.className = 'inv-filter-btn px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-cyan-600 text-white';
+                } else {
+                    btn.className = 'inv-filter-btn px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 text-gray-600';
+                }
+            });
+
+            renderInventoryList();
+        }
+
+        function filterInventory() {
+            renderInventoryList();
+        }
+
+        function setInventoryTypeFilter(filter) {
+            state.inventoryTypeFilter = filter;
+
+            // 更新類別篩選按鈕樣式
+            document.querySelectorAll('.inv-type-filter-btn').forEach(btn => {
+                if (btn.dataset.invTypeFilter === filter) {
+                    btn.className = 'inv-type-filter-btn px-2 py-1 rounded text-xs font-medium whitespace-nowrap bg-cyan-100 text-cyan-700';
+                } else {
+                    btn.className = 'inv-type-filter-btn px-2 py-1 rounded text-xs font-medium whitespace-nowrap bg-gray-200 text-gray-600';
+                }
+            });
+
+            renderInventoryList();
+        }
+
+        function getItemType(item) {
+            const code = (item.code || '').toUpperCase();
+            if (code.startsWith('EMER-')) return 'emergency';  // 急救藥物
+            if (code.startsWith('MED-')) return 'medication';   // 一般藥品
+            if (code.startsWith('REA-')) return 'reagent';      // 試劑
+            return 'supply';  // 耗材
+        }
+
+        function getItemTypeInfo(itemType) {
+            const types = {
+                'emergency': {
+                    icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                           </svg>`,
+                    color: 'text-red-600 bg-red-100',
+                    label: '急救'
+                },
+                'medication': {
+                    icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                           </svg>`,
+                    color: 'text-purple-600 bg-purple-100',
+                    label: '藥品'
+                },
+                'reagent': {
+                    icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                           </svg>`,
+                    color: 'text-amber-600 bg-amber-100',
+                    label: '試劑'
+                },
+                'supply': {
+                    icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                           </svg>`,
+                    color: 'text-cyan-600 bg-cyan-100',
+                    label: '耗材'
+                }
+            };
+            return types[itemType] || types['supply'];
+        }
+
+        function isLowStock(item) {
+            const quantity = item.quantity || 0;
+            const minLevel = item.min_quantity || item.min_level || 10;
+            return quantity <= minLevel;
+        }
+
+        function renderInventoryList() {
+            const listEl = document.getElementById('inventoryList');
+            const searchText = (document.getElementById('inventorySearch')?.value || '').toLowerCase();
+
+            let filtered = state.inventoryData;
+
+            // 搜尋篩選
+            if (searchText) {
+                filtered = filtered.filter(item => {
+                    const name = (item.name || '').toLowerCase();
+                    const code = (item.code || '').toLowerCase();
+                    return name.includes(searchText) || code.includes(searchText);
+                });
+            }
+
+            // 狀態篩選（盤點進度）
+            switch (state.inventoryFilter) {
+                case 'unchecked':
+                    filtered = filtered.filter(item => !state.inventoryChecks[item.code]);
+                    break;
+                case 'checked':
+                    filtered = filtered.filter(item => state.inventoryChecks[item.code]?.status === 'confirmed');
+                    break;
+                case 'check_error':
+                    filtered = filtered.filter(item => state.inventoryChecks[item.code]?.status === 'error');
+                    break;
+                case 'low_stock':
+                    filtered = filtered.filter(item => isLowStock(item));
+                    break;
+            }
+
+            // 類別篩選
+            switch (state.inventoryTypeFilter) {
+                case 'medication':
+                    filtered = filtered.filter(item => getItemType(item) === 'medication');
+                    break;
+                case 'emergency':
+                    filtered = filtered.filter(item => getItemType(item) === 'emergency');
+                    break;
+                case 'reagent':
+                    filtered = filtered.filter(item => getItemType(item) === 'reagent');
+                    break;
+                case 'supply':
+                    filtered = filtered.filter(item => getItemType(item) === 'supply');
+                    break;
+            }
+
+            // 統計
+            const totalCount = filtered.length;
+            const lowStockCount = filtered.filter(item => isLowStock(item)).length;
+
+            document.getElementById('inventoryCountText').textContent = `共 ${totalCount} 項`;
+
+            const lowStockWarning = document.getElementById('lowStockWarning');
+            if (lowStockCount > 0) {
+                lowStockWarning.classList.remove('hidden');
+                document.getElementById('lowStockCount').textContent = lowStockCount;
+            } else {
+                lowStockWarning.classList.add('hidden');
+            }
+
+            // 渲染清單
+            if (filtered.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-12 text-gray-500">
+                        <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                        <p>無符合條件的項目</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(item => {
+                const itemType = getItemType(item);
+                const typeInfo = getItemTypeInfo(itemType);
+                const lowStock = isLowStock(item);
+                const stockColor = lowStock ? 'text-red-600 bg-red-50' : 'text-gray-700 bg-gray-100';
+                const checkStatus = state.inventoryChecks[item.code];
+
+                // 檢查狀態指示器（配色：確認=cyan庫存藍，錯誤=灰底紅字）
+                let checkIndicator = '';
+                let borderClass = 'border-gray-200';
+                if (checkStatus) {
+                    if (checkStatus.status === 'confirmed') {
+                        checkIndicator = `
+                            <div class="absolute -top-1 -right-1 w-6 h-6 bg-cyan-600 rounded-full flex items-center justify-center shadow">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>`;
+                        borderClass = 'border-cyan-300';
+                    } else {
+                        checkIndicator = `
+                            <div class="absolute -top-1 -right-1 w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center shadow border border-gray-300">
+                                <svg class="w-4 h-4 text-[#D96754]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01"/>
+                                </svg>
+                            </div>`;
+                        borderClass = 'border-gray-300';
+                    }
+                }
+
+                return `
+                    <div class="inventory-card bg-white rounded-xl shadow-sm p-4 border ${borderClass} cursor-pointer active:bg-gray-50 relative" data-item-code="${item.code}">
+                        ${checkIndicator}
+                        <div class="flex items-start gap-3 pointer-events-none">
+                            <div class="w-10 h-10 ${typeInfo.color} rounded-lg flex items-center justify-center flex-shrink-0">
+                                ${typeInfo.icon}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold text-gray-800 truncate">${item.name}</span>
+                                    <span class="px-1.5 py-0.5 text-xs rounded ${typeInfo.color}">${typeInfo.label}</span>
+                                </div>
+                                <div class="text-sm text-gray-500">${item.code}</div>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <div class="px-2 py-1 rounded-lg ${stockColor} text-sm font-semibold">
+                                    ${item.quantity || 0} ${item.unit || ''}
+                                </div>
+                                ${lowStock ? '<div class="text-xs text-red-500 mt-1">低庫存</div>' : ''}
+                            </div>
+                        </div>
+                        ${item.expiry_date ? `
+                        <div class="mt-2 pt-2 border-t text-xs text-gray-400 flex justify-between pointer-events-none">
+                            <span>效期</span>
+                            <span>${item.expiry_date}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 庫存項目詳情 Modal
+        function openInventoryModal(itemCode) {
+            const item = state.inventoryData.find(i => i.code === itemCode);
+            if (!item) {
+                console.error('Item not found:', itemCode);
+                return;
+            }
+
+            // 儲存當前項目代碼供檢查使用
+            state.currentInventoryItemCode = itemCode;
+
+            const itemType = getItemType(item);
+            const typeInfo = getItemTypeInfo(itemType);
+            const lowStock = isLowStock(item);
+
+            // 標題
+            document.getElementById('inventoryModalTitle').textContent = item.name;
+
+            // 基本資訊
+            document.getElementById('inventoryModalInfo').innerHTML = `
+                <div class="flex justify-between py-2 border-b">
+                    <span class="text-gray-500">代碼</span>
+                    <span class="font-medium">${item.code}</span>
+                </div>
+                <div class="flex justify-between py-2 border-b">
+                    <span class="text-gray-500">分類</span>
+                    <span class="px-2 py-0.5 rounded ${typeInfo.color} text-sm">${typeInfo.label}</span>
+                </div>
+                ${item.category ? `
+                <div class="flex justify-between py-2 border-b">
+                    <span class="text-gray-500">類別</span>
+                    <span class="font-medium">${item.category}</span>
+                </div>
+                ` : ''}
+                ${item.location ? `
+                <div class="flex justify-between py-2 border-b">
+                    <span class="text-gray-500">存放位置</span>
+                    <span class="font-medium">${item.location}</span>
+                </div>
+                ` : ''}
+            `;
+
+            // 庫存數量
+            document.getElementById('inventoryModalQuantity').textContent = item.quantity || 0;
+            document.getElementById('inventoryModalUnit').textContent = item.unit || '單位';
+
+            // 庫存狀態
+            const stockStatusEl = document.getElementById('inventoryModalStockStatus');
+            if (lowStock) {
+                stockStatusEl.innerHTML = '<span class="text-red-600 font-medium">低庫存警告</span>';
+            } else {
+                stockStatusEl.innerHTML = '<span class="text-green-600">庫存充足</span>';
+            }
+
+            // 效期
+            const expiryEl = document.getElementById('inventoryModalExpiry');
+            if (item.expiry_date) {
+                expiryEl.classList.remove('hidden');
+                document.getElementById('inventoryModalExpiryDate').textContent = `到期日：${item.expiry_date}`;
+            } else {
+                expiryEl.classList.add('hidden');
+            }
+
+            // 備註
+            const notesEl = document.getElementById('inventoryModalNotes');
+            if (item.notes || item.description) {
+                notesEl.classList.remove('hidden');
+                document.getElementById('inventoryModalNotesText').textContent = item.notes || item.description;
+            } else {
+                notesEl.classList.add('hidden');
+            }
+
+            // 檢查狀態顯示
+            const checkStatusEl = document.getElementById('inventoryCheckStatus');
+            const checkStatusContent = document.getElementById('inventoryCheckStatusContent');
+            const checkNotesInput = document.getElementById('inventoryCheckNotesInput');
+            const currentCheck = state.inventoryChecks[itemCode];
+
+            if (currentCheck) {
+                checkStatusEl.classList.remove('hidden');
+                if (currentCheck.status === 'confirmed') {
+                    checkStatusContent.className = 'flex items-center justify-between py-2 px-3 rounded-lg bg-cyan-100';
+                    checkStatusContent.innerHTML = `
+                        <div class="flex items-center gap-2 text-cyan-700">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="font-medium">已確認</span>
+                        </div>
+                        <span class="text-xs text-cyan-600">${new Date(currentCheck.checkedAt).toLocaleTimeString('zh-TW')}</span>
+                    `;
+                } else {
+                    checkStatusContent.className = 'flex items-center justify-between py-2 px-3 rounded-lg bg-gray-100';
+                    checkStatusContent.innerHTML = `
+                        <div class="flex items-center gap-2 text-[#D96754]">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <span class="font-medium">有錯誤</span>
+                        </div>
+                        <span class="text-xs text-[#D96754]">${currentCheck.notes || ''}</span>
+                    `;
+                }
+            } else {
+                checkStatusEl.classList.add('hidden');
+            }
+
+            // 重置錯誤備註輸入
+            checkNotesInput.classList.add('hidden');
+            document.getElementById('inventoryCheckNotesTextarea').value = '';
+
+            // 顯示 modal
+            const modal = document.getElementById('inventoryModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeInventoryModal() {
+            const modal = document.getElementById('inventoryModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            state.currentInventoryItemCode = null;
+
+            // 重置按鈕狀態
+            const notesInput = document.getElementById('inventoryCheckNotesInput');
+            const textarea = document.getElementById('inventoryCheckNotesTextarea');
+            const normalButtons = document.getElementById('inventoryCheckButtons');
+            const errorButtons = document.getElementById('inventoryErrorButtons');
+            const closeBtn = document.getElementById('inventoryCloseBtn');
+
+            if (notesInput) notesInput.classList.add('hidden');
+            if (normalButtons) normalButtons.classList.remove('hidden');
+            if (errorButtons) errorButtons.classList.add('hidden');
+            if (closeBtn) closeBtn.classList.remove('hidden');
+            if (textarea) textarea.value = '';
+        }
+
+        // ========================================
+        // 庫存盤點檢查功能
+        // ========================================
+        function markInventoryConfirmed() {
+            const itemCode = state.currentInventoryItemCode;
+            if (!itemCode) return;
+
+            state.inventoryChecks[itemCode] = {
+                status: 'confirmed',
+                checkedAt: Date.now(),
+                notes: ''
+            };
+
+            saveInventoryChecks();
+            closeInventoryModal();
+            renderInventoryList();
+            updateInventoryCheckProgress();
+        }
+
+        function showErrorInput() {
+            // 顯示錯誤備註輸入欄位
+            const notesInput = document.getElementById('inventoryCheckNotesInput');
+            const textarea = document.getElementById('inventoryCheckNotesTextarea');
+            const normalButtons = document.getElementById('inventoryCheckButtons');
+            const errorButtons = document.getElementById('inventoryErrorButtons');
+            const closeBtn = document.getElementById('inventoryCloseBtn');
+
+            notesInput.classList.remove('hidden');
+            normalButtons.classList.add('hidden');
+            errorButtons.classList.remove('hidden');
+            closeBtn.classList.add('hidden');
+            textarea.focus();
+        }
+
+        function cancelErrorInput() {
+            // 取消錯誤回報，回到正常模式
+            const notesInput = document.getElementById('inventoryCheckNotesInput');
+            const textarea = document.getElementById('inventoryCheckNotesTextarea');
+            const normalButtons = document.getElementById('inventoryCheckButtons');
+            const errorButtons = document.getElementById('inventoryErrorButtons');
+            const closeBtn = document.getElementById('inventoryCloseBtn');
+
+            notesInput.classList.add('hidden');
+            normalButtons.classList.remove('hidden');
+            errorButtons.classList.add('hidden');
+            closeBtn.classList.remove('hidden');
+            textarea.value = '';
+        }
+
+        function confirmInventoryError() {
+            // 確認儲存錯誤狀態
+            const textarea = document.getElementById('inventoryCheckNotesTextarea');
+            const itemCode = state.currentInventoryItemCode;
+            if (!itemCode) return;
+
+            state.inventoryChecks[itemCode] = {
+                status: 'error',
+                checkedAt: Date.now(),
+                notes: textarea.value.trim() || '（未說明）'
+            };
+
+            console.log('❌ 已標記錯誤:', itemCode, textarea.value.trim());
+
+            saveInventoryChecks();
+            closeInventoryModal();
+            renderInventoryList();
+            updateInventoryCheckProgress();
+        }
+
+        // 保留舊函數名稱以相容性
+        function markInventoryError() {
+            showErrorInput();
+        }
+
+        function saveInventoryChecks() {
+            localStorage.setItem('mirs_inventory_checks', JSON.stringify({
+                checks: state.inventoryChecks,
+                session: state.inventoryCheckSession,
+                timestamp: Date.now()
+            }));
+        }
+
+        function loadInventoryChecks() {
+            const saved = localStorage.getItem('mirs_inventory_checks');
+            if (saved) {
+                const data = JSON.parse(saved);
+                state.inventoryChecks = data.checks || {};
+                state.inventoryCheckSession = data.session || null;
+            }
+        }
+
+        function getInventoryCheckStats() {
+            const checks = state.inventoryChecks;
+            const total = state.inventoryData.length;
+            let confirmed = 0;
+            let errors = 0;
+
+            Object.values(checks).forEach(check => {
+                if (check.status === 'confirmed') confirmed++;
+                if (check.status === 'error') errors++;
+            });
+
+            return {
+                total,
+                confirmed,
+                errors,
+                unchecked: total - confirmed - errors,
+                progress: total > 0 ? Math.round(((confirmed + errors) / total) * 100) : 0
+            };
+        }
+
+        function updateInventoryCheckProgress() {
+            const stats = getInventoryCheckStats();
+            const progressEl = document.getElementById('inventoryCheckProgress');
+            if (progressEl) {
+                progressEl.innerHTML = `
+                    <span class="text-green-600">${stats.confirmed} 確認</span>
+                    ${stats.errors > 0 ? `<span class="text-red-600">/ ${stats.errors} 錯誤</span>` : ''}
+                    <span class="text-gray-400">/ ${stats.total} 總計</span>
+                `;
+            }
+        }
+
+        function showInventoryCheckSummary() {
+            const stats = getInventoryCheckStats();
+            const session = JSON.parse(localStorage.getItem('mirs_session') || '{}');
+
+            // 更新統計
+            document.getElementById('checkSummaryTotal').textContent = stats.total;
+            document.getElementById('checkSummaryConfirmed').textContent = stats.confirmed;
+            document.getElementById('checkSummaryErrors').textContent = stats.errors;
+
+            // 錯誤清單
+            const errorListEl = document.getElementById('checkSummaryErrorList');
+            const errorItemsEl = document.getElementById('checkSummaryErrorItems');
+
+            const errorItems = Object.entries(state.inventoryChecks)
+                .filter(([_, check]) => check.status === 'error')
+                .map(([code, check]) => {
+                    const item = state.inventoryData.find(i => i.code === code);
+                    return { code, name: item?.name || code, notes: check.notes };
+                });
+
+            if (errorItems.length > 0) {
+                errorListEl.classList.remove('hidden');
+                errorItemsEl.innerHTML = errorItems.map(item => `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-2">
+                        <div class="font-medium text-red-800 text-sm">${item.name}</div>
+                        <div class="text-xs text-red-600">${item.code}</div>
+                        <div class="text-xs text-gray-600 mt-1">${item.notes}</div>
+                    </div>
+                `).join('');
+            } else {
+                errorListEl.classList.add('hidden');
+            }
+
+            // 盤點人員
+            document.getElementById('checkSummaryInitial').textContent = (session.staff_name || 'U')[0];
+            document.getElementById('checkSummaryCheckerName').textContent = session.staff_name || '使用者';
+            document.getElementById('checkSummaryTime').textContent = new Date().toLocaleString('zh-TW');
+
+            // 顯示 modal
+            const modal = document.getElementById('inventoryCheckSummaryModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeInventoryCheckSummary() {
+            const modal = document.getElementById('inventoryCheckSummaryModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function submitInventoryCheck() {
+            const stats = getInventoryCheckStats();
+            const session = JSON.parse(localStorage.getItem('mirs_session') || '{}');
+
+            const checkData = {
+                station_id: session.station_id || state.stationId,
+                checker_id: session.staff_id || state.staffId,
+                checker_name: session.staff_name || state.staffName,
+                checked_at: new Date().toISOString(),
+                total_items: stats.total,
+                confirmed_count: stats.confirmed,
+                error_count: stats.errors,
+                errors: Object.entries(state.inventoryChecks)
+                    .filter(([_, check]) => check.status === 'error')
+                    .map(([code, check]) => ({
+                        item_code: code,
+                        notes: check.notes,
+                        checked_at: new Date(check.checkedAt).toISOString()
+                    }))
+            };
+
+            // Debug: 記錄提交資料以追蹤同步問題
+            console.log('📋 盤點提交資料:', JSON.stringify({
+                confirmed: stats.confirmed,
+                errors: stats.errors,
+                errorItems: checkData.errors.map(e => e.item_code)
+            }));
+
+            if (state.isOnline) {
+                try {
+                    const response = await fetch('/api/inventory-check', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(checkData)
+                    });
+
+                    if (!response.ok) {
+                        console.warn('Submit failed, saving for offline sync');
+                        saveCheckForSync(checkData);
+                    }
+                } catch (e) {
+                    console.warn('Submit error, saving for offline sync:', e);
+                    saveCheckForSync(checkData);
+                }
+            } else {
+                saveCheckForSync(checkData);
+            }
+
+            // 清除本地檢查記錄
+            state.inventoryChecks = {};
+            state.inventoryCheckSession = null;
+            localStorage.removeItem('mirs_inventory_checks');
+
+            closeInventoryCheckSummary();
+            renderInventoryList();
+            updateInventoryCheckProgress();
+            alert('盤點結果已送出！\n\n' +
+                  `確認: ${stats.confirmed} 項\n` +
+                  `錯誤: ${stats.errors} 項\n\n` +
+                  (stats.errors > 0 ? '錯誤項目已加入待處理佇列，請至 Hub 主控台處理。' : ''));
+        }
+
+        function saveCheckForSync(checkData) {
+            const action = {
+                action_id: generateUUID(),
+                action_type: 'INVENTORY_CHECK',
+                payload: checkData,
+                created_at: new Date().toISOString()
+            };
+            state.pendingActions.push(action);
+            savePendingActions();
+            updateSyncStatus();
+        }
+
+        // ========================================
+        // 離線同步
+        // ========================================
+        function handleOnline() {
+            state.isOnline = true;
+            document.getElementById('offlineIndicator').classList.remove('show');
+            document.getElementById('syncStatusIcon').className = 'w-2 h-2 rounded-full bg-green-500';
+            document.getElementById('syncStatusText').textContent = '已連線';
+            syncPendingActions();
+        }
+
+        function handleOffline() {
+            state.isOnline = false;
+            document.getElementById('offlineIndicator').classList.add('show');
+            document.getElementById('syncStatusIcon').className = 'w-2 h-2 rounded-full bg-yellow-500';
+            document.getElementById('syncStatusText').textContent = '離線';
+        }
+
+        function savePendingActions() {
+            localStorage.setItem('mirs_pending_actions', JSON.stringify(state.pendingActions));
+        }
+
+        function updateSyncStatus() {
+            const countEl = document.getElementById('pendingActionsCount');
+            const headerBtn = document.getElementById('headerSyncBtn');
+            const headerText = document.getElementById('headerSyncText');
+            const headerBadge = document.getElementById('headerSyncBadge');
+            const pendingCount = state.pendingActions.length;
+
+            if (pendingCount > 0) {
+                // 底部狀態欄
+                countEl.classList.remove('hidden');
+                countEl.querySelector('span').textContent = pendingCount;
+
+                // Header 同步按鈕（高亮顯示）
+                headerBtn.classList.remove('bg-teal-700');
+                headerBtn.classList.add('bg-amber-500', 'hover:bg-amber-400');
+                headerText.textContent = '待同步';
+                headerBadge.textContent = pendingCount;
+                headerBadge.classList.remove('hidden');
+            } else {
+                // 底部狀態欄
+                countEl.classList.add('hidden');
+
+                // Header 同步按鈕（正常狀態）
+                headerBtn.classList.add('bg-teal-700');
+                headerBtn.classList.remove('bg-amber-500', 'hover:bg-amber-400');
+                headerText.textContent = '已同步';
+                headerBadge.classList.add('hidden');
+            }
+        }
+
+        async function manualSync() {
+            const headerBtn = document.getElementById('headerSyncBtn');
+            const headerIcon = document.getElementById('headerSyncIcon');
+            const headerText = document.getElementById('headerSyncText');
+
+            // 如果沒有待同步項目，顯示訊息
+            if (state.pendingActions.length === 0) {
+                alert('沒有待同步的操作');
+                return;
+            }
+
+            // 離線時無法同步
+            if (!state.isOnline) {
+                alert('目前離線，無法同步\n請連接網路後再試');
+                return;
+            }
+
+            // 顯示同步中狀態
+            headerIcon.classList.add('animate-spin');
+            headerText.textContent = '同步中...';
+            headerBtn.disabled = true;
+
+            try {
+                await syncPendingActions();
+                headerText.textContent = '同步完成';
+                setTimeout(() => updateSyncStatus(), 1500);
+            } catch (e) {
+                headerText.textContent = '同步失敗';
+                setTimeout(() => updateSyncStatus(), 2000);
+            } finally {
+                headerIcon.classList.remove('animate-spin');
+                headerBtn.disabled = false;
+            }
+        }
+
+        async function syncPendingActions() {
+            if (state.pendingActions.length === 0) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/sync/actions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        actions: state.pendingActions
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Sync result:', data);
+
+                    // 清除已同步的操作
+                    const processedIds = data.results
+                        .filter(r => r.status !== 'REJECTED')
+                        .map(r => r.action_id);
+
+                    state.pendingActions = state.pendingActions.filter(
+                        a => !processedIds.includes(a.action_id)
+                    );
+                    savePendingActions();
+                    updateSyncStatus();
+
+                    // 重新載入資料
+                    await refreshDashboard();
+                }
+            } catch (e) {
+                console.error('Sync error:', e);
+            }
+        }
+    </script>
+</body>
+</html>
