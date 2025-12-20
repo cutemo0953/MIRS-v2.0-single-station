@@ -759,12 +759,12 @@ INSERT OR IGNORE INTO resilience_config (station_id, isolation_target_days, popu
 -- ============================================
 -- 預設消耗情境
 -- ============================================
-INSERT OR IGNORE INTO resilience_profiles (station_id, endurance_type, profile_name, burn_rate, burn_rate_unit, is_default, sort_order) VALUES
-('BORP-DNO-01', 'OXYGEN', '低流量 (2L/min)', 2, 'L/min', 1, 1),
-('BORP-DNO-01', 'OXYGEN', '中流量 (5L/min)', 5, 'L/min', 0, 2),
-('BORP-DNO-01', 'OXYGEN', '高流量 (10L/min)', 10, 'L/min', 0, 3),
-('BORP-DNO-01', 'POWER', '基本負載 (500W)', 500, 'W', 1, 1),
-('BORP-DNO-01', 'POWER', '手術負載 (2000W)', 2000, 'W', 0, 2);
+INSERT OR IGNORE INTO resilience_profiles (station_id, endurance_type, profile_name, burn_rate, burn_rate_unit, is_default, sort_order, population_multiplier) VALUES
+('BORP-DNO-01', 'OXYGEN', '低流量 (2L/min)', 2, 'L/min', 1, 1, 1),
+('BORP-DNO-01', 'OXYGEN', '中流量 (5L/min)', 5, 'L/min', 0, 2, 1),
+('BORP-DNO-01', 'OXYGEN', '高流量 (10L/min)', 10, 'L/min', 0, 3, 1),
+('BORP-DNO-01', 'POWER', '基本負載 (500W)', 500, 'W', 1, 1, 0),
+('BORP-DNO-01', 'POWER', '手術負載 (2000W)', 2000, 'W', 0, 2, 0);
 
 -- ============================================
 -- 展示設備
