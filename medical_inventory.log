@@ -1235,3 +1235,166 @@ sqlite3.OperationalError: table equipment has no column named station_id
 2025-12-20 09:06:56,318 - __main__ - INFO - ✓ 錯誤項目已處理: CHK-20251220-090156-001/AIRWAY-007 by Admin
 2025-12-20 09:08:02,599 - services.mobile.auth - ERROR - 記錄操作失敗: database is locked
 2025-12-20 09:08:18,106 - services.mobile.auth - ERROR - 記錄操作失敗: database is locked
+2025-12-20 16:40:23,420 - services.mobile.auth - INFO - 產生配對碼 891681 for station BORP-DNO-01, expires 2025-12-20 16:45:23.416999
+2025-12-20 16:40:44,846 - services.mobile.routes - WARNING - DEBUG exchange from 10.42.0.45: {"pairing_code":"891681","device_id":"07d9c6d9-c847-40c1-942d-bee95a697584","device_name":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac O","staff_id":"STAFF-001","staff_name":"護理師","role":"nurse"}
+2025-12-20 16:40:44,882 - services.mobile.routes - INFO - Exchange request from 10.42.0.45: code=891681, device=07d9c6d9-c847-40c1-942d-bee95a697584
+2025-12-20 16:40:44,892 - services.mobile.auth - INFO - 裝置 07d9c6d9-c847-40c1-942d-bee95a697584 配對成功，角色: nurse, 站點: BORP-DNO-01
+2025-12-21 07:00:00,395 - __main__ - INFO - 設備每日重置完成: 3 個設備已重置
+2025-12-21 07:00:00,405 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-21 07:00:00): 3 個設備已重置
+2025-12-21 07:00:00,408 - __main__ - INFO - 下次設備重置時間: 2025-12-22 07:00:00 (等待 24.0 小時)
+2025-12-22 07:00:00,200 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-22 07:00:00): 0 個設備已重置
+2025-12-22 07:00:00,207 - __main__ - INFO - 下次設備重置時間: 2025-12-23 07:00:00 (等待 24.0 小時)
+2025-12-22 21:17:11,392 - __main__ - WARNING - Pandas not available, some export features will be limited
+2025-12-22 21:17:11,392 - __main__ - WARNING - ReportLab not available, PDF generation will be limited
+2025-12-22 21:17:11,393 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-22 21:17:11,413 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-22 21:17:11,413 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-22 21:17:11,418 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-22 21:17:11,419 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-22 21:17:11,421 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-22 21:17:11,444 - __main__ - WARNING - MIRS Mobile API 未啟用: No module named 'jwt'
+2025-12-22 21:17:11,478 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-22 21:17:11,479 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-22 21:17:11,479 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-22 21:17:11,479 - __main__ - INFO - 下次設備重置時間: 2025-12-23 07:00:00 (等待 9.7 小時)
+2025-12-23 07:00:00,193 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-23 07:00:00): 0 個設備已重置
+2025-12-23 07:00:00,201 - __main__ - INFO - 下次設備重置時間: 2025-12-24 07:00:00 (等待 24.0 小時)
+2025-12-23 14:47:44,088 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-23 14:47:44,104 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-23 14:47:44,104 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-23 14:47:44,109 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-23 14:47:44,110 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-23 14:47:44,110 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-23 14:47:44,188 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-23 14:47:44,189 - services.mobile.auth - INFO - 清理了 4 個過期/已使用的配對碼
+2025-12-23 14:47:44,190 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-23 14:47:44,194 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-23 14:47:44,235 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-23 14:47:44,236 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-23 14:47:44,236 - __main__ - INFO - ✓ Migration: 新增 medicines.reserved_qty 欄位
+2025-12-23 14:47:44,236 - __main__ - INFO - ✓ Migration: 建立 pharmacy_dispatch_orders 表
+2025-12-23 14:47:44,237 - __main__ - INFO - ✓ Migration: 建立 pharmacy_dispatch_items 表
+2025-12-23 14:47:44,238 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-23 14:47:44,238 - __main__ - INFO - 下次設備重置時間: 2025-12-24 07:00:00 (等待 16.2 小時)
+2025-12-23 15:37:52,607 - __main__ - INFO - 進貨記錄成功: MED-PAIN-006 +100
+2025-12-23 15:38:02,279 - __main__ - INFO - 進貨記錄成功: ANES-005 +50
+2025-12-23 15:38:14,842 - __main__ - INFO - 進貨記錄成功: MED-PAIN-001 +500
+2025-12-23 15:38:27,438 - __main__ - INFO - 進貨記錄成功: MED-ATB-001 +500
+2025-12-23 16:36:12,393 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-23 16:36:12,410 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-23 16:36:12,410 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-23 16:36:12,415 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-23 16:36:12,415 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-23 16:36:12,416 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-23 16:36:12,499 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-23 16:36:12,500 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-23 16:36:12,504 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-23 16:36:12,548 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-23 16:36:12,549 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-23 16:36:12,549 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-23 16:36:12,550 - __main__ - INFO - 下次設備重置時間: 2025-12-24 07:00:00 (等待 14.4 小時)
+2025-12-23 16:36:26,637 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-23 16:36:26,653 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-23 16:36:26,653 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-23 16:36:26,655 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-23 16:36:26,655 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-23 16:36:26,656 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-23 16:36:26,715 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-23 16:36:26,716 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-23 16:36:26,720 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-23 16:36:26,755 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-23 16:36:26,756 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-23 16:36:26,756 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-23 16:36:26,757 - __main__ - INFO - 下次設備重置時間: 2025-12-24 07:00:00 (等待 14.4 小時)
+2025-12-23 16:39:50,201 - __main__ - ERROR - 保留庫存失敗: table inventory_events has no column named reference_id
+2025-12-23 16:40:03,320 - __main__ - ERROR - 保留庫存失敗: table inventory_events has no column named reference_id
+2025-12-23 16:41:51,036 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-23 16:41:51,052 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-23 16:41:51,052 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-23 16:41:51,055 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-23 16:41:51,056 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-23 16:41:51,057 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-23 16:41:51,122 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-23 16:41:51,123 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-23 16:41:51,127 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-23 16:41:51,164 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-23 16:41:51,165 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-23 16:41:51,165 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-23 16:41:51,165 - __main__ - INFO - 下次設備重置時間: 2025-12-24 07:00:00 (等待 14.3 小時)
+2025-12-23 18:32:16,081 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-23 18:32:16,098 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-23 18:32:16,098 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-23 18:32:16,103 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-23 18:32:16,104 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-23 18:32:16,105 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-23 18:32:16,186 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-23 18:32:16,187 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-23 18:32:16,191 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-23 18:32:16,235 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-23 18:32:16,235 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-23 18:32:16,236 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-23 18:32:16,236 - __main__ - INFO - 下次設備重置時間: 2025-12-24 07:00:00 (等待 12.5 小時)
+2025-12-23 18:32:33,360 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-23 18:32:33,377 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-23 18:32:33,377 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-23 18:32:33,379 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-23 18:32:33,380 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-23 18:32:33,380 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-23 18:32:33,447 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-23 18:32:33,448 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-23 18:32:33,452 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-23 18:32:33,489 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-23 18:32:33,489 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-23 18:32:33,489 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-23 18:32:33,489 - __main__ - INFO - 下次設備重置時間: 2025-12-24 07:00:00 (等待 12.5 小時)
+2025-12-24 06:59:57,670 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-24 06:59:57): 0 個設備已重置
+2025-12-24 06:59:57,678 - __main__ - INFO - 下次設備重置時間: 2025-12-24 07:00:00 (等待 0.0 小時)
+2025-12-24 07:00:00,009 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-24 07:00:00): 0 個設備已重置
+2025-12-24 07:00:00,009 - __main__ - INFO - 下次設備重置時間: 2025-12-25 07:00:00 (等待 24.0 小時)
+2025-12-24 07:45:29,703 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-24 07:45:29,719 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-24 07:45:29,719 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-24 07:45:29,724 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-24 07:45:29,725 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-24 07:45:29,726 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-24 07:45:29,809 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-24 07:45:29,810 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-24 07:45:29,814 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-24 07:45:29,858 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-24 07:45:29,858 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-24 07:45:29,859 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-24 07:45:29,859 - __main__ - INFO - 下次設備重置時間: 2025-12-25 07:00:00 (等待 23.2 小時)
+2025-12-25 07:08:39,080 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-25 07:08:39): 0 個設備已重置
+2025-12-25 07:08:39,090 - __main__ - INFO - 下次設備重置時間: 2025-12-26 07:00:00 (等待 23.9 小時)
+2025-12-26 07:00:00,328 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-26 07:00:00): 0 個設備已重置
+2025-12-26 07:00:00,336 - __main__ - INFO - 下次設備重置時間: 2025-12-27 07:00:00 (等待 24.0 小時)
+2025-12-27 07:14:01,543 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-27 07:14:01): 0 個設備已重置
+2025-12-27 07:14:01,546 - __main__ - INFO - 下次設備重置時間: 2025-12-28 07:00:00 (等待 23.8 小時)
+2025-12-27 17:18:46,622 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-27 17:18:46,638 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-27 17:18:46,638 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-27 17:18:46,644 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-27 17:18:46,646 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-27 17:18:46,646 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-27 17:18:46,730 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-27 17:18:46,731 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-27 17:18:46,735 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-27 17:18:46,776 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-27 17:18:46,776 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-27 17:18:46,777 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-27 17:18:46,777 - __main__ - INFO - 下次設備重置時間: 2025-12-28 07:00:00 (等待 13.7 小時)
+2025-12-27 17:19:00,494 - __main__ - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-27 17:19:00,510 - __main__ - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-27 17:19:00,510 - __main__ - INFO - 開始初始化資料庫結構...
+2025-12-27 17:19:00,513 - __main__ - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-27 17:19:00,513 - __main__ - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-27 17:19:00,514 - __main__ - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-27 17:19:00,573 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-27 17:19:00,573 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-27 17:19:00,577 - __main__ - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-27 17:19:00,611 - __main__ - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-27 17:19:00,611 - __main__ - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-27 17:19:00,612 - __main__ - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-27 17:19:00,612 - __main__ - INFO - 下次設備重置時間: 2025-12-28 07:00:00 (等待 13.7 小時)
+2025-12-28 07:00:00,275 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-28 07:00:00): 0 個設備已重置
+2025-12-28 07:00:00,278 - __main__ - INFO - 下次設備重置時間: 2025-12-29 07:00:00 (等待 24.0 小時)
