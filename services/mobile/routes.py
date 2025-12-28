@@ -1,6 +1,7 @@
 """
-MIRS Mobile API v1 Routes
+MIRS Mobile API v1.4 Routes
 API 路由: /api/mirs-mobile/v1/*
+支援裝置黑名單、撤銷恢復、Rate Limiting
 """
 
 from datetime import datetime
@@ -32,7 +33,16 @@ def get_local_ip() -> str:
     except Exception:
         return "127.0.0.1"
 
-from .auth import MobileAuth
+
+def get_client_ip(request: Request) -> str:
+    """取得客戶端 IP (v1.4)"""
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+from .auth import MobileAuth, check_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -170,11 +180,23 @@ async def exchange_debug(raw_request: Request):
 @router.post("/auth/exchange")
 async def exchange_pairing_code(request: ExchangePairingCodeRequest, raw_request: Request):
     """
-    交換配對碼取得 JWT Token
+    交換配對碼取得 JWT Token (v1.4: Rate limiting + Blacklist check)
 
     行動端提交配對碼與裝置資訊，成功後取得 JWT Token。
+    Rate limit: 5 attempts per minute per IP.
     """
-    logger.info(f"Exchange request from {raw_request.client.host}: code={request.pairing_code}, device={request.device_id}")
+    client_ip = get_client_ip(raw_request)
+    user_agent = raw_request.headers.get("User-Agent")
+
+    # v1.4: Rate limiting
+    if not check_rate_limit(client_ip):
+        logger.warning(f"Rate limit exceeded for {client_ip}")
+        raise HTTPException(
+            status_code=429,
+            detail="嘗試次數過多，請等待 60 秒後再試"
+        )
+
+    logger.info(f"Exchange request from {client_ip}: code={request.pairing_code}, device={request.device_id}")
     auth = get_mobile_auth()
     result = auth.exchange_pairing_code(
         pairing_code=request.pairing_code,
@@ -182,13 +204,22 @@ async def exchange_pairing_code(request: ExchangePairingCodeRequest, raw_request
         device_name=request.device_name,
         staff_id=request.staff_id,
         staff_name=request.staff_name,
-        role=request.role
+        role=request.role,
+        ip_address=client_ip,
+        user_agent=user_agent
     )
 
     if result is None:
         raise HTTPException(
             status_code=400,
             detail="配對碼無效、已過期或角色不允許"
+        )
+
+    # v1.4: Check for blacklist error
+    if isinstance(result, dict) and result.get("error") == "BLACKLISTED":
+        raise HTTPException(
+            status_code=403,
+            detail=result.get("message", "此裝置已被永久封鎖")
         )
 
     return result
@@ -285,10 +316,76 @@ async def hub_revoke_device(
     )
 
     if not success:
-        raise HTTPException(status_code=404, detail="裝置不存在")
+        raise HTTPException(status_code=404, detail="裝置不存在或已在黑名單中")
 
     logger.info(f"Hub 撤銷裝置: {device_id}, 原因: {request.reason}")
     return {"success": True, "message": f"裝置 {device_id} 已被撤銷"}
+
+
+@router.post("/devices/{device_id}/unrevoke")
+async def hub_unrevoke_device(device_id: str):
+    """
+    恢復已撤銷的裝置授權 (Hub 管理端 v1.4)
+    無需 Mobile Token，供 Hub 管理介面使用
+    """
+    auth = get_mobile_auth()
+    success = auth.unrevoke_device(
+        device_id=device_id,
+        unrevoked_by="hub_admin"
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail="裝置不存在、未被撤銷或已在黑名單中")
+
+    logger.info(f"Hub 恢復裝置: {device_id}")
+    return {"success": True, "message": f"裝置 {device_id} 已恢復存取權限"}
+
+
+class BlacklistDeviceRequest(BaseModel):
+    """黑名單請求"""
+    reason: str = Field(default="管理員封鎖", description="封鎖原因")
+
+
+@router.post("/devices/{device_id}/blacklist")
+async def hub_blacklist_device(
+    device_id: str,
+    request: BlacklistDeviceRequest
+):
+    """
+    將裝置加入黑名單 (Hub 管理端 v1.4)
+    永久封鎖，即使重新配對也無法使用
+    """
+    auth = get_mobile_auth()
+    success = auth.blacklist_device(
+        device_id=device_id,
+        reason=request.reason,
+        blacklisted_by="hub_admin"
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail="加入黑名單失敗")
+
+    logger.info(f"Hub 黑名單裝置: {device_id}, 原因: {request.reason}")
+    return {"success": True, "message": f"裝置 {device_id} 已加入黑名單"}
+
+
+@router.post("/devices/{device_id}/unblacklist")
+async def hub_unblacklist_device(device_id: str):
+    """
+    將裝置從黑名單移除 (Hub 管理端 v1.4)
+    移除後裝置可以重新配對
+    """
+    auth = get_mobile_auth()
+    success = auth.unblacklist_device(
+        device_id=device_id,
+        unblacklisted_by="hub_admin"
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail="裝置不存在或不在黑名單中")
+
+    logger.info(f"Hub 解除黑名單: {device_id}")
+    return {"success": True, "message": f"裝置 {device_id} 已從黑名單移除"}
 
 
 # ============================================================================
@@ -643,8 +740,13 @@ async def get_mobile_api_info():
     """取得 Mobile API 資訊"""
     return {
         "api": "MIRS Mobile API",
-        "version": "1.0.0",
+        "version": "1.4.0",
         "phase": "P0",
+        "features": {
+            "rate_limiting": "5 attempts/minute per IP",
+            "device_blacklist": True,
+            "device_unrevoke": True
+        },
         "endpoints": {
             "auth": [
                 "POST /auth/pairing",
@@ -652,6 +754,13 @@ async def get_mobile_api_info():
                 "GET /auth/verify",
                 "GET /auth/devices",
                 "POST /auth/devices/{id}/revoke"
+            ],
+            "devices": [
+                "GET /devices",
+                "POST /devices/{id}/revoke",
+                "POST /devices/{id}/unrevoke",
+                "POST /devices/{id}/blacklist",
+                "POST /devices/{id}/unblacklist"
             ],
             "resilience": [
                 "GET /resilience"

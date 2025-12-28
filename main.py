@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
 醫療站庫存管理系統 - 後端 API
-版本: v1.4.8
+版本: v1.4.9
 新增: 藥品分流管理、血袋標籤列印、政府標準預載資料庫
 v1.4.8: 樹莓派部署修復、韌性估算修正、PWA 配對修正
+v1.4.9: 藥局撥發 API (Pharmacy Dispatch v1.1) - 庫存保留、撥發確認、收貨回執
 """
 
 import logging
 import sys
+import socket
 from datetime import datetime, timedelta, time
 from typing import Optional, List, Dict, Any
 from pathlib import Path
@@ -20,6 +22,9 @@ import shutil
 import hashlib
 import asyncio
 import os
+import secrets
+import base64
+import binascii
 from enum import Enum
 
 # ============================================================================
@@ -99,7 +104,7 @@ class StationType(str, Enum):
 
 class Config:
     """系統配置 - v1.4.8 穩定單站點架構"""
-    VERSION = "1.4.8-demo" if IS_VERCEL else "1.4.8"
+    VERSION = "1.4.9-demo" if IS_VERCEL else "1.4.9"
     DATABASE_PATH = ":memory:" if IS_VERCEL else "medical_inventory.db"
     TEMPLATES_PATH = str(PROJECT_ROOT / "templates")
 
@@ -3241,6 +3246,67 @@ def run_migrations():
         """)
         logger.info("✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)")
 
+        # v1.4.3: 新增 medicines.reserved_qty 欄位 (庫存保留)
+        cursor.execute("PRAGMA table_info(medicines)")
+        med_columns = [col[1] for col in cursor.fetchall()]
+        if med_columns and 'reserved_qty' not in med_columns:
+            cursor.execute("ALTER TABLE medicines ADD COLUMN reserved_qty INTEGER DEFAULT 0")
+            logger.info("✓ Migration: 新增 medicines.reserved_qty 欄位")
+
+        # v1.4.3: 建立 pharmacy_dispatch_orders 表 (藥局撥發單)
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='pharmacy_dispatch_orders'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE pharmacy_dispatch_orders (
+                    dispatch_id TEXT PRIMARY KEY,
+                    created_at TEXT NOT NULL,
+                    created_by TEXT NOT NULL,
+                    target_station_id TEXT,
+                    target_station_name TEXT,
+                    target_unbound INTEGER DEFAULT 0,
+                    status TEXT DEFAULT 'DRAFT',
+                    dispatch_method TEXT DEFAULT 'QR',
+                    total_items INTEGER NOT NULL,
+                    total_quantity INTEGER NOT NULL,
+                    has_controlled INTEGER DEFAULT 0,
+                    reserved_at TEXT,
+                    dispatched_at TEXT,
+                    dispatched_by TEXT,
+                    received_at TEXT,
+                    received_by TEXT,
+                    receiver_station_id TEXT,
+                    receipt_signature TEXT,
+                    notes TEXT,
+                    signature TEXT,
+                    qr_chunks INTEGER DEFAULT 1,
+                    CHECK (status IN ('DRAFT', 'RESERVED', 'DISPATCHED', 'RECEIVED', 'CANCELLED'))
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_dispatch_status ON pharmacy_dispatch_orders(status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_dispatch_target ON pharmacy_dispatch_orders(target_station_id)")
+            logger.info("✓ Migration: 建立 pharmacy_dispatch_orders 表")
+
+        # v1.4.3: 建立 pharmacy_dispatch_items 表 (撥發單明細)
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='pharmacy_dispatch_items'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE pharmacy_dispatch_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    dispatch_id TEXT NOT NULL,
+                    medicine_code TEXT NOT NULL,
+                    medicine_name TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    reserved_qty INTEGER DEFAULT 0,
+                    unit TEXT DEFAULT '單位',
+                    batch_number TEXT,
+                    expiry_date TEXT,
+                    is_controlled INTEGER DEFAULT 0,
+                    FOREIGN KEY (dispatch_id) REFERENCES pharmacy_dispatch_orders(dispatch_id)
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_dispatch_items_order ON pharmacy_dispatch_items(dispatch_id)")
+            logger.info("✓ Migration: 建立 pharmacy_dispatch_items 表")
+
         conn.commit()
     except Exception as e:
         logger.warning(f"Migration warning: {e}")
@@ -3272,14 +3338,38 @@ async def startup_event():
 # API 端點
 # ============================================================================
 
+def get_local_ip():
+    """取得本機區網 IP 位址"""
+    try:
+        # 建立一個 UDP socket 連到外部 IP (不會真的發送封包)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except Exception:
+        # 備用方法：嘗試透過 hostname
+        try:
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            if local_ip.startswith("127."):
+                return None
+            return local_ip
+        except Exception:
+            return None
+
+
 @app.get("/api/info")
 async def api_info():
-    """API 資訊端點"""
+    """API 資訊端點 - 包含伺服器 IP"""
+    local_ip = get_local_ip()
     return {
         "name": "醫療站庫存管理系統 API",
         "version": config.VERSION,
         "station": config.STATION_ID,
-        "docs": "/docs"
+        "docs": "/docs",
+        "server_ip": local_ip,
+        "server_url": f"http://{local_ip}:8000/api" if local_ip else None
     }
 
 
@@ -5143,6 +5233,637 @@ async def get_dispense_history(
 
     except Exception as e:
         logger.error(f"查詢領用歷史失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+# ============================================================================
+# Pharmacy Dispatch API (藥局撥發 v1.1)
+# ============================================================================
+
+class DispatchItemRequest(BaseModel):
+    medicine_code: str
+    quantity: int
+
+class CreateDispatchRequest(BaseModel):
+    items: List[DispatchItemRequest]
+    target_station_id: Optional[str] = None
+    target_station_name: Optional[str] = None
+    notes: Optional[str] = None
+    created_by: str
+
+class ReserveDispatchRequest(BaseModel):
+    reserved_by: str
+
+class ConfirmDispatchRequest(BaseModel):
+    dispatched_by: str
+
+class IngestReceiptRequest(BaseModel):
+    receipt_data: str
+
+
+def generate_dispatch_id() -> str:
+    """Generate unique dispatch ID"""
+    today = datetime.now().strftime('%Y%m%d')
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) FROM pharmacy_dispatch_orders WHERE dispatch_id LIKE ?",
+        (f"DISP-{today}-%",)
+    )
+    count = cursor.fetchone()[0] + 1
+    conn.close()
+    return f"DISP-{today}-{count:03d}"
+
+
+@app.post("/api/pharmacy/dispatch", status_code=201)
+async def create_dispatch(request: CreateDispatchRequest):
+    """
+    建立撥發單 (DRAFT)
+    - 驗證管制藥是否有 target_station_id
+    - 不扣庫存，只建立草稿
+    """
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    try:
+        dispatch_id = generate_dispatch_id()
+        now = datetime.now().isoformat()
+        total_items = len(request.items)
+        total_quantity = sum(item.quantity for item in request.items)
+        has_controlled = False
+
+        # 驗證藥品並收集資訊 (使用 items + inventory_events 系統)
+        dispatch_items = []
+        for item in request.items:
+            # 從 items 表取得藥品資訊
+            cursor.execute(
+                "SELECT item_code, item_name, unit, category FROM items WHERE item_code = ?",
+                (item.medicine_code,)
+            )
+            med_item = cursor.fetchone()
+            if not med_item:
+                raise HTTPException(status_code=404, detail=f"找不到藥品: {item.medicine_code}")
+
+            # 計算庫存 (從 inventory_events)
+            cursor.execute("""
+                SELECT COALESCE(SUM(CASE
+                    WHEN event_type = 'RECEIVE' THEN quantity
+                    WHEN event_type = 'CONSUME' THEN -quantity
+                    WHEN event_type = 'DISPATCH_RESERVE' THEN -quantity
+                    WHEN event_type = 'DISPATCH_RELEASE' THEN quantity
+                    ELSE 0 END), 0) as current_stock
+                FROM inventory_events WHERE item_code = ?
+            """, (item.medicine_code,))
+            stock_row = cursor.fetchone()
+            current_stock = stock_row['current_stock'] if stock_row else 0
+
+            # 檢查是否為管制藥 (從 medicines 資料表查詢)
+            cursor.execute("""
+                SELECT is_controlled_drug, controlled_level
+                FROM medicines
+                WHERE medicine_code = ?
+            """, (item.medicine_code,))
+            med_info = cursor.fetchone()
+            is_controlled = bool(med_info and med_info[0]) if med_info else False
+            # 備用: 如果資料庫沒有，檢查藥品代碼是否包含 CTRL
+            if not is_controlled:
+                is_controlled = 'CTRL' in item.medicine_code.upper()
+
+            available = current_stock
+            if item.quantity > available:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"庫存不足: {med_item['item_name']} 可用 {available}, 需求 {item.quantity}"
+                )
+
+            if is_controlled:
+                has_controlled = True
+
+            dispatch_items.append({
+                'medicine_code': med_item['item_code'],
+                'medicine_name': med_item['item_name'],
+                'quantity': item.quantity,
+                'unit': med_item['unit'] or 'EA',
+                'is_controlled': is_controlled
+            })
+
+        # 管制藥必須有 target_station_id
+        if has_controlled and not request.target_station_id:
+            raise HTTPException(
+                status_code=400,
+                detail="含管制藥品必須指定目標站點 (target_station_id)"
+            )
+
+        target_unbound = 1 if not request.target_station_id else 0
+
+        # 建立撥發單
+        cursor.execute("""
+            INSERT INTO pharmacy_dispatch_orders (
+                dispatch_id, created_at, created_by,
+                target_station_id, target_station_name, target_unbound,
+                status, total_items, total_quantity, has_controlled, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?)
+        """, (
+            dispatch_id, now, request.created_by,
+            request.target_station_id, request.target_station_name, target_unbound,
+            total_items, total_quantity, 1 if has_controlled else 0, request.notes
+        ))
+
+        # 建立撥發明細
+        for item in dispatch_items:
+            cursor.execute("""
+                INSERT INTO pharmacy_dispatch_items (
+                    dispatch_id, medicine_code, medicine_name, quantity, unit, is_controlled
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                dispatch_id, item['medicine_code'], item['medicine_name'],
+                item['quantity'], item['unit'], item['is_controlled']
+            ))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "dispatch_id": dispatch_id,
+            "status": "DRAFT",
+            "total_items": total_items,
+            "total_quantity": total_quantity,
+            "has_controlled": has_controlled,
+            "message": "撥發單已建立 (草稿)"
+        }
+
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"建立撥發單失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/pharmacy/dispatch/{dispatch_id}/reserve")
+async def reserve_dispatch(dispatch_id: str, request: ReserveDispatchRequest):
+    """
+    保留庫存 (DRAFT → RESERVED)
+    - 檢查可用庫存
+    - 增加 reserved_qty
+    """
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    try:
+        # 檢查撥發單狀態
+        cursor.execute("SELECT * FROM pharmacy_dispatch_orders WHERE dispatch_id = ?", (dispatch_id,))
+        dispatch = cursor.fetchone()
+        if not dispatch:
+            raise HTTPException(status_code=404, detail="找不到撥發單")
+
+        if dispatch['status'] == 'RESERVED':
+            return {"success": True, "dispatch_id": dispatch_id, "status": "RESERVED", "message": "庫存已保留 (冪等)"}
+
+        if dispatch['status'] != 'DRAFT':
+            raise HTTPException(status_code=400, detail=f"狀態 {dispatch['status']} 不允許保留")
+
+        # 取得撥發明細
+        cursor.execute("SELECT * FROM pharmacy_dispatch_items WHERE dispatch_id = ?", (dispatch_id,))
+        items = cursor.fetchall()
+
+        # 檢查並保留庫存 (使用 inventory_events)
+        shortages = []
+        for item in items:
+            # 計算現有庫存
+            cursor.execute("""
+                SELECT COALESCE(SUM(CASE
+                    WHEN event_type = 'RECEIVE' THEN quantity
+                    WHEN event_type = 'CONSUME' THEN -quantity
+                    WHEN event_type = 'DISPATCH_RESERVE' THEN -quantity
+                    WHEN event_type = 'DISPATCH_RELEASE' THEN quantity
+                    ELSE 0 END), 0) as current_stock
+                FROM inventory_events WHERE item_code = ?
+            """, (item['medicine_code'],))
+            stock_row = cursor.fetchone()
+            available = stock_row['current_stock'] if stock_row else 0
+
+            if item['quantity'] > available:
+                shortages.append({
+                    "code": item['medicine_code'],
+                    "name": item['medicine_name'],
+                    "requested": item['quantity'],
+                    "available": available,
+                    "shortage": item['quantity'] - available
+                })
+
+        if shortages:
+            raise HTTPException(status_code=409, detail={
+                "error": "INSUFFICIENT_STOCK",
+                "shortages": shortages,
+                "message": "庫存不足，無法保留"
+            })
+
+        # 執行保留 (建立 DISPATCH_RESERVE 事件)
+        for item in items:
+            cursor.execute("""
+                INSERT INTO inventory_events (item_code, event_type, quantity, batch_number, remarks, station_id, operator)
+                VALUES (?, 'DISPATCH_RESERVE', ?, ?, ?, ?, ?)
+            """, (item['medicine_code'], item['quantity'], dispatch_id, f"撥發保留: {dispatch_id}", config.STATION_ID, request.reserved_by))
+            cursor.execute(
+                "UPDATE pharmacy_dispatch_items SET reserved_qty = ? WHERE dispatch_id = ? AND medicine_code = ?",
+                (item['quantity'], dispatch_id, item['medicine_code'])
+            )
+
+        # 更新撥發單狀態
+        now = datetime.now().isoformat()
+        cursor.execute(
+            "UPDATE pharmacy_dispatch_orders SET status = 'RESERVED', reserved_at = ? WHERE dispatch_id = ?",
+            (now, dispatch_id)
+        )
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "dispatch_id": dispatch_id,
+            "status": "RESERVED",
+            "reserved_at": now,
+            "message": "庫存已保留"
+        }
+
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"保留庫存失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/pharmacy/dispatch/{dispatch_id}/qr")
+async def get_dispatch_qr(dispatch_id: str):
+    """
+    取得撥發單 QR Code (XIR1 格式)
+    - 狀態必須是 RESERVED 或 DISPATCHED
+    """
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT * FROM pharmacy_dispatch_orders WHERE dispatch_id = ?", (dispatch_id,))
+        dispatch = cursor.fetchone()
+        if not dispatch:
+            raise HTTPException(status_code=404, detail="找不到撥發單")
+
+        if dispatch['status'] not in ('RESERVED', 'DISPATCHED'):
+            raise HTTPException(status_code=400, detail=f"狀態 {dispatch['status']} 無法產生 QR")
+
+        cursor.execute("SELECT * FROM pharmacy_dispatch_items WHERE dispatch_id = ?", (dispatch_id,))
+        items = cursor.fetchall()
+
+        # 建立 MED_DISPATCH payload
+        payload = {
+            "type": "MED_DISPATCH",
+            "v": "1.1",
+            "dispatch_id": dispatch_id,
+            "source_station": config.get_station_id(),
+            "target_station": dispatch['target_station_id'],
+            "target_unbound": bool(dispatch['target_unbound']),
+            "items": [
+                {
+                    "code": item['medicine_code'],
+                    "name": item['medicine_name'],
+                    "qty": item['quantity'],
+                    "unit": item['unit'],
+                    "controlled": bool(item['is_controlled'])
+                }
+                for item in items
+            ],
+            "total_items": dispatch['total_items'],
+            "total_qty": dispatch['total_quantity'],
+            "has_controlled": bool(dispatch['has_controlled']),
+            "ts": int(datetime.now().timestamp()),
+            "nonce": secrets.token_hex(12)
+        }
+
+        # TODO: Add Ed25519 signature
+        # payload['signature'] = sign_payload(payload)
+
+        # Generate XIR1 chunks
+        payload_json = json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
+        payload_b64 = base64.b64encode(payload_json.encode('utf-8')).decode('ascii')
+
+        # CRC32 checksum
+        checksum = format(binascii.crc32(payload_b64.encode()) & 0xFFFFFFFF, '08x')
+
+        # Single chunk for now (max 800 chars)
+        MAX_CHUNK_SIZE = 700  # Leave room for protocol overhead
+        chunks = []
+        if len(payload_b64) <= MAX_CHUNK_SIZE:
+            chunks = [f"XIR1|MF|1/1|{payload_b64}|{checksum}"]
+        else:
+            # Multi-chunk
+            total = (len(payload_b64) + MAX_CHUNK_SIZE - 1) // MAX_CHUNK_SIZE
+            for i in range(total):
+                start = i * MAX_CHUNK_SIZE
+                end = min(start + MAX_CHUNK_SIZE, len(payload_b64))
+                chunk_data = payload_b64[start:end]
+                chunk_crc = format(binascii.crc32(chunk_data.encode()) & 0xFFFFFFFF, '08x')
+                chunks.append(f"XIR1|MF|{i+1}/{total}|{chunk_data}|{chunk_crc}")
+
+        # Update qr_chunks count
+        cursor.execute(
+            "UPDATE pharmacy_dispatch_orders SET qr_chunks = ? WHERE dispatch_id = ?",
+            (len(chunks), dispatch_id)
+        )
+        conn.commit()
+
+        return {
+            "dispatch_id": dispatch_id,
+            "status": dispatch['status'],
+            "chunks": len(chunks),
+            "qr_data": chunks,
+            "payload": payload  # For debugging
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"產生 QR 失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/pharmacy/dispatch/{dispatch_id}/confirm")
+async def confirm_dispatch(dispatch_id: str, request: ConfirmDispatchRequest):
+    """
+    確認發出 (RESERVED → DISPATCHED)
+    - 釋放 reserved_qty
+    - 扣除 current_stock
+    - 冪等操作
+    """
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT * FROM pharmacy_dispatch_orders WHERE dispatch_id = ?", (dispatch_id,))
+        dispatch = cursor.fetchone()
+        if not dispatch:
+            raise HTTPException(status_code=404, detail="找不到撥發單")
+
+        # 冪等: 已經是 DISPATCHED 直接返回成功
+        if dispatch['status'] == 'DISPATCHED':
+            return {
+                "success": True,
+                "dispatch_id": dispatch_id,
+                "status": "DISPATCHED",
+                "dispatched_at": dispatch['dispatched_at'],
+                "message": "已確認發出 (冪等)"
+            }
+
+        if dispatch['status'] != 'RESERVED':
+            raise HTTPException(status_code=400, detail=f"狀態 {dispatch['status']} 不允許確認發出")
+
+        cursor.execute("SELECT * FROM pharmacy_dispatch_items WHERE dispatch_id = ?", (dispatch_id,))
+        items = cursor.fetchall()
+
+        # 注意: 使用 inventory_events 系統，DISPATCH_RESERVE 事件已經扣除可用庫存
+        # 確認發出時不需要額外操作，只更新狀態即可
+        # (DISPATCH_RESERVE 已經使該數量從 available 中扣除)
+
+        # 更新撥發單狀態
+        now = datetime.now().isoformat()
+        cursor.execute("""
+            UPDATE pharmacy_dispatch_orders SET
+                status = 'DISPATCHED',
+                dispatched_at = ?,
+                dispatched_by = ?
+            WHERE dispatch_id = ?
+        """, (now, request.dispatched_by, dispatch_id))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "dispatch_id": dispatch_id,
+            "status": "DISPATCHED",
+            "dispatched_at": now,
+            "message": "已確認發出，庫存已扣除"
+        }
+
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"確認發出失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/pharmacy/dispatch/receipt")
+async def ingest_receipt(request: IngestReceiptRequest):
+    """
+    匯入收貨回執 (DISPATCHED → RECEIVED)
+    - 解析 XIR1 格式回執
+    - 驗證簽章
+    - 冪等操作
+    """
+    try:
+        # Parse XIR1 receipt
+        receipt_data = request.receipt_data.strip()
+
+        if not receipt_data.startswith('XIR1|'):
+            raise HTTPException(status_code=400, detail="無效的 XIR1 格式")
+
+        parts = receipt_data.split('|')
+        if len(parts) != 5:
+            raise HTTPException(status_code=400, detail="XIR1 格式錯誤")
+
+        _, packet_type, seq_total, payload_b64, checksum = parts
+
+        # Verify CRC32
+        expected_crc = format(binascii.crc32(payload_b64.encode()) & 0xFFFFFFFF, '08x')
+        if checksum != expected_crc:
+            raise HTTPException(status_code=400, detail="CRC32 校驗失敗")
+
+        # Decode payload
+        try:
+            payload_json = base64.b64decode(payload_b64).decode('utf-8')
+            receipt = json.loads(payload_json)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"解碼失敗: {e}")
+
+        if receipt.get('type') != 'MED_RECEIPT':
+            raise HTTPException(status_code=400, detail=f"非收貨回執: {receipt.get('type')}")
+
+        dispatch_id = receipt.get('dispatch_id')
+        if not dispatch_id:
+            raise HTTPException(status_code=400, detail="缺少 dispatch_id")
+
+        # TODO: Verify signature
+
+        # Update dispatch order
+        conn = sqlite3.connect(config.DATABASE_PATH)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("SELECT status FROM pharmacy_dispatch_orders WHERE dispatch_id = ?", (dispatch_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="找不到撥發單")
+
+            # 冪等
+            if row[0] == 'RECEIVED':
+                return {
+                    "success": True,
+                    "dispatch_id": dispatch_id,
+                    "status": "RECEIVED",
+                    "message": "回執已匯入 (冪等)"
+                }
+
+            if row[0] != 'DISPATCHED':
+                raise HTTPException(status_code=400, detail=f"狀態 {row[0]} 不允許匯入回執")
+
+            now = datetime.now().isoformat()
+            cursor.execute("""
+                UPDATE pharmacy_dispatch_orders SET
+                    status = 'RECEIVED',
+                    received_at = ?,
+                    received_by = ?,
+                    receiver_station_id = ?,
+                    receipt_signature = ?
+                WHERE dispatch_id = ?
+            """, (
+                now,
+                receipt.get('received_by'),
+                receipt.get('receiver_station'),
+                receipt.get('signature'),
+                dispatch_id
+            ))
+            conn.commit()
+
+            return {
+                "success": True,
+                "dispatch_id": dispatch_id,
+                "status": "RECEIVED",
+                "received_at": now,
+                "received_by": receipt.get('received_by'),
+                "receiver_station": receipt.get('receiver_station'),
+                "message": "收貨回執已確認"
+            }
+
+        finally:
+            conn.close()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"匯入回執失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/pharmacy/dispatch")
+async def list_dispatches(
+    status: Optional[str] = Query(None, description="狀態篩選"),
+    limit: int = Query(50, ge=1, le=200)
+):
+    """列出撥發單"""
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    try:
+        if status:
+            cursor.execute(
+                "SELECT * FROM pharmacy_dispatch_orders WHERE status = ? ORDER BY created_at DESC LIMIT ?",
+                (status, limit)
+            )
+        else:
+            cursor.execute(
+                "SELECT * FROM pharmacy_dispatch_orders ORDER BY created_at DESC LIMIT ?",
+                (limit,)
+            )
+
+        dispatches = [dict(row) for row in cursor.fetchall()]
+
+        # 加入明細
+        for d in dispatches:
+            cursor.execute("SELECT * FROM pharmacy_dispatch_items WHERE dispatch_id = ?", (d['dispatch_id'],))
+            d['items'] = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            "dispatches": dispatches,
+            "count": len(dispatches)
+        }
+
+    except Exception as e:
+        logger.error(f"列出撥發單失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.delete("/api/pharmacy/dispatch/{dispatch_id}")
+async def cancel_dispatch(dispatch_id: str):
+    """
+    取消撥發單
+    - 只能取消 DRAFT 或 RESERVED
+    - RESERVED 需釋放保留庫存
+    """
+    conn = sqlite3.connect(config.DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT * FROM pharmacy_dispatch_orders WHERE dispatch_id = ?", (dispatch_id,))
+        dispatch = cursor.fetchone()
+        if not dispatch:
+            raise HTTPException(status_code=404, detail="找不到撥發單")
+
+        if dispatch['status'] not in ('DRAFT', 'RESERVED'):
+            raise HTTPException(status_code=400, detail=f"狀態 {dispatch['status']} 不允許取消")
+
+        # 如果是 RESERVED，釋放保留 (建立 DISPATCH_RELEASE 事件)
+        if dispatch['status'] == 'RESERVED':
+            cursor.execute("SELECT * FROM pharmacy_dispatch_items WHERE dispatch_id = ?", (dispatch_id,))
+            items = cursor.fetchall()
+            for item in items:
+                cursor.execute("""
+                    INSERT INTO inventory_events (item_code, event_type, quantity, batch_number, remarks, station_id, operator)
+                    VALUES (?, 'DISPATCH_RELEASE', ?, ?, ?, ?, 'SYSTEM')
+                """, (item['medicine_code'], item['reserved_qty'] or item['quantity'], dispatch_id, f"撥發取消釋放: {dispatch_id}", config.STATION_ID))
+
+        # 更新狀態
+        cursor.execute(
+            "UPDATE pharmacy_dispatch_orders SET status = 'CANCELLED' WHERE dispatch_id = ?",
+            (dispatch_id,)
+        )
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "dispatch_id": dispatch_id,
+            "status": "CANCELLED",
+            "message": "撥發單已取消" + ("，保留庫存已釋放" if dispatch['status'] == 'RESERVED' else "")
+        }
+
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"取消撥發單失敗: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()

@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>醫療站庫存管理系統 v1.4.8</title>
+    <title>醫療站庫存管理系統 v1.4.9</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Tailwind 自定義色系配置
@@ -73,6 +73,16 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <!-- QRCode library - 使用 qrcodejs (DOM-based, 穩定可用) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script>
+        // 驗證 QRCode 載入
+        if (typeof QRCode !== 'undefined') {
+            console.log('[QRCode] qrcodejs library loaded successfully');
+        } else {
+            console.error('[QRCode] qrcodejs library failed to load from CDN');
+        }
+    </script>
     <style>
         [x-cloak] { display: none !important; }
         
@@ -1121,7 +1131,14 @@
 
             <!-- 藥品領用模式 (MIRS v2.3 - Emergency Dispense) -->
             <div x-show="treatmentMode === 'dispense'">
-                <div class="flex justify-end mb-4">
+                <div class="flex justify-between mb-4">
+                    <!-- 撥發給藥局按鈕 (MIRS v2.4) -->
+                    <button @click.prevent.stop="openDispatchModal()" class="bg-treatment-500 text-white px-4 py-2 rounded-lg hover:bg-[#3d4270] transition-colors flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                        </svg>
+                        <span>撥發給藥局</span>
+                    </button>
                     <button @click.prevent.stop="loadPendingDispenses()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -3230,6 +3247,216 @@
             </div>
         </div>
 
+        <!-- 藥局撥發 Modal (MIRS v2.4) -->
+        <div x-show="showDispatchModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4" style="display: none;">
+            <div @click.away="showDispatchModal = false" class="bg-white rounded-xl shadow-2xl p-4 sm:p-5 md:p-6 max-w-3xl w-full mx-4 my-4 max-h-[95vh] overflow-y-auto">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-treatment-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                    </svg>
+                    撥發藥品給藥局
+                </h3>
+
+                <form @submit.prevent="createDispatch()" class="space-y-4">
+                    <!-- 目標藥局資訊 -->
+                    <div class="bg-treatment-50 rounded-lg p-4 border border-treatment-500/30">
+                        <h4 class="font-semibold text-gray-800 mb-3">目標藥局</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">藥局編號 (選填)</label>
+                                <input type="text" x-model="dispatchForm.target_station_id" placeholder="PHR-001"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
+                                <p class="text-xs text-gray-500 mt-1">管制藥品必須指定</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">藥局名稱 (選填)</label>
+                                <input type="text" x-model="dispatchForm.target_station_name" placeholder="衛生站藥局"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 藥品清單 -->
+                    <div class="border-2 border-treatment-500/30 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-semibold text-gray-700 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-treatment-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                                </svg>
+                                撥發藥品清單
+                            </h4>
+                            <button type="button" @click="addDispatchItem()"
+                                    class="bg-treatment-500 text-white px-3 py-1 rounded-lg hover:bg-[#3d4270] text-sm flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                新增藥品
+                            </button>
+                        </div>
+
+                        <div class="space-y-3">
+                            <template x-for="(item, index) in dispatchForm.items" :key="index">
+                                <div class="flex gap-2 items-start border border-gray-200 rounded-lg p-3 bg-white">
+                                    <div class="flex-1 grid grid-cols-3 gap-2">
+                                        <!-- 藥品搜尋 -->
+                                        <div class="relative col-span-2">
+                                            <input type="text" x-model="item.searchText"
+                                                   @input="filterDispatchItems(index)"
+                                                   @focus="item.showDropdown = true"
+                                                   @blur="setTimeout(() => item.showDropdown = false, 200)"
+                                                   placeholder="搜尋藥品..."
+                                                   required
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
+                                            <div x-show="item.showDropdown && item.filteredItems && item.filteredItems.length > 0"
+                                                 class="absolute z-10 w-full mt-1 bg-white border border-treatment-500/50 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                <template x-for="med in item.filteredItems.slice(0, 8)" :key="med.code">
+                                                    <div @click.stop="selectDispatchItem(index, med)"
+                                                         class="px-3 py-2 hover:bg-treatment-50 cursor-pointer text-sm">
+                                                        <span class="font-mono" x-text="med.code"></span> -
+                                                        <span x-text="med.name"></span>
+                                                        <span class="text-xs text-gray-500" x-text="`(可用: ${med.current_stock - (med.reserved_qty || 0)})`"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <!-- 數量 -->
+                                        <input type="number" x-model="item.quantity" required min="1" placeholder="數量"
+                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
+                                    </div>
+                                    <!-- 刪除 -->
+                                    <button type="button" @click="removeDispatchItem(index)"
+                                            x-show="dispatchForm.items.length > 1"
+                                            class="text-red-600 hover:text-red-800 p-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- 操作按鈕 -->
+                    <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                        <button type="submit" class="flex-1 bg-treatment-500 text-white px-4 py-2 rounded-lg hover:bg-[#3d4270] transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                            </svg>
+                            建立撥發單 + 產生 QR
+                        </button>
+                        <button type="button" @click="showDispatchModal = false; resetDispatchForm()"
+                                class="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            取消
+                        </button>
+                    </div>
+                </form>
+
+                <!-- 已建立的撥發單列表 -->
+                <div x-show="dispatchList.length > 0" class="mt-6 border-t pt-4">
+                    <h4 class="font-semibold text-gray-700 mb-3">最近撥發單</h4>
+                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                        <template x-for="dispatch in dispatchList" :key="dispatch.dispatch_id">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                                <div>
+                                    <span class="font-mono text-sm" x-text="dispatch.dispatch_id"></span>
+                                    <span class="ml-2 px-2 py-0.5 text-xs rounded-full"
+                                          :class="{
+                                              'bg-gray-200 text-gray-700': dispatch.status === 'DRAFT',
+                                              'bg-yellow-100 text-yellow-800': dispatch.status === 'RESERVED',
+                                              'bg-blue-100 text-blue-800': dispatch.status === 'DISPATCHED',
+                                              'bg-green-100 text-green-800': dispatch.status === 'RECEIVED',
+                                              'bg-red-100 text-red-800': dispatch.status === 'CANCELLED'
+                                          }"
+                                          x-text="dispatch.status"></span>
+                                    <span class="text-xs text-gray-500 ml-2" x-text="dispatch.target_station_name || '未指定'"></span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button @click="showDispatchQR(dispatch)"
+                                            x-show="dispatch.status === 'RESERVED' || dispatch.status === 'DISPATCHED'"
+                                            class="text-treatment-500 hover:text-[#3d4270] text-sm">
+                                        QR
+                                    </button>
+                                    <button @click="confirmDispatch(dispatch.dispatch_id)"
+                                            x-show="dispatch.status === 'RESERVED'"
+                                            class="text-green-600 hover:text-green-800 text-sm">
+                                        確認
+                                    </button>
+                                    <button @click="cancelDispatch(dispatch.dispatch_id)"
+                                            x-show="dispatch.status === 'DRAFT' || dispatch.status === 'RESERVED'"
+                                            class="text-red-600 hover:text-red-800 text-sm">
+                                        取消
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 撥發 QR Code 顯示 Modal -->
+        <div x-show="showDispatchQRModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+            <div @click.away="showDispatchQRModal = false" class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">掃描此 QR Code</h3>
+
+                <div class="flex justify-center mb-4">
+                    <div class="p-4 bg-white border-4 border-treatment-500 rounded-lg">
+                        <!-- 顯示 QR Code 或載入中 -->
+                        <template x-if="dispatchQRData.qr_codes[dispatchQRData.current_index]?.data_url">
+                            <img :src="dispatchQRData.qr_codes[dispatchQRData.current_index]?.data_url"
+                                 alt="Dispatch QR Code" class="w-48 h-48">
+                        </template>
+                        <template x-if="!dispatchQRData.qr_codes[dispatchQRData.current_index]?.data_url">
+                            <div class="w-48 h-48 flex items-center justify-center text-gray-400 bg-gray-100 rounded">
+                                <span x-show="dispatchQRData.qr_codes.length === 0">載入中...</span>
+                                <span x-show="dispatchQRData.qr_codes.length > 0">QR 生成失敗</span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- 多片輪播控制 -->
+                <div x-show="dispatchQRData.qr_codes.length > 1" class="flex justify-center items-center gap-4 mb-4">
+                    <button @click="dispatchQRData.current_index = Math.max(0, dispatchQRData.current_index - 1)"
+                            :disabled="dispatchQRData.current_index === 0"
+                            class="px-3 py-1 bg-gray-200 rounded-lg disabled:opacity-50">
+                        ◀ 上一片
+                    </button>
+                    <span class="text-sm text-gray-600"
+                          x-text="`${dispatchQRData.current_index + 1} / ${dispatchQRData.qr_codes.length}`"></span>
+                    <button @click="dispatchQRData.current_index = Math.min(dispatchQRData.qr_codes.length - 1, dispatchQRData.current_index + 1)"
+                            :disabled="dispatchQRData.current_index >= dispatchQRData.qr_codes.length - 1"
+                            class="px-3 py-1 bg-gray-200 rounded-lg disabled:opacity-50">
+                        下一片 ▶
+                    </button>
+                </div>
+
+                <div class="text-center text-sm text-gray-600 mb-4 space-y-1">
+                    <p>撥發單: <span class="font-mono" x-text="dispatchQRData.dispatch_id"></span></p>
+                    <p class="text-xs text-gray-400">
+                        伺服器: <span class="font-mono" x-text="getDisplayServerUrl()"></span>
+                    </p>
+                    <p x-show="isLocalhostAccess()" class="text-xs text-amber-600 mt-1">
+                        ⚠️ 手機請改用電腦 IP 存取 MIRS
+                    </p>
+                </div>
+
+                <div class="flex gap-3">
+                    <button @click="confirmDispatch(dispatchQRData.dispatch_id)"
+                            class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                        確認送出
+                    </button>
+                    <button @click="showDispatchQRModal = false"
+                            class="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                        關閉
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- 新增處置記錄 Modal -->
         <div x-show="showAddSurgeryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4" style="display: none;">
             <div @click.away="showAddSurgeryModal = false" class="bg-white rounded-xl shadow-2xl p-4 sm:p-5 md:p-6 max-w-2xl w-full mx-4 my-4 max-h-[95vh] overflow-y-auto">
@@ -4440,6 +4667,7 @@
             return {
                 // 基本設定
                 apiUrl: apiBaseUrl,
+                detectedServerUrl: null,  // v2.5: 從後端偵測的伺服器 URL
                 stationId: localStorage.getItem('stationId') || 'HC-000000',
                 stationName: localStorage.getItem('stationName') || '前線醫療站',
                 stationType: localStorage.getItem('stationType') || '',
@@ -4619,6 +4847,21 @@
                 dispenseHistory: [],
                 selectedDispenseForApproval: null,
 
+                // 藥局撥發 (MIRS v2.4 - Pharmacy Dispatch)
+                showDispatchModal: false,
+                showDispatchQRModal: false,
+                dispatchList: [],
+                dispatchForm: {
+                    target_station_id: '',
+                    target_station_name: '',
+                    items: [{ code: '', name: '', quantity: 1, searchText: '', filteredItems: [], showDropdown: false }]
+                },
+                dispatchQRData: {
+                    dispatch_id: '',
+                    qr_codes: [],
+                    current_index: 0
+                },
+
                 // 表單
                 receiveForm: {
                     itemCode: '',
@@ -4793,6 +5036,13 @@
                     this.updateTime();
                     setInterval(() => this.updateTime(), 1000);
 
+                    // 驗證 QRCode 函式庫是否可用 (qrcodejs)
+                    if (typeof QRCode !== 'undefined' && QRCode.CorrectLevel) {
+                        console.log('[Init] qrcodejs library loaded successfully');
+                    } else {
+                        console.error('[Init] qrcodejs library NOT loaded!');
+                    }
+
                     // Check if running in Vercel demo mode
                     try {
                         const demoRes = await fetch(`${this.apiUrl}/demo-status`);
@@ -4804,6 +5054,18 @@
                     } catch (e) {
                         // Not in demo mode or API not available
                         this.demoMode = false;
+                    }
+
+                    // v2.5: 取得伺服器 IP 資訊
+                    try {
+                        const infoRes = await fetch(`${this.apiUrl}/info`);
+                        if (infoRes.ok) {
+                            const infoData = await infoRes.json();
+                            this.detectedServerUrl = infoData.server_url;
+                            console.log('[Init] Server URL:', this.detectedServerUrl);
+                        }
+                    } catch (e) {
+                        console.log('[Init] Could not detect server IP');
                     }
 
                     // 同步所有表單的 stationId
@@ -7584,6 +7846,28 @@
                     }, 3000);
                 },
 
+                // ========== 伺服器位址顯示 (v2.5) ==========
+                isLocalhostAccess() {
+                    // 如果已偵測到伺服器 URL，就不需要警告
+                    if (this.detectedServerUrl) return false;
+                    const host = window.location.hostname;
+                    return host === 'localhost' || host === '127.0.0.1';
+                },
+
+                getDisplayServerUrl() {
+                    // 優先使用後端偵測的 IP
+                    if (this.detectedServerUrl) {
+                        return this.detectedServerUrl;
+                    }
+                    // 備用：使用前端的 hostname
+                    const host = window.location.hostname;
+                    const port = '8000';
+                    if (host === 'localhost' || host === '127.0.0.1') {
+                        return `http://<電腦IP>:${port}/api`;
+                    }
+                    return `http://${host}:${port}/api`;
+                },
+
                 // ========== PWA 同步通知 (v0.8) ==========
                 async initSyncNotifications() {
                     // 初始化時記錄當前的盤點記錄數量
@@ -8142,6 +8426,321 @@
                         isEmergency: false,
                         emergencyReason: ''
                     };
+                },
+
+                // ============================================================
+                // 藥局撥發功能 (MIRS v2.4 - Pharmacy Dispatch)
+                // ============================================================
+
+                async openDispatchModal() {
+                    await this.ensureItemsLoaded();
+                    await this.loadDispatchList();
+                    this.showDispatchModal = true;
+                },
+
+                resetDispatchForm() {
+                    this.dispatchForm = {
+                        target_station_id: '',
+                        target_station_name: '',
+                        items: [{ code: '', name: '', quantity: 1, searchText: '', filteredItems: [], showDropdown: false }]
+                    };
+                },
+
+                addDispatchItem() {
+                    this.dispatchForm.items.push({
+                        code: '',
+                        name: '',
+                        quantity: 1,
+                        searchText: '',
+                        filteredItems: [],
+                        showDropdown: false
+                    });
+                },
+
+                removeDispatchItem(index) {
+                    if (this.dispatchForm.items.length > 1) {
+                        this.dispatchForm.items.splice(index, 1);
+                    }
+                },
+
+                filterDispatchItems(index) {
+                    const searchText = this.dispatchForm.items[index].searchText.toLowerCase();
+                    if (!searchText) {
+                        this.dispatchForm.items[index].filteredItems = [];
+                        return;
+                    }
+                    // 只顯示藥品 (MED- 前綴)
+                    this.dispatchForm.items[index].filteredItems = this.items.filter(item =>
+                        item.code.startsWith('MED-') &&
+                        (item.code.toLowerCase().includes(searchText) ||
+                         item.name.toLowerCase().includes(searchText))
+                    );
+                },
+
+                selectDispatchItem(index, med) {
+                    this.dispatchForm.items[index].code = med.code;
+                    this.dispatchForm.items[index].name = med.name;
+                    this.dispatchForm.items[index].searchText = `${med.code} - ${med.name}`;
+                    this.dispatchForm.items[index].showDropdown = false;
+                    this.dispatchForm.items[index].filteredItems = [];
+                },
+
+                async loadDispatchList() {
+                    try {
+                        const response = await fetch(`${this.apiUrl}/pharmacy/dispatch`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.dispatchList = data.dispatches || [];
+                        }
+                    } catch (error) {
+                        console.error('載入撥發單列表失敗:', error);
+                    }
+                },
+
+                async createDispatch() {
+                    // 驗證
+                    const validItems = this.dispatchForm.items.filter(item => item.code && item.quantity > 0);
+                    if (validItems.length === 0) {
+                        this.toast('請至少選擇一項藥品', 'error');
+                        return;
+                    }
+
+                    try {
+                        // Step 1: 建立撥發單 (DRAFT)
+                        const createPayload = {
+                            target_station_id: this.dispatchForm.target_station_id || null,
+                            target_station_name: this.dispatchForm.target_station_name || null,
+                            created_by: this.stationId || 'MIRS',
+                            items: validItems.map(item => ({
+                                medicine_code: item.code,
+                                quantity: parseInt(item.quantity)
+                            }))
+                        };
+
+                        const createResponse = await fetch(`${this.apiUrl}/pharmacy/dispatch`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(createPayload)
+                        });
+
+                        if (!createResponse.ok) {
+                            const errData = await createResponse.json();
+                            const errMsg = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+                            this.toast(`建立撥發單失敗: ${errMsg}`, 'error');
+                            return;
+                        }
+
+                        const createData = await createResponse.json();
+                        const dispatchId = createData.dispatch_id;
+
+                        // Step 2: 預扣庫存 (DRAFT → RESERVED)
+                        const reserveResponse = await fetch(`${this.apiUrl}/pharmacy/dispatch/${dispatchId}/reserve`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ reserved_by: this.stationId || 'MIRS' })
+                        });
+
+                        if (!reserveResponse.ok) {
+                            const errData = await reserveResponse.json();
+                            const errMsg = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+                            this.toast(`預扣庫存失敗: ${errMsg}`, 'error');
+                            // 若預扣失敗則自動取消撥發單 (silent mode)
+                            await this.cancelDispatch(dispatchId, true);
+                            return;
+                        }
+
+                        // Step 3: 取得 QR Code 並渲染為圖片
+                        const qrResponse = await fetch(`${this.apiUrl}/pharmacy/dispatch/${dispatchId}/qr`);
+                        if (!qrResponse.ok) {
+                            this.toast('無法取得 QR Code', 'error');
+                            return;
+                        }
+
+                        const qrData = await qrResponse.json();
+                        console.log('[Dispatch] Got QR data:', qrData.qr_data?.length, 'chunks');
+                        const qrCodes = await this.generateQRDataURLs(qrData.qr_data || []);
+                        console.log('[Dispatch] Generated QR codes:', qrCodes.length, 'first data_url:', qrCodes[0]?.data_url?.substring(0, 50));
+
+                        this.dispatchQRData = {
+                            dispatch_id: dispatchId,
+                            qr_codes: qrCodes,
+                            current_index: 0
+                        };
+                        console.log('[Dispatch] dispatchQRData set:', this.dispatchQRData.qr_codes?.length);
+
+                        this.toast('撥發單建立成功，請讓藥局掃描 QR Code', 'success');
+                        this.resetDispatchForm();
+                        await this.loadDispatchList();
+                        await this.loadItems();
+                        await this.loadStats();
+
+                        // 顯示 QR Modal
+                        console.log('[Dispatch] Showing QR modal');
+                        this.showDispatchQRModal = true;
+
+                    } catch (error) {
+                        console.error('建立撥發單錯誤:', error);
+                        this.toast('建立撥發單失敗', 'error');
+                    }
+                },
+
+                // Adapter: 使用 qrcodejs (DOM-based) 產生 DataURL
+                generateQRToDataURL(text, width = 250) {
+                    return new Promise((resolve, reject) => {
+                        try {
+                            // 1. 創建臨時隱藏容器
+                            const tempDiv = document.createElement('div');
+                            tempDiv.style.position = 'absolute';
+                            tempDiv.style.left = '-9999px';
+                            document.body.appendChild(tempDiv);
+
+                            // 2. 使用 qrcodejs 生成 QR Code
+                            new QRCode(tempDiv, {
+                                text: text,
+                                width: width,
+                                height: width,
+                                colorDark: "#000000",
+                                colorLight: "#ffffff",
+                                correctLevel: QRCode.CorrectLevel.L
+                            });
+
+                            // 3. 嘗試從 Canvas 提取 Data URL (最穩定)
+                            const canvas = tempDiv.querySelector('canvas');
+                            if (canvas) {
+                                const dataUrl = canvas.toDataURL("image/png");
+                                document.body.removeChild(tempDiv);
+                                resolve(dataUrl);
+                                return;
+                            }
+
+                            // 4. Fallback: 延遲抓取 img.src (針對舊版瀏覽器)
+                            setTimeout(() => {
+                                const canvasRetry = tempDiv.querySelector('canvas');
+                                if (canvasRetry) {
+                                    const dataUrl = canvasRetry.toDataURL("image/png");
+                                    document.body.removeChild(tempDiv);
+                                    resolve(dataUrl);
+                                } else {
+                                    const img = tempDiv.querySelector('img');
+                                    document.body.removeChild(tempDiv);
+                                    if (img && img.src) {
+                                        resolve(img.src);
+                                    } else {
+                                        reject(new Error("Failed to generate QR Data URL"));
+                                    }
+                                }
+                            }, 50);
+                        } catch (e) {
+                            reject(e);
+                        }
+                    });
+                },
+
+                // 將 XIR1 chunk strings 轉換為 QR Code DataURL
+                async generateQRDataURLs(chunks) {
+                    console.log('[Dispatch] generateQRDataURLs called with', chunks?.length, 'chunks');
+                    if (!chunks || chunks.length === 0) {
+                        console.error('[Dispatch] No chunks provided');
+                        return [];
+                    }
+
+                    if (typeof QRCode === 'undefined') {
+                        console.error('[Dispatch] QRCode library not loaded (qrcodejs)');
+                        return chunks.map(chunk => ({ chunk, data_url: '' }));
+                    }
+
+                    const results = [];
+                    for (const chunk of chunks) {
+                        try {
+                            console.log('[Dispatch] Generating QR for chunk:', chunk.substring(0, 30) + '...');
+                            // 使用 Adapter 函式 (qrcodejs DOM-based)
+                            const dataUrl = await this.generateQRToDataURL(chunk, 250);
+                            console.log('[Dispatch] QR generated, dataUrl length:', dataUrl?.length);
+                            results.push({ chunk, data_url: dataUrl });
+                        } catch (e) {
+                            console.error('[Dispatch] QR generation failed:', e);
+                            results.push({ chunk, data_url: '' });
+                        }
+                    }
+                    console.log('[Dispatch] Generated', results.length, 'QR codes');
+                    return results;
+                },
+
+                async showDispatchQR(dispatch) {
+                    try {
+                        const response = await fetch(`${this.apiUrl}/pharmacy/dispatch/${dispatch.dispatch_id}/qr`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            const qrCodes = await this.generateQRDataURLs(data.qr_data || []);
+                            this.dispatchQRData = {
+                                dispatch_id: dispatch.dispatch_id,
+                                qr_codes: qrCodes,
+                                current_index: 0
+                            };
+                            this.showDispatchQRModal = true;
+                        } else {
+                            this.toast('無法取得 QR Code', 'error');
+                        }
+                    } catch (error) {
+                        console.error('取得 QR Code 失敗:', error);
+                        this.toast('取得 QR Code 失敗', 'error');
+                    }
+                },
+
+                async confirmDispatch(dispatchId) {
+                    try {
+                        const response = await fetch(`${this.apiUrl}/pharmacy/dispatch/${dispatchId}/confirm`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ dispatched_by: this.stationId || 'MIRS' })
+                        });
+
+                        if (response.ok) {
+                            this.toast('撥發單已確認送出', 'success');
+                            this.showDispatchQRModal = false;
+                            await this.loadDispatchList();
+                            await this.loadItems();
+                            await this.loadStats();
+                        } else {
+                            const errData = await response.json();
+                            const errMsg = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+                            this.toast(`確認失敗: ${errMsg}`, 'error');
+                        }
+                    } catch (error) {
+                        console.error('確認撥發單失敗:', error);
+                        this.toast('確認撥發單失敗', 'error');
+                    }
+                },
+
+                async cancelDispatch(dispatchId, silent = false) {
+                    if (!silent && !confirm('確定要取消此撥發單嗎？庫存將會釋放回可用狀態。')) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${this.apiUrl}/pharmacy/dispatch/${dispatchId}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            if (!silent) {
+                                this.toast('撥發單已取消', 'success');
+                            }
+                            await this.loadDispatchList();
+                            await this.loadItems();
+                            await this.loadStats();
+                        } else {
+                            const errData = await response.json();
+                            if (!silent) {
+                                this.toast(`取消失敗: ${errData.detail || '未知錯誤'}`, 'error');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('取消撥發單失敗:', error);
+                        if (!silent) {
+                            this.toast('取消撥發單失敗', 'error');
+                        }
+                    }
                 },
 
                 // 格式化位元組大小
