@@ -202,7 +202,7 @@
                 <div id="debugOutput" class="mt-4 text-xs text-teal-200 text-center"></div>
 
                 <div class="mt-4 text-center">
-                    <p class="text-teal-300 text-sm">版本 1.6.0</p>
+                    <p class="text-teal-300 text-sm">版本 1.7.0</p>
                 </div>
             </div>
         </div>
@@ -1039,6 +1039,342 @@
     <!-- JavaScript -->
     <script>
         // ========================================
+        // WAL (Write-Ahead Log) Module - Safety-II Phase 1
+        // IndexedDB-based operation logging for crash recovery
+        // ========================================
+        const MIRS_WAL = {
+            VERSION: '1.0.0',
+            SCHEMA_VERSION: 1,
+            DB_NAME: 'mirs_wal_db',
+            STORE_OPS: 'operations',
+            STORE_META: 'meta',
+            MAX_OPS: 2000,
+            db: null,
+            isReady: false,
+
+            // Initialize IndexedDB
+            async init() {
+                if (this.isReady) return this.db;
+
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.DB_NAME, this.SCHEMA_VERSION);
+
+                    request.onerror = () => {
+                        console.error('MIRS_WAL: IndexedDB open failed', request.error);
+                        reject(request.error);
+                    };
+
+                    request.onsuccess = () => {
+                        this.db = request.result;
+                        this.isReady = true;
+                        console.log('MIRS_WAL: IndexedDB ready');
+                        resolve(this.db);
+                    };
+
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+
+                        // Operations store with indexes
+                        if (!db.objectStoreNames.contains(this.STORE_OPS)) {
+                            const opsStore = db.createObjectStore(this.STORE_OPS, { keyPath: 'seq', autoIncrement: true });
+                            opsStore.createIndex('op_id', 'op_id', { unique: true });
+                            opsStore.createIndex('op_type', 'op_type', { unique: false });
+                            opsStore.createIndex('created_at', 'created_at', { unique: false });
+                            opsStore.createIndex('synced', 'synced', { unique: false });
+                        }
+
+                        // Meta store for schema version and replay state
+                        if (!db.objectStoreNames.contains(this.STORE_META)) {
+                            db.createObjectStore(this.STORE_META, { keyPath: 'key' });
+                        }
+
+                        console.log('MIRS_WAL: IndexedDB schema created/upgraded');
+                    };
+                });
+            },
+
+            // Generate unique operation ID
+            generateOpId() {
+                const ts = Date.now().toString(36);
+                const rand = Math.random().toString(36).substring(2, 8);
+                return `op_${ts}_${rand}`;
+            },
+
+            // Create operation object
+            createOp(type, payload, actorId = 'user') {
+                return {
+                    op_id: this.generateOpId(),
+                    op_type: type,
+                    actor_id: actorId,
+                    device_id: localStorage.getItem('mirs_device_id') || 'unknown',
+                    payload: payload,
+                    created_at: Date.now(),
+                    schema_version: this.SCHEMA_VERSION,
+                    synced: 0,
+                    sync_attempts: 0
+                };
+            },
+
+            // Append operation to WAL (write-before-mutate)
+            async append(type, payload, actorId = 'user') {
+                await this.init();
+                const op = this.createOp(type, payload, actorId);
+
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.STORE_OPS], 'readwrite');
+                    const store = tx.objectStore(this.STORE_OPS);
+
+                    const request = store.add(op);
+                    request.onsuccess = () => {
+                        op.seq = request.result;
+                        console.log('MIRS_WAL: Appended op', op.op_id, 'seq:', op.seq);
+                        resolve(op);
+                    };
+                    request.onerror = () => {
+                        console.error('MIRS_WAL: Append failed', request.error);
+                        reject(request.error);
+                    };
+                });
+            },
+
+            // Load all operations from WAL
+            async loadOps() {
+                await this.init();
+
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.STORE_OPS], 'readonly');
+                    const store = tx.objectStore(this.STORE_OPS);
+                    const request = store.getAll();
+
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+
+            // Load unsynced operations
+            async loadUnsyncedOps() {
+                await this.init();
+
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.STORE_OPS], 'readonly');
+                    const store = tx.objectStore(this.STORE_OPS);
+                    const index = store.index('synced');
+                    const request = index.getAll(IDBKeyRange.only(0));
+
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+
+            // Mark operations as synced
+            async markSynced(opIds) {
+                if (!opIds || opIds.length === 0) return;
+                await this.init();
+
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.STORE_OPS], 'readwrite');
+                    const store = tx.objectStore(this.STORE_OPS);
+                    const index = store.index('op_id');
+                    let completed = 0;
+
+                    opIds.forEach(opId => {
+                        const getReq = index.get(opId);
+                        getReq.onsuccess = () => {
+                            const op = getReq.result;
+                            if (op) {
+                                op.synced = 1;
+                                op.synced_at = Date.now();
+                                store.put(op);
+                            }
+                            completed++;
+                            if (completed === opIds.length) resolve();
+                        };
+                    });
+
+                    tx.onerror = () => reject(tx.error);
+                });
+            },
+
+            // Replay operations for crash recovery
+            async replay(applyFn) {
+                await this.init();
+                const ops = await this.loadOps();
+                const meta = await this.loadMeta();
+                const lastReplayed = meta.last_replayed_seq || 0;
+
+                let replayed = 0;
+                for (const op of ops) {
+                    if (op.seq > lastReplayed) {
+                        try {
+                            await applyFn(op);
+                            replayed++;
+                        } catch (e) {
+                            console.error('MIRS_WAL: Replay error for op', op.op_id, e);
+                        }
+                    }
+                }
+
+                if (ops.length > 0) {
+                    const maxSeq = Math.max(...ops.map(o => o.seq));
+                    await this.updateMeta({ last_replayed_seq: maxSeq });
+                }
+
+                console.log(`MIRS_WAL: Replayed ${replayed} operations`);
+                return replayed;
+            },
+
+            // Load meta data
+            async loadMeta() {
+                await this.init();
+
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.STORE_META], 'readonly');
+                    const store = tx.objectStore(this.STORE_META);
+                    const request = store.get('wal_meta');
+
+                    request.onsuccess = () => resolve(request.result || { key: 'wal_meta' });
+                    request.onerror = () => reject(request.error);
+                });
+            },
+
+            // Update meta data
+            async updateMeta(updates) {
+                await this.init();
+                const meta = await this.loadMeta();
+                const updated = { ...meta, ...updates, updated_at: Date.now() };
+
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.STORE_META], 'readwrite');
+                    const store = tx.objectStore(this.STORE_META);
+                    const request = store.put(updated);
+
+                    request.onsuccess = () => resolve(updated);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+
+            // Compact WAL: keep only unsynced ops and audit-significant ops
+            async compact(auditOpTypes = ['BREAK_GLASS', 'CONTROLLED_ITEM_DISPENSE', 'BLOOD_TRANSFUSION']) {
+                await this.init();
+                const ops = await this.loadOps();
+                const now = Date.now();
+                const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+
+                // Keep: unsynced OR audit-significant OR less than 1 week old
+                const toKeep = ops.filter(op =>
+                    op.synced === 0 ||
+                    auditOpTypes.includes(op.op_type) ||
+                    (now - op.created_at) < oneWeekMs
+                );
+
+                const toDelete = ops.filter(op => !toKeep.includes(op));
+
+                if (toDelete.length === 0) {
+                    console.log('MIRS_WAL: No ops to compact');
+                    return { deleted: 0, remaining: ops.length };
+                }
+
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([this.STORE_OPS], 'readwrite');
+                    const store = tx.objectStore(this.STORE_OPS);
+
+                    toDelete.forEach(op => store.delete(op.seq));
+
+                    tx.oncomplete = () => {
+                        console.log(`MIRS_WAL: Compacted ${toDelete.length} ops, kept ${toKeep.length}`);
+                        resolve({ deleted: toDelete.length, remaining: toKeep.length });
+                    };
+                    tx.onerror = () => reject(tx.error);
+                });
+            },
+
+            // Get WAL status
+            async getStatus() {
+                await this.init();
+                const ops = await this.loadOps();
+                const unsynced = ops.filter(op => op.synced === 0);
+                const meta = await this.loadMeta();
+
+                return {
+                    version: this.VERSION,
+                    schemaVersion: this.SCHEMA_VERSION,
+                    totalOps: ops.length,
+                    unsyncedOps: unsynced.length,
+                    lastReplayedSeq: meta.last_replayed_seq || 0,
+                    oldestOpTime: ops.length > 0 ? Math.min(...ops.map(o => o.created_at)) : null,
+                    newestOpTime: ops.length > 0 ? Math.max(...ops.map(o => o.created_at)) : null
+                };
+            },
+
+            // Migrate from legacy localStorage pendingActions
+            async migrateFromLegacy() {
+                const legacyKey = 'mirs_pending_actions';
+                const legacyData = localStorage.getItem(legacyKey);
+
+                if (!legacyData) {
+                    console.log('MIRS_WAL: No legacy data to migrate');
+                    return 0;
+                }
+
+                try {
+                    const actions = JSON.parse(legacyData);
+                    if (!Array.isArray(actions) || actions.length === 0) {
+                        console.log('MIRS_WAL: Legacy data is empty');
+                        return 0;
+                    }
+
+                    await this.init();
+                    let migrated = 0;
+
+                    for (const action of actions) {
+                        const op = {
+                            op_id: action.action_id || action.id || this.generateOpId(),
+                            op_type: action.action_type || action.type || 'LEGACY_ACTION',
+                            actor_id: action.payload?.checked_by || action.data?.received_by || 'legacy',
+                            device_id: localStorage.getItem('mirs_device_id') || 'unknown',
+                            payload: action.payload || action.data || action,
+                            created_at: action.created_at ? new Date(action.created_at).getTime() : Date.now(),
+                            schema_version: this.SCHEMA_VERSION,
+                            synced: 0,
+                            sync_attempts: 0,
+                            migrated_from: 'localStorage'
+                        };
+
+                        await new Promise((resolve, reject) => {
+                            const tx = this.db.transaction([this.STORE_OPS], 'readwrite');
+                            const store = tx.objectStore(this.STORE_OPS);
+                            const request = store.add(op);
+                            request.onsuccess = () => resolve();
+                            request.onerror = () => reject(request.error);
+                        });
+                        migrated++;
+                    }
+
+                    // Clear legacy data after successful migration
+                    localStorage.removeItem(legacyKey);
+                    console.log(`MIRS_WAL: Migrated ${migrated} legacy actions`);
+                    return migrated;
+
+                } catch (e) {
+                    console.error('MIRS_WAL: Migration error', e);
+                    return 0;
+                }
+            },
+
+            // Get pending actions for sync (compatibility with existing sync logic)
+            async getPendingActionsForSync() {
+                const ops = await this.loadUnsyncedOps();
+                // Convert to legacy format for existing sync API
+                return ops.map(op => ({
+                    action_id: op.op_id,
+                    action_type: op.op_type,
+                    payload: op.payload,
+                    created_at: new Date(op.created_at).toISOString()
+                }));
+            }
+        };
+
+        // ========================================
         // 全域狀態
         // ========================================
         const state = {
@@ -1133,14 +1469,8 @@
                 }
             }
 
-            // 載入待同步操作
-            const savedActions = localStorage.getItem('mirs_pending_actions');
-            if (savedActions) {
-                try {
-                    state.pendingActions = JSON.parse(savedActions);
-                    updateSyncStatus();
-                } catch (e) {}
-            }
+            // 初始化 WAL 並遷移舊資料
+            initWAL();
 
             // 載入庫存盤點記錄
             loadInventoryChecks();
@@ -1717,10 +2047,8 @@
                 }
             }
 
-            // 離線或 API 失敗：加入待同步佇列
-            state.pendingActions.push(action);
-            localStorage.setItem('mirs_pending_actions', JSON.stringify(state.pendingActions));
-            updateSyncStatus();
+            // 離線或 API 失敗：使用 WAL 記錄操作
+            await walAppendAndQueue('BLOOD_RECEIVE', action.data, state.staffId);
 
             closeBloodReceiveModal();
             alert(`已登記 ${state.bloodReceiveForm.quantity} 袋 ${state.bloodReceiveForm.bloodType} 血袋入庫\n（待同步）`);
@@ -1927,10 +2255,8 @@
                 }
             }
 
-            // 離線或 API 失敗：加入待同步佇列
-            state.pendingActions.push(action);
-            localStorage.setItem('mirs_pending_actions', JSON.stringify(state.pendingActions));
-            updateSyncStatus();
+            // 離線或 API 失敗：使用 WAL 記錄操作
+            await walAppendAndQueue('SUPPLY_RECEIVE', action.data, state.staffId);
 
             closeSupplyReceiveModal();
             alert(`已登記 ${state.supplyReceiveForm.quantity} ${state.supplyReceiveForm.itemName} 入庫\n（待同步）`);
@@ -2349,18 +2675,8 @@
                     showToast('同步失敗，請重試', 'error');
                 }
             } else {
-                // 離線模式：暫存
-                const action = {
-                    action_id: generateUUID(),
-                    action_type: 'EQUIPMENT_CHECK',
-                    payload: checkData,
-                    created_at: new Date().toISOString()
-                };
-
-                state.pendingActions.push(action);
-                savePendingActions();
-                updateSyncStatus();
-
+                // 離線模式：使用 WAL 記錄操作
+                await walAppendAndQueue('EQUIPMENT_CHECK', checkData, state.staffId);
                 showToast('已暫存，將在網路恢復後同步');
             }
 
@@ -3020,16 +3336,62 @@
                   (stats.errors > 0 ? '錯誤項目已加入待處理佇列，請至 Hub 主控台處理。' : ''));
         }
 
-        function saveCheckForSync(checkData) {
-            const action = {
-                action_id: generateUUID(),
-                action_type: 'INVENTORY_CHECK',
-                payload: checkData,
-                created_at: new Date().toISOString()
-            };
-            state.pendingActions.push(action);
-            savePendingActions();
-            updateSyncStatus();
+        async function saveCheckForSync(checkData) {
+            // 使用 WAL 記錄庫存盤點操作
+            await walAppendAndQueue('INVENTORY_CHECK', checkData, state.staffId);
+        }
+
+        // ========================================
+        // WAL 初始化
+        // ========================================
+        async function initWAL() {
+            try {
+                // 初始化 WAL
+                await MIRS_WAL.init();
+
+                // 遷移舊的 localStorage 資料
+                const migrated = await MIRS_WAL.migrateFromLegacy();
+                if (migrated > 0) {
+                    console.log(`MIRS: Migrated ${migrated} legacy actions to WAL`);
+                }
+
+                // 更新同步狀態
+                await updateSyncStatusAsync();
+
+                console.log('MIRS: WAL initialized');
+            } catch (e) {
+                console.error('MIRS: WAL init error', e);
+                // Fallback: 繼續使用舊版 localStorage
+            }
+        }
+
+        // WAL 操作函數：寫入前先記錄到 WAL
+        async function walAppendAndQueue(type, payload, actorId) {
+            try {
+                const op = await MIRS_WAL.append(type, payload, actorId);
+                // 同步更新 state.pendingActions (for UI compatibility)
+                state.pendingActions.push({
+                    action_id: op.op_id,
+                    action_type: op.op_type,
+                    payload: op.payload,
+                    created_at: new Date(op.created_at).toISOString()
+                });
+                await updateSyncStatusAsync();
+                return op;
+            } catch (e) {
+                console.error('MIRS: WAL append error', e);
+                // Fallback to old method
+                const action = {
+                    action_id: generateUUID(),
+                    action_type: type,
+                    payload: payload,
+                    created_at: new Date().toISOString()
+                };
+                state.pendingActions.push(action);
+                savePendingActions();
+                updateSyncStatus();
+                return action;
+            }
         }
 
         // ========================================
@@ -3051,15 +3413,33 @@
         }
 
         function savePendingActions() {
+            // Legacy fallback - only used if WAL fails
             localStorage.setItem('mirs_pending_actions', JSON.stringify(state.pendingActions));
         }
 
+        // Async version that uses WAL
+        async function updateSyncStatusAsync() {
+            try {
+                const status = await MIRS_WAL.getStatus();
+                const pendingCount = status.unsyncedOps;
+                state.pendingActions = await MIRS_WAL.getPendingActionsForSync();
+                updateSyncStatusUI(pendingCount);
+            } catch (e) {
+                // Fallback
+                updateSyncStatus();
+            }
+        }
+
         function updateSyncStatus() {
+            const pendingCount = state.pendingActions.length;
+            updateSyncStatusUI(pendingCount);
+        }
+
+        function updateSyncStatusUI(pendingCount) {
             const countEl = document.getElementById('pendingActionsCount');
             const headerBtn = document.getElementById('headerSyncBtn');
             const headerText = document.getElementById('headerSyncText');
             const headerBadge = document.getElementById('headerSyncBadge');
-            const pendingCount = state.pendingActions.length;
 
             if (pendingCount > 0) {
                 // 底部狀態欄
@@ -3089,8 +3469,17 @@
             const headerIcon = document.getElementById('headerSyncIcon');
             const headerText = document.getElementById('headerSyncText');
 
+            // 檢查 WAL 中的待同步數量
+            let pendingCount = 0;
+            try {
+                const status = await MIRS_WAL.getStatus();
+                pendingCount = status.unsyncedOps;
+            } catch (e) {
+                pendingCount = state.pendingActions.length;
+            }
+
             // 如果沒有待同步項目，顯示訊息
-            if (state.pendingActions.length === 0) {
+            if (pendingCount === 0) {
                 alert('沒有待同步的操作');
                 return;
             }
@@ -3109,10 +3498,10 @@
             try {
                 await syncPendingActions();
                 headerText.textContent = '同步完成';
-                setTimeout(() => updateSyncStatus(), 1500);
+                setTimeout(() => updateSyncStatusAsync(), 1500);
             } catch (e) {
                 headerText.textContent = '同步失敗';
-                setTimeout(() => updateSyncStatus(), 2000);
+                setTimeout(() => updateSyncStatusAsync(), 2000);
             } finally {
                 headerIcon.classList.remove('animate-spin');
                 headerBtn.disabled = false;
@@ -3120,7 +3509,15 @@
         }
 
         async function syncPendingActions() {
-            if (state.pendingActions.length === 0) return;
+            // 從 WAL 取得待同步操作
+            let actions;
+            try {
+                actions = await MIRS_WAL.getPendingActionsForSync();
+            } catch (e) {
+                actions = state.pendingActions;
+            }
+
+            if (!actions || actions.length === 0) return;
 
             try {
                 const response = await fetch(`${API_BASE}/sync/actions`, {
@@ -3130,7 +3527,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        actions: state.pendingActions
+                        actions: actions
                     })
                 });
 
@@ -3138,16 +3535,34 @@
                     const data = await response.json();
                     console.log('Sync result:', data);
 
-                    // 清除已同步的操作
+                    // 標記已同步的操作
                     const processedIds = data.results
                         .filter(r => r.status !== 'REJECTED')
                         .map(r => r.action_id);
 
+                    // 在 WAL 中標記為已同步
+                    try {
+                        await MIRS_WAL.markSynced(processedIds);
+                    } catch (e) {
+                        console.error('MIRS: Failed to mark synced in WAL', e);
+                    }
+
+                    // 更新 state.pendingActions (for compatibility)
                     state.pendingActions = state.pendingActions.filter(
                         a => !processedIds.includes(a.action_id)
                     );
-                    savePendingActions();
-                    updateSyncStatus();
+
+                    await updateSyncStatusAsync();
+
+                    // 定期壓縮 WAL
+                    try {
+                        const status = await MIRS_WAL.getStatus();
+                        if (status.totalOps > 100) {
+                            await MIRS_WAL.compact();
+                        }
+                    } catch (e) {
+                        console.error('MIRS: WAL compact error', e);
+                    }
 
                     // 重新載入資料
                     await refreshDashboard();
