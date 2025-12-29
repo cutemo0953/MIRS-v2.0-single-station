@@ -1,6 +1,34 @@
 # MIRS v1.4.5 Raspberry Pi 部署指南
 
-## 快速部署步驟
+## 快速參考 (已部署的系統)
+
+### 更新系統
+```bash
+sudo systemctl stop mirs.service
+cd ~/medical-inventory-system_v1.4.5
+git pull origin v1.4.2-plus
+sudo systemctl start mirs.service
+sudo systemctl status mirs.service
+```
+
+### 常用指令
+```bash
+# 查看狀態
+sudo systemctl status mirs.service
+
+# 重新啟動
+sudo systemctl restart mirs.service
+
+# 查看日誌
+sudo journalctl -u mirs.service -f
+
+# 查看 IP 位址
+hostname -I
+```
+
+---
+
+## 首次部署步驟
 
 此版本已修復所有 Raspberry Pi 相容性問題，可直接部署使用。
 
