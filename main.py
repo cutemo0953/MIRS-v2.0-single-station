@@ -707,6 +707,7 @@ class DatabaseManager:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     used_at TIMESTAMP,
                     used_for TEXT,
+                    station_id TEXT,
                     CHECK(status IN ('AVAILABLE', 'RESERVED', 'USED', 'EXPIRED', 'DISCARDED'))
                 )
             """)
@@ -714,6 +715,12 @@ class DatabaseManager:
             # v1.4.2-plus: 確保 donor_info 欄位存在 (支援既有資料庫升級)
             try:
                 cursor.execute("ALTER TABLE blood_bags ADD COLUMN donor_info TEXT")
+            except:
+                pass  # 欄位已存在則忽略
+
+            # v1.5.1: 確保 station_id 欄位存在 (修復血袋站點追蹤 bug)
+            try:
+                cursor.execute("ALTER TABLE blood_bags ADD COLUMN station_id TEXT")
             except:
                 pass  # 欄位已存在則忽略
 
@@ -2024,9 +2031,9 @@ class DatabaseManager:
 
                     cursor.execute("""
                         INSERT INTO blood_bags
-                        (bag_code, blood_type, volume_ml, collection_date, expiry_date, donor_info, status, created_at)
-                        VALUES (?, ?, 250, ?, ?, ?, 'AVAILABLE', ?)
-                    """, (bag_code, request.bloodType, collection_date, expiry_date, donor_info, tw_now_str))
+                        (bag_code, blood_type, volume_ml, collection_date, expiry_date, donor_info, status, created_at, station_id)
+                        VALUES (?, ?, 250, ?, ?, ?, 'AVAILABLE', ?, ?)
+                    """, (bag_code, request.bloodType, collection_date, expiry_date, donor_info, tw_now_str, request.stationId))
 
                     created_bag_codes.append(bag_code)
 
@@ -7595,6 +7602,9 @@ async def create_blood_bags(request: BloodBagCreateRequest):
         else:
             expiry_date = (datetime.strptime(collection_date, "%Y-%m-%d") + timedelta(days=35)).strftime("%Y-%m-%d")
 
+        # v1.5.1: 取得站點 ID 用於血袋追蹤
+        station_id = config.get_station_id()
+
         created_bags = []
         for i in range(request.quantity):
             seq = start_seq + i
@@ -7602,10 +7612,10 @@ async def create_blood_bags(request: BloodBagCreateRequest):
 
             cursor.execute("""
                 INSERT INTO blood_bags
-                (bag_code, blood_type, volume_ml, collection_date, expiry_date, batch_number, remarks)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (bag_code, blood_type, volume_ml, collection_date, expiry_date, batch_number, remarks, station_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (bag_code, request.bloodType, request.volumeMl, collection_date,
-                  expiry_date, request.batchNumber, request.remarks))
+                  expiry_date, request.batchNumber, request.remarks, station_id))
 
             created_bags.append({
                 "bag_code": bag_code,
@@ -7615,7 +7625,6 @@ async def create_blood_bags(request: BloodBagCreateRequest):
             })
 
         # 同步更新 blood_inventory
-        station_id = config.get_station_id()
         cursor.execute("""
             INSERT INTO blood_inventory (blood_type, quantity, station_id)
             VALUES (?, ?, ?)
@@ -7785,12 +7794,13 @@ async def discard_blood_bag(request: BloodBagDiscardRequest):
         """, (f"丟棄原因: {request.reason}", request.bagCode))
 
         # 同步更新 blood_inventory (減少庫存)
-        station_id = config.get_station_id()
+        # v1.5.1: 使用血袋本身的 station_id，若無則使用目前站點
+        bag_station_id = bag['station_id'] if bag['station_id'] else config.get_station_id()
         cursor.execute("""
             UPDATE blood_inventory
             SET quantity = quantity - 1, last_updated = CURRENT_TIMESTAMP
             WHERE blood_type = ? AND station_id = ?
-        """, (bag['blood_type'], station_id))
+        """, (bag['blood_type'], bag_station_id))
 
         # 記錄血袋事件
         cursor.execute("""
