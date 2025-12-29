@@ -173,10 +173,57 @@ sudo nmcli device wifi hotspot ifname wlan0 ssid MedicalStation password Medical
 
 ### Q: 如何更新到最新版本？
 
+**快速更新 (有網路)：**
 ```bash
+# 1. 停止服務
+sudo systemctl stop mirs.service
+
+# 2. 備份資料庫
+cp ~/medical-inventory-system_v1.4.5/medical_inventory.db \
+   ~/medical-inventory-system_v1.4.5/backup_$(date +%Y%m%d_%H%M%S).db
+
+# 3. 拉取最新程式碼
 cd ~/medical-inventory-system_v1.4.5
+git fetch origin
 git pull origin main
-sudo systemctl restart mirs.service
+
+# 4. 更新依賴 (如有)
+pip3 install --break-system-packages -r requirements_v1.4.5.txt
+
+# 5. 重新啟動
+sudo systemctl start mirs.service
+
+# 6. 驗證
+sudo systemctl status mirs.service
+curl -s http://localhost:8000/api/health
+```
+
+**從 USB 更新 (離線環境)：**
+```bash
+# 1. 停止服務
+sudo systemctl stop mirs.service
+
+# 2. 備份資料庫
+cp ~/medical-inventory-system_v1.4.5/medical_inventory.db \
+   ~/backup_db_$(date +%Y%m%d_%H%M%S).db
+
+# 3. 複製新版程式碼
+cp -r /media/pi/USB_DRIVE/MIRS/* ~/medical-inventory-system_v1.4.5/
+# 注意：若要保留資料，先把 medical_inventory.db 備份出來再還原
+
+# 4. 還原資料庫
+cp ~/backup_db_*.db ~/medical-inventory-system_v1.4.5/medical_inventory.db
+
+# 5. 重新啟動
+sudo systemctl start mirs.service
+```
+
+**回滾到舊版本：**
+```bash
+sudo systemctl stop mirs.service
+cp ~/backup_db_YYYYMMDD_HHMMSS.db ~/medical-inventory-system_v1.4.5/medical_inventory.db
+cd ~/medical-inventory-system_v1.4.5 && git checkout <commit-hash>
+sudo systemctl start mirs.service
 ```
 
 ## 部署檢查清單
