@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
 醫療站庫存管理系統 - 後端 API
-版本: v1.4.9
+版本: v1.5.0
 新增: 藥品分流管理、血袋標籤列印、政府標準預載資料庫
 v1.4.8: 樹莓派部署修復、韌性估算修正、PWA 配對修正
 v1.4.9: 藥局撥發 API (Pharmacy Dispatch v1.1) - 庫存保留、撥發確認、收貨回執
+v1.5.0: 麻醉模組 (Anesthesia Module v1.5.1) - Event-Sourced 架構
 """
 
 import logging
@@ -43,6 +44,15 @@ import uvicorn
 # v1.4.5新增: 緊急功能相關套件
 import qrcode
 from io import BytesIO
+
+# v1.5.1新增: 麻醉模組
+try:
+    from routes.anesthesia import router as anesthesia_router, init_anesthesia_schema
+    ANESTHESIA_MODULE_AVAILABLE = True
+except ImportError as e:
+    ANESTHESIA_MODULE_AVAILABLE = False
+    anesthesia_router = None
+    init_anesthesia_schema = None
 
 
 # ============================================================================
@@ -104,7 +114,7 @@ class StationType(str, Enum):
 
 class Config:
     """系統配置 - v1.4.8 穩定單站點架構"""
-    VERSION = "1.4.9-demo" if IS_VERCEL else "1.4.9"
+    VERSION = "1.5.0-demo" if IS_VERCEL else "1.5.0"
     DATABASE_PATH = ":memory:" if IS_VERCEL else "medical_inventory.db"
     TEMPLATES_PATH = str(PROJECT_ROOT / "templates")
 
@@ -1226,6 +1236,13 @@ class DatabaseManager:
                     INSERT OR IGNORE INTO blood_inventory (blood_type, quantity, station_id)
                     VALUES (?, 0, ?)
                 """, (blood_type, config.get_station_id()))
+
+            # v1.5.1: 初始化麻醉模組 schema
+            if ANESTHESIA_MODULE_AVAILABLE and init_anesthesia_schema:
+                try:
+                    init_anesthesia_schema(cursor)
+                except Exception as e:
+                    logger.warning(f"麻醉模組 schema 初始化失敗: {e}")
 
             conn.commit()
             logger.info(f"✓ 資料庫初始化完成: {config.get_station_id()}")
@@ -3013,6 +3030,54 @@ async def serve_mobile_icon(filename: str):
     if icon_file.exists() and icon_file.suffix in ['.png', '.svg', '.ico']:
         media_type = "image/png" if filename.endswith('.png') else "image/svg+xml"
         return FileResponse(icon_file, media_type=media_type)
+    raise HTTPException(status_code=404)
+
+
+# ============================================================================
+# v1.5.1: Anesthesia PWA Routes (麻醉站)
+# ============================================================================
+
+@app.get("/anesthesia")
+@app.get("/anesthesia/")
+async def serve_anesthesia_pwa():
+    """
+    Serve MIRS Anesthesia PWA (麻醉站)
+    """
+    anes_file = PROJECT_ROOT / "frontend" / "anesthesia" / "index.html"
+    if anes_file.exists():
+        return FileResponse(
+            anes_file,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Anesthesia PWA not found")
+
+
+@app.get("/anesthesia/manifest.json")
+async def serve_anesthesia_manifest():
+    """Serve Anesthesia PWA manifest"""
+    manifest_file = PROJECT_ROOT / "frontend" / "anesthesia" / "manifest.json"
+    if manifest_file.exists():
+        return FileResponse(manifest_file, media_type="application/manifest+json")
+    raise HTTPException(status_code=404)
+
+
+@app.get("/anesthesia/icons/{filename}")
+async def serve_anesthesia_icon(filename: str):
+    """Serve Anesthesia PWA icons"""
+    icon_file = PROJECT_ROOT / "frontend" / "anesthesia" / "icons" / filename
+    if icon_file.exists() and icon_file.suffix in ['.png', '.svg', '.ico']:
+        media_type = "image/png" if filename.endswith('.png') else "image/svg+xml"
+        return FileResponse(icon_file, media_type=media_type)
+    # Fallback to mobile icons if anesthesia-specific ones don't exist
+    fallback = PROJECT_ROOT / "static" / "mobile" / "icons" / filename
+    if fallback.exists() and fallback.suffix in ['.png', '.svg', '.ico']:
+        media_type = "image/png" if filename.endswith('.png') else "image/svg+xml"
+        return FileResponse(fallback, media_type=media_type)
     raise HTTPException(status_code=404)
 
 
@@ -8066,6 +8131,13 @@ except ImportError as e:
     logger.warning(f"MIRS Mobile API 未啟用: {e}")
 except Exception as e:
     logger.error(f"MIRS Mobile API 初始化失敗: {e}")
+
+# v1.5.1: 麻醉模組路由
+if ANESTHESIA_MODULE_AVAILABLE and anesthesia_router:
+    app.include_router(anesthesia_router)
+    logger.info("✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)")
+else:
+    logger.warning("麻醉模組未啟用")
 
 
 class ResilienceConfigUpdate(BaseModel):

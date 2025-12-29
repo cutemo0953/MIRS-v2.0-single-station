@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>麻醉站 - MIRS</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --card-hover: #334155;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-subtitle {
+            font-size: 0.875rem;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        /* Resource Bar */
+        .resource-bar {
+            display: flex;
+            gap: 16px;
+            padding: 12px 16px;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .resource-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .resource-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .resource-value.warning {
+            color: var(--warning);
+        }
+
+        .resource-value.danger {
+            color: var(--danger);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Content */
+        .main {
+            padding: 16px;
+            padding-bottom: 100px;
+        }
+
+        /* Case Info Card */
+        .case-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .case-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .case-id {
+            font-size: 0.875rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .patient-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .case-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .case-status.preop { background: var(--warning); color: #000; }
+        .case-status.in_progress { background: var(--success); }
+        .case-status.pacu { background: var(--primary); }
+        .case-status.closed { background: var(--text-muted); }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .quick-btn {
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .quick-btn:active {
+            transform: scale(0.95);
+            background: var(--card-hover);
+        }
+
+        .quick-btn .icon {
+            font-size: 1.5rem;
+        }
+
+        .quick-btn.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .quick-btn.success {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .quick-btn.warning {
+            background: var(--warning);
+            border-color: var(--warning);
+            color: #000;
+        }
+
+        /* Vitals Grid */
+        .vitals-section {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .vital-input {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .vital-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .vital-value {
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 1.5rem;
+            font-weight: 600;
+            width: 100%;
+            text-align: center;
+            outline: none;
+        }
+
+        .vital-value::placeholder {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .vital-unit {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Timeline */
+        .timeline-section {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .timeline {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .timeline-time {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            min-width: 50px;
+        }
+
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            margin-top: 4px;
+        }
+
+        .timeline-dot.vital { background: var(--success); }
+        .timeline-dot.med { background: var(--warning); }
+        .timeline-dot.milestone { background: var(--danger); }
+
+        .timeline-content {
+            flex: 1;
+        }
+
+        .timeline-type {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .timeline-desc {
+            font-size: 0.9rem;
+            margin-top: 2px;
+        }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 8px 16px;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-item .icon {
+            font-size: 1.25rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card);
+            border-radius: 20px 20px 0 0;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        /* Quick Med Buttons */
+        .med-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .med-btn {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--text);
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .med-btn:active {
+            background: var(--card-hover);
+        }
+
+        .med-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .med-dose {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:active {
+            background: var(--primary-dark);
+        }
+
+        /* Case List (No Active Case View) */
+        .case-list {
+            margin-top: 16px;
+        }
+
+        .case-list-item {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+
+        .case-list-item:active {
+            background: var(--card-hover);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-title">
+            <span>🏥</span>
+            <span>麻醉站</span>
+            <span id="contextBadge" class="case-status hidden">BATTLEFIELD</span>
+            <span id="syncIndicator" class="sync-indicator" title="同步狀態">
+                <span class="sync-icon">🔄</span>
+                <span id="syncBadge" class="sync-badge hidden">0</span>
+            </span>
+        </div>
+        <div class="header-subtitle" id="stationInfo">MIRS v1.5.1</div>
+    </header>
+
+    <!-- Resource Bar (shown when case is active) -->
+    <div class="resource-bar hidden" id="resourceBar">
+        <div class="resource-item">
+            <span>O2</span>
+            <span class="resource-value" id="o2Minutes">--</span>
+            <span>min</span>
+        </div>
+        <div class="resource-item">
+            <span>SpO2</span>
+            <span class="resource-value" id="lastSpo2">--</span>
+            <span>%</span>
+        </div>
+        <div class="resource-item">
+            <span>HR</span>
+            <span class="resource-value" id="lastHr">--</span>
+        </div>
+        <div class="resource-item">
+            <span>BP</span>
+            <span class="resource-value" id="lastBp">--/--</span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- No Case View -->
+        <div id="noCaseView">
+            <div class="quick-actions">
+                <button class="quick-btn primary" onclick="showNewCaseModal()">
+                    <span class="icon">➕</span>
+                    <span>新增案例</span>
+                </button>
+                <button class="quick-btn" onclick="loadCases()">
+                    <span class="icon">📋</span>
+                    <span>今日案例</span>
+                </button>
+            </div>
+
+            <div class="case-list" id="caseList">
+                <div class="empty-state">
+                    <div class="icon">🏥</div>
+                    <p>尚無進行中的案例</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Case View -->
+        <div id="activeCaseView" class="hidden">
+            <!-- Case Info -->
+            <div class="case-card">
+                <div class="case-header">
+                    <div>
+                        <div class="case-id" id="caseId">ANES-20251229-ABC</div>
+                        <div class="patient-name" id="patientName">病患姓名</div>
+                    </div>
+                    <span class="case-status preop" id="caseStatus">PREOP</span>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-size: 0.875rem; color: var(--text-muted);" id="techniqueInfo">GA_ETT</span>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button class="quick-btn primary" onclick="showVitalsModal()">
+                    <span class="icon">💓</span>
+                    <span>記錄 Vitals</span>
+                </button>
+                <button class="quick-btn warning" onclick="showMedModal()">
+                    <span class="icon">💊</span>
+                    <span>給藥</span>
+                </button>
+                <button class="quick-btn" onclick="addMilestone('ANESTHESIA_START')" id="btnStart">
+                    <span class="icon">▶️</span>
+                    <span>開始麻醉</span>
+                </button>
+                <button class="quick-btn" onclick="showMoreActions()">
+                    <span class="icon">⋯</span>
+                    <span>更多</span>
+                </button>
+            </div>
+
+            <!-- Timeline -->
+            <div class="timeline-section">
+                <div class="section-title">事件時間軸</div>
+                <div class="timeline" id="timeline">
+                    <div class="empty-state">
+                        <p>尚無事件</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('case')">
+            <span class="icon">🏥</span>
+            <span>案例</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('preop')">
+            <span class="icon">📋</span>
+            <span>術前</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('drugs')">
+            <span class="icon">💊</span>
+            <span>管藥</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('o2')">
+            <span class="icon">🫁</span>
+            <span>氧氣</span>
+        </div>
+    </nav>
+
+    <!-- New Case Modal -->
+    <div class="modal" id="newCaseModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">新增麻醉案例</h2>
+                <button class="modal-close" onclick="closeModal('newCaseModal')">&times;</button>
+            </div>
+            <form onsubmit="createCase(event)">
+                <div class="form-group">
+                    <label class="form-label">病歷號 / 病患 ID</label>
+                    <input type="text" class="form-input" id="newPatientId" required placeholder="輸入病歷號">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">病患姓名</label>
+                    <input type="text" class="form-input" id="newPatientName" placeholder="選填">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">麻醉方式</label>
+                    <select class="form-input" id="newTechnique">
+                        <option value="GA_ETT">全身麻醉 (ETT)</option>
+                        <option value="GA_LMA">全身麻醉 (LMA)</option>
+                        <option value="RA_SPINAL">脊椎麻醉</option>
+                        <option value="RA_EPIDURAL">硬膜外麻醉</option>
+                        <option value="LA">局部麻醉</option>
+                        <option value="SEDATION">鎮靜</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">模式</label>
+                    <select class="form-input" id="newContextMode">
+                        <option value="STANDARD">標準模式</option>
+                        <option value="BATTLEFIELD">戰時模式</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">建立案例</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Vitals Modal -->
+    <div class="modal" id="vitalsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">記錄 Vital Signs</h2>
+                <button class="modal-close" onclick="closeModal('vitalsModal')">&times;</button>
+            </div>
+            <form onsubmit="submitVitals(event)">
+                <div class="vitals-grid">
+                    <div class="vital-input">
+                        <div class="vital-label">BP (sys)</div>
+                        <input type="number" class="vital-value" id="vBpSys" placeholder="120">
+                        <div class="vital-unit">mmHg</div>
+                    </div>
+                    <div class="vital-input">
+                        <div class="vital-label">BP (dia)</div>
+                        <input type="number" class="vital-value" id="vBpDia" placeholder="80">
+                        <div class="vital-unit">mmHg</div>
+                    </div>
+                    <div class="vital-input">
+                        <div class="vital-label">HR</div>
+                        <input type="number" class="vital-value" id="vHr" placeholder="72">
+                        <div class="vital-unit">bpm</div>
+                    </div>
+                    <div class="vital-input">
+                        <div class="vital-label">SpO2</div>
+                        <input type="number" class="vital-value" id="vSpo2" placeholder="99">
+                        <div class="vital-unit">%</div>
+                    </div>
+                    <div class="vital-input">
+                        <div class="vital-label">EtCO2</div>
+                        <input type="number" class="vital-value" id="vEtco2" placeholder="35">
+                        <div class="vital-unit">mmHg</div>
+                    </div>
+                    <div class="vital-input">
+                        <div class="vital-label">O2 Flow</div>
+                        <input type="number" step="0.5" class="vital-value" id="vO2Flow" placeholder="2">
+                        <div class="vital-unit">L/min</div>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary">記錄</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Medication Modal -->
+    <div class="modal" id="medModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">給藥記錄</h2>
+                <button class="modal-close" onclick="closeModal('medModal')">&times;</button>
+            </div>
+            <div class="section-title">常用藥物</div>
+            <div class="med-grid">
+                <button class="med-btn" onclick="quickMed('PROPO001', 'Propofol', 100, 'mg')">
+                    <div class="med-name">Propofol</div>
+                    <div class="med-dose">100 mg IV</div>
+                </button>
+                <button class="med-btn" onclick="quickMed('FENTA001', 'Fentanyl', 50, 'mcg')">
+                    <div class="med-name">Fentanyl</div>
+                    <div class="med-dose">50 mcg IV</div>
+                </button>
+                <button class="med-btn" onclick="quickMed('ROCUR001', 'Rocuronium', 50, 'mg')">
+                    <div class="med-name">Rocuronium</div>
+                    <div class="med-dose">50 mg IV</div>
+                </button>
+                <button class="med-btn" onclick="quickMed('MIDAZ001', 'Midazolam', 2, 'mg')">
+                    <div class="med-name">Midazolam</div>
+                    <div class="med-dose">2 mg IV</div>
+                </button>
+                <button class="med-btn" onclick="quickMed('ATRO001', 'Atropine', 0.5, 'mg')">
+                    <div class="med-name">Atropine</div>
+                    <div class="med-dose">0.5 mg IV</div>
+                </button>
+                <button class="med-btn" onclick="quickMed('EPHED001', 'Ephedrine', 5, 'mg')">
+                    <div class="med-name">Ephedrine</div>
+                    <div class="med-dose">5 mg IV</div>
+                </button>
+            </div>
+            <div style="margin-top: 20px;">
+                <button class="btn" style="background: var(--card-hover);" onclick="showCustomMedForm()">自訂藥物</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Battlefield Preop Modal -->
+    <div class="modal" id="preopModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">術前快速評估</h2>
+                <button class="modal-close" onclick="closeModal('preopModal')">&times;</button>
+            </div>
+            <div id="preopContent">
+                <div class="section-title">戰場模式 - 快速5項評估</div>
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                    <label class="preop-flag">
+                        <input type="checkbox" id="flagAllergic">
+                        <span class="flag-label">
+                            <span class="flag-icon warning">⚠️</span>
+                            已知過敏 (Known Allergy)
+                        </span>
+                    </label>
+                    <label class="preop-flag">
+                        <input type="checkbox" id="flagFullStomach">
+                        <span class="flag-label">
+                            <span class="flag-icon warning">⚠️</span>
+                            未禁食 (Full Stomach)
+                        </span>
+                    </label>
+                    <label class="preop-flag">
+                        <input type="checkbox" id="flagDifficultAirway">
+                        <span class="flag-label">
+                            <span class="flag-icon danger">🚨</span>
+                            困難呼吸道 (Difficult Airway)
+                        </span>
+                    </label>
+                    <label class="preop-flag">
+                        <input type="checkbox" id="flagUnstable">
+                        <span class="flag-label">
+                            <span class="flag-icon danger">🚨</span>
+                            血行動力不穩 (Hemodynamically Unstable)
+                        </span>
+                    </label>
+                    <label class="preop-flag">
+                        <input type="checkbox" id="flagHighRisk">
+                        <span class="flag-label">
+                            <span class="flag-icon danger">🚨</span>
+                            高風險 (High Risk)
+                        </span>
+                    </label>
+                </div>
+                <div class="form-group" style="margin-top: 16px;">
+                    <label class="form-label">快速備註</label>
+                    <textarea class="form-input" id="preopQuickNote" rows="2" placeholder="其他重要資訊..."></textarea>
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 12px;">
+                    <button class="btn btn-primary" onclick="savePreop()">儲存評估</button>
+                    <button class="btn" style="background: var(--card-hover);" onclick="closeModal('preopModal')">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .preop-flag {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .preop-flag:hover {
+            background: var(--card-hover);
+        }
+        .preop-flag input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+        }
+        .preop-flag input[type="checkbox"]:checked + .flag-label {
+            color: var(--warning);
+        }
+        .flag-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+        }
+        .flag-icon {
+            font-size: 1.2rem;
+        }
+        .flag-icon.warning { color: var(--warning); }
+        .flag-icon.danger { color: var(--danger); }
+
+        /* Phase A-6: Sync Indicator Styles */
+        .sync-indicator {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.1);
+        }
+        .sync-icon {
+            font-size: 1rem;
+        }
+        .sync-indicator.syncing .sync-icon {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .sync-badge {
+            background: var(--warning);
+            color: #000;
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 4px;
+        }
+        .sync-badge.hidden {
+            display: none;
+        }
+
+        /* Offline mode indicator */
+        body.offline::before {
+            content: '📴 離線模式 - 操作將在連線後同步';
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 8px;
+            background: var(--warning);
+            color: #000;
+            text-align: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+            z-index: 1000;
+        }
+        body.offline .header {
+            margin-top: 36px;
+        }
+    </style>
+
+    <script>
+        // State
+        let currentCase = null;
+        let actorId = 'ANES001'; // TODO: Get from auth
+        let isOnline = navigator.onLine;
+        let syncQueue = [];
+        let deviceId = localStorage.getItem('deviceId') || generateDeviceId();
+
+        const API_BASE = '/api/anesthesia';
+
+        // =================================================================
+        // Phase A-6: WAL Offline Queue
+        // =================================================================
+
+        function generateDeviceId() {
+            const id = 'DEV-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 6);
+            localStorage.setItem('deviceId', id);
+            return id;
+        }
+
+        function generateIdempotencyKey(caseId, action) {
+            return `${caseId}:${deviceId}:${Date.now()}:${action}`;
+        }
+
+        // Load queue from localStorage
+        function loadSyncQueue() {
+            try {
+                const stored = localStorage.getItem('anesOfflineQueue');
+                syncQueue = stored ? JSON.parse(stored) : [];
+                updateSyncBadge();
+            } catch (e) {
+                syncQueue = [];
+            }
+        }
+
+        // Save queue to localStorage
+        function saveSyncQueue() {
+            localStorage.setItem('anesOfflineQueue', JSON.stringify(syncQueue));
+            updateSyncBadge();
+        }
+
+        // Add to offline queue
+        function queueOfflineAction(endpoint, operation, payload) {
+            const item = {
+                id: 'Q-' + Date.now(),
+                device_id: deviceId,
+                operation: operation,
+                endpoint: endpoint,
+                payload: payload,
+                idempotency_key: generateIdempotencyKey(currentCase?.id || 'new', endpoint),
+                created_at: new Date().toISOString()
+            };
+            syncQueue.push(item);
+            saveSyncQueue();
+            console.log('[Offline] Queued:', item.endpoint);
+            return item;
+        }
+
+        // Update sync badge
+        function updateSyncBadge() {
+            const badge = document.getElementById('syncBadge');
+            if (badge) {
+                if (syncQueue.length > 0) {
+                    badge.textContent = syncQueue.length;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        }
+
+        // Sync with server
+        async function syncWithServer() {
+            if (!isOnline || syncQueue.length === 0) return;
+
+            console.log('[Sync] Starting sync of', syncQueue.length, 'items');
+            const indicator = document.getElementById('syncIndicator');
+            if (indicator) indicator.classList.add('syncing');
+
+            try {
+                const res = await fetch(`${API_BASE}/sync/batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device_id: deviceId,
+                        items: syncQueue
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('[Sync] Results:', data);
+
+                    // Remove synced items
+                    const syncedIds = data.results
+                        .filter(r => r.status === 'synced' || r.status === 'duplicate')
+                        .map(r => r.id);
+                    syncQueue = syncQueue.filter(item => !syncedIds.includes(item.id));
+                    saveSyncQueue();
+
+                    // Reload timeline if we're viewing a case
+                    if (currentCase) {
+                        loadTimeline(currentCase.id);
+                    }
+                }
+            } catch (e) {
+                console.error('[Sync] Failed:', e);
+            } finally {
+                if (indicator) indicator.classList.remove('syncing');
+            }
+        }
+
+        // Network status listeners
+        window.addEventListener('online', () => {
+            isOnline = true;
+            console.log('[Network] Online - syncing...');
+            document.body.classList.remove('offline');
+            syncWithServer();
+        });
+
+        window.addEventListener('offline', () => {
+            isOnline = false;
+            console.log('[Network] Offline');
+            document.body.classList.add('offline');
+        });
+
+        // Wrapped fetch for offline support
+        async function offlineFetch(url, options = {}) {
+            if (!isOnline) {
+                // Queue the request for later
+                const endpoint = url.replace(API_BASE, '');
+                const operation = options.method || 'GET';
+
+                if (operation !== 'GET') {
+                    const payload = options.body ? JSON.parse(options.body) : {};
+                    queueOfflineAction(endpoint, operation, payload);
+                    return { ok: true, offline: true, json: () => Promise.resolve({ queued: true }) };
+                } else {
+                    throw new Error('Offline - cannot fetch data');
+                }
+            }
+
+            return fetch(url, options);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSyncQueue();
+            loadCases();
+
+            // Periodic sync attempt
+            setInterval(() => {
+                if (isOnline && syncQueue.length > 0) {
+                    syncWithServer();
+                }
+            }, 30000); // Every 30 seconds
+        });
+
+        // Modal Functions
+        function showNewCaseModal() {
+            document.getElementById('newCaseModal').classList.add('active');
+        }
+
+        function showVitalsModal() {
+            document.getElementById('vitalsModal').classList.add('active');
+        }
+
+        function showMedModal() {
+            document.getElementById('medModal').classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // API Functions
+        async function loadCases() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const res = await fetch(`${API_BASE}/cases?date=${today}&limit=20`);
+                const data = await res.json();
+
+                const listEl = document.getElementById('caseList');
+
+                if (data.cases.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">🏥</div>
+                            <p>今日尚無案例</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                listEl.innerHTML = data.cases.map(c => `
+                    <div class="case-list-item" onclick="selectCase('${c.id}')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div class="case-id">${c.id}</div>
+                                <div style="font-weight: 600;">${c.patient_name || c.patient_id}</div>
+                            </div>
+                            <span class="case-status ${c.status.toLowerCase()}">${c.status}</span>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Auto-select if there's an in-progress case
+                const inProgress = data.cases.find(c => c.status === 'IN_PROGRESS');
+                if (inProgress) {
+                    selectCase(inProgress.id);
+                }
+            } catch (err) {
+                console.error('Failed to load cases:', err);
+            }
+        }
+
+        async function selectCase(caseId) {
+            try {
+                const res = await fetch(`${API_BASE}/cases/${caseId}`);
+                currentCase = await res.json();
+
+                // Update UI
+                document.getElementById('noCaseView').classList.add('hidden');
+                document.getElementById('activeCaseView').classList.remove('hidden');
+                document.getElementById('resourceBar').classList.remove('hidden');
+
+                document.getElementById('caseId').textContent = currentCase.id;
+                document.getElementById('patientName').textContent = currentCase.patient_name || currentCase.patient_id;
+                document.getElementById('caseStatus').textContent = currentCase.status;
+                document.getElementById('caseStatus').className = `case-status ${currentCase.status.toLowerCase()}`;
+                document.getElementById('techniqueInfo').textContent = currentCase.planned_technique || '';
+
+                if (currentCase.context_mode === 'BATTLEFIELD') {
+                    document.getElementById('contextBadge').classList.remove('hidden');
+                }
+
+                // Load timeline
+                loadTimeline(caseId);
+
+                // Load O2 status
+                loadO2Status(caseId);
+
+            } catch (err) {
+                console.error('Failed to load case:', err);
+            }
+        }
+
+        async function loadTimeline(caseId) {
+            try {
+                const res = await fetch(`${API_BASE}/cases/${caseId}/timeline`);
+                const data = await res.json();
+
+                const timelineEl = document.getElementById('timeline');
+
+                if (data.all.length === 0) {
+                    timelineEl.innerHTML = `<div class="empty-state"><p>尚無事件</p></div>`;
+                    return;
+                }
+
+                // Sort by clinical_time desc
+                const events = data.all.sort((a, b) =>
+                    new Date(b.clinical_time) - new Date(a.clinical_time)
+                );
+
+                timelineEl.innerHTML = events.slice(0, 20).map(e => {
+                    const time = new Date(e.clinical_time).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+                    const dotClass = e.event_type === 'VITAL_SIGN' ? 'vital' :
+                                    e.event_type === 'MEDICATION_ADMIN' ? 'med' :
+                                    e.event_type === 'MILESTONE' ? 'milestone' : '';
+
+                    let desc = '';
+                    if (e.event_type === 'VITAL_SIGN') {
+                        const p = e.payload;
+                        desc = `BP ${p.bp_sys || '--'}/${p.bp_dia || '--'}, HR ${p.hr || '--'}, SpO2 ${p.spo2 || '--'}%`;
+                    } else if (e.event_type === 'MEDICATION_ADMIN') {
+                        desc = `${e.payload.drug_name} ${e.payload.dose}${e.payload.unit} ${e.payload.route}`;
+                    } else if (e.event_type === 'MILESTONE') {
+                        desc = e.payload.type;
+                    } else {
+                        desc = JSON.stringify(e.payload).substring(0, 50);
+                    }
+
+                    return `
+                        <div class="timeline-item">
+                            <div class="timeline-time">${time}</div>
+                            <div class="timeline-dot ${dotClass}"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-type">${e.event_type}</div>
+                                <div class="timeline-desc">${desc}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Update last values in resource bar
+                const lastVital = data.vitals[data.vitals.length - 1];
+                if (lastVital) {
+                    document.getElementById('lastSpo2').textContent = lastVital.payload.spo2 || '--';
+                    document.getElementById('lastHr').textContent = lastVital.payload.hr || '--';
+                    document.getElementById('lastBp').textContent =
+                        `${lastVital.payload.bp_sys || '--'}/${lastVital.payload.bp_dia || '--'}`;
+                }
+
+            } catch (err) {
+                console.error('Failed to load timeline:', err);
+            }
+        }
+
+        async function loadO2Status(caseId) {
+            try {
+                const res = await fetch(`${API_BASE}/cases/${caseId}/oxygen-status`);
+                const data = await res.json();
+
+                const el = document.getElementById('o2Minutes');
+                if (data.est_minutes_remaining) {
+                    el.textContent = data.est_minutes_remaining;
+                    if (data.est_minutes_remaining < 30) {
+                        el.classList.add('danger');
+                    } else if (data.est_minutes_remaining < 60) {
+                        el.classList.add('warning');
+                    }
+                } else {
+                    el.textContent = '--';
+                }
+            } catch (err) {
+                console.error('Failed to load O2 status:', err);
+            }
+        }
+
+        async function createCase(event) {
+            event.preventDefault();
+
+            const body = {
+                patient_id: document.getElementById('newPatientId').value,
+                patient_name: document.getElementById('newPatientName').value || null,
+                planned_technique: document.getElementById('newTechnique').value,
+                context_mode: document.getElementById('newContextMode').value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/cases?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) throw new Error('Failed to create case');
+
+                const newCase = await res.json();
+                closeModal('newCaseModal');
+                selectCase(newCase.id);
+            } catch (err) {
+                alert('建立失敗: ' + err.message);
+            }
+        }
+
+        async function submitVitals(event) {
+            event.preventDefault();
+
+            if (!currentCase) return;
+
+            const body = {
+                bp_sys: parseInt(document.getElementById('vBpSys').value) || null,
+                bp_dia: parseInt(document.getElementById('vBpDia').value) || null,
+                hr: parseInt(document.getElementById('vHr').value) || null,
+                spo2: parseInt(document.getElementById('vSpo2').value) || null,
+                etco2: parseInt(document.getElementById('vEtco2').value) || null,
+                o2_flow_lpm: parseFloat(document.getElementById('vO2Flow').value) || null
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/vitals?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) throw new Error('Failed');
+
+                closeModal('vitalsModal');
+                loadTimeline(currentCase.id);
+
+                // Clear form
+                ['vBpSys', 'vBpDia', 'vHr', 'vSpo2', 'vEtco2', 'vO2Flow'].forEach(id => {
+                    document.getElementById(id).value = '';
+                });
+            } catch (err) {
+                alert('記錄失敗');
+            }
+        }
+
+        async function quickMed(code, name, dose, unit) {
+            if (!currentCase) return;
+
+            const body = {
+                drug_code: code,
+                drug_name: name,
+                dose: dose,
+                unit: unit,
+                route: 'IV'
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/medication?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) throw new Error('Failed');
+
+                closeModal('medModal');
+                loadTimeline(currentCase.id);
+            } catch (err) {
+                alert('記錄失敗');
+            }
+        }
+
+        async function addMilestone(type) {
+            if (!currentCase) return;
+
+            try {
+                const res = await fetch(
+                    `${API_BASE}/cases/${currentCase.id}/milestone?milestone_type=${type}&actor_id=${actorId}`,
+                    { method: 'POST' }
+                );
+
+                if (!res.ok) throw new Error('Failed');
+
+                // Reload case to get updated status
+                selectCase(currentCase.id);
+            } catch (err) {
+                alert('記錄失敗');
+            }
+        }
+
+        function switchTab(tab) {
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.target.closest('.nav-item').classList.add('active');
+
+            if (tab === 'case') {
+                // Already on case view
+            } else if (tab === 'preop') {
+                if (!currentCase) {
+                    alert('請先選擇或建立案例');
+                    return;
+                }
+                // Load existing preop data if available
+                loadPreopData(currentCase.id);
+                openModal('preopModal');
+            } else if (tab === 'drugs') {
+                alert('管制藥品功能開發中 (Phase B)');
+            } else if (tab === 'o2') {
+                alert('氧氣管理功能開發中');
+            }
+        }
+
+        async function loadPreopData(caseId) {
+            try {
+                // Reset checkboxes first
+                document.getElementById('flagAllergic').checked = false;
+                document.getElementById('flagFullStomach').checked = false;
+                document.getElementById('flagDifficultAirway').checked = false;
+                document.getElementById('flagUnstable').checked = false;
+                document.getElementById('flagHighRisk').checked = false;
+                document.getElementById('preopQuickNote').value = '';
+
+                const res = await fetch(`${API_BASE}/cases/${caseId}/battlefield-preop`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.battlefield_preop) {
+                        document.getElementById('flagAllergic').checked = data.battlefield_preop.is_allergic;
+                        document.getElementById('flagFullStomach').checked = data.battlefield_preop.is_full_stomach;
+                        document.getElementById('flagDifficultAirway').checked = data.battlefield_preop.is_difficult_airway;
+                        document.getElementById('flagUnstable').checked = data.battlefield_preop.is_hemodynamically_unstable;
+                        document.getElementById('flagHighRisk').checked = data.battlefield_preop.is_high_risk;
+                        document.getElementById('preopQuickNote').value = data.battlefield_preop.quick_note || '';
+                    }
+                }
+            } catch (err) {
+                console.log('No preop data yet');
+            }
+        }
+
+        async function savePreop() {
+            if (!currentCase) return;
+
+            const payload = {
+                is_allergic: document.getElementById('flagAllergic').checked,
+                is_full_stomach: document.getElementById('flagFullStomach').checked,
+                is_difficult_airway: document.getElementById('flagDifficultAirway').checked,
+                is_hemodynamically_unstable: document.getElementById('flagUnstable').checked,
+                is_high_risk: document.getElementById('flagHighRisk').checked,
+                quick_note: document.getElementById('preopQuickNote').value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/battlefield-preop?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw new Error('Failed');
+
+                closeModal('preopModal');
+                alert('術前評估已儲存');
+            } catch (err) {
+                alert('儲存失敗: ' + err.message);
+            }
+        }
+
+        function showMoreActions() {
+            const actions = [
+                { label: '插管 Intubation', action: () => addAirwayEvent('INTUBATION') },
+                { label: '手術開始', action: () => addMilestone('SURGERY_START') },
+                { label: '手術結束', action: () => addMilestone('SURGERY_END') },
+                { label: '拔管 Extubation', action: () => addAirwayEvent('EXTUBATION') },
+                { label: '麻醉結束', action: () => addMilestone('ANESTHESIA_END') },
+                { label: '認領氧氣瓶', action: () => alert('氧氣瓶認領功能開發中') },
+                { label: '關閉案例', action: () => closeCase() }
+            ];
+
+            // Simple menu using confirm for now
+            const choice = prompt(
+                actions.map((a, i) => `${i + 1}. ${a.label}`).join('\n') +
+                '\n\n請輸入編號:'
+            );
+
+            const idx = parseInt(choice) - 1;
+            if (idx >= 0 && idx < actions.length) {
+                actions[idx].action();
+            }
+        }
+
+        async function addAirwayEvent(action) {
+            if (!currentCase) return;
+
+            const body = {
+                event_type: 'AIRWAY_EVENT',
+                payload: { action: action }
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/events?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) throw new Error('Failed');
+                loadTimeline(currentCase.id);
+            } catch (err) {
+                alert('記錄失敗');
+            }
+        }
+
+        async function closeCase() {
+            if (!currentCase) return;
+            if (!confirm('確定要關閉此案例?')) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/close?actor_id=${actorId}`, {
+                    method: 'POST'
+                });
+
+                if (!res.ok) throw new Error('Failed');
+
+                currentCase = null;
+                document.getElementById('activeCaseView').classList.add('hidden');
+                document.getElementById('resourceBar').classList.add('hidden');
+                document.getElementById('noCaseView').classList.remove('hidden');
+                loadCases();
+            } catch (err) {
+                alert('關閉失敗: ' + err.message);
+            }
+        }
+
+        function showCustomMedForm() {
+            const code = prompt('藥物代碼:');
+            const name = prompt('藥物名稱:');
+            const dose = parseFloat(prompt('劑量:'));
+            const unit = prompt('單位 (mg/mcg/ml):');
+
+            if (code && name && dose && unit) {
+                quickMed(code, name, dose, unit);
+            }
+        }
+    </script>
+</body>
+</html>
