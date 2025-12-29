@@ -79,25 +79,33 @@ sudo nmcli device wifi hotspot ifname wlan0 ssid MedicalStation
 ### 6. 設定開機自動啟動
 
 ```bash
-# 創建 systemd 服務檔案
-sudo tee /etc/systemd/system/mirs.service > /dev/null << 'EOF'
+# 設定使用者名稱變數
+MY_USER=$(whoami)
+MIRS_DIR=~/medical-inventory-system_v1.4.5
+
+# 創建 systemd 服務檔案 (使用 sudo bash -c 避免 heredoc 問題)
+sudo bash -c "cat > /etc/systemd/system/mirs.service << 'ENDOFFILE'
 [Unit]
 Description=Medical Inventory Resource System
 After=network.target NetworkManager.service
 
 [Service]
 Type=simple
-User=medical
-WorkingDirectory=/home/medical/medical-inventory-system_v1.4.5
-ExecStart=/usr/bin/python3 /home/medical/medical-inventory-system_v1.4.5/main.py
+User=${MY_USER}
+WorkingDirectory=/home/${MY_USER}/medical-inventory-system_v1.4.5
+ExecStart=/usr/bin/python3 /home/${MY_USER}/medical-inventory-system_v1.4.5/main.py
 Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-EOF
+ENDOFFILE"
+
+# 確認檔案內容正確
+cat /etc/systemd/system/mirs.service
 
 # 啟用並啟動服務
+sudo systemctl daemon-reload
 sudo systemctl enable mirs.service
 sudo systemctl start mirs.service
 
@@ -108,7 +116,10 @@ sudo systemctl status mirs.service
 sudo journalctl -u mirs.service -f
 ```
 
-**注意**：將上述 `User=medical` 和路徑中的 `medical` 替換為實際的使用者名稱。
+**常見問題**：
+- 如果出現 `Failed to determine user credentials`，檢查 `User=` 的使用者名稱是否正確
+- 如果出現 `No such file or directory`，檢查 `WorkingDirectory` 和 `ExecStart` 路徑
+- 使用 `whoami` 確認你的使用者名稱
 
 ## 修復內容說明
 
