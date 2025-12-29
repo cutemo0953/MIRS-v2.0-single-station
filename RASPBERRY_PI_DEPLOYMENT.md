@@ -5,7 +5,11 @@
 ### 更新系統
 ```bash
 sudo systemctl stop mirs.service
-cd ~/medical-inventory-system_v1.4.5
+cd ~/mirs-v1.4.2-plus   # 或你的 MIRS 目錄名稱
+
+# 如果有 log 檔案變更，先清除
+git checkout -- medical_inventory.log 2>/dev/null
+
 git pull origin v1.4.2-plus
 sudo systemctl start mirs.service
 sudo systemctl status mirs.service
