@@ -150,34 +150,35 @@
         /* Quick Actions */
         .quick-actions {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
             margin-bottom: 16px;
         }
 
         .quick-btn {
             background: var(--card);
             border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
+            border-radius: 10px;
+            padding: 12px 8px;
             color: var(--text);
-            font-size: 1rem;
+            font-size: 0.8rem;
             font-weight: 500;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
             transition: all 0.2s;
+        }
+
+        .quick-btn .icon {
+            width: 20px !important;
+            height: 20px !important;
         }
 
         .quick-btn:active {
             transform: scale(0.95);
             background: var(--card-hover);
-        }
-
-        .quick-btn .icon {
-            font-size: 1.5rem;
         }
 
         .quick-btn.primary {
@@ -703,11 +704,23 @@
                     </svg>
                     <span>開始麻醉</span>
                 </button>
-                <button class="quick-btn" onclick="showMoreActions()">
+                <button class="quick-btn" onclick="showO2Modal()">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                     </svg>
-                    <span>更多</span>
+                    <span>氧氣</span>
+                </button>
+                <button class="quick-btn" onclick="showMilestoneMenu()">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                    </svg>
+                    <span>里程碑</span>
+                </button>
+                <button class="quick-btn" onclick="closeCase()" style="background: var(--danger); border-color: var(--danger);">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>結案</span>
                 </button>
             </div>
 
@@ -2116,7 +2129,12 @@
             event.target.closest('.nav-item').classList.add('active');
 
             if (tab === 'case') {
-                // Already on case view
+                // Go back to case list
+                currentCase = null;
+                document.getElementById('activeCaseView').classList.add('hidden');
+                document.getElementById('noCaseView').classList.remove('hidden');
+                document.getElementById('resourceBar').classList.add('hidden');
+                loadCases();
             } else if (tab === 'preop') {
                 if (!currentCase) {
                     alert('請先選擇或建立案例');
@@ -2422,27 +2440,36 @@
             }
         }
 
-        function showMoreActions() {
-            const actions = [
-                { label: '插管 Intubation', action: () => addAirwayEvent('INTUBATION') },
-                { label: '手術開始', action: () => addMilestone('SURGERY_START') },
-                { label: '手術結束', action: () => addMilestone('SURGERY_END') },
-                { label: '拔管 Extubation', action: () => addAirwayEvent('EXTUBATION') },
-                { label: '麻醉結束', action: () => addMilestone('ANESTHESIA_END') },
-                { label: '認領氧氣瓶', action: () => showO2Modal() },
-                { label: '關閉案例', action: () => closeCase() }
+        function showMilestoneMenu() {
+            const milestones = [
+                { label: '麻醉開始', value: 'ANESTHESIA_START' },
+                { label: '插管 Intubation', value: 'INTUBATION', isAirway: true },
+                { label: '手術開始', value: 'SURGERY_START' },
+                { label: '手術結束', value: 'SURGERY_END' },
+                { label: '拔管 Extubation', value: 'EXTUBATION', isAirway: true },
+                { label: '麻醉結束', value: 'ANESTHESIA_END' }
             ];
 
-            // Simple menu using confirm for now
             const choice = prompt(
-                actions.map((a, i) => `${i + 1}. ${a.label}`).join('\n') +
+                '選擇里程碑:\n\n' +
+                milestones.map((m, i) => `${i + 1}. ${m.label}`).join('\n') +
                 '\n\n請輸入編號:'
             );
 
             const idx = parseInt(choice) - 1;
-            if (idx >= 0 && idx < actions.length) {
-                actions[idx].action();
+            if (idx >= 0 && idx < milestones.length) {
+                const m = milestones[idx];
+                if (m.isAirway) {
+                    addAirwayEvent(m.value);
+                } else {
+                    addMilestone(m.value);
+                }
             }
+        }
+
+        function showMoreActions() {
+            // Keep for backwards compatibility
+            showMilestoneMenu();
         }
 
         async function addAirwayEvent(action) {
