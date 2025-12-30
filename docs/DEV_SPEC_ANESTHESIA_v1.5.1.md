@@ -890,100 +890,132 @@ class AnesthesiaRole(str, Enum):
 **問題描述:**
 當 MIRS 麻醉站輸入病歷號建立案例時，目前**不會**與 CIRS 檢傷分類系統的掛號連結。
 
-#### Expected Workflow (To Be Implemented)
+#### Reference: xIRS_REGISTRATION_SPEC_v1.2
+
+根據 CIRS 已定義的掛號規格 (`/CIRS/docs/xIRS_REGISTRATION_SPEC_v1.0.md`)：
 
 ```
+CIRS 掛號流程（已實作於 Doctor PWA）:
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        CIRS ↔ MIRS Integration Flow                          │
-├─────────────────────────────────────────────────────────────────────────────┤
+│  1. CIRS Admin 點擊「掛號」                                                  │
+│     └── 產生 registrations record                                            │
+│     └── 產生 QR Code (PATIENT_REGISTRATION payload)                          │
 │                                                                              │
-│  1. CIRS Triage (檢傷站)                                                     │
-│     └── Patient arrives → Triage nurse registers patient                     │
-│         └── Creates `registrations` record with patient_id, station_id       │
+│  2. Doctor PWA 兩種方式取得病患：                                            │
+│     ├── 掃描 QR Code → 自動帶入病患資料                                      │
+│     └── GET /api/registrations/waiting/list → 同步待診清單                   │
 │                                                                              │
-│  2. CIRS Hub broadcasts registration to subscribed stations:                 │
-│     ├── Doctor PWA (/doctor) receives patient list                           │
-│     ├── Anesthesia PWA (/anesthesia) receives patient list                   │
-│     └── Surgery Console receives patient list                                │
+│  3. 醫師 claim 病患後，其他醫師看不到                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Anesthesia Station 應採用相同模式
+
+```
+麻醉站 (建議實作):
+┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                              │
-│  3. Anesthesia Station                                                       │
-│     └── Nurse selects patient from list (instead of manual entry)            │
-│     └── Creates anesthesia_case linked to registration.patient_id            │
+│  ┌─────────────────┐    ┌─────────────────────────────────────────────────┐ │
+│  │ 新增案例 Modal  │    │                                                 │ │
+│  ├─────────────────┤    │  待診病患清單 (從 CIRS 同步)                    │ │
+│  │                 │    │  ┌───────────────────────────────────────────┐  │ │
+│  │ ○ 從待診清單選取│───▶│  │ 🟡 ***0042 王小明 - 頭痛、發燒           │  │ │
+│  │   (建議)        │    │  │    URGENT · 10:30 掛號              [選取]│  │ │
+│  │                 │    │  ├───────────────────────────────────────────┤  │ │
+│  │ ○ 掃描掛號 QR   │    │  │ 🟢 ***0088 李小華 - 腹部外傷              │  │ │
+│  │                 │    │  │    ROUTINE · 10:45 掛號             [選取]│  │ │
+│  │ ○ 手動輸入      │    │  └───────────────────────────────────────────┘  │ │
+│  │   (緊急 fallback)    │                                                 │ │
+│  └─────────────────┘    └─────────────────────────────────────────────────┘ │
 │                                                                              │
-│  4. Doctor PWA                                                               │
-│     └── Doctor sees same patient list                                        │
-│     └── Can view anesthesia case status, sign off when ready                 │
+│  選取後自動帶入：                                                            │
+│  - patient_id (masked)                                                       │
+│  - patient_name                                                              │
+│  - chief_complaint                                                           │
+│  - triage_level                                                              │
+│  - registration_id (for linking)                                             │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Technical Implementation Plan
-
-**Option A: Shared Database (Recommended for Single-Station BORP)**
-
-```python
-# In routes/anesthesia.py
-
-@router.get("/registrations")
-async def get_pending_registrations():
-    """Get patients registered to this station from CIRS"""
-    cursor.execute("""
-        SELECT r.id, r.patient_id, r.patient_name, r.chief_complaint,
-               r.triage_level, r.registered_at
-        FROM registrations r
-        WHERE r.station_id = ?
-          AND r.status = 'REGISTERED'
-          AND NOT EXISTS (
-              SELECT 1 FROM anesthesia_cases ac
-              WHERE ac.patient_id = r.patient_id
-                AND DATE(ac.created_at) = DATE('now')
-          )
-        ORDER BY r.registered_at DESC
-    """, (config.get_station_id(),))
-    return {"registrations": cursor.fetchall()}
-```
-
-**Option B: Hub-Satellite Sync (For Multi-Station Deployment)**
-
-```
-Hub                           Satellite (MIRS)
- │                                 │
- │  POST /api/sync/push            │
- │  { registrations: [...] }  ────▶│
- │                                 │ Store in local registrations table
- │                                 │
- │  GET /api/sync/ack              │
- │◀──── { received: true }         │
-```
-
-#### API Changes Required
+#### API (已存在於 CIRS，麻醉站直接使用)
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/anesthesia/registrations` | GET | List pending registrations for this station |
-| `/api/anesthesia/cases` | POST | Accept `registration_id` to link case |
+| `GET /api/registrations/waiting/list` | GET | 取得待診清單 (公開，無需授權) |
+| `POST /api/registrations/{reg_id}/claim` | POST | Claim 病患 (避免重複選取) |
 
-#### Frontend Changes Required
+#### 麻醉站需要新增的邏輯
 
-1. **New Case Modal**: Add "從掛號清單選取" option
-2. **Registration List View**: Show pending patients with triage info
-3. **Patient Autocomplete**: When typing patient_id, suggest from registrations
+```python
+# routes/anesthesia.py - 修改 create_case
 
-#### Priority
+class CreateCaseRequest(BaseModel):
+    # 方式 1: 從掛號清單選取 (建議)
+    registration_id: Optional[str] = None
 
-| Item | Priority | Reason |
-|------|----------|--------|
-| Shared DB query | High | Simplest for single-station |
-| Frontend patient picker | High | Better UX than manual entry |
-| Hub-Satellite sync | Medium | Only needed for multi-station |
-| Doctor PWA notification | Medium | Can view via web for now |
+    # 方式 2: 手動輸入 (fallback)
+    patient_id: Optional[str] = None
+    patient_name: Optional[str] = None
 
-#### Decision Required
+    planned_technique: str
+    context_mode: str = "STANDARD"
 
-Before implementation, clarify:
-1. Is MIRS running on same database as CIRS? (Single SQLite file)
-2. If separate, what sync mechanism? (Hub-push or satellite-pull)
-3. Should patient selection be mandatory or allow manual entry as fallback?
+@router.post("/cases")
+async def create_case(req: CreateCaseRequest, actor_id: str):
+    if req.registration_id:
+        # 從 CIRS 取得病患資料
+        reg = await fetch_registration(req.registration_id)
+        patient_id = reg['patient_ref']
+        patient_name = reg['display_name']
+
+        # Claim 病患，防止其他站重複選取
+        await claim_registration(req.registration_id, "ANESTHESIA")
+    else:
+        # 手動輸入 (緊急情況)
+        patient_id = req.patient_id
+        patient_name = req.patient_name
+
+    # 建立案例...
+```
+
+#### Frontend 修改 (New Case Modal)
+
+```html
+<!-- 新增案例 Modal - 病患來源選擇 -->
+<div class="patient-source-tabs">
+    <button class="tab active" onclick="showPatientList()">
+        待診清單 (建議)
+    </button>
+    <button class="tab" onclick="showQrScanner()">
+        掃描 QR
+    </button>
+    <button class="tab" onclick="showManualInput()">
+        手動輸入
+    </button>
+</div>
+
+<!-- 待診清單 View -->
+<div id="patientListView">
+    <!-- 從 /api/registrations/waiting/list 載入 -->
+</div>
+
+<!-- 手動輸入 View (hidden by default) -->
+<div id="manualInputView" class="hidden">
+    <input type="text" id="newPatientId" placeholder="病歷號">
+    <input type="text" id="newPatientName" placeholder="姓名">
+</div>
+```
+
+#### 結論：病歷號應自動帶入
+
+| 場景 | 病歷號來源 | 實作方式 |
+|------|-----------|----------|
+| **正常流程** | CIRS 掛號系統 | 從待診清單選取，自動帶入 |
+| **QR 掃描** | 掛號單 QR Code | 掃描後自動帶入 |
+| **緊急 fallback** | 手動輸入 | 僅限網路斷線或系統故障時 |
+
+**建議：預設隱藏手動輸入，引導使用者從清單選取。**
 
 ---
 
