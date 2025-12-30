@@ -99,6 +99,22 @@ class PreopStatus(str, Enum):
     NEEDS_REVIEW = "NEEDS_REVIEW"
 
 
+# Phase B: Drug Transaction Types
+class DrugTxType(str, Enum):
+    DISPENSE = "DISPENSE"   # 藥局核發
+    ADMIN = "ADMIN"         # 給藥
+    WASTE = "WASTE"         # 廢棄 (需見證)
+    RETURN = "RETURN"       # 退回
+
+
+class DrugRequestStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    DISPENSED = "DISPENSED"
+    RECONCILED = "RECONCILED"
+    REJECTED = "REJECTED"
+
+
 # =============================================================================
 # Request/Response Models
 # =============================================================================
@@ -429,7 +445,88 @@ def init_anesthesia_schema(cursor):
         ON anesthesia_sync_queue(device_id, status)
     """)
 
-    logger.info("✓ Anesthesia schema initialized")
+    # =========================================================================
+    # Phase B: Controlled Drugs Schema
+    # =========================================================================
+
+    # Drug Requests (申請單)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS drug_requests (
+            id TEXT PRIMARY KEY,
+            case_id TEXT NOT NULL,
+
+            requester_id TEXT NOT NULL,
+            requester_role TEXT NOT NULL,
+
+            items TEXT NOT NULL,
+
+            approver_id TEXT,
+            approved_at DATETIME,
+
+            status TEXT NOT NULL DEFAULT 'PENDING',
+
+            offline_proof_artifact_id TEXT,
+
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (case_id) REFERENCES anesthesia_cases(id),
+            CHECK(status IN ('PENDING', 'APPROVED', 'DISPENSED', 'RECONCILED', 'REJECTED'))
+        )
+    """)
+
+    # Drug Transactions (交易流水帳 - The Ledger)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS drug_transactions (
+            id TEXT PRIMARY KEY,
+            request_id TEXT,
+            case_id TEXT NOT NULL,
+
+            drug_code TEXT NOT NULL,
+            drug_name TEXT NOT NULL,
+            schedule_class INTEGER NOT NULL DEFAULT 4,
+            batch_number TEXT,
+
+            tx_type TEXT NOT NULL,
+            quantity REAL NOT NULL,
+            unit TEXT NOT NULL,
+
+            actor_id TEXT NOT NULL,
+            witness_id TEXT,
+            witness_verified_at DATETIME,
+
+            idempotency_key TEXT UNIQUE,
+            device_id TEXT,
+            local_seq INTEGER,
+
+            tx_time DATETIME NOT NULL,
+            recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+            sync_status TEXT DEFAULT 'LOCAL',
+            notes TEXT,
+
+            FOREIGN KEY (request_id) REFERENCES drug_requests(id),
+            FOREIGN KEY (case_id) REFERENCES anesthesia_cases(id),
+            CHECK(tx_type IN ('DISPENSE', 'ADMIN', 'WASTE', 'RETURN')),
+            CHECK(quantity > 0),
+            CHECK(sync_status IN ('LOCAL', 'SYNCED', 'CONFLICT'))
+        )
+    """)
+
+    # Indexes for drug tables
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_drug_requests_case
+        ON drug_requests(case_id, status)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_drug_tx_case
+        ON drug_transactions(case_id, drug_code)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_drug_tx_request
+        ON drug_transactions(request_id)
+    """)
+
+    logger.info("✓ Anesthesia schema initialized (Phase A + B)")
 
 
 # =============================================================================
@@ -1681,3 +1778,534 @@ async def remove_from_queue(item_id: str):
     conn.commit()
 
     return {"deleted": cursor.rowcount > 0}
+
+
+# =============================================================================
+# Phase B: Controlled Drugs API
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Models
+# -----------------------------------------------------------------------------
+
+class DrugRequestItem(BaseModel):
+    drug_code: str
+    drug_name: str
+    quantity: float
+    unit: str
+    schedule_class: int = 4  # 管制藥品級別 (1-4)
+
+
+class CreateDrugRequestRequest(BaseModel):
+    items: List[DrugRequestItem]
+
+
+class DrugTransactionRequest(BaseModel):
+    drug_code: str
+    drug_name: str
+    quantity: float
+    unit: str
+    tx_type: DrugTxType
+    schedule_class: int = 4
+    batch_number: Optional[str] = None
+    witness_id: Optional[str] = None  # Required for WASTE
+    notes: Optional[str] = None
+    request_id: Optional[str] = None
+    device_id: Optional[str] = None
+    idempotency_key: Optional[str] = None
+
+
+# -----------------------------------------------------------------------------
+# Helper Functions
+# -----------------------------------------------------------------------------
+
+def generate_request_id() -> str:
+    """Generate unique drug request ID"""
+    date_str = datetime.now().strftime("%Y%m%d")
+    short_uuid = uuid.uuid4().hex[:4].upper()
+    return f"REQ-{date_str}-{short_uuid}"
+
+
+def generate_tx_id() -> str:
+    """Generate unique transaction ID"""
+    return f"TX-{uuid.uuid4().hex[:12].upper()}"
+
+
+def calculate_drug_holdings(cursor, case_id: str) -> List[Dict]:
+    """
+    Calculate current drug holdings for a case.
+    Balance = DISPENSE - (ADMIN + WASTE + RETURN)
+    """
+    cursor.execute("""
+        SELECT
+            drug_code,
+            drug_name,
+            unit,
+            schedule_class,
+            SUM(CASE WHEN tx_type = 'DISPENSE' THEN quantity ELSE 0 END) as dispensed,
+            SUM(CASE WHEN tx_type = 'ADMIN' THEN quantity ELSE 0 END) as administered,
+            SUM(CASE WHEN tx_type = 'WASTE' THEN quantity ELSE 0 END) as wasted,
+            SUM(CASE WHEN tx_type = 'RETURN' THEN quantity ELSE 0 END) as returned
+        FROM drug_transactions
+        WHERE case_id = ?
+        GROUP BY drug_code, drug_name, unit
+    """, (case_id,))
+
+    holdings = []
+    for row in cursor.fetchall():
+        dispensed = row['dispensed'] or 0
+        administered = row['administered'] or 0
+        wasted = row['wasted'] or 0
+        returned = row['returned'] or 0
+        balance = dispensed - administered - wasted - returned
+
+        holdings.append({
+            "drug_code": row['drug_code'],
+            "drug_name": row['drug_name'],
+            "unit": row['unit'],
+            "schedule_class": row['schedule_class'],
+            "dispensed": dispensed,
+            "administered": administered,
+            "wasted": wasted,
+            "returned": returned,
+            "balance": round(balance, 2)
+        })
+
+    return holdings
+
+
+def get_total_balance(cursor, case_id: str) -> float:
+    """Get total drug balance for a case (for validation)"""
+    holdings = calculate_drug_holdings(cursor, case_id)
+    return sum(h['balance'] for h in holdings)
+
+
+# -----------------------------------------------------------------------------
+# Drug Request API
+# -----------------------------------------------------------------------------
+
+@router.post("/cases/{case_id}/drugs/request")
+async def create_drug_request(
+    case_id: str,
+    request: CreateDrugRequestRequest,
+    actor_id: str = Query(...),
+    actor_role: str = Query("ANES_NA")
+):
+    """Create a new controlled drug request for a case"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify case exists
+    cursor.execute("SELECT id, status FROM anesthesia_cases WHERE id = ?", (case_id,))
+    case = cursor.fetchone()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    if case['status'] == 'CLOSED':
+        raise HTTPException(status_code=400, detail="Cannot request drugs for closed case")
+
+    request_id = generate_request_id()
+
+    try:
+        cursor.execute("""
+            INSERT INTO drug_requests (
+                id, case_id, requester_id, requester_role, items, status
+            ) VALUES (?, ?, ?, ?, ?, 'PENDING')
+        """, (
+            request_id,
+            case_id,
+            actor_id,
+            actor_role,
+            json.dumps([item.dict() for item in request.items])
+        ))
+
+        conn.commit()
+
+        return {
+            "request_id": request_id,
+            "case_id": case_id,
+            "status": "PENDING",
+            "items": [item.dict() for item in request.items]
+        }
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cases/{case_id}/drugs/requests")
+async def list_drug_requests(case_id: str):
+    """List all drug requests for a case"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, case_id, requester_id, requester_role, items,
+               approver_id, approved_at, status, created_at
+        FROM drug_requests
+        WHERE case_id = ?
+        ORDER BY created_at DESC
+    """, (case_id,))
+
+    requests = []
+    for row in cursor.fetchall():
+        requests.append({
+            "id": row['id'],
+            "case_id": row['case_id'],
+            "requester_id": row['requester_id'],
+            "requester_role": row['requester_role'],
+            "items": json.loads(row['items']) if row['items'] else [],
+            "approver_id": row['approver_id'],
+            "approved_at": row['approved_at'],
+            "status": row['status'],
+            "created_at": row['created_at']
+        })
+
+    return {"requests": requests}
+
+
+@router.post("/drugs/requests/{request_id}/approve")
+async def approve_drug_request(
+    request_id: str,
+    actor_id: str = Query(...),
+    actor_role: str = Query("PHARMACY")
+):
+    """Approve a drug request (Pharmacy or Supervisor)"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM drug_requests WHERE id = ?", (request_id,))
+    req = cursor.fetchone()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if req['status'] != 'PENDING':
+        raise HTTPException(status_code=400, detail=f"Request is already {req['status']}")
+
+    try:
+        cursor.execute("""
+            UPDATE drug_requests
+            SET status = 'APPROVED', approver_id = ?, approved_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (actor_id, request_id))
+
+        conn.commit()
+
+        return {"request_id": request_id, "status": "APPROVED"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/drugs/requests/{request_id}/dispense")
+async def dispense_drug_request(
+    request_id: str,
+    actor_id: str = Query(...),
+    batch_numbers: Optional[Dict[str, str]] = None  # drug_code -> batch_number
+):
+    """
+    Dispense drugs from an approved request.
+    Creates DISPENSE transactions for each item.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM drug_requests WHERE id = ?", (request_id,))
+    req = cursor.fetchone()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if req['status'] not in ('APPROVED', 'PENDING'):
+        raise HTTPException(status_code=400, detail=f"Request is already {req['status']}")
+
+    items = json.loads(req['items'])
+    case_id = req['case_id']
+    tx_time = datetime.now().isoformat()
+
+    try:
+        # Create DISPENSE transactions for each item
+        transactions = []
+        for item in items:
+            tx_id = generate_tx_id()
+            batch = (batch_numbers or {}).get(item['drug_code'])
+
+            cursor.execute("""
+                INSERT INTO drug_transactions (
+                    id, request_id, case_id,
+                    drug_code, drug_name, schedule_class, batch_number,
+                    tx_type, quantity, unit,
+                    actor_id, tx_time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'DISPENSE', ?, ?, ?, ?)
+            """, (
+                tx_id, request_id, case_id,
+                item['drug_code'], item['drug_name'], item.get('schedule_class', 4), batch,
+                item['quantity'], item['unit'],
+                actor_id, tx_time
+            ))
+
+            transactions.append({
+                "tx_id": tx_id,
+                "drug_code": item['drug_code'],
+                "quantity": item['quantity']
+            })
+
+        # Update request status
+        cursor.execute("""
+            UPDATE drug_requests SET status = 'DISPENSED' WHERE id = ?
+        """, (request_id,))
+
+        conn.commit()
+
+        return {
+            "request_id": request_id,
+            "status": "DISPENSED",
+            "transactions": transactions
+        }
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -----------------------------------------------------------------------------
+# Drug Transaction API (Direct Recording)
+# -----------------------------------------------------------------------------
+
+@router.post("/cases/{case_id}/drugs/transaction")
+async def record_drug_transaction(
+    case_id: str,
+    request: DrugTransactionRequest,
+    actor_id: str = Query(...)
+):
+    """
+    Record a drug transaction (ADMIN, WASTE, RETURN).
+    WASTE requires witness_id.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify case exists and is not closed
+    cursor.execute("SELECT id, status FROM anesthesia_cases WHERE id = ?", (case_id,))
+    case = cursor.fetchone()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    if case['status'] == 'CLOSED':
+        raise HTTPException(status_code=400, detail="Cannot record transaction for closed case")
+
+    # WASTE requires witness
+    if request.tx_type == DrugTxType.WASTE and not request.witness_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Witness ID required for drug waste (管藥廢棄需要見證人)"
+        )
+
+    # Check for sufficient balance for ADMIN/WASTE/RETURN
+    if request.tx_type in (DrugTxType.ADMIN, DrugTxType.WASTE, DrugTxType.RETURN):
+        holdings = calculate_drug_holdings(cursor, case_id)
+        drug_holding = next((h for h in holdings if h['drug_code'] == request.drug_code), None)
+        current_balance = drug_holding['balance'] if drug_holding else 0
+
+        if request.quantity > current_balance:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient balance. Available: {current_balance} {request.unit}"
+            )
+
+    tx_id = generate_tx_id()
+    tx_time = datetime.now().isoformat()
+
+    # Handle idempotency
+    if request.idempotency_key:
+        cursor.execute(
+            "SELECT id FROM drug_transactions WHERE idempotency_key = ?",
+            (request.idempotency_key,)
+        )
+        existing = cursor.fetchone()
+        if existing:
+            return {"tx_id": existing['id'], "status": "DUPLICATE"}
+
+    try:
+        cursor.execute("""
+            INSERT INTO drug_transactions (
+                id, request_id, case_id,
+                drug_code, drug_name, schedule_class, batch_number,
+                tx_type, quantity, unit,
+                actor_id, witness_id, witness_verified_at,
+                device_id, idempotency_key, tx_time, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            tx_id,
+            request.request_id,
+            case_id,
+            request.drug_code,
+            request.drug_name,
+            request.schedule_class,
+            request.batch_number,
+            request.tx_type.value,
+            request.quantity,
+            request.unit,
+            actor_id,
+            request.witness_id,
+            datetime.now().isoformat() if request.witness_id else None,
+            request.device_id,
+            request.idempotency_key,
+            tx_time,
+            request.notes
+        ))
+
+        conn.commit()
+
+        # Get updated holdings
+        holdings = calculate_drug_holdings(cursor, case_id)
+
+        return {
+            "tx_id": tx_id,
+            "tx_type": request.tx_type.value,
+            "drug_code": request.drug_code,
+            "quantity": request.quantity,
+            "unit": request.unit,
+            "actor_id": actor_id,
+            "witness_id": request.witness_id,
+            "holdings": holdings
+        }
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -----------------------------------------------------------------------------
+# Drug Holdings API
+# -----------------------------------------------------------------------------
+
+@router.get("/cases/{case_id}/drugs/holdings")
+async def get_drug_holdings(case_id: str):
+    """Get current drug holdings (balance) for a case"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify case exists
+    cursor.execute("SELECT id FROM anesthesia_cases WHERE id = ?", (case_id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    holdings = calculate_drug_holdings(cursor, case_id)
+    total_balance = sum(h['balance'] for h in holdings)
+
+    return {
+        "case_id": case_id,
+        "holdings": holdings,
+        "total_balance": round(total_balance, 2),
+        "is_reconciled": total_balance == 0
+    }
+
+
+@router.get("/cases/{case_id}/drugs/transactions")
+async def list_drug_transactions(case_id: str):
+    """List all drug transactions for a case"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, request_id, drug_code, drug_name, schedule_class,
+               tx_type, quantity, unit, actor_id, witness_id,
+               tx_time, recorded_at, notes
+        FROM drug_transactions
+        WHERE case_id = ?
+        ORDER BY tx_time DESC
+    """, (case_id,))
+
+    transactions = []
+    for row in cursor.fetchall():
+        transactions.append({
+            "id": row['id'],
+            "request_id": row['request_id'],
+            "drug_code": row['drug_code'],
+            "drug_name": row['drug_name'],
+            "schedule_class": row['schedule_class'],
+            "tx_type": row['tx_type'],
+            "quantity": row['quantity'],
+            "unit": row['unit'],
+            "actor_id": row['actor_id'],
+            "witness_id": row['witness_id'],
+            "tx_time": row['tx_time'],
+            "recorded_at": row['recorded_at'],
+            "notes": row['notes']
+        })
+
+    return {"transactions": transactions, "count": len(transactions)}
+
+
+# -----------------------------------------------------------------------------
+# Drug Reconciliation API
+# -----------------------------------------------------------------------------
+
+@router.post("/cases/{case_id}/drugs/reconcile")
+async def reconcile_drugs(
+    case_id: str,
+    actor_id: str = Query(...),
+    actor_role: str = Query("ANES_MD")
+):
+    """
+    Reconcile drugs for a case.
+    Requires total balance = 0 and ANES_MD role.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify role
+    if actor_role != "ANES_MD":
+        raise HTTPException(
+            status_code=403,
+            detail="Only ANES_MD can reconcile drugs (需要麻醉醫師核准)"
+        )
+
+    # Verify case exists
+    cursor.execute("SELECT id, status FROM anesthesia_cases WHERE id = ?", (case_id,))
+    case = cursor.fetchone()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    # Check balance
+    total_balance = get_total_balance(cursor, case_id)
+    if total_balance != 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot reconcile: balance is {total_balance}, must be 0"
+        )
+
+    # Update all pending requests to RECONCILED
+    cursor.execute("""
+        UPDATE drug_requests
+        SET status = 'RECONCILED'
+        WHERE case_id = ? AND status = 'DISPENSED'
+    """, (case_id,))
+
+    conn.commit()
+
+    return {
+        "case_id": case_id,
+        "status": "RECONCILED",
+        "reconciled_by": actor_id,
+        "reconciled_at": datetime.now().isoformat()
+    }
+
+
+@router.get("/cases/{case_id}/drugs/can-close")
+async def check_can_close_case(case_id: str):
+    """Check if case can be closed (drug balance must be 0)"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id FROM anesthesia_cases WHERE id = ?", (case_id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    total_balance = get_total_balance(cursor, case_id)
+    holdings = calculate_drug_holdings(cursor, case_id)
+
+    return {
+        "case_id": case_id,
+        "can_close": total_balance == 0,
+        "total_balance": round(total_balance, 2),
+        "holdings": holdings,
+        "message": None if total_balance == 0 else f"Drug balance must be 0 (current: {total_balance})"
+    }

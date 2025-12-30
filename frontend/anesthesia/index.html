@@ -981,6 +981,228 @@
         </div>
     </div>
 
+    <!-- Phase B: Controlled Drugs Modal -->
+    <div class="modal" id="drugsModal">
+        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 class="modal-title">管制藥品</h2>
+                <button class="modal-close" onclick="closeModal('drugsModal')">&times;</button>
+            </div>
+
+            <!-- Holdings Summary -->
+            <div id="drugHoldingsSummary" class="holdings-summary">
+                <div class="holdings-header">
+                    <span>藥品餘額</span>
+                    <span id="holdingsStatus" class="holdings-status reconciled">已結清</span>
+                </div>
+                <div id="holdingsList" class="holdings-list">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="drug-actions">
+                <button class="drug-action-btn" onclick="showDrugDispenseForm()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>領藥</span>
+                </button>
+                <button class="drug-action-btn" onclick="showDrugAdminForm()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                    <span>給藥</span>
+                </button>
+                <button class="drug-action-btn" onclick="showDrugWasteForm()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    <span>廢棄</span>
+                </button>
+                <button class="drug-action-btn" onclick="showDrugReturnForm()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                    </svg>
+                    <span>退回</span>
+                </button>
+            </div>
+
+            <!-- Transaction Form (hidden by default) -->
+            <div id="drugTxForm" class="hidden">
+                <div class="section-title" id="drugTxTitle">給藥記錄</div>
+                <div class="form-group">
+                    <label class="form-label">藥品</label>
+                    <select class="form-input" id="drugTxDrugSelect">
+                        <option value="">選擇藥品...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">劑量</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="number" class="form-input" id="drugTxQuantity" step="0.1" style="flex: 1;">
+                        <span id="drugTxUnit" class="dose-unit" style="min-width: 40px;">mg</span>
+                    </div>
+                    <div id="drugTxAvailable" class="drug-available">可用: --</div>
+                </div>
+                <div id="drugTxWitnessGroup" class="form-group hidden">
+                    <label class="form-label">見證人 ID (必填)</label>
+                    <input type="text" class="form-input" id="drugTxWitness" placeholder="輸入見證人 ID">
+                    <div class="form-hint">管藥廢棄需要見證人簽核</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">備註</label>
+                    <input type="text" class="form-input" id="drugTxNotes" placeholder="選填">
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 16px;">
+                    <button class="btn" style="background: var(--card-hover); flex: 1;" onclick="hideDrugTxForm()">取消</button>
+                    <button class="btn controlled" style="flex: 2;" onclick="submitDrugTx()">確認</button>
+                </div>
+            </div>
+
+            <!-- Transaction History -->
+            <div class="section-title" style="margin-top: 20px;">交易記錄</div>
+            <div id="drugTxHistory" class="tx-history">
+                <div class="empty-state" style="padding: 20px;">
+                    <p>尚無交易記錄</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Phase B: Drug Modal Styles */
+        .holdings-summary {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .holdings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .holdings-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .holdings-status.reconciled {
+            background: #71717a;
+            color: white;
+        }
+        .holdings-status.pending {
+            background: var(--controlled);
+            color: white;
+        }
+        .holdings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .holding-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--card);
+            border-radius: 8px;
+            border-left: 3px solid var(--controlled);
+        }
+        .holding-drug-name {
+            font-weight: 500;
+        }
+        .holding-balance {
+            font-weight: 700;
+            color: var(--controlled);
+        }
+        .holding-balance.zero {
+            color: #71717a;
+        }
+        .drug-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .drug-action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .drug-action-btn:active {
+            background: var(--card-hover);
+        }
+        .drug-available {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--controlled);
+            margin-top: 4px;
+        }
+        .btn.controlled {
+            background: var(--controlled);
+        }
+        .btn.controlled:active {
+            background: var(--controlled-dark);
+        }
+        .tx-history {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .tx-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .tx-item:last-child {
+            border-bottom: none;
+        }
+        .tx-type {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .tx-type.DISPENSE { background: #6366f1; color: white; }
+        .tx-type.ADMIN { background: var(--controlled); color: white; }
+        .tx-type.WASTE { background: #71717a; color: white; }
+        .tx-type.RETURN { background: #52525b; color: white; }
+        .tx-info {
+            flex: 1;
+            margin-left: 8px;
+        }
+        .tx-drug {
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        .tx-detail {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .tx-amount {
+            font-weight: 600;
+            text-align: right;
+        }
+    </style>
+
     <style>
         .preop-flag {
             display: flex;
@@ -1610,9 +1832,244 @@
                 loadPreopData(currentCase.id);
                 openModal('preopModal');
             } else if (tab === 'drugs') {
-                alert('管制藥品功能開發中 (Phase B)');
+                if (!currentCase) {
+                    alert('請先選擇或建立案例');
+                    return;
+                }
+                loadDrugHoldings();
+                loadDrugTransactions();
+                openModal('drugsModal');
             } else if (tab === 'o2') {
                 alert('氧氣管理功能開發中');
+            }
+        }
+
+        // =================================================================
+        // Phase B: Controlled Drugs Functions
+        // =================================================================
+
+        let drugHoldings = [];
+        let currentDrugTxType = 'ADMIN';
+
+        // Controlled drug list for quick selection
+        const CONTROLLED_DRUGS = [
+            { code: 'FENT001', name: 'Fentanyl', unit: 'mcg', schedule_class: 2 },
+            { code: 'MIDA001', name: 'Midazolam', unit: 'mg', schedule_class: 4 },
+            { code: 'PROP001', name: 'Propofol', unit: 'mg', schedule_class: 4 },
+            { code: 'KETA001', name: 'Ketamine', unit: 'mg', schedule_class: 3 },
+            { code: 'MORP001', name: 'Morphine', unit: 'mg', schedule_class: 2 },
+            { code: 'REMI001', name: 'Remifentanil', unit: 'mcg', schedule_class: 2 },
+        ];
+
+        async function loadDrugHoldings() {
+            if (!currentCase) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/drugs/holdings`);
+                const data = await res.json();
+
+                drugHoldings = data.holdings || [];
+                const totalBalance = data.total_balance || 0;
+
+                // Update status badge
+                const statusEl = document.getElementById('holdingsStatus');
+                if (totalBalance === 0) {
+                    statusEl.textContent = '已結清';
+                    statusEl.className = 'holdings-status reconciled';
+                } else {
+                    statusEl.textContent = `餘額: ${totalBalance}`;
+                    statusEl.className = 'holdings-status pending';
+                }
+
+                // Update holdings list
+                const listEl = document.getElementById('holdingsList');
+                if (drugHoldings.length === 0) {
+                    listEl.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 12px;">尚無領藥記錄</div>`;
+                } else {
+                    listEl.innerHTML = drugHoldings.map(h => `
+                        <div class="holding-item">
+                            <div class="holding-drug-name">${h.drug_name}</div>
+                            <div class="holding-balance ${h.balance === 0 ? 'zero' : ''}">${h.balance} ${h.unit}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('Failed to load drug holdings:', err);
+            }
+        }
+
+        async function loadDrugTransactions() {
+            if (!currentCase) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/drugs/transactions`);
+                const data = await res.json();
+
+                const historyEl = document.getElementById('drugTxHistory');
+                if (!data.transactions || data.transactions.length === 0) {
+                    historyEl.innerHTML = `<div class="empty-state" style="padding: 20px;"><p>尚無交易記錄</p></div>`;
+                } else {
+                    historyEl.innerHTML = data.transactions.map(tx => `
+                        <div class="tx-item">
+                            <span class="tx-type ${tx.tx_type}">${tx.tx_type}</span>
+                            <div class="tx-info">
+                                <div class="tx-drug">${tx.drug_name}</div>
+                                <div class="tx-detail">${tx.tx_time?.substring(11, 16) || ''} · ${tx.actor_id}${tx.witness_id ? ' (見證: ' + tx.witness_id + ')' : ''}</div>
+                            </div>
+                            <div class="tx-amount">${tx.tx_type === 'DISPENSE' ? '+' : '-'}${tx.quantity} ${tx.unit}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('Failed to load drug transactions:', err);
+            }
+        }
+
+        function updateDrugSelect(includeAllDrugs = false) {
+            const select = document.getElementById('drugTxDrugSelect');
+            let options = '<option value="">選擇藥品...</option>';
+
+            if (includeAllDrugs) {
+                // For DISPENSE, show all controlled drugs
+                CONTROLLED_DRUGS.forEach(d => {
+                    options += `<option value="${d.code}" data-name="${d.name}" data-unit="${d.unit}" data-class="${d.schedule_class}">${d.name}</option>`;
+                });
+            } else {
+                // For ADMIN/WASTE/RETURN, only show drugs with balance > 0
+                drugHoldings.filter(h => h.balance > 0).forEach(h => {
+                    options += `<option value="${h.drug_code}" data-name="${h.drug_name}" data-unit="${h.unit}" data-balance="${h.balance}">${h.drug_name} (餘 ${h.balance} ${h.unit})</option>`;
+                });
+            }
+
+            select.innerHTML = options;
+        }
+
+        function showDrugDispenseForm() {
+            currentDrugTxType = 'DISPENSE';
+            document.getElementById('drugTxTitle').textContent = '領藥記錄';
+            document.getElementById('drugTxWitnessGroup').classList.add('hidden');
+            updateDrugSelect(true);
+            document.getElementById('drugTxForm').classList.remove('hidden');
+            document.getElementById('drugTxAvailable').textContent = '';
+        }
+
+        function showDrugAdminForm() {
+            if (drugHoldings.filter(h => h.balance > 0).length === 0) {
+                alert('目前無可用藥品，請先領藥');
+                return;
+            }
+            currentDrugTxType = 'ADMIN';
+            document.getElementById('drugTxTitle').textContent = '給藥記錄';
+            document.getElementById('drugTxWitnessGroup').classList.add('hidden');
+            updateDrugSelect(false);
+            document.getElementById('drugTxForm').classList.remove('hidden');
+        }
+
+        function showDrugWasteForm() {
+            if (drugHoldings.filter(h => h.balance > 0).length === 0) {
+                alert('目前無可廢棄藥品');
+                return;
+            }
+            currentDrugTxType = 'WASTE';
+            document.getElementById('drugTxTitle').textContent = '廢棄記錄 (需見證人)';
+            document.getElementById('drugTxWitnessGroup').classList.remove('hidden');
+            updateDrugSelect(false);
+            document.getElementById('drugTxForm').classList.remove('hidden');
+        }
+
+        function showDrugReturnForm() {
+            if (drugHoldings.filter(h => h.balance > 0).length === 0) {
+                alert('目前無可退回藥品');
+                return;
+            }
+            currentDrugTxType = 'RETURN';
+            document.getElementById('drugTxTitle').textContent = '退回藥品';
+            document.getElementById('drugTxWitnessGroup').classList.add('hidden');
+            updateDrugSelect(false);
+            document.getElementById('drugTxForm').classList.remove('hidden');
+        }
+
+        function hideDrugTxForm() {
+            document.getElementById('drugTxForm').classList.add('hidden');
+            document.getElementById('drugTxQuantity').value = '';
+            document.getElementById('drugTxWitness').value = '';
+            document.getElementById('drugTxNotes').value = '';
+        }
+
+        // Update available balance when drug is selected
+        document.addEventListener('DOMContentLoaded', () => {
+            const drugSelect = document.getElementById('drugTxDrugSelect');
+            if (drugSelect) {
+                drugSelect.addEventListener('change', function() {
+                    const option = this.options[this.selectedIndex];
+                    const unit = option.dataset.unit || 'mg';
+                    const balance = option.dataset.balance || '';
+                    document.getElementById('drugTxUnit').textContent = unit;
+                    if (balance && currentDrugTxType !== 'DISPENSE') {
+                        document.getElementById('drugTxAvailable').textContent = `可用: ${balance} ${unit}`;
+                    } else {
+                        document.getElementById('drugTxAvailable').textContent = '';
+                    }
+                });
+            }
+        });
+
+        async function submitDrugTx() {
+            if (!currentCase) return;
+
+            const drugSelect = document.getElementById('drugTxDrugSelect');
+            const option = drugSelect.options[drugSelect.selectedIndex];
+
+            if (!option.value) {
+                alert('請選擇藥品');
+                return;
+            }
+
+            const quantity = parseFloat(document.getElementById('drugTxQuantity').value);
+            if (!quantity || quantity <= 0) {
+                alert('請輸入有效劑量');
+                return;
+            }
+
+            // Check witness for WASTE
+            let witnessId = null;
+            if (currentDrugTxType === 'WASTE') {
+                witnessId = document.getElementById('drugTxWitness').value.trim();
+                if (!witnessId) {
+                    alert('廢棄管藥需要見證人 ID');
+                    return;
+                }
+            }
+
+            const body = {
+                drug_code: option.value,
+                drug_name: option.dataset.name || option.text.split(' (')[0],
+                quantity: quantity,
+                unit: option.dataset.unit || 'mg',
+                tx_type: currentDrugTxType,
+                schedule_class: parseInt(option.dataset.class) || 4,
+                witness_id: witnessId,
+                notes: document.getElementById('drugTxNotes').value.trim() || null
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/drugs/transaction?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Transaction failed');
+                }
+
+                // Refresh data
+                hideDrugTxForm();
+                await loadDrugHoldings();
+                await loadDrugTransactions();
+            } catch (err) {
+                alert('記錄失敗: ' + err.message);
             }
         }
 
