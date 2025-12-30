@@ -972,49 +972,50 @@ class AnesthesiaRole(str, Enum):
 - Grayscale UI with purple-pink (fuchsia) for controlled drugs
 - All emojis replaced with Heroicons SVG
 
-### Phase B: Controlled Drugs 🚧 NEXT
+### Phase B: Controlled Drugs ✅ COMPLETED (2025-12-30)
 
 **Goal:** Drug ledger with balance tracking and dual-control enforcement
 
+| Task | Status |
+|------|--------|
+| Schema: `drug_requests`, `drug_transactions` | ✅ Done |
+| API: Drug request/tx/holdings (10+ endpoints) | ✅ Done |
+| UI: 管藥 Tab with holdings display | ✅ Done |
+| Dual-control enforcement (witness for WASTE) | ✅ Done |
+| Balance validation (block close if ≠ 0) | ✅ Done |
+| Transaction history log | ✅ Done |
+
+**Delivered:**
+- Drug ledger with balance tracking: `Balance = DISPENSE - (ADMIN + WASTE + RETURN)`
+- Block case close if balance ≠ 0 via `/drugs/can-close` endpoint
+- Witness requirement enforced for WASTE transactions
+- Full transaction history with timestamps and actor/witness tracking
+- Fuchsia/purple-pink color scheme for controlled drug UI elements
+
+### Phase C: Resource Coupling + PACU 🚧 NEXT
+
 | Task | Priority |
 |------|----------|
-| Schema: `drug_requests`, `drug_transactions` | High |
-| API: Drug request/tx/holdings | High |
-| UI: Drug panel with balance display | High |
-| Dual-control enforcement | High |
-| Offline proof upload | Medium |
-| Pharmacy integration | Medium |
-
-**Deliverables:**
-- Drug ledger with balance tracking
-- Block case close if balance ≠ 0
-- Witness requirement for WASTE
-- Integration with existing pharmacy module
-
-### Phase C: Resource Coupling + PACU (1 Week)
-
-| Task | Days |
-|------|------|
-| O2 cylinder claim API | 1 |
-| O2 minutes estimation | 1 |
-| UI: O2 status in header | 0.5 |
-| Schema: `pacu_assessments` | 0.5 |
-| API: PACU endpoints | 1 |
-| UI: PACU dashboard | 2 |
+| O2 cylinder claim API | High |
+| O2 minutes estimation | High |
+| UI: O2 status in header | High |
+| Schema: `pacu_assessments` | Medium |
+| API: PACU endpoints | Medium |
+| UI: PACU dashboard | Medium |
 
 **Deliverables:**
 - Claim O2 cylinder by barcode
 - Real-time O2 remaining estimate
 - PACU admit/assess/discharge flow
 
-### Phase D: Signatures + Polish (1 Week)
+### Phase D: Signatures + Polish
 
-| Task | Days |
-|------|------|
-| Anesthesia Doctor PWA | 2 |
-| Digital signature flow | 2 |
-| Reports: Case summary, Drug reconciliation | 2 |
-| Edge case handling | 1 |
+| Task | Priority |
+|------|----------|
+| Role switching (nurse/doctor) with PIN | High |
+| Digital signature flow | High |
+| Reports: Case summary, Drug reconciliation | Medium |
+| Edge case handling | Medium |
 
 **Deliverables:**
 - Doctor PWA with signing
@@ -1218,7 +1219,7 @@ During transition, system supports:
 
 *Version: 1.5.1*
 *Last Updated: 2025-12-30*
-*Status: Phase A Complete, Ready for Phase B*
+*Status: Phase A & B Complete, Ready for Phase C*
 
 ---
 
