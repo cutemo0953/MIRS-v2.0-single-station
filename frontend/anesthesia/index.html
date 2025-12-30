@@ -614,10 +614,13 @@
 
     <!-- Resource Bar (shown when case is active) -->
     <div class="resource-bar hidden" id="resourceBar">
-        <div class="resource-item">
-            <span>O2</span>
-            <span class="resource-value" id="o2Minutes">--</span>
-            <span>min</span>
+        <div class="resource-item o2-item" onclick="showO2Modal()" style="cursor:pointer; padding: 4px 8px; border-radius: 8px; transition: background 0.2s;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:18px;height:18px;opacity:0.7;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+            </svg>
+            <span id="o2Label">O2</span>
+            <span class="resource-value" id="o2Status">未認領</span>
+            <span id="o2Unit"></span>
         </div>
         <div class="resource-item">
             <span>SpO2</span>
@@ -1069,6 +1072,127 @@
             </div>
         </div>
     </div>
+
+    <!-- Phase C: O2 Cylinder Modal -->
+    <div class="modal" id="o2Modal">
+        <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 class="modal-title">氧氣管理</h2>
+                <button class="modal-close" onclick="closeModal('o2Modal')">&times;</button>
+            </div>
+
+            <!-- Current O2 Status -->
+            <div class="o2-current-status" id="o2CurrentStatus">
+                <div class="holdings-header">
+                    <span>目前狀態</span>
+                    <span class="holdings-status" id="o2ClaimStatus">未認領</span>
+                </div>
+                <div id="o2ClaimedInfo" class="hidden" style="padding: 12px; background: var(--card); border-radius: 8px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>氧氣瓶</span>
+                        <span id="o2CylinderSerial" style="font-weight: 600;">--</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>剩餘量</span>
+                        <span id="o2LevelPercent" style="font-weight: 600;">--%</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>預估剩餘</span>
+                        <span id="o2EstTime" style="font-weight: 600;">-- min</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>流速</span>
+                        <span id="o2FlowRate" style="font-weight: 600;">-- L/min</span>
+                    </div>
+                </div>
+                <button id="o2ReleaseBtn" class="quick-btn hidden" onclick="releaseO2Cylinder()" style="width: 100%; background: var(--danger); border-color: var(--danger);">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    <span>釋放氧氣瓶</span>
+                </button>
+            </div>
+
+            <!-- Available Cylinders List -->
+            <div id="o2AvailableSection">
+                <div class="holdings-header" style="margin-top: 16px;">
+                    <span>可用氧氣瓶</span>
+                    <button onclick="loadAvailableCylinders()" style="background: none; border: none; color: var(--primary); cursor: pointer;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="o2CylinderList" class="holdings-list">
+                    <div class="empty-state" style="padding: 24px; text-align: center;">
+                        <p style="color: var(--text-muted);">載入中...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Phase C: O2 Modal Styles */
+        .o2-current-status {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .o2-cylinder-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--card);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .o2-cylinder-item:hover {
+            background: var(--card-hover);
+        }
+        .o2-cylinder-item.claimed {
+            border-left-color: var(--warning);
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .o2-cylinder-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .o2-cylinder-serial {
+            font-weight: 600;
+        }
+        .o2-cylinder-level {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+        .o2-level-bar {
+            width: 60px;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .o2-level-fill {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s;
+        }
+        .o2-level-fill.low {
+            background: var(--warning);
+        }
+        .o2-level-fill.critical {
+            background: var(--danger);
+        }
+        .o2-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+    </style>
 
     <style>
         /* Phase B: Drug Modal Styles */
@@ -1600,24 +1724,194 @@
             }
         }
 
+        // =================================================================
+        // Phase C: Oxygen Cylinder Management
+        // =================================================================
+        let currentO2Status = null;
+
         async function loadO2Status(caseId) {
             try {
                 const res = await fetch(`${API_BASE}/cases/${caseId}/oxygen-status`);
                 const data = await res.json();
+                currentO2Status = data;
 
-                const el = document.getElementById('o2Minutes');
-                if (data.est_minutes_remaining) {
-                    el.textContent = data.est_minutes_remaining;
-                    if (data.est_minutes_remaining < 30) {
-                        el.classList.add('danger');
-                    } else if (data.est_minutes_remaining < 60) {
-                        el.classList.add('warning');
+                const statusEl = document.getElementById('o2Status');
+                const unitEl = document.getElementById('o2Unit');
+
+                if (data.source_type === 'CYLINDER' && data.cylinder_serial) {
+                    // Cylinder claimed
+                    statusEl.textContent = data.est_minutes_remaining || '--';
+                    unitEl.textContent = 'min';
+
+                    // Apply warning/danger classes
+                    statusEl.classList.remove('warning', 'danger');
+                    if (data.est_minutes_remaining && data.est_minutes_remaining < 30) {
+                        statusEl.classList.add('danger');
+                    } else if (data.est_minutes_remaining && data.est_minutes_remaining < 60) {
+                        statusEl.classList.add('warning');
                     }
                 } else {
-                    el.textContent = '--';
+                    // No cylinder claimed
+                    statusEl.textContent = '未認領';
+                    unitEl.textContent = '';
+                    statusEl.classList.remove('warning', 'danger');
                 }
             } catch (err) {
                 console.error('Failed to load O2 status:', err);
+                document.getElementById('o2Status').textContent = '--';
+            }
+        }
+
+        async function showO2Modal() {
+            if (!currentCase) {
+                alert('請先選擇案例');
+                return;
+            }
+
+            document.getElementById('o2Modal').classList.add('active');
+
+            // Load current status
+            await loadO2Status(currentCase.id);
+            updateO2ModalStatus();
+
+            // Load available cylinders
+            await loadAvailableCylinders();
+        }
+
+        function updateO2ModalStatus() {
+            const claimStatusEl = document.getElementById('o2ClaimStatus');
+            const claimedInfoEl = document.getElementById('o2ClaimedInfo');
+            const releaseBtn = document.getElementById('o2ReleaseBtn');
+            const availableSection = document.getElementById('o2AvailableSection');
+
+            if (currentO2Status && currentO2Status.source_type === 'CYLINDER' && currentO2Status.cylinder_serial) {
+                // Cylinder is claimed
+                claimStatusEl.textContent = '已認領';
+                claimStatusEl.classList.remove('reconciled');
+                claimStatusEl.classList.add('pending');
+                claimedInfoEl.classList.remove('hidden');
+                releaseBtn.classList.remove('hidden');
+                availableSection.classList.add('hidden');
+
+                document.getElementById('o2CylinderSerial').textContent = currentO2Status.cylinder_serial;
+                document.getElementById('o2LevelPercent').textContent = `${currentO2Status.level_percent || '--'}%`;
+                document.getElementById('o2EstTime').textContent = `${currentO2Status.est_minutes_remaining || '--'} min`;
+                document.getElementById('o2FlowRate').textContent = `${currentO2Status.avg_flow_lpm || '--'} L/min`;
+            } else {
+                // No cylinder claimed
+                claimStatusEl.textContent = '未認領';
+                claimStatusEl.classList.add('reconciled');
+                claimStatusEl.classList.remove('pending');
+                claimedInfoEl.classList.add('hidden');
+                releaseBtn.classList.add('hidden');
+                availableSection.classList.remove('hidden');
+            }
+        }
+
+        async function loadAvailableCylinders() {
+            const listEl = document.getElementById('o2CylinderList');
+            listEl.innerHTML = '<div class="empty-state" style="padding: 24px; text-align: center;"><p style="color: var(--text-muted);">載入中...</p></div>';
+
+            try {
+                // Load E-size cylinders
+                const eRes = await fetch('/api/v2/equipment/EMER-EQ-006/units');
+                const eData = await eRes.json();
+
+                // Load H-size cylinders
+                const hRes = await fetch('/api/v2/equipment/RESP-001/units');
+                const hData = await hRes.json();
+
+                const allUnits = [
+                    ...(eData.units || []).map(u => ({ ...u, type: 'E型' })),
+                    ...(hData.units || []).map(u => ({ ...u, type: 'H型' }))
+                ];
+
+                if (allUnits.length === 0) {
+                    listEl.innerHTML = '<div class="empty-state" style="padding: 24px; text-align: center;"><p style="color: var(--text-muted);">無可用氧氣瓶</p></div>';
+                    return;
+                }
+
+                listEl.innerHTML = allUnits.map(unit => {
+                    const isClaimed = unit.claimed_by_case_id && unit.claimed_by_case_id !== currentCase?.id;
+                    const isMyself = unit.claimed_by_case_id === currentCase?.id;
+                    const levelClass = unit.level_percent < 30 ? 'critical' : (unit.level_percent < 60 ? 'low' : '');
+
+                    return `
+                        <div class="o2-cylinder-item ${isClaimed ? 'claimed' : ''}"
+                             onclick="${isClaimed ? '' : `claimO2Cylinder(${unit.id})`}"
+                             style="${isMyself ? 'border-left-color: var(--primary); background: var(--card-hover);' : ''}">
+                            <div class="o2-cylinder-info">
+                                <span class="o2-cylinder-serial">${unit.unit_label} (${unit.type})</span>
+                                <span class="o2-cylinder-level">${unit.level_percent}% ${isClaimed ? '- 使用中' : (isMyself ? '- 目前使用' : '')}</span>
+                            </div>
+                            <div class="o2-level-bar">
+                                <div class="o2-level-fill ${levelClass}" style="width: ${unit.level_percent}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Failed to load cylinders:', err);
+                listEl.innerHTML = '<div class="empty-state" style="padding: 24px; text-align: center;"><p style="color: var(--text-muted);">載入失敗</p></div>';
+            }
+        }
+
+        async function claimO2Cylinder(unitId) {
+            if (!currentCase) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/claim-oxygen?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cylinder_unit_id: unitId })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.detail || '認領失敗');
+                    return;
+                }
+
+                const data = await res.json();
+                alert(`已認領氧氣瓶: ${data.cylinder_serial} (${data.level_percent}%)`);
+
+                // Reload status
+                await loadO2Status(currentCase.id);
+                updateO2ModalStatus();
+                await loadAvailableCylinders();
+
+            } catch (err) {
+                console.error('Failed to claim cylinder:', err);
+                alert('認領失敗: ' + err.message);
+            }
+        }
+
+        async function releaseO2Cylinder() {
+            if (!currentCase) return;
+
+            if (!confirm('確定要釋放氧氣瓶嗎？')) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/claim-oxygen?actor_id=${actorId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.detail || '釋放失敗');
+                    return;
+                }
+
+                // Clear status
+                currentO2Status = null;
+                await loadO2Status(currentCase.id);
+                updateO2ModalStatus();
+                await loadAvailableCylinders();
+
+            } catch (err) {
+                console.error('Failed to release cylinder:', err);
+                alert('釋放失敗: ' + err.message);
             }
         }
 
@@ -1840,7 +2134,7 @@
                 loadDrugTransactions();
                 openModal('drugsModal');
             } else if (tab === 'o2') {
-                alert('氧氣管理功能開發中');
+                showO2Modal();
             }
         }
 
@@ -2135,7 +2429,7 @@
                 { label: '手術結束', action: () => addMilestone('SURGERY_END') },
                 { label: '拔管 Extubation', action: () => addAirwayEvent('EXTUBATION') },
                 { label: '麻醉結束', action: () => addMilestone('ANESTHESIA_END') },
-                { label: '認領氧氣瓶', action: () => alert('氧氣瓶認領功能開發中') },
+                { label: '認領氧氣瓶', action: () => showO2Modal() },
                 { label: '關閉案例', action: () => closeCase() }
             ];
 
