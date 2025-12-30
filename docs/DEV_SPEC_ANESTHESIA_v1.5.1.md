@@ -872,6 +872,7 @@ class AnesthesiaRole(str, Enum):
 | Equipment module O2 cylinders | Exists | Claim integration |
 | Pharmacy drug inventory | Exists | Drug request workflow |
 | WAL sync engine | Exists | Offline sync |
+| **CIRS Registration Integration** | ⚠️ NOT IMPLEMENTED | See 11.3 |
 
 ### 11.2 Out of Scope (Future Dev Specs)
 
@@ -881,6 +882,108 @@ class AnesthesiaRole(str, Enum):
 | **Automated Monitor Integration** | Requires hardware; Phase 2 consideration |
 | **Hash Chain / Merkle Tree** | Nice-to-have for audit; not MVP critical |
 | **Full PKI for Signatures** | Current approach uses session-bound keys |
+
+### 11.3 CIRS Registration Integration (GAP ANALYSIS)
+
+#### Current Status: ❌ NOT IMPLEMENTED
+
+**問題描述:**
+當 MIRS 麻醉站輸入病歷號建立案例時，目前**不會**與 CIRS 檢傷分類系統的掛號連結。
+
+#### Expected Workflow (To Be Implemented)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        CIRS ↔ MIRS Integration Flow                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  1. CIRS Triage (檢傷站)                                                     │
+│     └── Patient arrives → Triage nurse registers patient                     │
+│         └── Creates `registrations` record with patient_id, station_id       │
+│                                                                              │
+│  2. CIRS Hub broadcasts registration to subscribed stations:                 │
+│     ├── Doctor PWA (/doctor) receives patient list                           │
+│     ├── Anesthesia PWA (/anesthesia) receives patient list                   │
+│     └── Surgery Console receives patient list                                │
+│                                                                              │
+│  3. Anesthesia Station                                                       │
+│     └── Nurse selects patient from list (instead of manual entry)            │
+│     └── Creates anesthesia_case linked to registration.patient_id            │
+│                                                                              │
+│  4. Doctor PWA                                                               │
+│     └── Doctor sees same patient list                                        │
+│     └── Can view anesthesia case status, sign off when ready                 │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Technical Implementation Plan
+
+**Option A: Shared Database (Recommended for Single-Station BORP)**
+
+```python
+# In routes/anesthesia.py
+
+@router.get("/registrations")
+async def get_pending_registrations():
+    """Get patients registered to this station from CIRS"""
+    cursor.execute("""
+        SELECT r.id, r.patient_id, r.patient_name, r.chief_complaint,
+               r.triage_level, r.registered_at
+        FROM registrations r
+        WHERE r.station_id = ?
+          AND r.status = 'REGISTERED'
+          AND NOT EXISTS (
+              SELECT 1 FROM anesthesia_cases ac
+              WHERE ac.patient_id = r.patient_id
+                AND DATE(ac.created_at) = DATE('now')
+          )
+        ORDER BY r.registered_at DESC
+    """, (config.get_station_id(),))
+    return {"registrations": cursor.fetchall()}
+```
+
+**Option B: Hub-Satellite Sync (For Multi-Station Deployment)**
+
+```
+Hub                           Satellite (MIRS)
+ │                                 │
+ │  POST /api/sync/push            │
+ │  { registrations: [...] }  ────▶│
+ │                                 │ Store in local registrations table
+ │                                 │
+ │  GET /api/sync/ack              │
+ │◀──── { received: true }         │
+```
+
+#### API Changes Required
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/anesthesia/registrations` | GET | List pending registrations for this station |
+| `/api/anesthesia/cases` | POST | Accept `registration_id` to link case |
+
+#### Frontend Changes Required
+
+1. **New Case Modal**: Add "從掛號清單選取" option
+2. **Registration List View**: Show pending patients with triage info
+3. **Patient Autocomplete**: When typing patient_id, suggest from registrations
+
+#### Priority
+
+| Item | Priority | Reason |
+|------|----------|--------|
+| Shared DB query | High | Simplest for single-station |
+| Frontend patient picker | High | Better UX than manual entry |
+| Hub-Satellite sync | Medium | Only needed for multi-station |
+| Doctor PWA notification | Medium | Can view via web for now |
+
+#### Decision Required
+
+Before implementation, clarify:
+1. Is MIRS running on same database as CIRS? (Single SQLite file)
+2. If separate, what sync mechanism? (Hub-push or satellite-pull)
+3. Should patient selection be mandatory or allow manual entry as fallback?
 
 ---
 

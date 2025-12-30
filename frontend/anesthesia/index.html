@@ -426,6 +426,14 @@
             background: var(--card-hover);
         }
 
+        .med-btn.controlled-drug {
+            border-color: var(--controlled);
+        }
+
+        .med-btn.controlled-drug .med-name {
+            color: var(--controlled);
+        }
+
         .med-name {
             font-weight: 600;
             margin-bottom: 4px;
@@ -434,6 +442,68 @@
         .med-dose {
             font-size: 0.875rem;
             color: var(--text-muted);
+        }
+
+        /* Dose Adjustment UI */
+        .selected-drug-card {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .selected-drug-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .selected-drug-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .selected-drug-tag.controlled {
+            background: var(--controlled);
+            color: white;
+        }
+
+        .dose-adjust-section {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .dose-btn {
+            background: var(--card-hover);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .dose-btn:active {
+            background: var(--primary);
+        }
+
+        .dose-input {
+            width: 100px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .dose-unit {
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 8px;
         }
 
         /* Form */
@@ -771,35 +841,74 @@
                 <h2 class="modal-title">給藥記錄</h2>
                 <button class="modal-close" onclick="closeModal('medModal')">&times;</button>
             </div>
-            <div class="section-title">常用藥物</div>
-            <div class="med-grid">
-                <button class="med-btn" onclick="quickMed('PROPO001', 'Propofol', 100, 'mg')">
-                    <div class="med-name">Propofol</div>
-                    <div class="med-dose">100 mg IV</div>
-                </button>
-                <button class="med-btn" onclick="quickMed('FENTA001', 'Fentanyl', 50, 'mcg')">
-                    <div class="med-name">Fentanyl</div>
-                    <div class="med-dose">50 mcg IV</div>
-                </button>
-                <button class="med-btn" onclick="quickMed('ROCUR001', 'Rocuronium', 50, 'mg')">
-                    <div class="med-name">Rocuronium</div>
-                    <div class="med-dose">50 mg IV</div>
-                </button>
-                <button class="med-btn" onclick="quickMed('MIDAZ001', 'Midazolam', 2, 'mg')">
-                    <div class="med-name">Midazolam</div>
-                    <div class="med-dose">2 mg IV</div>
-                </button>
-                <button class="med-btn" onclick="quickMed('ATRO001', 'Atropine', 0.5, 'mg')">
-                    <div class="med-name">Atropine</div>
-                    <div class="med-dose">0.5 mg IV</div>
-                </button>
-                <button class="med-btn" onclick="quickMed('EPHED001', 'Ephedrine', 5, 'mg')">
-                    <div class="med-name">Ephedrine</div>
-                    <div class="med-dose">5 mg IV</div>
-                </button>
+
+            <!-- Drug Selection View -->
+            <div id="medSelectView">
+                <div class="section-title">常用藥物</div>
+                <div class="med-grid">
+                    <button class="med-btn" onclick="selectMed('PROPO001', 'Propofol', 100, 'mg', false)">
+                        <div class="med-name">Propofol</div>
+                        <div class="med-dose">100 mg IV</div>
+                    </button>
+                    <button class="med-btn controlled-drug" onclick="selectMed('FENTA001', 'Fentanyl', 50, 'mcg', true)">
+                        <div class="med-name">Fentanyl</div>
+                        <div class="med-dose">50 mcg IV</div>
+                    </button>
+                    <button class="med-btn" onclick="selectMed('ROCUR001', 'Rocuronium', 50, 'mg', false)">
+                        <div class="med-name">Rocuronium</div>
+                        <div class="med-dose">50 mg IV</div>
+                    </button>
+                    <button class="med-btn controlled-drug" onclick="selectMed('MIDAZ001', 'Midazolam', 2, 'mg', true)">
+                        <div class="med-name">Midazolam</div>
+                        <div class="med-dose">2 mg IV</div>
+                    </button>
+                    <button class="med-btn" onclick="selectMed('ATRO001', 'Atropine', 0.5, 'mg', false)">
+                        <div class="med-name">Atropine</div>
+                        <div class="med-dose">0.5 mg IV</div>
+                    </button>
+                    <button class="med-btn" onclick="selectMed('EPHED001', 'Ephedrine', 5, 'mg', false)">
+                        <div class="med-name">Ephedrine</div>
+                        <div class="med-dose">5 mg IV</div>
+                    </button>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="btn" style="background: var(--card-hover);" onclick="showCustomMedForm()">自訂藥物</button>
+                </div>
             </div>
-            <div style="margin-top: 20px;">
-                <button class="btn" style="background: var(--card-hover);" onclick="showCustomMedForm()">自訂藥物</button>
+
+            <!-- Dose Adjustment View -->
+            <div id="medConfirmView" class="hidden">
+                <div class="selected-drug-card">
+                    <div class="selected-drug-name" id="selectedDrugName">Propofol</div>
+                    <div class="selected-drug-tag" id="selectedDrugTag"></div>
+                </div>
+                <div class="dose-adjust-section">
+                    <div class="form-group">
+                        <label class="form-label">劑量</label>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <button class="dose-btn" onclick="adjustDose(-10)">-10</button>
+                            <button class="dose-btn" onclick="adjustDose(-1)">-1</button>
+                            <input type="number" class="form-input dose-input" id="selectedDose" step="0.1">
+                            <button class="dose-btn" onclick="adjustDose(1)">+1</button>
+                            <button class="dose-btn" onclick="adjustDose(10)">+10</button>
+                        </div>
+                        <div class="dose-unit" id="selectedUnit">mg</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">給藥途徑</label>
+                        <select class="form-input" id="selectedRoute">
+                            <option value="IV">IV 靜脈注射</option>
+                            <option value="IM">IM 肌肉注射</option>
+                            <option value="SC">SC 皮下注射</option>
+                            <option value="PO">PO 口服</option>
+                            <option value="INH">INH 吸入</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button class="btn" style="background: var(--card-hover); flex: 1;" onclick="backToMedSelect()">返回</button>
+                    <button class="btn btn-primary" style="flex: 2;" onclick="confirmMed()">確認給藥</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1352,6 +1461,94 @@
             }
         }
 
+        // =================================================================
+        // Medication Selection with Dose Adjustment
+        // =================================================================
+        let selectedMed = null;
+
+        function selectMed(code, name, defaultDose, unit, isControlled) {
+            if (!currentCase) {
+                alert('請先選擇或建立案例');
+                return;
+            }
+
+            selectedMed = { code, name, defaultDose, unit, isControlled };
+
+            // Update UI
+            document.getElementById('selectedDrugName').textContent = name;
+            document.getElementById('selectedDose').value = defaultDose;
+            document.getElementById('selectedUnit').textContent = unit;
+            document.getElementById('selectedRoute').value = 'IV';
+
+            // Show controlled tag if applicable
+            const tagEl = document.getElementById('selectedDrugTag');
+            if (isControlled) {
+                tagEl.textContent = '管制藥品';
+                tagEl.className = 'selected-drug-tag controlled';
+                document.getElementById('selectedDrugName').style.color = 'var(--controlled)';
+            } else {
+                tagEl.textContent = '';
+                tagEl.className = 'selected-drug-tag';
+                document.getElementById('selectedDrugName').style.color = 'var(--text)';
+            }
+
+            // Switch views
+            document.getElementById('medSelectView').classList.add('hidden');
+            document.getElementById('medConfirmView').classList.remove('hidden');
+        }
+
+        function adjustDose(delta) {
+            const input = document.getElementById('selectedDose');
+            let current = parseFloat(input.value) || 0;
+            current = Math.max(0, current + delta);
+            // Round to 1 decimal
+            input.value = Math.round(current * 10) / 10;
+        }
+
+        function backToMedSelect() {
+            document.getElementById('medSelectView').classList.remove('hidden');
+            document.getElementById('medConfirmView').classList.add('hidden');
+            selectedMed = null;
+        }
+
+        async function confirmMed() {
+            if (!currentCase || !selectedMed) return;
+
+            const dose = parseFloat(document.getElementById('selectedDose').value);
+            if (!dose || dose <= 0) {
+                alert('請輸入有效劑量');
+                return;
+            }
+
+            const route = document.getElementById('selectedRoute').value;
+
+            const body = {
+                drug_code: selectedMed.code,
+                drug_name: selectedMed.name,
+                dose: dose,
+                unit: selectedMed.unit,
+                route: route,
+                is_controlled: selectedMed.isControlled
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/medication?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) throw new Error('Failed');
+
+                closeModal('medModal');
+                backToMedSelect(); // Reset view for next time
+                loadTimeline(currentCase.id);
+            } catch (err) {
+                alert('記錄失敗');
+            }
+        }
+
+        // Legacy function for custom med form
         async function quickMed(code, name, dose, unit) {
             if (!currentCase) return;
 
