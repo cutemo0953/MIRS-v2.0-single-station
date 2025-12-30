@@ -992,20 +992,24 @@ class AnesthesiaRole(str, Enum):
 - Full transaction history with timestamps and actor/witness tracking
 - Fuchsia/purple-pink color scheme for controlled drug UI elements
 
-### Phase C: Resource Coupling + PACU 🚧 NEXT
+### Phase C: Resource Coupling + PACU 🚧 IN PROGRESS
 
-| Task | Priority |
-|------|----------|
-| O2 cylinder claim API | High |
-| O2 minutes estimation | High |
-| UI: O2 status in header | High |
-| Schema: `pacu_assessments` | Medium |
-| API: PACU endpoints | Medium |
-| UI: PACU dashboard | Medium |
+| Task | Status |
+|------|--------|
+| O2 cylinder claim API | ✅ Done |
+| O2 minutes estimation | ✅ Done |
+| UI: O2 status in header | ✅ Done |
+| Schema: `pacu_assessments` | Pending |
+| API: PACU endpoints | Pending |
+| UI: PACU dashboard | Pending |
 
-**Deliverables:**
-- Claim O2 cylinder by barcode
-- Real-time O2 remaining estimate
+**Delivered (O2 Claim - 2025-12-30):**
+- Claim O2 cylinder via modal UI (click O2 in resource bar)
+- Automatic estimation: est_minutes_remaining based on level% and flow rate
+- Prevents double-claim (returns error if cylinder already in use)
+- Release cylinder on case close or manual release
+
+**Pending (PACU):**
 - PACU admit/assess/discharge flow
 
 ### Phase D: Signatures + Polish
