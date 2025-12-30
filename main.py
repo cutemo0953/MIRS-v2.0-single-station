@@ -3262,6 +3262,19 @@ def run_migrations():
             cursor.execute("UPDATE equipment_units SET is_active = 1 WHERE is_active IS NULL")
             logger.info("✓ Migration: 新增 equipment_units soft-delete 欄位")
 
+        # v2.1.1: Add O2 claim columns for anesthesia module
+        # Re-check columns after potential additions above
+        cursor.execute("PRAGMA table_info(equipment_units)")
+        eu_columns = [col[1] for col in cursor.fetchall()]
+        if eu_columns and 'claimed_by_case_id' not in eu_columns:
+            try:
+                cursor.execute("ALTER TABLE equipment_units ADD COLUMN claimed_by_case_id TEXT")
+                cursor.execute("ALTER TABLE equipment_units ADD COLUMN claimed_at TIMESTAMP")
+                cursor.execute("ALTER TABLE equipment_units ADD COLUMN claimed_by_user_id TEXT")
+                logger.info("✓ Migration: 新增 equipment_units O2 claim 欄位")
+            except Exception as e:
+                logger.warning(f"O2 claim columns may already exist: {e}")
+
         # v2.1: 建立 equipment_lifecycle_events 表
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='equipment_lifecycle_events'")
         if not cursor.fetchone():
@@ -9059,10 +9072,11 @@ async def get_equipment_units_v2(
         if not eq_row:
             raise HTTPException(status_code=404, detail=f"設備不存在: {equipment_id}")
 
-        # 取得 active units
+        # 取得 active units (including O2 claim columns)
         cursor.execute("""
             SELECT id, unit_serial, unit_label, level_percent, status,
-                   last_check, checked_by, remarks, is_active
+                   last_check, checked_by, remarks, is_active,
+                   claimed_by_case_id, claimed_at, claimed_by_user_id
             FROM equipment_units
             WHERE equipment_id = ? AND (is_active = 1 OR is_active IS NULL)
             ORDER BY unit_serial
