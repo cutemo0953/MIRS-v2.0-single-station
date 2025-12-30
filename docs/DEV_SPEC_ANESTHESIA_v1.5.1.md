@@ -844,6 +844,67 @@ function resetSessionTimer() {
 | `/pharmacy` | Add drug request approval queue |
 | `/station` | Add O2 cylinder barcode scanning |
 
+### 7.5 Deployment Architecture
+
+#### 7.5.1 Single Server Requirement
+
+**重要：麻醉模組必須與 MIRS 主系統運行在同一伺服器/port 上。**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  MIRS Backend (main.py) - Single Process                        │
+│  Port: 8090 (or configured port)                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Routes:                                                         │
+│  ├── /                     → MIRS 主頁面                         │
+│  ├── /station              → Station PWA                         │
+│  ├── /admin                → Admin PWA                           │
+│  ├── /anesthesia           → Anesthesia PWA ← 新增               │
+│  ├── /api/...              → MIRS API                            │
+│  └── /api/anesthesia/...   → Anesthesia API ← 新增               │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### 7.5.2 常見錯誤
+
+| 錯誤 | 原因 | 解決方案 |
+|------|------|----------|
+| `/anesthesia` 返回 404 | 舊版 MIRS (無麻醉模組) 仍在運行 | 停止所有舊進程，啟動新版 main.py |
+| MIRS 連結到 `/anesthesia` 失敗 | 多個進程在不同 port 運行 | 統一使用單一 port |
+| Raspberry Pi 部署後無法訪問 | 未更新 systemd service | 更新 service 指向新版 main.py |
+
+#### 7.5.3 Raspberry Pi 部署
+
+```bash
+# 1. 停止舊服務
+sudo systemctl stop mirs
+
+# 2. 更新代碼
+cd /opt/mirs
+git pull origin v1.4.2-plus
+
+# 3. 確認 service 文件指向正確的 main.py
+# /etc/systemd/system/mirs.service
+# ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8090
+
+# 4. 重啟服務
+sudo systemctl daemon-reload
+sudo systemctl restart mirs
+
+# 5. 驗證
+curl http://localhost:8090/api/health
+curl http://localhost:8090/anesthesia
+```
+
+#### 7.5.4 Vercel 部署注意事項
+
+- Vercel Serverless 使用 ephemeral SQLite（每次部署重置）
+- 案例資料不會持久化
+- 正式環境需使用外部資料庫 (Turso, PlanetScale, Supabase)
+- 404 錯誤處理已加入前端（自動返回案例列表）
+
 ---
 
 ## 8. API Specification
