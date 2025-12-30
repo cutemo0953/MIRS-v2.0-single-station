@@ -930,16 +930,27 @@ During transition, system supports:
 
 ### Color Palette
 
-- **Primary Grayscale:**
-  - `--primary: #64748b` (slate-500)
-  - `--primary-dark: #475569` (slate-600)
-  - Background: `#0f172a` (dark navy)
+- **Primary (Indigo):**
+  - `--primary: #6366f1` (indigo-500)
+  - `--primary-dark: #4f46e5` (indigo-600)
+  - Background: `#0f172a` (dark navy, suitable for low-light OR environment)
   - Cards: `#1e293b` (slate-800)
 
 - **Controlled Drugs (Fuchsia/Purple-Pink):**
   - `--controlled: #c026d3` (fuchsia-600)
   - `--controlled-dark: #a21caf` (fuchsia-700)
+  - Used for: 給藥 button, timeline medication dots, 管藥 tab (when active)
+
+- **Status Colors (Grayscale - replacing yellow/red):**
+  - `--warning: #a1a1aa` (zinc-400)
+  - `--danger: #52525b` (zinc-600)
 
 ### Icons
 
 All icons use Heroicons (outline style) via inline SVG. No emoji usage.
+
+### Navigation UX
+
+- Bottom nav tabs use `--text-muted` when inactive
+- Active tab uses `--primary` (indigo)
+- 管藥 tab uses `--controlled` (fuchsia) only when active, to avoid confusion with other tabs

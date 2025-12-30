@@ -10,9 +10,10 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <style>
         :root {
-            /* Grayscale palette */
-            --primary: #64748b;      /* slate-500 */
-            --primary-dark: #475569; /* slate-600 */
+            /* Primary: Indigo (original) */
+            --primary: #6366f1;      /* indigo-500 */
+            --primary-dark: #4f46e5; /* indigo-600 */
+            /* Grayscale for status/alerts (replacing yellow/red) */
             --success: #71717a;      /* zinc-500 */
             --warning: #a1a1aa;      /* zinc-400 */
             --danger: #52525b;       /* zinc-600 */
@@ -347,10 +348,7 @@
             color: var(--primary);
         }
 
-        .nav-item.controlled-nav {
-            color: var(--controlled);
-        }
-
+        /* Controlled nav only shows purple-pink when active */
         .nav-item.controlled-nav.active {
             color: var(--controlled);
         }
