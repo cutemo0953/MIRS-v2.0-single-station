@@ -1976,6 +1976,10 @@
                     body: JSON.stringify(body)
                 });
 
+                if (res.status === 404) {
+                    handleCaseNotFound();
+                    return;
+                }
                 if (!res.ok) throw new Error('Failed');
 
                 closeModal('vitalsModal');
@@ -2114,6 +2118,10 @@
                     { method: 'POST' }
                 );
 
+                if (res.status === 404) {
+                    handleCaseNotFound();
+                    return;
+                }
                 if (!res.ok) throw new Error('Failed');
 
                 // Reload case to get updated status
@@ -2121,6 +2129,18 @@
             } catch (err) {
                 alert('記錄失敗');
             }
+        }
+
+        // Handle case not found (e.g., after database reset)
+        function handleCaseNotFound() {
+            alert('案例不存在或已被重置，請重新建立案例。');
+            currentCase = null;
+            document.getElementById('activeCaseView').classList.add('hidden');
+            document.getElementById('noCaseView').classList.remove('hidden');
+            document.getElementById('resourceBar').classList.add('hidden');
+            // Close any open modals
+            document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
+            loadCases();
         }
 
         function switchTab(tab) {
