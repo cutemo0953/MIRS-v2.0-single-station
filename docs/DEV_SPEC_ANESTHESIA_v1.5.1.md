@@ -789,40 +789,46 @@ class AnesthesiaRole(str, Enum):
 
 ## 10. Implementation Roadmap
 
-### Phase A: Core Event Stream (2 Weeks)
+### Phase A: Core Event Stream ✅ COMPLETED (2025-12-30)
 
 **Goal:** Basic intraop documentation with append-only events
 
-| Task | Days |
-|------|------|
-| Schema: `anesthesia_cases`, `anesthesia_events` | 1 |
-| API: Case CRUD, Event POST | 2 |
-| PWA: `/anesthesia` timeline view | 3 |
-| UI: One-tap vitals grid | 2 |
-| UI: Medication quick-buttons | 1 |
-| Battlefield preop mode | 1 |
-| WAL integration (offline sync) | 2 |
+| Task | Status |
+|------|--------|
+| Schema: `anesthesia_cases`, `anesthesia_events` | ✅ Done |
+| API: Case CRUD, Event POST (27 endpoints) | ✅ Done |
+| PWA: `/anesthesia` timeline view | ✅ Done |
+| UI: One-tap vitals grid | ✅ Done |
+| UI: Medication quick-buttons (10 drugs) | ✅ Done |
+| Battlefield preop mode (5 quick flags) | ✅ Done |
+| WAL integration (offline sync queue) | ✅ Done |
+| UI: Heroicons + Grayscale theme | ✅ Done |
 
-**Deliverables:**
-- Can create case, add events, view timeline
+**Delivered:**
+- Create case, add events, view timeline
 - Vitals and medications recordable
-- Works offline, syncs when online
+- Works offline with localStorage queue, syncs when online
+- Grayscale UI with purple-pink (fuchsia) for controlled drugs
+- All emojis replaced with Heroicons SVG
 
-### Phase B: Controlled Drugs (1 Week)
+### Phase B: Controlled Drugs 🚧 NEXT
 
-| Task | Days |
-|------|------|
-| Schema: `drug_requests`, `drug_transactions` | 0.5 |
-| API: Drug request/tx/holdings | 1.5 |
-| UI: Drug panel with balance display | 2 |
-| Dual-control enforcement | 1 |
-| Offline proof upload | 1 |
-| Pharmacy integration | 1 |
+**Goal:** Drug ledger with balance tracking and dual-control enforcement
+
+| Task | Priority |
+|------|----------|
+| Schema: `drug_requests`, `drug_transactions` | High |
+| API: Drug request/tx/holdings | High |
+| UI: Drug panel with balance display | High |
+| Dual-control enforcement | High |
+| Offline proof upload | Medium |
+| Pharmacy integration | Medium |
 
 **Deliverables:**
 - Drug ledger with balance tracking
 - Block case close if balance ≠ 0
 - Witness requirement for WASTE
+- Integration with existing pharmacy module
 
 ### Phase C: Resource Coupling + PACU (1 Week)
 
@@ -915,5 +921,25 @@ During transition, system supports:
 **De Novo Orthopedics Inc. / 谷盺生物科技股份有限公司**
 
 *Version: 1.5.1*
-*Last Updated: 2025-12-29*
-*Status: Ready for Phase A Implementation*
+*Last Updated: 2025-12-30*
+*Status: Phase A Complete, Ready for Phase B*
+
+---
+
+## UI Design Notes (v1.5.1)
+
+### Color Palette
+
+- **Primary Grayscale:**
+  - `--primary: #64748b` (slate-500)
+  - `--primary-dark: #475569` (slate-600)
+  - Background: `#0f172a` (dark navy)
+  - Cards: `#1e293b` (slate-800)
+
+- **Controlled Drugs (Fuchsia/Purple-Pink):**
+  - `--controlled: #c026d3` (fuchsia-600)
+  - `--controlled-dark: #a21caf` (fuchsia-700)
+
+### Icons
+
+All icons use Heroicons (outline style) via inline SVG. No emoji usage.

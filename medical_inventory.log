@@ -1398,3 +1398,137 @@ sqlite3.OperationalError: table equipment has no column named station_id
 2025-12-27 17:19:00,612 - __main__ - INFO - 下次設備重置時間: 2025-12-28 07:00:00 (等待 13.7 小時)
 2025-12-28 07:00:00,275 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-28 07:00:00): 0 個設備已重置
 2025-12-28 07:00:00,278 - __main__ - INFO - 下次設備重置時間: 2025-12-29 07:00:00 (等待 24.0 小時)
+2025-12-29 07:00:00,311 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-29 07:00:00): 0 個設備已重置
+2025-12-29 07:00:00,314 - __main__ - INFO - 下次設備重置時間: 2025-12-30 07:00:00 (等待 24.0 小時)
+2025-12-29 23:05:02,136 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-29 23:05:02,153 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-29 23:05:02,153 - main - INFO - 開始初始化資料庫結構...
+2025-12-29 23:05:02,160 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-29 23:05:02,160 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-29 23:05:02,162 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized
+2025-12-29 23:05:02,165 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-29 23:05:02,249 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-29 23:05:02,250 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-29 23:05:02,254 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-29 23:05:02,261 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-29 23:05:02,313 - httpx - INFO - HTTP Request: GET http://testserver/anesthesia "HTTP/1.1 200 OK"
+2025-12-29 23:05:02,315 - httpx - INFO - HTTP Request: GET http://testserver/anesthesia/manifest.json "HTTP/1.1 200 OK"
+2025-12-29 23:05:02,316 - httpx - INFO - HTTP Request: GET http://testserver/anesthesia/icons/icon-192.png "HTTP/1.1 200 OK"
+2025-12-29 23:05:02,317 - httpx - INFO - HTTP Request: GET http://testserver/api/anesthesia/quick-drugs "HTTP/1.1 404 Not Found"
+2025-12-29 23:06:43,422 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-29 23:06:43,440 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-29 23:06:43,440 - main - INFO - 開始初始化資料庫結構...
+2025-12-29 23:06:43,445 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-29 23:06:43,446 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-29 23:06:43,446 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized
+2025-12-29 23:06:43,447 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-29 23:06:43,516 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-29 23:06:43,517 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-29 23:06:43,521 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-29 23:06:43,531 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-29 23:06:43,577 - httpx - INFO - HTTP Request: GET http://testserver/api/anesthesia/quick-drugs "HTTP/1.1 200 OK"
+2025-12-29 23:06:43,578 - httpx - INFO - HTTP Request: GET http://testserver/api/anesthesia/quick-vitals-templates "HTTP/1.1 200 OK"
+2025-12-29 23:10:31,650 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-29 23:10:31,667 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-29 23:10:31,667 - main - INFO - 開始初始化資料庫結構...
+2025-12-29 23:10:31,672 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-29 23:10:31,673 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-29 23:10:31,673 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized
+2025-12-29 23:10:31,673 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-29 23:10:31,734 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-29 23:10:31,735 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-29 23:10:31,739 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-29 23:10:31,748 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-29 23:11:36,063 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-29 23:11:36,079 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-29 23:11:36,079 - main - INFO - 開始初始化資料庫結構...
+2025-12-29 23:11:36,084 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-29 23:11:36,085 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-29 23:11:36,085 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized
+2025-12-29 23:11:36,085 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-29 23:11:36,150 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-29 23:11:36,151 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-29 23:11:36,155 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-29 23:11:36,164 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-29 23:11:36,207 - httpx - INFO - HTTP Request: POST http://testserver/api/anesthesia/cases?actor_id=TEST001 "HTTP/1.1 200 OK"
+2025-12-29 23:11:36,208 - httpx - INFO - HTTP Request: POST http://testserver/api/anesthesia/cases/ANES-20251229-7F0FCC/battlefield-preop?actor_id=TEST001 "HTTP/1.1 500 Internal Server Error"
+2025-12-29 23:11:36,210 - httpx - INFO - HTTP Request: GET http://testserver/api/anesthesia/cases/ANES-20251229-7F0FCC/battlefield-preop "HTTP/1.1 200 OK"
+2025-12-29 23:11:36,211 - httpx - INFO - HTTP Request: GET http://testserver/api/anesthesia/quick-drugs "HTTP/1.1 200 OK"
+2025-12-29 23:11:36,212 - httpx - INFO - HTTP Request: POST http://testserver/api/anesthesia/cases/ANES-20251229-7F0FCC/quick-drug/PROP?actor_id=TEST001 "HTTP/1.1 200 OK"
+2025-12-29 23:11:36,214 - httpx - INFO - HTTP Request: POST http://testserver/api/anesthesia/cases/ANES-20251229-7F0FCC/quick-vitals?template=%E8%AA%98%E5%B0%8E%E4%B8%AD&actor_id=TEST001 "HTTP/1.1 200 OK"
+2025-12-29 23:11:36,216 - httpx - INFO - HTTP Request: GET http://testserver/api/anesthesia/cases/ANES-20251229-7F0FCC/timeline "HTTP/1.1 200 OK"
+2025-12-29 23:12:22,913 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-29 23:12:22,930 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-29 23:12:22,930 - main - INFO - 開始初始化資料庫結構...
+2025-12-29 23:12:22,934 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-29 23:12:22,935 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-29 23:12:22,935 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized
+2025-12-29 23:12:22,935 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-29 23:12:22,998 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-29 23:12:22,999 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-29 23:12:23,003 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-29 23:12:23,012 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-29 23:12:23,056 - httpx - INFO - HTTP Request: POST http://testserver/api/anesthesia/cases?actor_id=TEST001 "HTTP/1.1 200 OK"
+2025-12-29 23:12:23,058 - httpx - INFO - HTTP Request: POST http://testserver/api/anesthesia/cases/ANES-20251229-7EF72F/battlefield-preop?actor_id=TEST001 "HTTP/1.1 200 OK"
+2025-12-29 23:12:23,059 - httpx - INFO - HTTP Request: GET http://testserver/api/anesthesia/cases/ANES-20251229-7EF72F/battlefield-preop "HTTP/1.1 200 OK"
+2025-12-29 23:18:10,732 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-29 23:18:10,749 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-29 23:18:10,749 - main - INFO - 開始初始化資料庫結構...
+2025-12-29 23:18:10,754 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-29 23:18:10,754 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-29 23:18:10,754 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized
+2025-12-29 23:18:10,755 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-29 23:18:10,818 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-29 23:18:10,819 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-29 23:18:10,824 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-29 23:18:10,834 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-29 23:18:10,884 - httpx - INFO - HTTP Request: GET http://testserver/api/anesthesia/sync/status?device_id=DEV-TEST-001 "HTTP/1.1 200 OK"
+2025-12-29 23:23:22,292 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-29 23:23:22,310 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-29 23:23:22,311 - main - INFO - 開始初始化資料庫結構...
+2025-12-29 23:23:22,319 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-29 23:23:22,320 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-29 23:23:22,320 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized
+2025-12-29 23:23:22,321 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-29 23:23:22,390 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-29 23:23:22,393 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-29 23:23:22,397 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-29 23:23:22,409 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-29 23:23:22,423 - main - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-29 23:23:22,423 - main - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-29 23:23:22,424 - main - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-29 23:23:22,424 - main - INFO - 下次設備重置時間: 2025-12-30 07:00:00 (等待 7.6 小時)
+2025-12-29 23:25:54,197 - __main__ - INFO - 🩸 血袋丟棄: BB-ON-251219-001 -> expired
+2025-12-29 23:25:59,740 - __main__ - INFO - 🩸 血袋丟棄: BB-ON-251219-002 -> expired
+2025-12-30 07:00:00,325 - __main__ - INFO - ✓ 設備每日重置已執行 (2025-12-30 07:00:00): 0 個設備已重置
+2025-12-30 07:00:00,326 - __main__ - INFO - 下次設備重置時間: 2025-12-31 07:00:00 (等待 24.0 小時)
+2025-12-30 07:09:54,576 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-30 07:09:54,597 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-30 07:09:54,597 - main - INFO - 開始初始化資料庫結構...
+2025-12-30 07:09:54,610 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-30 07:09:54,611 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-30 07:09:54,611 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized
+2025-12-30 07:09:54,616 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-30 07:09:54,705 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-30 07:09:54,706 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-30 07:09:54,711 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-30 07:09:54,722 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-30 07:09:54,735 - main - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-30 07:09:54,735 - main - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-30 07:09:54,736 - main - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-30 07:09:54,736 - main - INFO - 下次設備重置時間: 2025-12-31 07:00:00 (等待 23.8 小時)
+2025-12-30 13:51:17,624 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-30 13:51:17,642 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-30 13:51:17,642 - main - INFO - 開始初始化資料庫結構...
+2025-12-30 13:51:17,647 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-30 13:51:17,647 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-30 13:51:17,648 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized
+2025-12-30 13:51:17,648 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-30 13:51:17,786 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-30 13:51:17,792 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-30 13:51:17,796 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-30 13:51:17,807 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-30 13:51:17,819 - main - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-30 13:51:17,819 - main - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-30 13:51:17,820 - main - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-30 13:51:17,820 - main - INFO - 下次設備重置時間: 2025-12-31 07:00:00 (等待 17.1 小時)
