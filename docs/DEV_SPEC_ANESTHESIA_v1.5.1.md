@@ -650,32 +650,193 @@ interface PACUHandoffChecklist {
 
 ## 7. PWA Architecture
 
-### 7.1 New PWA: Anesthesia Doctor (`/anesthesia-doctor`)
+### 7.1 Architecture Decision: Single PWA with Role Switching
 
-**Purpose:** Digital signature, case review, reconciliation approval
+**ADR-005: 單一麻醉 PWA + 角色切換**
 
-**Features:**
-- PIN-based login (same as CIRS Doctor PWA)
-- Session-bound signing key
-- Case list with sign-off status
-- Drug reconciliation approval
-- PACU discharge authorization
+#### 問題背景
 
-**Tech:** Reuse CIRS Doctor PWA pattern (Ed25519 signing)
+麻醉團隊包含兩種角色，各有不同權限：
 
-### 7.2 New PWA: Anesthesia Station (`/anesthesia`)
+| 任務 | 麻醉護士 (ANES_NA) | 麻醉醫師 (ANES_MD) |
+|------|:------------------:|:------------------:|
+| 記錄 Vitals / 用藥 / 事件 | ✓ | ✓ |
+| 管制藥品給藥記錄 | ✓ | ✓ |
+| 管制藥品廢棄 (actor) | ✓ | ✓ |
+| 管制藥品廢棄見證 (witness) | ✓ | - |
+| 氧氣瓶認領 | ✓ | ✓ |
+| **術前評估核准** | - | ✓ |
+| **案例 Sign-off** | - | ✓ |
+| **管藥結算核准** | - | ✓ |
+| **PACU 出院授權** | - | ✓ |
 
-**Purpose:** Primary intraop documentation interface (tablet-optimized)
+#### 方案評估
 
-**Features:**
-- Timeline-based event entry
-- One-tap vitals recording
-- Medication quick-buttons
-- Drug ledger view
-- O2 cylinder claim + monitoring
-- Wartime mode toggle
+| 方案 | 說明 | 優點 | 缺點 |
+|------|------|------|------|
+| A. 擴充 Doctor PWA | 在 `/doctor` 加入麻醉功能 | 少維護一個 PWA | Doctor PWA 設計是給 CIRS 門診用，workflow 完全不同 |
+| B. 獨立 Anesthesia Doctor PWA | 新增 `/anesthesia-doctor` | 專注麻醉流程 | 多一個 PWA 維護，醫師需切換兩個 App |
+| **C. 單一 PWA + 角色切換** | `/anesthesia` 根據角色顯示不同功能 | 護士醫師共用一台平板，UX 一致 | 需實作角色切換機制 |
 
-### 7.3 Existing PWA Modifications
+#### 決策：採用方案 C
+
+**理由：**
+
+1. **BORP 環境特性**
+   - 團隊小（1 麻醉醫師 + 1-2 護士）
+   - 可能共用同一台平板
+   - 醫師有時也要幫忙記錄 vitals
+
+2. **Workflow 連貫性**
+   - 護士記錄 → 醫師核准 → 護士繼續記錄
+   - 單一 PWA 避免切換 App 的中斷
+
+3. **與 Doctor PWA 區隔**
+   - `/doctor` = CIRS 門診看診、開處方
+   - `/anesthesia` = BORP 手術室麻醉支援
+   - 不同場景，不應混用
+
+#### 後果
+
+- 單一 `/anesthesia` PWA 維護
+- 需實作 PIN-based 角色提升機制
+- 敏感操作（sign-off）需重新驗證
+
+---
+
+### 7.2 Anesthesia PWA (`/anesthesia`) - Role-Based Design
+
+**Purpose:** 麻醉團隊共用的術中記錄與管理介面
+
+#### 7.2.1 角色切換機制
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  /anesthesia PWA - Role Switching                                    │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │ Header                                                       │    │
+│  │  麻醉站  [目前角色: 👤 護士 ▼]  [🔄 同步]                    │    │
+│  │                     ↓ 點擊展開                               │    │
+│  │              ┌──────────────────┐                            │    │
+│  │              │ 👤 護士模式      │ ← 預設                     │    │
+│  │              │ 👨‍⚕️ 醫師模式 🔒  │ ← 需 PIN                   │    │
+│  │              └──────────────────┘                            │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │ 護士模式 (預設)                                              │    │
+│  │                                                              │    │
+│  │  功能：                                                      │    │
+│  │  ✓ 建立案例 (從 CIRS 待診清單選取)                          │    │
+│  │  ✓ 記錄 Vitals / 用藥 / 事件                                │    │
+│  │  ✓ 管制藥品給藥記錄                                         │    │
+│  │  ✓ 氧氣瓶認領與監控                                         │    │
+│  │  ✓ 術前評估填寫 (無法核准)                                  │    │
+│  │  ✓ 見證管藥廢棄                                             │    │
+│  │                                                              │    │
+│  │  限制：                                                      │    │
+│  │  ✗ 術前評估核准 → 顯示「需醫師核准」                        │    │
+│  │  ✗ 案例 Sign-off → 按鈕 disabled                            │    │
+│  │  ✗ 管藥結算核准 → 按鈕 disabled                             │    │
+│  │  ✗ PACU 出院授權 → 按鈕 disabled                            │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │ 醫師模式 (PIN 驗證後)                                        │    │
+│  │                                                              │    │
+│  │  所有護士功能 +                                              │    │
+│  │                                                              │    │
+│  │  額外功能：                                                  │    │
+│  │  ✓ 術前評估核准 (digital signature)                         │    │
+│  │  ✓ 案例 Sign-off                                            │    │
+│  │  ✓ 管藥結算核准                                             │    │
+│  │  ✓ PACU 出院授權                                            │    │
+│  │                                                              │    │
+│  │  Session：                                                   │    │
+│  │  - 5 分鐘無操作自動降級回護士模式                           │    │
+│  │  - 敏感操作需重新輸入 PIN                                   │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### 7.2.2 PIN 驗證機制
+
+```typescript
+// 角色提升流程
+async function elevateToDoctor() {
+    const pin = await showPinModal("請輸入醫師 PIN");
+
+    const res = await fetch('/api/auth/verify-pin', {
+        method: 'POST',
+        body: JSON.stringify({ pin, role: 'ANES_MD' })
+    });
+
+    if (res.ok) {
+        const { doctor_id, session_token, expires_at } = await res.json();
+        currentRole = 'ANES_MD';
+        doctorSession = { doctor_id, session_token, expires_at };
+        updateUIForRole('ANES_MD');
+        startSessionTimer(5 * 60 * 1000); // 5 min timeout
+    } else {
+        showError("PIN 錯誤");
+    }
+}
+
+// 自動降級
+function startSessionTimer(timeout) {
+    sessionTimer = setTimeout(() => {
+        currentRole = 'ANES_NA';
+        doctorSession = null;
+        updateUIForRole('ANES_NA');
+        showToast("醫師 session 已過期，已切換回護士模式");
+    }, timeout);
+}
+
+// 任何操作重置計時器
+function resetSessionTimer() {
+    if (currentRole === 'ANES_MD') {
+        clearTimeout(sessionTimer);
+        startSessionTimer(5 * 60 * 1000);
+    }
+}
+```
+
+#### 7.2.3 UI 差異對照
+
+| UI 元素 | 護士模式 | 醫師模式 |
+|---------|---------|---------|
+| Header badge | `👤 護士` | `👨‍⚕️ 醫師 (Dr. 李)` |
+| 術前評估 | 可編輯，「核准」按鈕 disabled | 可編輯 + 可核准 |
+| 案例卡片 | 無 sign-off 按鈕 | 顯示 sign-off 按鈕 |
+| 管藥結算 | 只能查看 | 可核准結算 |
+| PACU 出院 | 只能查看 | 可授權出院 |
+| Timeline | 記錄顯示 `by: 護士` | 記錄顯示 `by: Dr. 李` |
+
+#### 7.2.4 安全考量
+
+| 風險 | 緩解措施 |
+|------|---------|
+| 護士誤用醫師功能 | PIN 驗證 + 5 分鐘 session timeout |
+| Session 被盜用 | 敏感操作 (sign-off) 需重新輸入 PIN |
+| 平板遺失 | 無本地儲存醫師憑證，每次需重新驗證 |
+| 離線時無法驗證 | 允許離線操作，但 sign-off 需上線後補驗 |
+
+---
+
+### 7.3 PWA Ecosystem Summary
+
+| PWA | 路徑 | 用途 | 使用者 |
+|-----|------|------|--------|
+| **Anesthesia** | `/anesthesia` | 麻醉記錄、手術支援 | 麻醉護士 + 麻醉醫師 |
+| Doctor | `/doctor` | CIRS 門診看診、開處方 | 一般醫師 |
+| Admin | `/admin` | 系統管理、設定 | 管理員 |
+| Pharmacy | `/pharmacy` | 藥品調劑、管藥核發 | 藥師 |
+| Station | `/station` | 物資管理、設備掃描 | 站點人員 |
+
+### 7.4 Existing PWA Modifications
 
 | PWA | Modification |
 |-----|--------------|
