@@ -42,11 +42,16 @@
 - **Decision:** Create `/anesthesia-doctor` PWA with PIN-based signing (same pattern as CIRS Doctor PWA)
 - **Consequence:** Reuse existing signing infrastructure; clear role separation
 
-**ADR-006: xIRS Unified vs Separate Architecture** ⚠️ PENDING DECISION
+**ADR-006: xIRS Unified vs Separate Architecture** ✅ DECIDED
 
 - **Context:** MIRS、CIRS、HIRS 目前為獨立系統，各自運行在不同 port
-- **Status:** 待決定
-- **Decision:** TBD
+- **Status:** 已決定 (2025-12-30)
+- **Decision:** **方案 C：Hub-Satellite 架構**
+- **Rationale:**
+  1. 戰時韌性：CIRS/MIRS 可能物理分離，各站必須獨立存活
+  2. 權威分離：CIRS = 病患身分（你是誰）；MIRS = 執行紀錄（對你做了什麼）
+  3. 漸進整合：不需一次性重構，可逐步實作同步
+  4. 現有模式：ADR-005 已走向「分散角色端點」設計
 
 #### 現況（分開架構）
 
@@ -142,11 +147,168 @@
 | 長期維護考量 | | ✓ | |
 | 現有系統已穩定 | ✓ | | ✓ |
 
-#### 待決定事項
+#### 實作路線圖
 
-1. **短期（v1.5.x）**：麻醉模組先整合進 MIRS，維持 MIRS/CIRS 分開
-2. **中期（v2.0）**：評估是否統一為 xIRS
-3. **資料同步**：若維持分開，需設計 CIRS ↔ MIRS 病患資料同步機制
+1. **v1.5.x（短期）**：麻醉模組整合進 MIRS ✅，實作 CIRS Proxy + Patient Snapshot
+2. **v1.6.x（中期）**：實作完整 Sync API + TempRegistration 機制
+3. **v2.0（長期）**：穩定 Hub-Satellite 同步，72 小時離線驗收
+
+---
+
+### ADR-006 附錄：Hub-Satellite 同步機制規格
+
+#### A. 資料權威邊界（合約級）
+
+| 資料類型 | 權威來源 | 同步方向 |
+|----------|----------|----------|
+| 病患主檔 (patients) | CIRS Hub | Hub → Satellite |
+| 掛號資料 (registrations) | CIRS Hub | Hub → Satellite |
+| 處方資料 (prescriptions) | CIRS Hub | Hub → Satellite |
+| 物資管理 (inventory) | MIRS Satellite | Local only |
+| 設備狀態 (equipment) | MIRS Satellite | Local only |
+| 麻醉記錄 (anesthesia) | MIRS Satellite | Satellite → Hub |
+| 管制藥品 (controlled drugs) | MIRS Satellite | Satellite → Hub |
+
+#### B. 最小同步資料集（v1.5.x 目標）
+
+**PatientStub（Hub → Satellite）**
+```json
+{
+  "patientId": "UUID",
+  "displayName": "王小明",
+  "dobYear": 1980,
+  "sex": "M",
+  "allergies": ["Penicillin"],
+  "hubRevision": 42,
+  "lastUpdatedAt": "2025-12-30T10:00:00Z"
+}
+```
+
+**RegistrationStub（Hub → Satellite）**
+```json
+{
+  "registrationId": "REG-20251230-001",
+  "patientId": "UUID",
+  "triageCategory": "YELLOW",
+  "location": "BORP-01",
+  "status": "WAITING",
+  "hubRevision": 15
+}
+```
+
+**EncounterLink（Satellite → Hub）**
+```json
+{
+  "encounterId": "ANES-20251230-ABC123",
+  "registrationId": "REG-20251230-001",
+  "stationId": "MIRS-BORP-01",
+  "openedAt": "2025-12-30T10:30:00Z",
+  "closedAt": null
+}
+```
+
+#### C. 斷網時身分處理（TempRegistration）
+
+當 Hub 不可達且病患身分無法確認時：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Satellite 建立 TempRegistration                            │
+│  tempRegistrationId = "TMP-" + ULID                         │
+│  patientHint = "男性約40歲，右腿骨折"                        │
+│  confidence = LOW                                            │
+│  photoHash = (optional)                                      │
+└─────────────────────────────────────────────────────────────┘
+              │
+              │ 所有 MIRS/麻醉操作掛在 tempRegistrationId
+              │
+              ▼ (連線恢復後)
+┌─────────────────────────────────────────────────────────────┐
+│  Satellite 送 TEMP_REGISTRATION_SUBMIT op                   │
+│  Hub 回傳 MERGE_MAP:                                         │
+│  { "TMP-xxx": "REG-20251230-001" }                          │
+│                                                              │
+│  Satellite 用 alias table 做引用轉換（不破壞性改寫）        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### D. 資料快照（Data Snapshotting）
+
+**關鍵原則：** MIRS 案例建立時，不只存 `patient_id`，要存完整快照。
+
+```sql
+-- anesthesia_cases table 調整
+ALTER TABLE anesthesia_cases ADD COLUMN patient_snapshot TEXT;
+-- JSON: {"name": "王小明", "dob": "1980-01-01", "allergy": "Penicillin", ...}
+
+ALTER TABLE anesthesia_cases ADD COLUMN cirs_registration_ref TEXT;
+-- 來自 CIRS 的 registration_id（可為 TMP-xxx）
+```
+
+**理由：** 戰時 CIRS 資料庫可能毀損或病歷號重複，MIRS 必須自給自足。
+
+#### E. Air-Gap 備援（QR Code Fallback）
+
+當 Hub 完全不可達時：
+
+1. CIRS 檢傷站印出的「傷票」包含 QR Code（病患基本資料 JSON）
+2. MIRS 麻醉站掃描 QR Code
+3. 解析 JSON 填入 `CreateCaseRequest`
+4. 完全不需要網路連接
+
+```
+QR Code 內容（建議格式）：
+{
+  "type": "CIRS_TRIAGE_TICKET",
+  "version": 1,
+  "registrationId": "REG-20251230-001",
+  "patient": {
+    "name": "王小明",
+    "dob": "1980-01-01",
+    "sex": "M",
+    "allergies": ["Penicillin"]
+  },
+  "triage": "YELLOW",
+  "timestamp": "2025-12-30T10:00:00Z",
+  "signature": "HMAC-SHA256..."
+}
+```
+
+#### F. Sync API 端點（合約）
+
+**CIRS Hub 提供：**
+```
+GET  /api/sync/patients?since={cursor}
+GET  /api/sync/registrations?since={cursor}
+POST /api/sync/ops                    # 接收 Satellite ops batch
+POST /api/sync/resolve-temp           # 解析 TempRegistration
+```
+
+**MIRS Satellite 維護：**
+```
+GET  /api/sync/status                 # 同步狀態
+POST /api/sync/push                   # 推送待同步 ops
+
+本地佇列: pending_ops[]
+```
+
+#### G. 衝突規則（可證明、可重播）
+
+| 衝突類型 | 規則 |
+|----------|------|
+| 病患身分 | Hub 勝（Satellite 只能提案 TempRegistration） |
+| 掛號狀態 | Hub 勝（Satellite 以 op 提案變更） |
+| 事件排序 | 每站 (stationId, monotonicSeq)；Hub 用 idempotency key 去重 |
+| 麻醉記錄 | Satellite 權威（Hub 只做備份） |
+
+#### H. 驗收測試（Must-Pass）
+
+| 測試 | 條件 | 預期結果 |
+|------|------|----------|
+| 72 小時離線 | 建立 TempRegistration + 處置 + 麻醉 → 連線 | 全量對齊，無資料遺失 |
+| 合併正確性 | 兩個 TempReg 最終同一人 | merge map 正確回寫引用 |
+| 冪等性 | 同一批 ops 重送 | Hub 狀態不變 |
+| QR Fallback | Hub 完全不可達 | 掃 QR 可建案 |
 
 ---
 
