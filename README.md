@@ -633,16 +633,15 @@ sudo systemctl start mirs
 
 ### 開發團隊
 
-- **De Novo Orthopedics Inc.**
-- **壯闊台灣** 醫療站支援計畫
+- **De Novo Orthopedics Inc.** / 谷盺生物科技股份有限公司
 
 ---
 
 ## 授權資訊
 
-© 2024 De Novo Orthopedics Inc. All rights reserved.
+© 2024-2025 De Novo Orthopedics Inc. All rights reserved.
 
-本系統專為壯闊台灣醫療站、備援手術站及物資中心開發。
+本系統專為野戰醫療站、備援手術站及物資中心開發。
 
 ---
 
@@ -688,4 +687,3 @@ ifconfig | grep inet
 *讓醫療物資管理更簡單*
 
 🏥 Powered by De Novo Orthopedics Inc.
-🤝 與壯闊台灣共同開發
