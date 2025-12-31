@@ -310,6 +310,99 @@ POST /api/sync/push                   # 推送待同步 ops
 | 冪等性 | 同一批 ops 重送 | Hub 狀態不變 |
 | QR Fallback | Hub 完全不可達 | 掃 QR 可建案 |
 
+#### I. xIRS Shared Contracts（共享合約規格）v1.0
+
+**目的：** 定義 CIRS Hub 與 MIRS Satellite 之間的資料交換格式與協定版本，確保獨立部署時的相容性。
+
+**原則：**
+- MIRS 與 CIRS 保持獨立 repo / codebase
+- 透過版本化合約（而非直接引用程式碼）整合
+- Breaking change 需升級 major 版本號
+
+##### I.1 合約資料結構
+
+```python
+# xIRS-Contracts v1.0.0 (2025-12-31)
+# 這些結構為 canonical schema，兩端必須遵守
+
+class PatientStub(BaseModel):
+    """Hub → Satellite: 病患基本資料快照"""
+    patient_id: str                    # UUID
+    name: Optional[str] = None
+    dob: Optional[str] = None          # ISO date
+    sex: Optional[str] = None          # M/F/O
+    allergies: List[str] = []
+    weight_kg: Optional[float] = None
+    blood_type: Optional[str] = None
+    hub_revision: int = 0              # 增量同步用
+
+class RegistrationStub(BaseModel):
+    """Hub → Satellite: 掛號資料快照"""
+    registration_id: str               # REG-YYYYMMDD-XXX
+    patient_id: Optional[str] = None
+    triage_category: Optional[str] = None  # RED/YELLOW/GREEN/BLACK
+    chief_complaint: Optional[str] = None
+    location: Optional[str] = None     # Station ID
+    status: str = "WAITING"
+    hub_revision: int = 0
+
+class EncounterLink(BaseModel):
+    """Satellite → Hub: 建立案例時的連結通知"""
+    encounter_id: str                  # ANES-YYYYMMDD-ULID
+    registration_id: str               # REG-xxx or TMP-xxx
+    station_id: str                    # MIRS-BORP-01
+    opened_at: str                     # ISO datetime
+    closed_at: Optional[str] = None
+
+class TempRegistration(BaseModel):
+    """Satellite: 離線時暫存病患身分"""
+    temp_registration_id: str          # TMP-{ULID}
+    patient_hint: str                  # 人工描述
+    confidence: str = "LOW"            # LOW/MEDIUM/HIGH
+    photo_hash: Optional[str] = None
+    created_at: str
+
+class MergeMap(BaseModel):
+    """Hub → Satellite: TempRegistration 解析結果"""
+    mappings: Dict[str, str]           # {"TMP-xxx": "REG-yyy"}
+    timestamp: str
+```
+
+##### I.2 協定版本標頭
+
+所有 Sync API 回應必須包含以下 HTTP 標頭：
+
+| Header | 範例值 | 說明 |
+|--------|--------|------|
+| `X-XIRS-Protocol-Version` | `1.0` | 合約版本 |
+| `X-XIRS-Hub-Revision` | `1542` | Hub 最新 revision |
+| `X-XIRS-Station-Id` | `MIRS-BORP-01` | 發起站點 |
+
+##### I.3 版本相容矩陣
+
+| Hub Version | Satellite Version | 相容性 | 備註 |
+|-------------|-------------------|--------|------|
+| 1.5.x | 1.5.x | ✅ Full | Patient Snapshot + Proxy |
+| 1.6.x | 1.5.x | ⚠️ Partial | Satellite 無法使用 TempRegistration merge |
+| 1.6.x | 1.6.x | ✅ Full | 完整 Sync + TempRegistration |
+| 2.0.x | 1.6.x | ✅ Backward | Hub 需支援舊版 Satellite |
+
+##### I.4 Idempotency 規則
+
+所有 Satellite → Hub 的 ops 必須包含：
+
+```json
+{
+  "idempotency_key": "{station_id}:{ulid}",
+  "station_id": "MIRS-BORP-01",
+  "op_type": "ENCOUNTER_LINK",
+  "payload": { ... },
+  "timestamp": "2025-12-31T10:00:00Z"
+}
+```
+
+Hub 以 `idempotency_key` 去重，重複送出不會造成重複處理。
+
 ---
 
 ## 1. System Context

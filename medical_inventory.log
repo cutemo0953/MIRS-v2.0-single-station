@@ -1640,3 +1640,67 @@ sqlite3.OperationalError: table equipment has no column named station_id
 2025-12-30 22:02:36,865 - routes.anesthesia - INFO - CIRS Hub not reachable - operating in offline mode
 2025-12-31 07:03:56,396 - main - INFO - ✓ 設備每日重置已執行 (2025-12-31 07:03:56): 0 個設備已重置
 2025-12-31 07:03:56,399 - main - INFO - 下次設備重置時間: 2026-01-01 07:00:00 (等待 23.9 小時)
+2025-12-31 19:52:44,375 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-31 19:52:44,393 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-31 19:52:44,394 - main - INFO - 開始初始化資料庫結構...
+2025-12-31 19:52:44,400 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-31 19:52:44,400 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-31 19:52:44,401 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized (Phase A + B)
+2025-12-31 19:52:44,401 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-31 19:52:44,487 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-31 19:52:44,488 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-31 19:52:44,493 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-31 19:52:44,507 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-31 19:52:44,522 - main - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-31 19:52:44,523 - main - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-31 19:52:44,523 - main - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-31 19:52:44,524 - main - INFO - 下次設備重置時間: 2026-01-01 07:00:00 (等待 11.1 小時)
+2025-12-31 19:53:17,545 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-31 19:53:17,563 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-31 19:53:17,563 - main - INFO - 開始初始化資料庫結構...
+2025-12-31 19:53:17,567 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-31 19:53:17,568 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-31 19:53:17,568 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized (Phase A + B)
+2025-12-31 19:53:17,569 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-31 19:53:17,634 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-31 19:53:17,635 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-31 19:53:17,640 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-31 19:53:17,654 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-31 19:53:17,666 - main - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-31 19:53:17,667 - main - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-31 19:53:17,667 - main - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-31 19:53:17,667 - main - INFO - 下次設備重置時間: 2026-01-01 07:00:00 (等待 11.1 小時)
+2025-12-31 19:53:24,601 - routes.anesthesia - INFO - CIRS Hub not reachable - operating in offline mode
+2025-12-31 19:53:55,295 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-31 19:53:55,314 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-31 19:53:55,314 - main - INFO - 開始初始化資料庫結構...
+2025-12-31 19:53:55,318 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-31 19:53:55,319 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-31 19:53:55,319 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized (Phase A + B)
+2025-12-31 19:53:55,320 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-31 19:53:55,386 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-31 19:53:55,387 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-31 19:53:55,392 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-31 19:53:55,405 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-31 19:53:55,419 - main - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-31 19:53:55,419 - main - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-31 19:53:55,419 - main - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-31 19:53:55,420 - main - INFO - 下次設備重置時間: 2026-01-01 07:00:00 (等待 11.1 小時)
+2025-12-31 19:55:04,531 - main - INFO - ✓ 配置載入成功: BORP-DNO-01
+2025-12-31 19:55:04,548 - main - INFO - 初始化資料庫: medical_inventory.db (in-memory: False)
+2025-12-31 19:55:04,548 - main - INFO - 開始初始化資料庫結構...
+2025-12-31 19:55:04,553 - main - INFO - ✓ 已初始化站點: BORP-DNO-01 (谷盺備援手術室 01)
+2025-12-31 19:55:04,554 - main - INFO - 資料庫已存在 82 種藥品，跳過預載
+2025-12-31 19:55:04,554 - routes.anesthesia - INFO - ✓ Anesthesia schema initialized (Phase A + B)
+2025-12-31 19:55:04,555 - main - INFO - ✓ 資料庫初始化完成: BORP-DNO-01
+2025-12-31 19:55:04,624 - services.mobile.auth - INFO - MIRS Mobile 資料表初始化完成
+2025-12-31 19:55:04,625 - services.mobile.routes - INFO - MIRS Mobile 服務初始化完成
+2025-12-31 19:55:04,629 - main - INFO - ✓ MIRS Mobile API v1 已啟用 (/api/mirs-mobile/v1)
+2025-12-31 19:55:04,643 - main - INFO - ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+2025-12-31 19:55:04,655 - main - INFO - ✓ Migration: 設定 equipment.type_code 對應
+2025-12-31 19:55:04,655 - main - INFO - ✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)
+2025-12-31 19:55:04,656 - main - INFO - ✓ 每日設備重置背景任務已啟動 (07:00am)
+2025-12-31 19:55:04,656 - main - INFO - 下次設備重置時間: 2026-01-01 07:00:00 (等待 11.1 小時)
+2025-12-31 19:55:09,513 - routes.anesthesia - INFO - CIRS Hub not reachable - operating in offline mode
+2025-12-31 19:55:09,550 - routes.anesthesia - INFO - CIRS Hub not reachable - operating in offline mode
+2025-12-31 19:55:09,628 - routes.anesthesia - INFO - CIRS Hub not reachable - operating in offline mode

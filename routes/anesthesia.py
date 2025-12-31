@@ -2352,10 +2352,27 @@ async def check_can_close_case(case_id: str):
 import httpx
 from typing import Optional
 import os
+from fastapi.responses import JSONResponse
 
 # CIRS Hub configuration
 CIRS_HUB_URL = os.getenv("CIRS_HUB_URL", "http://localhost:8000")
 CIRS_TIMEOUT = 5.0  # seconds
+
+# xIRS Protocol Version (see DEV_SPEC Section I.2)
+XIRS_PROTOCOL_VERSION = "1.0"
+STATION_ID = os.getenv("MIRS_STATION_ID", "MIRS-UNKNOWN")
+
+
+def make_xirs_response(data: dict, hub_revision: int = 0) -> JSONResponse:
+    """Create response with xIRS protocol headers."""
+    return JSONResponse(
+        content=data,
+        headers={
+            "X-XIRS-Protocol-Version": XIRS_PROTOCOL_VERSION,
+            "X-XIRS-Hub-Revision": str(hub_revision),
+            "X-XIRS-Station-Id": STATION_ID,
+        }
+    )
 
 
 @router.get("/proxy/cirs/waiting-list")
@@ -2368,13 +2385,23 @@ async def get_cirs_waiting_list(
     Returns patients waiting for procedures (for case creation).
 
     Gracefully handles offline scenarios by returning empty list with offline flag.
+
+    Response Headers:
+    - X-XIRS-Protocol-Version: Contract version (1.0)
+    - X-XIRS-Hub-Revision: Latest Hub revision number
+    - X-XIRS-Station-Id: This satellite's station ID
     """
+    hub_revision = 0
+
     try:
         async with httpx.AsyncClient(timeout=CIRS_TIMEOUT) as client:
             response = await client.get(
                 f"{CIRS_HUB_URL}/api/registrations",
                 params={"status": status, "limit": limit}
             )
+
+            # Extract hub revision from response headers if available
+            hub_revision = int(response.headers.get("X-XIRS-Hub-Revision", 0))
 
             if response.status_code == 200:
                 data = response.json()
@@ -2396,49 +2423,54 @@ async def get_cirs_waiting_list(
                         "registered_at": reg.get("registered_at") or reg.get("created_at")
                     })
 
-                return {
+                return make_xirs_response({
                     "online": True,
                     "source": "cirs_hub",
                     "patients": patients,
-                    "count": len(patients)
-                }
+                    "count": len(patients),
+                    "protocol_version": XIRS_PROTOCOL_VERSION
+                }, hub_revision)
             else:
                 logger.warning(f"CIRS Hub returned {response.status_code}")
-                return {
+                return make_xirs_response({
                     "online": False,
                     "source": "offline",
                     "patients": [],
                     "count": 0,
-                    "error": f"CIRS returned status {response.status_code}"
-                }
+                    "error": f"CIRS returned status {response.status_code}",
+                    "protocol_version": XIRS_PROTOCOL_VERSION
+                }, hub_revision)
 
     except httpx.TimeoutException:
         logger.warning("CIRS Hub timeout - operating in offline mode")
-        return {
+        return make_xirs_response({
             "online": False,
             "source": "offline",
             "patients": [],
             "count": 0,
-            "error": "CIRS Hub timeout"
-        }
+            "error": "CIRS Hub timeout",
+            "protocol_version": XIRS_PROTOCOL_VERSION
+        })
     except httpx.ConnectError:
         logger.info("CIRS Hub not reachable - operating in offline mode")
-        return {
+        return make_xirs_response({
             "online": False,
             "source": "offline",
             "patients": [],
             "count": 0,
-            "error": "CIRS Hub not reachable"
-        }
+            "error": "CIRS Hub not reachable",
+            "protocol_version": XIRS_PROTOCOL_VERSION
+        })
     except Exception as e:
         logger.error(f"CIRS proxy error: {e}")
-        return {
+        return make_xirs_response({
             "online": False,
             "source": "offline",
             "patients": [],
             "count": 0,
-            "error": str(e)
-        }
+            "error": str(e),
+            "protocol_version": XIRS_PROTOCOL_VERSION
+        })
 
 
 @router.get("/proxy/cirs/patient/{registration_id}")
@@ -2446,16 +2478,26 @@ async def get_cirs_patient_details(registration_id: str):
     """
     Fetch detailed patient info from CIRS Hub by registration ID.
     Used when creating a case to get full patient snapshot.
+
+    Response Headers:
+    - X-XIRS-Protocol-Version: Contract version (1.0)
+    - X-XIRS-Hub-Revision: Latest Hub revision number
+    - X-XIRS-Station-Id: This satellite's station ID
     """
+    hub_revision = 0
+
     try:
         async with httpx.AsyncClient(timeout=CIRS_TIMEOUT) as client:
             response = await client.get(
                 f"{CIRS_HUB_URL}/api/registrations/{registration_id}"
             )
 
+            # Extract hub revision from response headers if available
+            hub_revision = int(response.headers.get("X-XIRS-Hub-Revision", 0))
+
             if response.status_code == 200:
                 reg = response.json()
-                return {
+                return make_xirs_response({
                     "online": True,
                     "source": "cirs_hub",
                     "patient": {
@@ -2472,8 +2514,9 @@ async def get_cirs_patient_details(registration_id: str):
                         "medical_history": reg.get("medical_history"),
                         "current_medications": reg.get("current_medications"),
                         "status": reg.get("status")
-                    }
-                }
+                    },
+                    "protocol_version": XIRS_PROTOCOL_VERSION
+                }, hub_revision)
             elif response.status_code == 404:
                 raise HTTPException(status_code=404, detail="Registration not found in CIRS")
             else:
@@ -2491,3 +2534,38 @@ async def get_cirs_patient_details(registration_id: str):
     except Exception as e:
         logger.error(f"CIRS patient fetch error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/hub/status")
+async def get_hub_status():
+    """
+    Returns Hub-Satellite sync status for this station.
+
+    Response Headers:
+    - X-XIRS-Protocol-Version: Contract version (1.0)
+    - X-XIRS-Station-Id: This satellite's station ID
+    """
+    # Check CIRS Hub connectivity
+    hub_online = False
+    hub_revision = 0
+    hub_error = None
+
+    try:
+        async with httpx.AsyncClient(timeout=CIRS_TIMEOUT) as client:
+            response = await client.get(f"{CIRS_HUB_URL}/api/health")
+            if response.status_code == 200:
+                hub_online = True
+                hub_revision = int(response.headers.get("X-XIRS-Hub-Revision", 0))
+    except Exception as e:
+        hub_error = str(e)
+
+    return make_xirs_response({
+        "station_id": STATION_ID,
+        "protocol_version": XIRS_PROTOCOL_VERSION,
+        "hub_url": CIRS_HUB_URL,
+        "hub_online": hub_online,
+        "hub_revision": hub_revision,
+        "hub_error": hub_error,
+        "last_sync": None,  # TODO: Track last sync time
+        "pending_ops": 0,   # TODO: Count pending operations
+    }, hub_revision)
