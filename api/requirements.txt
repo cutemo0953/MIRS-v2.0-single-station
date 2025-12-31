@@ -8,7 +8,8 @@ pydantic>=2.5.0
 qrcode>=7.4.2
 Pillow>=10.1.0
 PyJWT>=2.8.0
+httpx>=0.25.0  # CIRS Hub proxy (Hub-Satellite Architecture)
 
 # PostgreSQL support (Neon)
 psycopg2-binary>=2.9.9
-# v1.4.4 - 2025年12月16日 星期二 13時22分45秒 CST
+# v1.5.1 - 2025年12月30日 - CIRS proxy support

@@ -1,6 +1,8 @@
-# 🏥 MIRS v1.4.5 Raspberry Pi 5 安裝說明
+# 🏥 MIRS v1.5.1 Raspberry Pi 5 安裝說明
 
 **專為壯闊台灣醫療站設計｜讓護理人員 3 分鐘完成安裝**
+
+> **v1.5.1 新功能**：麻醉模組 + CIRS Hub 整合（Hub-Satellite 架構）
 
 ---
 
@@ -16,6 +18,13 @@
 ### 可選配件
 - 📱 NFC 貼紙（NTAG215/216）- 讓手機一碰即連
 - 🖨️ 印表機 - 列印 QR code 連線卡
+
+### 網路架構選擇
+
+| 模式 | 說明 | 適用場景 |
+|------|------|----------|
+| **獨立模式** | MIRS 單機運作，無需 CIRS | 野外醫療站、無網路環境 |
+| **Hub-Satellite** | MIRS 連接 CIRS Hub 同步病患資料 | 有網路的醫療站 |
 
 ---
 
@@ -92,7 +101,7 @@ sudo apt install -y git python3-pip python3-venv sqlite3
 
 ---
 
-## 🏥 第二階段：安裝 MIRS v1.4.5 系統
+## 🏥 第二階段：安裝 MIRS v1.5.1 系統
 
 ### 步驟 1：下載系統程式
 
@@ -100,11 +109,11 @@ sudo apt install -y git python3-pip python3-venv sqlite3
 # 切換到家目錄
 cd ~
 
-# 從 GitHub 下載系統
-git clone https://github.com/cutemo0953/medical-inventory-system_v1.4.5.git
+# 從 GitHub 下載系統（v1.5.1 含麻醉模組）
+git clone https://github.com/cutemo0953/MIRS-v2.0-single-station.git
 
 # 進入系統目錄
-cd medical-inventory-system_v1.4.5
+cd MIRS-v2.0-single-station
 ```
 
 ### 步驟 2：安裝 Python 套件
@@ -121,7 +130,7 @@ python3 --version
 
 # 如果顯示 Python 3.13，需要先修正相容性問題
 # 編輯 requirements 檔案
-nano requirements_v1.4.5.txt
+nano api/requirements.txt
 ```
 
 **如果是 Python 3.13，請修改以下兩行：**
@@ -142,10 +151,10 @@ fastapi>=0.115.0
 # Ctrl+O 儲存，Ctrl+X 離開
 
 # 安裝套件
-pip install -r requirements_v1.4.5.txt
+pip install -r api/requirements.txt
 
 # 如果還是失敗，使用手動安裝（保證成功）：
-pip install fastapi>=0.115.0 uvicorn[standard]==0.24.0 pydantic>=2.8.0 reportlab>=4.0.0 qrcode[pil]>=7.4.2 pandas>=2.0.0 Pillow>=10.0.0
+pip install fastapi>=0.115.0 uvicorn[standard]==0.24.0 pydantic>=2.8.0 reportlab>=4.0.0 qrcode[pil]>=7.4.2 pandas>=2.0.0 Pillow>=10.0.0 httpx>=0.25.0
 ```
 
 ### 步驟 3：測試系統
@@ -155,12 +164,14 @@ pip install fastapi>=0.115.0 uvicorn[standard]==0.24.0 pydantic>=2.8.0 reportlab
 python3 main.py
 
 # 看到以下訊息就成功了：
-# 🏥 醫療站庫存管理系統 API v1.4.5
-# 🌐 服務位址: http://0.0.0.0:8000
+# 🏥 醫療站庫存管理系統 API v1.5.1
+# 🌐 服務位址: http://0.0.0.0:8090
+# ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
 ```
 
 **測試連線**：
-- 在你的電腦瀏覽器開啟：http://medical-tc01.local:8000
+- 主系統：http://medical-tc01.local:8090
+- 麻醉模組：http://medical-tc01.local:8090/anesthesia
 - 應該會看到 MIRS 登入畫面
 
 **測試成功！按 Ctrl+C 停止，繼續下一步**
@@ -304,7 +315,7 @@ sudo systemctl status dnsmasq
 
 ```bash
 # 建立啟動腳本
-nano ~/medical-inventory-system_v1.4.5/start_mirs.sh
+nano ~/MIRS-v2.0-single-station/start_mirs.sh
 ```
 
 **貼上以下內容**：
@@ -312,7 +323,7 @@ nano ~/medical-inventory-system_v1.4.5/start_mirs.sh
 #!/bin/bash
 
 # MIRS 系統啟動腳本
-cd /home/medical/medical-inventory-system_v1.4.5
+cd /home/medical/MIRS-v2.0-single-station
 
 # 啟動虛擬環境
 source venv/bin/activate
@@ -323,7 +334,7 @@ python3 main.py
 
 **儲存並設定執行權限**：
 ```bash
-chmod +x ~/medical-inventory-system_v1.4.5/start_mirs.sh
+chmod +x ~/MIRS-v2.0-single-station/start_mirs.sh
 ```
 
 ### 步驟 2：建立 systemd 服務
@@ -341,14 +352,21 @@ After=network.target
 [Service]
 Type=simple
 User=medical
-WorkingDirectory=/home/medical/medical-inventory-system_v1.4.5
-ExecStart=/home/medical/medical-inventory-system_v1.4.5/venv/bin/python3 main.py
+WorkingDirectory=/home/medical/MIRS-v2.0-single-station
+ExecStart=/home/medical/MIRS-v2.0-single-station/venv/bin/python3 main.py
 Restart=always
 RestartSec=10
+
+# CIRS Hub 連線設定（Hub-Satellite 架構）
+# 如果要連接 CIRS Hub，取消註解並設定 Hub 的 IP
+#Environment="CIRS_HUB_URL=http://192.168.1.100:8000"
 
 [Install]
 WantedBy=multi-user.target
 ```
+
+> **Hub-Satellite 模式**：如果要連接 CIRS Hub，設定 `CIRS_HUB_URL` 環境變數。
+> 若不設定，MIRS 會以獨立模式運作（離線時自動切換）。
 
 **儲存並啟動服務**：
 ```bash
@@ -409,7 +427,7 @@ import socket
 def get_station_info():
     """讀取站點資訊"""
     try:
-        with open('/home/medical/medical-inventory-system_v1.4.5/config/station_config.json', 'r', encoding='utf-8') as f:
+        with open('/home/medical/MIRS-v2.0-single-station/config/station_config.json', 'r', encoding='utf-8') as f:
             import json
             config = json.load(f)
             return config.get('station_id', 'TC-01'), config.get('station_name', '醫療站')
@@ -433,7 +451,7 @@ def generate_connection_card():
     station_id, station_name = get_station_info()
     wifi_ssid = get_wifi_ssid()
     wifi_password = "Medical2025"
-    system_url = "http://10.0.0.1:8000"
+    system_url = "http://10.0.0.1:8090"
     
     # 建立畫布 (A5 size, 300 DPI)
     width, height = 1748, 2480  # A5 at 300 DPI
@@ -464,7 +482,7 @@ def generate_connection_card():
               font=title_font, anchor='mm')
     draw.text((width//2, 220), f"{station_name} ({station_id})", fill='white',
               font=subtitle_font, anchor='mm')
-    draw.text((width//2, 310), "MIRS v1.4.5", fill='white',
+    draw.text((width//2, 310), "MIRS v1.5.1", fill='white',
               font=small_font, anchor='mm')
     
     # WiFi QR Code
@@ -605,7 +623,7 @@ sudo cp /home/medical/MIRS_Connection_Card_TC-01.png /media/usb/
 2. **找到並連接「Medical-TC01」**
 3. **輸入密碼：`Medical2025`**
 4. **開啟瀏覽器**
-5. **輸入網址：`http://10.0.0.1:8000`**
+5. **輸入網址：`http://10.0.0.1:8090`**
 6. **完成！**
 
 **總時間：60 秒**
@@ -616,7 +634,7 @@ sudo cp /home/medical/MIRS_Connection_Card_TC-01.png /media/usb/
 
 1. **開啟手機 WiFi**（系統會自動連上）
 2. **開啟瀏覽器**
-3. **點擊書籤或輸入：`http://10.0.0.1:8000`**
+3. **點擊書籤或輸入：`http://10.0.0.1:8090`**
 4. **完成！**
 
 **總時間：10 秒**
@@ -685,7 +703,7 @@ sudo reboot
 sudo systemctl stop mirs
 
 # 進入系統目錄
-cd ~/medical-inventory-system_v1.4.5
+cd ~/MIRS-v2.0-single-station
 
 # 備份資料庫
 cp medical_inventory.db medical_inventory.db.backup
@@ -695,7 +713,7 @@ git pull origin main
 
 # 更新套件
 source venv/bin/activate
-pip install -r requirements_v1.4.5.txt --upgrade
+pip install -r api/requirements.txt --upgrade
 
 # 重新啟動
 sudo systemctl start mirs
@@ -705,7 +723,7 @@ sudo systemctl start mirs
 
 ```bash
 # 手動備份
-cp ~/medical-inventory-system_v1.4.5/medical_inventory.db \
+cp ~/MIRS-v2.0-single-station/medical_inventory.db \
    ~/backup_$(date +%Y%m%d).db
 
 # 下載到電腦（在你的電腦執行）
@@ -724,7 +742,7 @@ nano ~/backup_mirs.sh
 #!/bin/bash
 BACKUP_DIR="/home/medical/backups"
 mkdir -p $BACKUP_DIR
-cp ~/medical-inventory-system_v1.4.5/medical_inventory.db \
+cp ~/MIRS-v2.0-single-station/medical_inventory.db \
    $BACKUP_DIR/backup_$(date +%Y%m%d_%H%M%S).db
 
 # 保留最近 7 天的備份
@@ -768,14 +786,14 @@ pip install fastapi>=0.115.0 uvicorn[standard]==0.24.0 pydantic>=2.8.0 reportlab
 
 **方法 B：修改 requirements 檔案**
 ```bash
-nano requirements_v1.4.5.txt
+nano api/requirements.txt
 
 # 修改這兩行：
 pydantic==2.5.0  → pydantic>=2.8.0
 fastapi==0.104.1 → fastapi>=0.115.0
 
 # 儲存後再執行
-pip install -r requirements_v1.4.5.txt
+pip install -r api/requirements.txt
 ```
 
 **方法 C：使用 Python 3.11**
@@ -788,7 +806,7 @@ python3.11 -m venv venv
 source venv/bin/activate
 
 # 安裝原版 requirements
-pip install -r requirements_v1.4.5.txt
+pip install -r api/requirements.txt
 ```
 
 ### 問題 1：手機找不到 WiFi
@@ -904,7 +922,7 @@ sudo systemctl restart hostapd
 ## 📞 技術支援
 
 **問題回報**：
-- GitHub Issues: https://github.com/cutemo0953/medical-inventory-system_v1.4.5/issues
+- GitHub Issues: https://github.com/cutemo0953/MIRS-v2.0-single-station/issues
 - Email: tom@denovortho.com
 
 **文件回饋**：
@@ -924,6 +942,46 @@ sudo systemctl restart hostapd
 
 ---
 
-**🏥 MIRS v1.4.5 - 專為壯闊台灣醫療站設計**
+---
 
-*De Novo Orthopedics Inc. © 2024*
+## 🔗 第六階段：CIRS Hub 連線設定（選用）
+
+如果要啟用 Hub-Satellite 架構，讓 MIRS 從 CIRS Hub 取得病患資料：
+
+### 步驟 1：確認網路連線
+
+```bash
+# 確認可以連到 CIRS Hub（替換成實際 IP）
+ping 192.168.1.100
+
+# 測試 CIRS API
+curl http://192.168.1.100:8000/api/health
+```
+
+### 步驟 2：設定 CIRS Hub URL
+
+```bash
+# 編輯 systemd 服務
+sudo nano /etc/systemd/system/mirs.service
+
+# 取消 Environment 那行的註解，並設定 CIRS Hub IP
+# Environment="CIRS_HUB_URL=http://192.168.1.100:8000"
+
+# 重新載入並重啟
+sudo systemctl daemon-reload
+sudo systemctl restart mirs
+```
+
+### 步驟 3：驗證連線
+
+開啟麻醉模組（http://10.0.0.1:8090/anesthesia），點擊「開始新案例」，
+應該會看到 CIRS 候診名單顯示「🟢 連線」狀態。
+
+> **離線模式**：若 CIRS Hub 無法連線，系統會自動切換為離線模式，
+> 仍可手動輸入病患資料繼續操作。
+
+---
+
+**🏥 MIRS v1.5.1 - 專為壯闊台灣醫療站設計**
+
+*De Novo Orthopedics Inc. © 2024-2025*

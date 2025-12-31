@@ -119,6 +119,19 @@ class DrugRequestStatus(str, Enum):
 # Request/Response Models
 # =============================================================================
 
+class PatientSnapshot(BaseModel):
+    """Patient data snapshot for offline resilience (Hub-Satellite sync)"""
+    name: Optional[str] = None
+    dob: Optional[str] = None
+    sex: Optional[str] = None
+    allergies: Optional[List[str]] = None
+    weight_kg: Optional[float] = None
+    blood_type: Optional[str] = None
+    # Additional fields from CIRS
+    triage_category: Optional[str] = None
+    chief_complaint: Optional[str] = None
+
+
 class CreateCaseRequest(BaseModel):
     surgery_case_id: Optional[str] = None
     patient_id: str
@@ -127,6 +140,9 @@ class CreateCaseRequest(BaseModel):
     planned_technique: Optional[AnesthesiaTechnique] = None
     primary_anesthesiologist_id: Optional[str] = None
     primary_nurse_id: Optional[str] = None
+    # Hub-Satellite sync fields
+    cirs_registration_ref: Optional[str] = None
+    patient_snapshot: Optional[PatientSnapshot] = None
 
 
 class CaseResponse(BaseModel):
@@ -419,6 +435,16 @@ def init_anesthesia_schema(cursor):
     except:
         pass
 
+    # Phase C: Add patient snapshot columns for Hub-Satellite sync
+    try:
+        cursor.execute("ALTER TABLE anesthesia_cases ADD COLUMN patient_snapshot TEXT")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE anesthesia_cases ADD COLUMN cirs_registration_ref TEXT")
+    except:
+        pass
+
     # Phase A-6: WAL Sync Queue for offline-first operations
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS anesthesia_sync_queue (
@@ -569,14 +595,20 @@ async def create_case(request: CreateCaseRequest, actor_id: str = Query(...)):
 
     case_id = generate_case_id()
 
+    # Serialize patient snapshot if provided
+    patient_snapshot_json = None
+    if request.patient_snapshot:
+        patient_snapshot_json = json.dumps(request.patient_snapshot.model_dump())
+
     try:
         cursor.execute("""
             INSERT INTO anesthesia_cases (
                 id, surgery_case_id, patient_id, patient_name,
                 context_mode, planned_technique,
                 primary_anesthesiologist_id, primary_nurse_id,
+                cirs_registration_ref, patient_snapshot,
                 created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             case_id,
             request.surgery_case_id,
@@ -586,6 +618,8 @@ async def create_case(request: CreateCaseRequest, actor_id: str = Query(...)):
             request.planned_technique.value if request.planned_technique else None,
             request.primary_anesthesiologist_id,
             request.primary_nurse_id,
+            request.cirs_registration_ref,
+            patient_snapshot_json,
             actor_id
         ))
 
@@ -2309,3 +2343,151 @@ async def check_can_close_case(case_id: str):
         "holdings": holdings,
         "message": None if total_balance == 0 else f"Drug balance must be 0 (current: {total_balance})"
     }
+
+
+# ============================================================
+# CIRS Hub Proxy Endpoints (Hub-Satellite Architecture)
+# ============================================================
+
+import httpx
+from typing import Optional
+import os
+
+# CIRS Hub configuration
+CIRS_HUB_URL = os.getenv("CIRS_HUB_URL", "http://localhost:8000")
+CIRS_TIMEOUT = 5.0  # seconds
+
+
+@router.get("/proxy/cirs/waiting-list")
+async def get_cirs_waiting_list(
+    status: Optional[str] = "waiting",
+    limit: int = 50
+):
+    """
+    Proxy endpoint to fetch waiting list from CIRS Hub.
+    Returns patients waiting for procedures (for case creation).
+
+    Gracefully handles offline scenarios by returning empty list with offline flag.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=CIRS_TIMEOUT) as client:
+            response = await client.get(
+                f"{CIRS_HUB_URL}/api/registrations",
+                params={"status": status, "limit": limit}
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                # Transform CIRS data to MIRS format
+                patients = []
+                for reg in data.get("registrations", data if isinstance(data, list) else []):
+                    patients.append({
+                        "registration_id": reg.get("id") or reg.get("registration_id"),
+                        "patient_id": reg.get("patient_id"),
+                        "name": reg.get("patient_name") or reg.get("name"),
+                        "dob": reg.get("dob"),
+                        "sex": reg.get("sex"),
+                        "allergies": reg.get("allergies", []),
+                        "weight_kg": reg.get("weight_kg"),
+                        "blood_type": reg.get("blood_type"),
+                        "triage_category": reg.get("triage_category"),
+                        "chief_complaint": reg.get("chief_complaint"),
+                        "status": reg.get("status"),
+                        "registered_at": reg.get("registered_at") or reg.get("created_at")
+                    })
+
+                return {
+                    "online": True,
+                    "source": "cirs_hub",
+                    "patients": patients,
+                    "count": len(patients)
+                }
+            else:
+                logger.warning(f"CIRS Hub returned {response.status_code}")
+                return {
+                    "online": False,
+                    "source": "offline",
+                    "patients": [],
+                    "count": 0,
+                    "error": f"CIRS returned status {response.status_code}"
+                }
+
+    except httpx.TimeoutException:
+        logger.warning("CIRS Hub timeout - operating in offline mode")
+        return {
+            "online": False,
+            "source": "offline",
+            "patients": [],
+            "count": 0,
+            "error": "CIRS Hub timeout"
+        }
+    except httpx.ConnectError:
+        logger.info("CIRS Hub not reachable - operating in offline mode")
+        return {
+            "online": False,
+            "source": "offline",
+            "patients": [],
+            "count": 0,
+            "error": "CIRS Hub not reachable"
+        }
+    except Exception as e:
+        logger.error(f"CIRS proxy error: {e}")
+        return {
+            "online": False,
+            "source": "offline",
+            "patients": [],
+            "count": 0,
+            "error": str(e)
+        }
+
+
+@router.get("/proxy/cirs/patient/{registration_id}")
+async def get_cirs_patient_details(registration_id: str):
+    """
+    Fetch detailed patient info from CIRS Hub by registration ID.
+    Used when creating a case to get full patient snapshot.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=CIRS_TIMEOUT) as client:
+            response = await client.get(
+                f"{CIRS_HUB_URL}/api/registrations/{registration_id}"
+            )
+
+            if response.status_code == 200:
+                reg = response.json()
+                return {
+                    "online": True,
+                    "source": "cirs_hub",
+                    "patient": {
+                        "registration_id": reg.get("id") or reg.get("registration_id"),
+                        "patient_id": reg.get("patient_id"),
+                        "name": reg.get("patient_name") or reg.get("name"),
+                        "dob": reg.get("dob"),
+                        "sex": reg.get("sex"),
+                        "allergies": reg.get("allergies", []),
+                        "weight_kg": reg.get("weight_kg"),
+                        "blood_type": reg.get("blood_type"),
+                        "triage_category": reg.get("triage_category"),
+                        "chief_complaint": reg.get("chief_complaint"),
+                        "medical_history": reg.get("medical_history"),
+                        "current_medications": reg.get("current_medications"),
+                        "status": reg.get("status")
+                    }
+                }
+            elif response.status_code == 404:
+                raise HTTPException(status_code=404, detail="Registration not found in CIRS")
+            else:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"CIRS Hub error: {response.status_code}"
+                )
+
+    except HTTPException:
+        raise
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="CIRS Hub timeout")
+    except httpx.ConnectError:
+        raise HTTPException(status_code=503, detail="CIRS Hub not reachable")
+    except Exception as e:
+        logger.error(f"CIRS patient fetch error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

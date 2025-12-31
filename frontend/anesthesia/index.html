@@ -771,7 +771,26 @@
                 <h2 class="modal-title">新增麻醉案例</h2>
                 <button class="modal-close" onclick="closeModal('newCaseModal')">&times;</button>
             </div>
+
+            <!-- CIRS Waiting List Section -->
+            <div id="cirsWaitingSection" style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label class="form-label" style="margin: 0;">CIRS 候診名單</label>
+                    <span id="cirsStatus" style="font-size: 12px; color: var(--text-secondary);">檢查中...</span>
+                </div>
+                <div id="cirsPatientList" style="max-height: 150px; overflow-y: auto; background: var(--bg-tertiary); border-radius: 8px; padding: 8px;">
+                    <div style="text-align: center; color: var(--text-secondary); padding: 16px;">載入中...</div>
+                </div>
+            </div>
+
+            <div style="text-align: center; color: var(--text-secondary); margin-bottom: 12px; font-size: 13px;">
+                ─── 或手動輸入 ───
+            </div>
+
             <form onsubmit="createCase(event)">
+                <input type="hidden" id="cirsRegistrationRef" value="">
+                <input type="hidden" id="patientSnapshot" value="">
+
                 <div class="form-group">
                     <label class="form-label">病歷號 / 病患 ID</label>
                     <input type="text" class="form-input" id="newPatientId" required placeholder="輸入病歷號">
@@ -1588,6 +1607,98 @@
         // Modal Functions
         function showNewCaseModal() {
             document.getElementById('newCaseModal').classList.add('active');
+            // Reset CIRS selection
+            document.getElementById('cirsRegistrationRef').value = '';
+            document.getElementById('patientSnapshot').value = '';
+            document.getElementById('newPatientId').value = '';
+            document.getElementById('newPatientName').value = '';
+            // Load CIRS waiting list
+            loadCirsWaitingList();
+        }
+
+        async function loadCirsWaitingList() {
+            const statusEl = document.getElementById('cirsStatus');
+            const listEl = document.getElementById('cirsPatientList');
+
+            statusEl.textContent = '檢查中...';
+            statusEl.style.color = 'var(--text-secondary)';
+
+            try {
+                const res = await fetch(`${API_BASE}/proxy/cirs/waiting-list`);
+                const data = await res.json();
+
+                if (data.online && data.patients.length > 0) {
+                    statusEl.textContent = `🟢 連線 (${data.count} 位候診)`;
+                    statusEl.style.color = '#10b981';
+
+                    listEl.innerHTML = data.patients.map(p => `
+                        <div class="cirs-patient-item" onclick="selectCirsPatient('${p.registration_id}', '${p.patient_id || ''}', '${p.name || ''}', ${JSON.stringify(p).replace(/"/g, '&quot;')})"
+                             style="padding: 10px; margin-bottom: 6px; background: var(--bg-secondary); border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span style="font-weight: 500;">${p.name || '未知'}</span>
+                                    <span style="color: var(--text-secondary); margin-left: 8px; font-size: 13px;">${p.patient_id || ''}</span>
+                                </div>
+                                <span style="font-size: 12px; padding: 2px 8px; background: ${getTriageColor(p.triage_category)}; border-radius: 4px;">${p.triage_category || '候診'}</span>
+                            </div>
+                            ${p.chief_complaint ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${p.chief_complaint}</div>` : ''}
+                        </div>
+                    `).join('');
+                } else if (data.online && data.patients.length === 0) {
+                    statusEl.textContent = '🟢 連線 (無候診)';
+                    statusEl.style.color = '#10b981';
+                    listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">目前無候診病患</div>';
+                } else {
+                    statusEl.textContent = '🔴 離線';
+                    statusEl.style.color = '#f59e0b';
+                    listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">CIRS 未連線，請手動輸入</div>';
+                }
+            } catch (err) {
+                console.error('Failed to load CIRS waiting list:', err);
+                statusEl.textContent = '🔴 離線';
+                statusEl.style.color = '#ef4444';
+                listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">CIRS 未連線，請手動輸入</div>';
+            }
+        }
+
+        function getTriageColor(category) {
+            const colors = {
+                'immediate': '#ef4444',
+                'urgent': '#f59e0b',
+                'delayed': '#10b981',
+                'minor': '#3b82f6',
+                'deceased': '#6b7280'
+            };
+            return colors[category?.toLowerCase()] || 'var(--bg-tertiary)';
+        }
+
+        function selectCirsPatient(registrationId, patientId, name, patientData) {
+            // Parse patient data if it's a string
+            const patient = typeof patientData === 'string' ? JSON.parse(patientData) : patientData;
+
+            // Fill in form fields
+            document.getElementById('newPatientId').value = patientId || registrationId;
+            document.getElementById('newPatientName').value = name || '';
+            document.getElementById('cirsRegistrationRef').value = registrationId;
+
+            // Store patient snapshot
+            const snapshot = {
+                name: patient.name,
+                dob: patient.dob,
+                sex: patient.sex,
+                allergies: patient.allergies || [],
+                weight_kg: patient.weight_kg,
+                blood_type: patient.blood_type,
+                triage_category: patient.triage_category,
+                chief_complaint: patient.chief_complaint
+            };
+            document.getElementById('patientSnapshot').value = JSON.stringify(snapshot);
+
+            // Visual feedback - highlight selected item
+            document.querySelectorAll('.cirs-patient-item').forEach(el => {
+                el.style.borderColor = 'transparent';
+            });
+            event.currentTarget.style.borderColor = 'var(--primary)';
         }
 
         function showVitalsModal() {
@@ -1931,11 +2042,25 @@
         async function createCase(event) {
             event.preventDefault();
 
+            // Get CIRS reference and patient snapshot if available
+            const cirsRef = document.getElementById('cirsRegistrationRef').value;
+            const snapshotJson = document.getElementById('patientSnapshot').value;
+            let patientSnapshot = null;
+            if (snapshotJson) {
+                try {
+                    patientSnapshot = JSON.parse(snapshotJson);
+                } catch (e) {
+                    console.warn('Failed to parse patient snapshot:', e);
+                }
+            }
+
             const body = {
                 patient_id: document.getElementById('newPatientId').value,
                 patient_name: document.getElementById('newPatientName').value || null,
                 planned_technique: document.getElementById('newTechnique').value,
-                context_mode: document.getElementById('newContextMode').value
+                context_mode: document.getElementById('newContextMode').value,
+                cirs_registration_ref: cirsRef || null,
+                patient_snapshot: patientSnapshot
             };
 
             try {
