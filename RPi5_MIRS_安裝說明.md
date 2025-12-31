@@ -982,6 +982,112 @@ sudo systemctl restart mirs
 
 ---
 
+## 🌐 第七階段：完整 xIRS 多服務部署（選用）
+
+在同一台 Raspberry Pi 上運行完整的 xIRS Hub-Satellite 架構：
+
+### 服務架構
+
+```
+┌─────────────────────────────────────────────────┐
+│  Raspberry Pi (Hub-Satellite Architecture)      │
+├─────────────────────────────────────────────────┤
+│  Port 8000: CIRS Hub (社區管理 - 權威中心)       │
+│  Port 8001: HIRS (家庭物資 - 選配)               │
+│  Port 8090: MIRS Satellite (醫療站麻醉模組)      │
+└─────────────────────────────────────────────────┘
+```
+
+### 步驟 1：下載 CIRS 和 HIRS
+
+```bash
+cd ~
+git clone https://github.com/cutemo0953/CIRS.git
+git clone https://github.com/cutemo0953/HIRS.git
+```
+
+### 步驟 2：建立 CIRS 服務
+
+```bash
+sudo nano /etc/systemd/system/cirs.service
+```
+
+**貼上以下內容**：
+```ini
+[Unit]
+Description=CIRS Hub (Community Inventory Resilience System)
+After=network.target
+
+[Service]
+Type=simple
+User=medical
+WorkingDirectory=/home/medical/CIRS/backend
+ExecStart=/home/medical/CIRS/backend/venv/bin/python3 -c "import uvicorn; from main import app; uvicorn.run(app, host='0.0.0.0', port=8000)"
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### 步驟 3：建立 HIRS 服務
+
+```bash
+sudo nano /etc/systemd/system/hirs.service
+```
+
+**貼上以下內容**：
+```ini
+[Unit]
+Description=HIRS (Home Inventory Resilience System)
+After=network.target
+
+[Service]
+Type=simple
+User=medical
+WorkingDirectory=/home/medical/HIRS
+ExecStart=/usr/bin/python3 -m http.server 8001
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### 步驟 4：啟動所有服務
+
+```bash
+# 重新載入服務設定
+sudo systemctl daemon-reload
+
+# 啟動所有服務
+sudo systemctl enable cirs hirs mirs
+sudo systemctl start cirs hirs mirs
+
+# 檢查狀態
+sudo systemctl status cirs hirs mirs
+```
+
+### 步驟 5：驗證多服務運作
+
+```bash
+# 測試各服務
+curl http://localhost:8000/api/health  # CIRS Hub
+curl http://localhost:8001/            # HIRS
+curl http://localhost:8090/api/health  # MIRS Satellite
+```
+
+### 存取方式
+
+| 服務 | URL | 說明 |
+|------|-----|------|
+| CIRS Hub | http://10.0.0.1:8000 | 社區管理、檢傷、掛號 |
+| HIRS | http://10.0.0.1:8001 | 家庭物資管理 |
+| MIRS | http://10.0.0.1:8090 | 醫療站物資 |
+| 麻醉模組 | http://10.0.0.1:8090/anesthesia | 麻醉記錄 |
+
+---
+
 **🏥 MIRS v1.5.1 - 專為壯闊台灣醫療站設計**
 
 *De Novo Orthopedics Inc. © 2024-2025*
