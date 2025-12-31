@@ -2395,9 +2395,9 @@ async def get_cirs_waiting_list(
 
     try:
         async with httpx.AsyncClient(timeout=CIRS_TIMEOUT) as client:
+            # Use the waiting list endpoint (no auth required for Doctor PWA compatibility)
             response = await client.get(
-                f"{CIRS_HUB_URL}/api/registrations",
-                params={"status": status, "limit": limit}
+                f"{CIRS_HUB_URL}/api/registrations/waiting/list"
             )
 
             # Extract hub revision from response headers if available
@@ -2406,18 +2406,22 @@ async def get_cirs_waiting_list(
             if response.status_code == 200:
                 data = response.json()
                 # Transform CIRS data to MIRS format
+                # CIRS waiting list format: reg_id, patient_ref, display_name, triage, priority, etc.
                 patients = []
                 for reg in data.get("registrations", data if isinstance(data, list) else []):
                     patients.append({
-                        "registration_id": reg.get("id") or reg.get("registration_id"),
-                        "patient_id": reg.get("patient_id"),
-                        "name": reg.get("patient_name") or reg.get("name"),
+                        "registration_id": reg.get("reg_id") or reg.get("id") or reg.get("registration_id"),
+                        "patient_id": reg.get("patient_id") or reg.get("person_id"),
+                        "patient_ref": reg.get("patient_ref"),  # Masked patient reference
+                        "name": reg.get("display_name") or reg.get("patient_name") or reg.get("name"),
+                        "age_group": reg.get("age_group"),
                         "dob": reg.get("dob"),
-                        "sex": reg.get("sex"),
+                        "sex": reg.get("gender") or reg.get("sex"),
                         "allergies": reg.get("allergies", []),
                         "weight_kg": reg.get("weight_kg"),
                         "blood_type": reg.get("blood_type"),
-                        "triage_category": reg.get("triage_category"),
+                        "triage_category": reg.get("triage") or reg.get("triage_category"),
+                        "priority": reg.get("priority"),
                         "chief_complaint": reg.get("chief_complaint"),
                         "status": reg.get("status"),
                         "registered_at": reg.get("registered_at") or reg.get("created_at")
