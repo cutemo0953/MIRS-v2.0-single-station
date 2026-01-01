@@ -3380,6 +3380,13 @@ def run_migrations():
             except Exception as e:
                 logger.warning(f"O2 claim columns may already exist: {e}")
 
+        # v2.5.2: 確保 equipment_units 有 updated_at 欄位
+        cursor.execute("PRAGMA table_info(equipment_units)")
+        eu_columns = [col[1] for col in cursor.fetchall()]
+        if eu_columns and 'updated_at' not in eu_columns:
+            cursor.execute("ALTER TABLE equipment_units ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            logger.info("✓ Migration: 新增 equipment_units.updated_at 欄位")
+
         # v2.1: 建立 equipment_lifecycle_events 表
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='equipment_lifecycle_events'")
         if not cursor.fetchone():
