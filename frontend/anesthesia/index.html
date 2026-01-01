@@ -1741,7 +1741,10 @@
 
                 const listEl = document.getElementById('caseList');
 
-                if (data.cases.length === 0) {
+                // v1.1: Filter out CLOSED cases from main list
+                const activeCases = data.cases.filter(c => c.status !== 'CLOSED');
+
+                if (activeCases.length === 0) {
                     listEl.innerHTML = `
                         <div class="empty-state">
                             <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:64px;height:64px;opacity:0.5;">
@@ -1753,7 +1756,7 @@
                     return;
                 }
 
-                listEl.innerHTML = data.cases.map(c => `
+                listEl.innerHTML = activeCases.map(c => `
                     <div class="case-list-item" onclick="selectCase('${c.id}')">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
@@ -1766,7 +1769,7 @@
                 `).join('');
 
                 // Auto-select if there's an in-progress case
-                const inProgress = data.cases.find(c => c.status === 'IN_PROGRESS');
+                const inProgress = activeCases.find(c => c.status === 'IN_PROGRESS');
                 if (inProgress) {
                     selectCase(inProgress.id);
                 }
