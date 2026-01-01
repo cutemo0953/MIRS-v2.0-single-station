@@ -1,8 +1,29 @@
 # xIRS 就診流程改進規格書
 
-**Version:** 1.0 (Draft)
+**Version:** 1.1
 **Date:** 2026-01-01
-**Status:** 待討論
+**Status:** 核准實作
+**Review:** Gemini + ChatGPT 專家審閱通過
+
+---
+
+## 0. 設計審閱總結
+
+### 0.1 核心設計確認 ✅
+
+| 設計決策 | 審閱結果 |
+|----------|----------|
+| `status` 與 `needs_*` 分離 | **高度肯定** - 避免單一 status 欄位的狀態爆炸問題 |
+| 醫囑驅動 (CPOE) | **正確方向** - 沒有醫囑就不應進入執行隊列 |
+| 待處置/待麻醉雙清單 | **直接修復問題** - 病患可同時出現在兩個清單 |
+
+### 0.2 關鍵補強 (v1.1 新增)
+
+| 補強項目 | 說明 |
+|----------|------|
+| **角色化 Claim** | 新增 `registration_claims` 表，支援多角色並存 |
+| **Hub-Satellite 合約升版** | `RegistrationStub` 必須包含 `needs_*` 欄位 |
+| **Server-side 防繞過** | 後端強制驗證，不能只靠 UI |
 
 ---
 
@@ -94,9 +115,101 @@ ALTER TABLE registrations ADD COLUMN consultation_by TEXT;
 
 ---
 
-## 3. API 變更
+## 3. 角色化 Claim 機制 (v1.1 關鍵補強)
 
-### 3.1 Doctor PWA - 完成看診
+### 3.1 問題：單一 Claim 造成互斥
+
+**現狀問題：**
+- Doctor PWA claim 病患後，Anesthesia PWA 看不到
+- 單一 `claimed_by` 欄位無法支援「同時需要處置與麻醉」
+
+**解決方案：角色化 Claim (Role-Scoped Claims)**
+
+### 3.2 新增 registration_claims 表
+
+```sql
+CREATE TABLE registration_claims (
+    id TEXT PRIMARY KEY,
+    registration_id TEXT NOT NULL,
+    claim_role TEXT NOT NULL CHECK (claim_role IN ('DOCTOR', 'PROCEDURE', 'ANESTHESIA')),
+    claimed_by TEXT NOT NULL,
+    claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP,  -- TTL 機制，可選
+    released_at TIMESTAMP,
+
+    -- 唯一約束：同一 registration 的同一 role 只能有一個 active claim
+    UNIQUE(registration_id, claim_role)
+        WHERE released_at IS NULL AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+);
+```
+
+### 3.3 Claim 語義
+
+| 角色 | Claim 時機 | 效果 |
+|------|-----------|------|
+| DOCTOR | Doctor PWA 選取病患看診 | 其他醫師不能同時看診 |
+| PROCEDURE | Procedure PWA 開始處置 | 其他處置站不能同時處置 |
+| ANESTHESIA | Anesthesia PWA 建立案例 | 其他麻醉站不能同時接案 |
+
+**關鍵：** 三種 Claim 互不影響！
+- Doctor claim 不會阻擋 Anesthesia/Procedure
+- 同一病患可同時被 PROCEDURE 和 ANESTHESIA claim（但各只能一個）
+
+### 3.4 Claim API
+
+```
+POST /api/registrations/{reg_id}/claim
+```
+
+**Request:**
+```json
+{
+  "role": "ANESTHESIA",
+  "actor_id": "ANES-DR-001",
+  "ttl_seconds": 7200  // 可選，2 小時後自動過期
+}
+```
+
+**Response (成功):**
+```json
+{
+  "success": true,
+  "claim_id": "CLM-20260101-001",
+  "registration_id": "REG-20260101-001",
+  "role": "ANESTHESIA",
+  "expires_at": "2026-01-01T12:30:00Z"
+}
+```
+
+**Response (衝突 - 409):**
+```json
+{
+  "success": false,
+  "error": "ALREADY_CLAIMED",
+  "claimed_by": "ANES-DR-002",
+  "claimed_at": "2026-01-01T10:15:00Z",
+  "message": "此病患已被其他麻醉站接手"
+}
+```
+
+### 3.5 Release API
+
+```
+POST /api/registrations/{reg_id}/release-claim
+```
+
+**Request:**
+```json
+{
+  "role": "ANESTHESIA"
+}
+```
+
+---
+
+## 4. API 變更
+
+### 4.1 Doctor PWA - 完成看診
 
 **現有：** 沒有明確的「完成看診」API
 
@@ -318,8 +431,41 @@ POST /api/anesthesia/cases/{case_id}/close
 |------|----------|----------|
 | registrations.needs_procedure | CIRS Hub | Hub → MIRS Satellite |
 | registrations.needs_anesthesia | CIRS Hub | Hub → MIRS Satellite |
+| registration_claims | CIRS Hub | Hub → MIRS Satellite |
 | procedure_cases | MIRS Satellite | Satellite → Hub (完成通知) |
 | anesthesia_cases | MIRS Satellite | Satellite → Hub (完成通知) |
+
+### 5.3 Hub-Satellite 合約升版 (v1.1 關鍵補強)
+
+**必須更新 `RegistrationStub` 定義：**
+
+```python
+# xIRS-Contracts v1.1.0 (2026-01-01)
+class RegistrationStub(BaseModel):
+    """Hub → Satellite: 掛號資料快照"""
+    registration_id: str               # REG-YYYYMMDD-XXX
+    patient_id: Optional[str] = None
+    triage_category: Optional[str] = None  # RED/YELLOW/GREEN/BLACK
+    chief_complaint: Optional[str] = None
+    location: Optional[str] = None     # Station ID
+    status: str = "WAITING"
+    hub_revision: int = 0
+
+    # v1.1 新增欄位 - 分流標記
+    needs_procedure: bool = False
+    needs_anesthesia: bool = False
+    consultation_completed_at: Optional[str] = None
+    consultation_by: Optional[str] = None
+```
+
+**版本相容：**
+| Hub Version | Satellite Version | 相容性 |
+|-------------|-------------------|--------|
+| v1.0 | v1.0 | ✅ Full (無 needs_* 欄位) |
+| v1.1 | v1.0 | ⚠️ Partial (Satellite 收不到分流指令) |
+| v1.1 | v1.1 | ✅ Full (完整分流支援) |
+
+**衝突規則：** Hub wins (Satellite 只能透過 ops 提案變更)
 
 ---
 
@@ -358,7 +504,89 @@ ALTER TABLE registrations ADD COLUMN anesthesia_notes TEXT;
 
 ---
 
-## 7. 待討論問題
+## 7. Server-side 防繞過 (v1.1 關鍵補強)
+
+### 7.1 必須在後端強制驗證
+
+**原則：** UI 只是 hint，真正的權限控制在 server-side。
+
+### 7.2 Invariant 檢查清單
+
+| API | 必須滿足條件 | 否則回應 |
+|-----|-------------|---------|
+| `GET /waiting/anesthesia` | 只回 `status=CONSULTATION_DONE AND needs_anesthesia=1` | (永不違反，純查詢) |
+| `POST /complete-consultation` | `status=IN_CONSULTATION` AND 持有 DOCTOR claim | 403 Forbidden |
+| `POST /claim` (PROCEDURE) | `status=CONSULTATION_DONE AND needs_procedure=1` | 400 Bad Request |
+| `POST /claim` (ANESTHESIA) | `status=CONSULTATION_DONE AND needs_anesthesia=1` | 400 Bad Request |
+| `POST /procedure-done` | 持有 PROCEDURE claim | 403 Forbidden |
+| `POST /anesthesia/cases` | 持有 ANESTHESIA claim | 403 Forbidden |
+
+### 7.3 實作範例
+
+```python
+@router.post("/registrations/{reg_id}/complete-consultation")
+async def complete_consultation(reg_id: str, req: CompleteConsultationRequest, actor: Actor):
+    # 1. 驗證 status
+    reg = get_registration(reg_id)
+    if reg.status != "IN_CONSULTATION":
+        raise HTTPException(400, "只能在看診中完成看診")
+
+    # 2. 驗證 claim
+    claim = get_active_claim(reg_id, role="DOCTOR")
+    if not claim or claim.claimed_by != actor.id:
+        raise HTTPException(403, "您未持有此病患的看診權限")
+
+    # 3. 執行更新
+    update_registration(reg_id,
+        status="CONSULTATION_DONE",
+        needs_procedure=req.needs_procedure,
+        needs_anesthesia=req.needs_anesthesia,
+        consultation_completed_at=now(),
+        consultation_by=actor.id
+    )
+
+    # 4. 自動釋放 DOCTOR claim
+    release_claim(reg_id, role="DOCTOR")
+
+    return {"success": True}
+```
+
+---
+
+## 8. 驗收測試 (Must-Pass)
+
+### 8.1 修復驗證
+
+| 測試 | 預期結果 |
+|------|---------|
+| Doctor claim 後查詢 `/waiting/anesthesia` | 病患**不應**消失（因為麻醉隊列不取 WAITING） |
+| Doctor claim 後 Anesthesia PWA 可選取 | ✅ 成功（只要 needs_anesthesia=1） |
+
+### 8.2 分流正確性
+
+| 測試 | 預期結果 |
+|------|---------|
+| 完成看診，兩個 box 都不勾 | 病患不出現在任何待處置/待麻醉清單 |
+| 完成看診，只勾「需麻醉」 | 只出現在 `/waiting/anesthesia` |
+| 完成看診，兩個都勾 | 同時出現在兩個清單 |
+
+### 8.3 互斥測試
+
+| 測試 | 預期結果 |
+|------|---------|
+| 兩個麻醉站同時 claim 同一病患 | 一個成功，另一個收到 409 Conflict |
+| 麻醉站 claim 後，處置站 claim 同一病患 | 兩個都成功（角色不同） |
+
+### 8.4 離線 72 小時
+
+| 測試 | 預期結果 |
+|------|---------|
+| 離線期間完成 10 次分流 + 5 個麻醉案例 | 連線後全量對齊，無資料遺失 |
+| 重複送出相同 ops | Hub 以 idempotency key 去重，狀態不變 |
+
+---
+
+## 9. 待討論問題
 
 ### 🎯 問題 1：多重需求處理順序
 
@@ -394,6 +622,25 @@ MIRS Satellite 離線時：
 
 ---
 
+---
+
+## 10. 實作優先順序 (Action Plan)
+
+根據 Gemini/ChatGPT 建議，降低 rework 風險：
+
+| 順序 | 任務 | 說明 |
+|------|------|------|
+| 1 | CIRS DB 遷移 | `ALTER TABLE registrations` + 新增 `registration_claims` 表 |
+| 2 | CIRS API | `/complete-consultation`, `/waiting/procedure`, `/waiting/anesthesia` |
+| 3 | 角色化 Claim 機制 | `/claim` 支援 role 參數，避免日後 rework |
+| 4 | Doctor PWA | 新增「完成看診」對話框 + 分流勾選 |
+| 5 | Anesthesia PWA | 改為讀取 `/waiting/anesthesia`，保留手動 fallback |
+| 6 | Procedure PWA | 改為讀取 `/waiting/procedure` |
+| 7 | Hub-Satellite 合約升版 | 更新 `RegistrationStub`，確保 MIRS 能同步分流指令 |
+
+---
+
 **De Novo Orthopedics Inc. / 谷盺生物科技股份有限公司**
-*Version: 1.0 Draft*
+*Version: 1.1*
 *Last Updated: 2026-01-01*
+*Review: Gemini + ChatGPT*
