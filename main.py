@@ -3412,6 +3412,29 @@ def run_migrations():
                 )
             logger.info("✓ Migration: 新增 equipment_types.unit_prefix/label_template 欄位")
 
+        # v2.5.3: 確保 equipment_types 有 status_options 欄位
+        cursor.execute("PRAGMA table_info(equipment_types)")
+        et_columns = [col[1] for col in cursor.fetchall()]
+        if et_columns and 'status_options' not in et_columns:
+            cursor.execute("ALTER TABLE equipment_types ADD COLUMN status_options TEXT DEFAULT '[]'")
+            # 設定預設狀態選項
+            status_data = [
+                ('POWER_STATION', '["AVAILABLE", "IN_USE", "CHARGING", "OFFLINE"]'),
+                ('GENERATOR', '["AVAILABLE", "RUNNING", "MAINTENANCE", "OFFLINE"]'),
+                ('O2_CYLINDER_H', '["AVAILABLE", "IN_USE", "EMPTY", "MAINTENANCE"]'),
+                ('O2_CYLINDER_E', '["AVAILABLE", "IN_USE", "EMPTY", "MAINTENANCE"]'),
+                ('O2_CONCENTRATOR', '["AVAILABLE", "IN_USE", "MAINTENANCE", "OFFLINE"]'),
+                ('VENTILATOR', '["AVAILABLE", "IN_USE", "MAINTENANCE", "OFFLINE"]'),
+                ('MONITOR', '["AVAILABLE", "IN_USE", "MAINTENANCE", "OFFLINE"]'),
+                ('GENERAL', '["AVAILABLE", "IN_USE", "MAINTENANCE", "OFFLINE"]'),
+            ]
+            for type_code, options in status_data:
+                cursor.execute(
+                    "UPDATE equipment_types SET status_options = ? WHERE type_code = ?",
+                    (options, type_code)
+                )
+            logger.info("✓ Migration: 新增 equipment_types.status_options 欄位")
+
         # v2: 確保 equipment 有 type_code 欄位
         cursor.execute("PRAGMA table_info(equipment)")
         eq_columns = [col[1] for col in cursor.fetchall()]
