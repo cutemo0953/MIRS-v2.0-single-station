@@ -6,6 +6,33 @@
 
 ---
 
+## [2.5.3] - 2026-01-01
+
+### 新增 (Added)
+- **xIRS Hub-Satellite 架構**：MIRS 可作為 CIRS Hub 的 Satellite 運行（連接埠 8090）
+- **完整資料庫遷移**：自動建立所有必要表格與視圖
+  - `v_resilience_equipment` 視圖 - 韌性設備資料彙整
+  - `equipment_types.status_options` 欄位 - 設備狀態選項
+- **試劑預載**：6 種常用檢驗試劑（REA- 前綴）
+- **相對路徑 API**：前端使用 `/api` 相對路徑，支援任意連接埠
+
+### 修復 (Fixed)
+- **設備檢查失敗**：修正「載入詳情失敗」錯誤
+  - 新增 `equipment_types.status_options` 欄位遷移
+  - 自動為韌性設備建立 `equipment_units` 記錄
+- **製氧機無法確認狀態**：修正 `v_resilience_equipment` 視圖缺失
+- **氧氣韌性計算**：
+  - 氧氣供應取各來源的最大值（濃縮機有電時可持續供氧）
+  - 新增 `summary.oxygen_hours` 和 `summary.power_hours`
+  - 正確反映濃縮機+電力組合時數（而非只取鋼瓶時數）
+- **Raspberry Pi 離線模式**：WiFi 熱點模式可正常運作
+
+### 變更 (Changed)
+- MIRS 預設連接埠從 8000 改為 8090（避免與 CIRS Hub 衝突）
+- README 更新 xIRS 架構說明
+
+---
+
 ## [1.4.8] - 2025-12-20
 
 ### 修復 (Fixed)

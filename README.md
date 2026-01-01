@@ -1,17 +1,21 @@
-# 醫療站庫存管理系統 v1.5.0
+# MIRS - 醫療站庫存管理系統 v2.5.3
 
 > 為醫療站、備援手術站(BORP)與物資中心設計的簡易庫存管理系統
+>
+> **xIRS Hub-Satellite 架構**：可作為 CIRS Hub 的 Satellite 站點運行
 
 ---
 
 ## 📋 目錄
 
 1. [系統簡介](#系統簡介)
-2. [給護理師的安裝指南](#給護理師的安裝指南)
-3. [功能介紹](#功能介紹)
-4. [使用說明](#使用說明)
-5. [常見問題](#常見問題)
-6. [技術資訊](#技術資訊)
+2. [xIRS Hub-Satellite 架構](#xirs-hub-satellite-架構)
+3. [給護理師的安裝指南](#給護理師的安裝指南)
+4. [Raspberry Pi 部署](#raspberry-pi-部署)
+5. [功能介紹](#功能介紹)
+6. [使用說明](#使用說明)
+7. [常見問題](#常見問題)
+8. [技術資訊](#技術資訊)
 
 ---
 
@@ -23,6 +27,53 @@
 - ✅ 血袋數量（A+, O-, AB+ 等各種血型）
 - ✅ 設備狀態（電源站、淨水器、手術包等）
 - ✅ 手術記錄與耗材消耗
+- ✅ 韌性計算（電力、氧氣、試劑可維持時數）
+
+---
+
+## xIRS Hub-Satellite 架構
+
+MIRS 可作為 **xIRS Satellite** 與 CIRS Hub 整合運行。
+
+### 連接埠配置
+
+| 系統 | 連接埠 | 說明 |
+|------|--------|------|
+| CIRS (Hub) | 8000 | 社區韌性中樞 |
+| MIRS (Satellite) | 8090 | 醫療站庫存管理 |
+| HIRS (Satellite) | 8001 | 醫院資訊系統 |
+
+### 環境變數
+
+```bash
+# 設定 CIRS Hub 連線位址
+export CIRS_HUB_URL=http://localhost:8000
+```
+
+---
+
+### v2.5.3 新功能 (2026-01-01)
+
+- **完整資料庫遷移**：所有必要表格與視圖自動建立（非 demo 模式也能正常運作）
+  - `equipment_units` - 設備單位追蹤（氧氣瓶、電源站個別管理）
+  - `equipment_check_history` - 設備檢查歷史（含完整欄位）
+  - `equipment_types` - 設備類型定義（含 `status_options` 欄位）
+  - `resilience_config` - 韌性設定
+  - `resilience_profiles` - 韌性情境設定
+  - `reagent_open_records` - 試劑開封記錄
+  - `config` - 系統設定
+  - `v_resilience_equipment` - 韌性設備視圖
+- **試劑預載**：6 種常用檢驗試劑（REA- 前綴）自動載入
+- **相對路徑 API**：前端使用 `/api` 相對路徑，支援任意連接埠運行
+- **Raspberry Pi 離線支援**：WiFi 熱點模式可正常運作
+- **設備狀態修復**：
+  - 修正「載入詳情失敗」錯誤（缺少 `status_options` 欄位）
+  - 修正製氧機/電源站無法檢查狀態問題
+  - 自動為韌性設備建立 `equipment_units` 記錄
+- **氧氣韌性計算優化**：
+  - 氧氣供應取各來源的最大值（濃縮機有電時可持續供氧）
+  - 新增 `summary.oxygen_hours` 和 `summary.power_hours` 供前端顯示
+  - 正確反映濃縮機+電力組合的時數（而非只取鋼瓶時數）
 
 ### v1.5.0 新功能 (2025-12-28)
 

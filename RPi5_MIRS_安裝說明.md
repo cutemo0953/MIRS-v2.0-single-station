@@ -1,8 +1,10 @@
-# 🏥 MIRS v1.5.1 Raspberry Pi 5 安裝說明
+# 🏥 MIRS v2.5.3 Raspberry Pi 5 安裝說明
 
 **專為野戰醫療站設計｜讓護理人員 3 分鐘完成安裝**
 
-> **v1.5.1 新功能**：麻醉模組 + CIRS Hub 整合（Hub-Satellite 架構）
+> **v2.5.3 新功能**：完整資料庫遷移 + 設備狀態修復 + 氧氣韌性計算優化
+>
+> **xIRS Hub-Satellite 架構**：MIRS 作為 CIRS Hub 的 Satellite 運行（連接埠 8090）
 
 ---
 
@@ -164,9 +166,10 @@ pip install fastapi>=0.115.0 uvicorn[standard]==0.24.0 pydantic>=2.8.0 reportlab
 python3 main.py
 
 # 看到以下訊息就成功了：
-# 🏥 醫療站庫存管理系統 API v1.5.1
+# 🏥 醫療站庫存管理系統 API v2.5.3
 # 🌐 服務位址: http://0.0.0.0:8090
-# ✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)
+# ✓ Migration: 建立 v_resilience_equipment 視圖
+# ✓ Migration: 為韌性設備建立 X 個單位
 ```
 
 **測試連線**：
@@ -1088,6 +1091,6 @@ curl http://localhost:8090/api/health  # MIRS Satellite
 
 ---
 
-**🏥 MIRS v1.5.1 - 專為野戰醫療站設計**
+**🏥 MIRS v2.5.3 - 專為野戰醫療站設計**
 
-*De Novo Orthopedics Inc. © 2024-2025*
+*De Novo Orthopedics Inc. © 2024-2026*
