@@ -3528,6 +3528,55 @@ def run_migrations():
         """)
         logger.info("✓ Migration: 建立 v_equipment_status 視圖 (含 is_active 過濾)")
 
+        # v2.5.3: 建立 v_resilience_equipment 視圖 (韌性設備詳情)
+        cursor.execute("DROP VIEW IF EXISTS v_resilience_equipment")
+        cursor.execute("""
+            CREATE VIEW v_resilience_equipment AS
+            SELECT
+                e.id as equipment_id,
+                e.name,
+                e.type_code,
+                et.type_name,
+                et.resilience_category,
+                et.capacity_config,
+                u.id as unit_id,
+                u.unit_serial,
+                u.unit_label,
+                u.level_percent,
+                u.status,
+                u.last_check
+            FROM equipment e
+            JOIN equipment_types et ON e.type_code = et.type_code
+            LEFT JOIN equipment_units u ON e.id = u.equipment_id AND (u.is_active = 1 OR u.is_active IS NULL)
+            WHERE et.resilience_category IS NOT NULL
+        """)
+        logger.info("✓ Migration: 建立 v_resilience_equipment 視圖")
+
+        # v2.5.3: 自動為有 resilience_category 的設備建立 equipment_units (若不存在)
+        cursor.execute("""
+            SELECT e.id, e.name, e.quantity, et.type_code, et.unit_prefix, et.label_template
+            FROM equipment e
+            JOIN equipment_types et ON e.type_code = et.type_code
+            WHERE et.resilience_category IS NOT NULL
+        """)
+        resilience_equipment = cursor.fetchall()
+        units_created = 0
+        for eq_id, eq_name, qty, type_code, prefix, template in resilience_equipment:
+            # 檢查是否已有單位
+            cursor.execute("SELECT COUNT(*) FROM equipment_units WHERE equipment_id = ?", (eq_id,))
+            existing_count = cursor.fetchone()[0]
+            if existing_count == 0 and qty and qty > 0:
+                # 建立對應數量的單位
+                for i in range(1, qty + 1):
+                    unit_label = template.replace('{n}', str(i)) if template else f"{prefix or 'UNIT'}-{i}"
+                    cursor.execute("""
+                        INSERT INTO equipment_units (equipment_id, unit_serial, unit_label, level_percent, status, is_active)
+                        VALUES (?, ?, ?, 100, 'UNCHECKED', 1)
+                    """, (eq_id, i, unit_label))
+                    units_created += 1
+        if units_created > 0:
+            logger.info(f"✓ Migration: 為韌性設備建立 {units_created} 個單位")
+
         # v1.4.3: 新增 medicines.reserved_qty 欄位 (庫存保留)
         cursor.execute("PRAGMA table_info(medicines)")
         med_columns = [col[1] for col in cursor.fetchall()]
