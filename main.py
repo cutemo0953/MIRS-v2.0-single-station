@@ -3264,6 +3264,66 @@ def run_migrations():
             """)
             logger.info("✓ Migration: 建立 reagent_open_records 表")
 
+        # v2.5.2: 確保 equipment_units 表存在
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='equipment_units'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE equipment_units (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    equipment_id TEXT NOT NULL,
+                    unit_serial INTEGER NOT NULL,
+                    unit_label TEXT,
+                    level_percent REAL DEFAULT 100,
+                    status TEXT DEFAULT 'UNCHECKED',
+                    last_check TIMESTAMP,
+                    checked_by TEXT,
+                    remarks TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    removed_at TIMESTAMP,
+                    removed_by TEXT,
+                    removal_reason TEXT,
+                    claimed_by_case_id TEXT,
+                    claimed_at TIMESTAMP,
+                    claimed_by_user_id TEXT,
+                    updated_at TIMESTAMP,
+                    FOREIGN KEY (equipment_id) REFERENCES equipment(id)
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_equipment_units_equipment_id ON equipment_units(equipment_id)")
+            logger.info("✓ Migration: 建立 equipment_units 表")
+
+        # v2.5.2: 確保 equipment_check_history 表存在
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='equipment_check_history'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE equipment_check_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    equipment_id TEXT NOT NULL,
+                    unit_id INTEGER,
+                    check_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    checked_by TEXT,
+                    status TEXT,
+                    level_percent REAL,
+                    remarks TEXT,
+                    station_id TEXT
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_check_history_equipment ON equipment_check_history(equipment_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_check_history_date ON equipment_check_history(check_date DESC)")
+            logger.info("✓ Migration: 建立 equipment_check_history 表")
+
+        # v2.5.2: 確保 config 表存在
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='config'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE config (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            logger.info("✓ Migration: 建立 config 表")
+
         # Phase 4.3: 確保 equipment_check_history 有 unit_id 欄位
         cursor.execute("PRAGMA table_info(equipment_check_history)")
         columns = [col[1] for col in cursor.fetchall()]
