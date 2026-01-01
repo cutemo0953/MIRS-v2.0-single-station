@@ -640,6 +640,44 @@ MIRS Satellite 離線時：
 
 ---
 
+---
+
+## 11. 實作狀態 (Implementation Status)
+
+### 11.1 已完成 (2026-01-01)
+
+| 項目 | 狀態 | 說明 |
+|------|------|------|
+| CIRS DB 遷移 | ✅ 完成 | `registrations` 表新增 `needs_procedure`, `needs_anesthesia`, `consultation_completed_at`, `consultation_by`, `procedure_notes`, `anesthesia_notes` 欄位 |
+| CIRS `/complete-consultation` API | ✅ 完成 | 支援 `needs_procedure`, `needs_anesthesia` 標記 |
+| CIRS `/waiting/anesthesia` API | ✅ 完成 | 回傳 `needs_anesthesia=1` 且尚未被 ANESTHESIA claim 的病患 |
+| CIRS `/waiting/procedure` API | ✅ 完成 | 回傳 `needs_procedure=1` 的病患 |
+| CIRS 角色化 Claim | ✅ 完成 | `registration_claims` 表支援 DOCTOR/PROCEDURE/ANESTHESIA 三種角色並存 |
+| Doctor PWA 完成看診 | ✅ 完成 | 新增「完成看診」對話框，含「需處置」「需麻醉」勾選 |
+| Anesthesia PWA 候診清單 | ✅ 完成 | 使用 `/waiting/anesthesia` 端點，只顯示需麻醉病患 |
+| Anesthesia PWA 案例過濾 | ✅ 完成 | 結案後從「我的案例」清單移除 |
+| MIRS → CIRS 通知 | ✅ 完成 | 建立/結案時通知 Hub 執行 role-claim / anesthesia-done |
+
+### 11.2 待實作
+
+| 項目 | 優先順序 | 說明 |
+|------|----------|------|
+| Procedure PWA 候診清單 | P1 | 使用 `/waiting/procedure` 端點 |
+| Hub-Satellite 合約升版 | P2 | `RegistrationStub` 包含 `needs_*` 欄位 |
+| 離線 72 小時測試 | P2 | 驗證離線期間分流操作的同步 |
+
+### 11.3 關鍵 Commits
+
+**CIRS:**
+- `34a0ba2` - feat: Doctor PWA 完成看診對話框 (needs_procedure/needs_anesthesia)
+- `xxxxxxx` - feat: v1.1 角色化 Claim 機制 (registration_claims 表)
+
+**MIRS:**
+- `279a148` - feat: 麻醉建案/結案時通知 CIRS Hub
+- `86ff7c2` - fix: 結案後從我的案例清單移除 (v1.1)
+
+---
+
 **De Novo Orthopedics Inc. / 谷盺生物科技股份有限公司**
 *Version: 1.1*
 *Last Updated: 2026-01-01*

@@ -1,8 +1,10 @@
-# MIRS - 醫療站庫存管理系統 v2.5.3
+# MIRS - 醫療站庫存管理系統 v2.5.4
 
 > 為醫療站、備援手術站(BORP)與物資中心設計的簡易庫存管理系統
 >
 > **xIRS Hub-Satellite 架構**：可作為 CIRS Hub 的 Satellite 站點運行
+>
+> **v1.1 就診流程**：與 CIRS Hub 完整整合，支援醫師分流 (需處置/需麻醉)
 
 ---
 
@@ -39,15 +41,15 @@ MIRS 可作為 **xIRS Satellite** 與 CIRS Hub 整合運行。
 
 | 系統 | 連接埠 | 說明 |
 |------|--------|------|
-| CIRS (Hub) | 8000 | 社區韌性中樞 |
-| MIRS (Satellite) | 8090 | 醫療站庫存管理 |
+| CIRS (Hub) | 8090 | 社區韌性中樞 (Authority) |
+| MIRS (Satellite) | 8000 | 醫療站庫存管理 (麻醉模組) |
 | HIRS (Satellite) | 8001 | 醫院資訊系統 |
 
 ### 環境變數
 
 ```bash
 # 設定 CIRS Hub 連線位址
-export CIRS_HUB_URL=http://localhost:8000
+export CIRS_HUB_URL=http://localhost:8090
 ```
 
 ---

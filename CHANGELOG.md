@@ -6,10 +6,25 @@
 
 ---
 
+## [2.5.4] - 2026-01-01
+
+### 新增 (Added)
+- **v1.1 就診流程整合**：與 CIRS Hub 完整對接
+  - Anesthesia PWA 使用新 `/waiting/anesthesia` 端點，只顯示醫師看診後勾選「需麻醉」的病患
+  - 建立麻醉案例時自動通知 CIRS Hub 執行 role-claim (ANESTHESIA)
+  - 結案時自動通知 CIRS Hub 清除 needs_anesthesia 標記
+  - 結案後案例從「我的案例」清單移除（filter CLOSED status）
+- **CSS 狀態指示器**：取代 emoji，使用純 CSS 狀態圓點
+
+### 修復 (Fixed)
+- **CIRS_HUB_URL 預設值**：改為 `http://localhost:8090` 符合 RPi 部署配置
+
+---
+
 ## [2.5.3] - 2026-01-01
 
 ### 新增 (Added)
-- **xIRS Hub-Satellite 架構**：MIRS 可作為 CIRS Hub 的 Satellite 運行（連接埠 8090）
+- **xIRS Hub-Satellite 架構**：MIRS 可作為 CIRS Hub 的 Satellite 運行（連接埠 8000）
 - **完整資料庫遷移**：自動建立所有必要表格與視圖
   - `v_resilience_equipment` 視圖 - 韌性設備資料彙整
   - `equipment_types.status_options` 欄位 - 設備狀態選項
