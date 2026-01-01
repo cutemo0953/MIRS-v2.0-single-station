@@ -4668,9 +4668,9 @@
             // v1.4.2-plus: 動態偵測 API URL (支援遠端存取)
             const currentHost = window.location.hostname;
             const currentPort = window.location.port;
-            // Vercel 或其他雲端部署使用相對路徑，本地開發使用 :8000
-            const isVercelOrCloud = currentHost.includes('vercel.app') || currentHost.includes('.com') || !currentPort;
-            const apiBaseUrl = isVercelOrCloud ? '/api' : `http://${currentHost}:8000/api`;
+            // v2.5.2: 統一使用相對路徑，因為前端由同一個 uvicorn 伺服器提供
+            // 這樣無論 port 是 8000 還是 8090 都能正常運作
+            const apiBaseUrl = '/api';
 
             return {
                 // 基本設定
