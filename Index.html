@@ -963,13 +963,87 @@
             </div>
 
             <!-- 處置記錄模式 (手術記錄) -->
-            <div x-show="treatmentMode === 'surgery'">
+            <div x-show="treatmentMode === 'surgery'" x-init="loadCirsProcedureWaiting()">
+
+                <!-- v1.1: CIRS 待處置清單 -->
+                <div class="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-treatment-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                            CIRS 待處置清單
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <span x-show="cirsProcedureStatus.online" class="text-sm text-green-600 flex items-center gap-1">
+                                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                連線 (<span x-text="cirsProcedurePatients.length"></span> 位)
+                            </span>
+                            <span x-show="!cirsProcedureStatus.online" class="text-sm text-gray-500 flex items-center gap-1">
+                                <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                                離線
+                            </span>
+                            <button @click="loadCirsProcedureWaiting()" class="text-gray-500 hover:text-treatment-500 p-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 待處置病患列表 -->
+                    <div x-show="cirsProcedurePatients.length > 0" class="space-y-2 max-h-48 overflow-y-auto">
+                        <template x-for="patient in cirsProcedurePatients" :key="patient.registration_id">
+                            <div @click="selectProcedurePatient(patient)"
+                                 class="p-3 bg-white rounded-lg border border-gray-200 hover:border-treatment-500 hover:bg-treatment-50 cursor-pointer transition-all">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <span class="font-medium" x-text="patient.name || patient.patient_ref || '未知'"></span>
+                                        <span class="text-sm text-gray-500 ml-2" x-text="patient.patient_id || ''"></span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span x-show="patient.waiting_minutes" class="text-xs text-gray-400" x-text="'等待 ' + patient.waiting_minutes + ' 分'"></span>
+                                        <span class="text-xs px-2 py-0.5 rounded"
+                                              :class="{
+                                                  'bg-red-100 text-red-700': patient.priority === 'STAT',
+                                                  'bg-orange-100 text-orange-700': patient.priority === 'URGENT',
+                                                  'bg-green-100 text-green-700': patient.priority === 'ROUTINE' || !patient.priority
+                                              }"
+                                              x-text="patient.priority === 'STAT' ? '急' : patient.priority === 'URGENT' ? '緊' : '常'"></span>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-600 mt-1">
+                                    <span x-show="patient.chief_complaint" x-text="patient.chief_complaint"></span>
+                                    <span x-show="patient.procedure_notes" class="text-treatment-600 ml-2" x-text="'[' + patient.procedure_notes + ']'"></span>
+                                </div>
+                                <div x-show="patient.consultation_by" class="text-xs text-gray-400 mt-1" x-text="'醫師: ' + patient.consultation_by"></div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div x-show="cirsProcedurePatients.length === 0 && cirsProcedureStatus.online" class="text-center text-gray-500 py-4">
+                        目前無待處置病患
+                        <div class="text-xs text-gray-400 mt-1">醫師完成看診並勾選「需處置」後，病患會出現在此</div>
+                    </div>
+
+                    <div x-show="!cirsProcedureStatus.online" class="text-center text-gray-500 py-4">
+                        CIRS 未連線
+                        <div class="text-xs text-gray-400 mt-1">請使用下方「新增處置記錄」手動輸入</div>
+                    </div>
+                </div>
+
+                <!-- 分隔線 -->
+                <div class="relative mb-4">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+                    <div class="relative flex justify-center text-sm"><span class="px-2 bg-white text-gray-500">或</span></div>
+                </div>
+
                 <div class="flex flex-wrap gap-2 mb-4">
                     <button @click.prevent.stop="ensureItemsLoaded(); showAddSurgeryModal = true" class="bg-treatment-500 text-white px-4 py-2 rounded-lg hover:bg-[#3d4270] transition-colors flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
-                        <span>新增處置記錄</span>
+                        <span>手動新增處置記錄</span>
                     </button>
                     <button @click.prevent.stop="exportSurgeryCSV()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4686,6 +4760,10 @@
                 treatmentMode: 'surgery', // 處置標籤頁模式: 'surgery' 或 'consume'
                 currentTime: '',
                 demoMode: false,  // Vercel demo mode flag
+
+                // v1.1: CIRS 待處置清單
+                cirsProcedureStatus: { online: false },
+                cirsProcedurePatients: [],
                 
                 // 資料
                 items: [],
@@ -4964,7 +5042,10 @@
                     durationMinutes: null,
                     remarks: '',
                     consumptions: [],
-                    stationId: 'HC-000000'
+                    stationId: 'HC-000000',
+                    // v1.1: CIRS 整合
+                    cirsRegistrationRef: null,
+                    cirsPersonId: null
                 },
                 surgerySearchForm: {
                     startDate: '',
@@ -7805,14 +7886,57 @@
                 resetAddSurgeryForm() {
                     this.addSurgeryForm = {
                         patientName: '',
+                        triageTagId: '',
                         surgeryType: '',
                         surgeonName: '',
                         anesthesiaType: '',
                         durationMinutes: null,
                         remarks: '',
                         consumptions: [],
-                        stationId: this.stationId
+                        stationId: this.stationId,
+                        // v1.1: CIRS 整合
+                        cirsRegistrationRef: null,
+                        cirsPersonId: null
                     };
+                },
+
+                // v1.1: 載入 CIRS 待處置清單
+                async loadCirsProcedureWaiting() {
+                    try {
+                        const response = await fetch(`${this.apiUrl}/procedure/proxy/cirs/waiting-procedure`);
+                        const data = await response.json();
+
+                        this.cirsProcedureStatus.online = data.online;
+                        this.cirsProcedurePatients = data.patients || [];
+
+                        if (data.online) {
+                            console.log(`CIRS 待處置清單: ${data.count} 位病患`);
+                        }
+                    } catch (error) {
+                        console.error('載入 CIRS 待處置清單失敗:', error);
+                        this.cirsProcedureStatus.online = false;
+                        this.cirsProcedurePatients = [];
+                    }
+                },
+
+                // v1.1: 從待處置清單選取病患
+                selectProcedurePatient(patient) {
+                    this.ensureItemsLoaded();
+
+                    // 自動帶入病患資料
+                    this.addSurgeryForm.patientName = patient.name || patient.patient_ref || '';
+                    this.addSurgeryForm.triageTagId = patient.patient_id || '';
+                    this.addSurgeryForm.surgeryType = patient.procedure_notes || patient.chief_complaint || '';
+                    this.addSurgeryForm.remarks = patient.chief_complaint ? `主訴: ${patient.chief_complaint}` : '';
+
+                    // v1.1: CIRS 整合欄位
+                    this.addSurgeryForm.cirsRegistrationRef = patient.registration_id;
+                    this.addSurgeryForm.cirsPersonId = patient.patient_id;
+
+                    // 開啟 Modal
+                    this.showAddSurgeryModal = true;
+
+                    this.toast(`已選取病患: ${patient.name || patient.patient_ref}`, 'success');
                 },
 
                 viewSurgeryDetail(record) {

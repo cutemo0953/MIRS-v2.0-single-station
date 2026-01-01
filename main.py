@@ -54,6 +54,15 @@ except ImportError as e:
     anesthesia_router = None
     init_anesthesia_schema = None
 
+# v1.1 新增: 處置模組 CIRS 整合
+try:
+    from routes.procedure import router as procedure_router
+    from routes.procedure import notify_cirs_procedure_claim, notify_cirs_procedure_done
+    PROCEDURE_MODULE_AVAILABLE = True
+except ImportError as e:
+    PROCEDURE_MODULE_AVAILABLE = False
+    procedure_router = None
+
 
 # ============================================================================
 # 日誌配置
@@ -405,6 +414,7 @@ class SurgeryRecordRequest(BaseModel):
     """手術記錄請求"""
     patientName: str = Field(..., description="病患姓名", min_length=1, max_length=100)
     cirsPersonId: Optional[str] = Field(None, description="CIRS 人員序號 (如 P0001)，用於關聯 CIRS 系統", max_length=20)
+    cirsRegistrationRef: Optional[str] = Field(None, description="CIRS 掛號編號 (REG-xxx)，v1.1 流程整合用", max_length=50)
     surgeryType: str = Field(..., description="手術類型", min_length=1, max_length=200)
     surgeonName: str = Field(..., description="主刀醫師", min_length=1, max_length=100)
     anesthesiaType: Optional[str] = Field(None, description="麻醉方式", max_length=100)
@@ -1021,6 +1031,15 @@ class DatabaseManager:
             except:
                 pass  # 欄位已存在則忽略
 
+            # v1.1: 新增 cirs_registration_ref 欄位
+            # 用於關聯 CIRS 掛號編號 (REG-xxx)，支援待處置清單整合
+            try:
+                cursor.execute("ALTER TABLE surgery_records ADD COLUMN cirs_registration_ref TEXT")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_surgery_cirs_reg ON surgery_records(cirs_registration_ref)")
+                logger.info("✓ Migration: 新增 surgery_records.cirs_registration_ref 欄位")
+            except:
+                pass  # 欄位已存在則忽略
+
             # 庫存物品索引
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_items_category
@@ -1520,16 +1539,17 @@ class DatabaseManager:
             # 插入手術記錄
             cursor.execute("""
                 INSERT INTO surgery_records (
-                    record_number, record_date, patient_name, cirs_person_id, surgery_sequence,
-                    surgery_type, surgeon_name, anesthesia_type, duration_minutes,
+                    record_number, record_date, patient_name, cirs_person_id, cirs_registration_ref,
+                    surgery_sequence, surgery_type, surgeon_name, anesthesia_type, duration_minutes,
                     remarks, station_id
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 record_number,
                 record_date,
                 request.patientName,
-                request.cirsPersonId,  # CIRS Integration
+                request.cirsPersonId,  # CIRS Person ID (P0001)
+                request.cirsRegistrationRef,  # v1.1: CIRS Registration ID (REG-xxx)
                 sequence,
                 request.surgeryType,
                 request.surgeonName,
@@ -1538,7 +1558,7 @@ class DatabaseManager:
                 request.remarks,
                 request.stationId
             ))
-            
+
             surgery_id = cursor.lastrowid
             
             # 插入耗材明細
@@ -1571,15 +1591,16 @@ class DatabaseManager:
             
             conn.commit()
             logger.info(f"手術記錄建立成功: {record_number}")
-            
+
             return {
                 "success": True,
                 "message": f"手術記錄 {record_number} 建立成功",
                 "recordNumber": record_number,
                 "surgeryId": surgery_id,
-                "sequence": sequence
+                "sequence": sequence,
+                "cirsRegistrationRef": request.cirsRegistrationRef  # v1.1: 返回以便端點通知 CIRS
             }
-        
+
         except Exception as e:
             conn.rollback()
             logger.error(f"建立手術記錄失敗: {e}")
@@ -4938,8 +4959,31 @@ async def delete_equipment(equipment_id: str):
 
 @app.post("/api/surgery/record")
 async def create_surgery_record(request: SurgeryRecordRequest):
-    """建立手術記錄"""
-    return db.create_surgery_record(request)
+    """建立手術記錄 (v1.1: 支援 CIRS 整合)"""
+    result = db.create_surgery_record(request)
+
+    # v1.1: 通知 CIRS Hub 處置完成 (非阻塞)
+    cirs_notified = False
+    if result.get("cirsRegistrationRef") and PROCEDURE_MODULE_AVAILABLE:
+        try:
+            actor_id = request.stationId or "MIRS-PROCEDURE"
+            record_number = result.get("recordNumber")
+
+            # Claim + Done in sequence
+            await notify_cirs_procedure_claim(result["cirsRegistrationRef"], actor_id)
+            cirs_notified = await notify_cirs_procedure_done(
+                result["cirsRegistrationRef"],
+                record_number,
+                actor_id
+            )
+
+            if cirs_notified:
+                logger.info(f"CIRS 處置完成通知成功: {result['cirsRegistrationRef']}")
+        except Exception as e:
+            logger.warning(f"CIRS 通知失敗 (非致命): {e}")
+
+    result["cirsNotified"] = cirs_notified
+    return result
 
 
 @app.get("/api/surgery/records")
@@ -8430,6 +8474,11 @@ if ANESTHESIA_MODULE_AVAILABLE and anesthesia_router:
     logger.info("✓ MIRS Anesthesia Module v1.5.1 已啟用 (/api/anesthesia)")
 else:
     logger.warning("麻醉模組未啟用")
+
+# v1.1: 處置模組 CIRS 整合路由
+if PROCEDURE_MODULE_AVAILABLE and procedure_router:
+    app.include_router(procedure_router)
+    logger.info("✓ MIRS Procedure Module v1.0 已啟用 (/api/procedure)")
 
 
 class ResilienceConfigUpdate(BaseModel):
