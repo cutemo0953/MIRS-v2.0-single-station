@@ -3300,17 +3300,42 @@ def run_migrations():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     equipment_id TEXT NOT NULL,
                     unit_id INTEGER,
-                    check_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    unit_label TEXT,
+                    check_date DATE NOT NULL,
+                    check_time TIMESTAMP NOT NULL,
                     checked_by TEXT,
-                    status TEXT,
-                    level_percent REAL,
+                    level_before INTEGER,
+                    level_after INTEGER,
+                    status_before TEXT,
+                    status_after TEXT,
                     remarks TEXT,
-                    station_id TEXT
+                    station_id TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_check_history_equipment ON equipment_check_history(equipment_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_check_history_date ON equipment_check_history(check_date DESC)")
             logger.info("✓ Migration: 建立 equipment_check_history 表")
+
+        # v2.5.3: 確保 equipment_check_history 有所有必要欄位
+        cursor.execute("PRAGMA table_info(equipment_check_history)")
+        ech_columns = [col[1] for col in cursor.fetchall()]
+        if ech_columns:
+            if 'unit_label' not in ech_columns:
+                cursor.execute("ALTER TABLE equipment_check_history ADD COLUMN unit_label TEXT")
+            if 'check_time' not in ech_columns:
+                cursor.execute("ALTER TABLE equipment_check_history ADD COLUMN check_time TIMESTAMP")
+            if 'level_before' not in ech_columns:
+                cursor.execute("ALTER TABLE equipment_check_history ADD COLUMN level_before INTEGER")
+            if 'level_after' not in ech_columns:
+                cursor.execute("ALTER TABLE equipment_check_history ADD COLUMN level_after INTEGER")
+            if 'status_before' not in ech_columns:
+                cursor.execute("ALTER TABLE equipment_check_history ADD COLUMN status_before TEXT")
+            if 'status_after' not in ech_columns:
+                cursor.execute("ALTER TABLE equipment_check_history ADD COLUMN status_after TEXT")
+            if 'created_at' not in ech_columns:
+                cursor.execute("ALTER TABLE equipment_check_history ADD COLUMN created_at TIMESTAMP")
+            logger.info("✓ Migration: 確保 equipment_check_history 欄位完整")
 
         # v2.5.2: 確保 config 表存在
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='config'")
