@@ -3454,7 +3454,7 @@ async def api_info():
         "station": config.STATION_ID,
         "docs": "/docs",
         "server_ip": local_ip,
-        "server_url": f"http://{local_ip}:8000/api" if local_ip else None
+        "server_url": f"http://{local_ip}:8090/api" if local_ip else None
     }
 
 
@@ -9688,9 +9688,9 @@ if __name__ == "__main__":
     print(f"🏢 站點ID: {config.get_station_id()}")
     print(f"🏷️  站點名稱: {config.get_station_name()}")
     print(f"🏥 組織: {config.ORG_NAME}")
-    print(f"🌐 服務位址: http://0.0.0.0:8000")
-    print(f"📖 API文件: http://localhost:8000/docs")
-    print(f"📊 健康檢查: http://localhost:8000/api/health")
+    print(f"🌐 服務位址: http://0.0.0.0:8090")
+    print(f"📖 API文件: http://localhost:8090/docs")
+    print(f"📊 健康檢查: http://localhost:8090/api/health")
     print("=" * 70)
     print("✨ v1.4.8 功能:")
     print("   - 藥品整合至庫存查詢 (MED- 前綴區分)")
@@ -9700,7 +9700,7 @@ if __name__ == "__main__":
     print("   - 單站版簡化架構")
     print("   - 📱 Mobile API v1 (巡房助手 PWA)")
     print("=" * 70)
-    print("📱 Mobile API: http://localhost:8000/api/mirs-mobile/v1/info")
+    print("📱 Mobile API: http://localhost:8090/api/mirs-mobile/v1/info")
     print("=" * 70)
     print("按 Ctrl+C 停止服務")
     print("=" * 70)
@@ -9708,7 +9708,7 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8000,
+        port=8090,
         log_level="info",
         access_log=True
     )
