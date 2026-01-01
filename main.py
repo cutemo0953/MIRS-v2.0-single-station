@@ -3170,14 +3170,34 @@ def run_migrations():
     conn = db.get_connection()
     cursor = conn.cursor()
     try:
-        # v2.5.2: 確保 items 表有試劑欄位
+        # v2.5.2: 確保 items 表有韌性計算相關欄位
         cursor.execute("PRAGMA table_info(items)")
         item_columns = [col[1] for col in cursor.fetchall()]
-        if item_columns and 'endurance_type' not in item_columns:
-            cursor.execute("ALTER TABLE items ADD COLUMN endurance_type TEXT")
-            cursor.execute("ALTER TABLE items ADD COLUMN tests_per_unit INTEGER")
-            cursor.execute("ALTER TABLE items ADD COLUMN valid_days_after_open INTEGER")
-            logger.info("✓ Migration: 新增 items 試劑欄位 (endurance_type, tests_per_unit, valid_days_after_open)")
+        if item_columns:
+            # 試劑欄位
+            if 'endurance_type' not in item_columns:
+                cursor.execute("ALTER TABLE items ADD COLUMN endurance_type TEXT")
+                logger.info("✓ Migration: 新增 items.endurance_type 欄位")
+            if 'tests_per_unit' not in item_columns:
+                cursor.execute("ALTER TABLE items ADD COLUMN tests_per_unit INTEGER")
+                logger.info("✓ Migration: 新增 items.tests_per_unit 欄位")
+            if 'valid_days_after_open' not in item_columns:
+                cursor.execute("ALTER TABLE items ADD COLUMN valid_days_after_open INTEGER")
+                logger.info("✓ Migration: 新增 items.valid_days_after_open 欄位")
+            # 韌性容量欄位
+            if 'capacity_per_unit' not in item_columns:
+                cursor.execute("ALTER TABLE items ADD COLUMN capacity_per_unit REAL")
+                logger.info("✓ Migration: 新增 items.capacity_per_unit 欄位")
+            if 'capacity_unit' not in item_columns:
+                cursor.execute("ALTER TABLE items ADD COLUMN capacity_unit TEXT")
+                logger.info("✓ Migration: 新增 items.capacity_unit 欄位")
+            # 依賴關係欄位
+            if 'depends_on_item_code' not in item_columns:
+                cursor.execute("ALTER TABLE items ADD COLUMN depends_on_item_code TEXT")
+                logger.info("✓ Migration: 新增 items.depends_on_item_code 欄位")
+            if 'dependency_note' not in item_columns:
+                cursor.execute("ALTER TABLE items ADD COLUMN dependency_note TEXT")
+                logger.info("✓ Migration: 新增 items.dependency_note 欄位")
 
         # v2.5.2: 確保 resilience_config 表存在
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='resilience_config'")
