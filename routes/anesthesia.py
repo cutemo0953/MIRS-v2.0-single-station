@@ -637,6 +637,18 @@ async def create_case(request: CreateCaseRequest, actor_id: str = Query(...)):
 
         conn.commit()
 
+        # v1.1: Notify CIRS to claim registration as ANESTHESIA (non-blocking)
+        if request.cirs_registration_ref:
+            try:
+                async with httpx.AsyncClient(timeout=CIRS_TIMEOUT) as client:
+                    await client.post(
+                        f"{CIRS_HUB_URL}/api/registrations/{request.cirs_registration_ref}/role-claim",
+                        json={"role": "ANESTHESIA", "actor_id": actor_id}
+                    )
+                    logger.info(f"CIRS registration {request.cirs_registration_ref} claimed as ANESTHESIA")
+            except Exception as e:
+                logger.warning(f"Failed to notify CIRS of anesthesia claim: {e}")
+
         # Fetch and return
         cursor.execute("SELECT * FROM anesthesia_cases WHERE id = ?", (case_id,))
         row = cursor.fetchone()
@@ -1361,7 +1373,7 @@ async def close_case(case_id: str, actor_id: str = Query(...)):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT status, oxygen_source_id FROM anesthesia_cases WHERE id = ?", (case_id,))
+    cursor.execute("SELECT status, oxygen_source_id, cirs_registration_ref FROM anesthesia_cases WHERE id = ?", (case_id,))
     case = cursor.fetchone()
 
     if not case:
@@ -1400,6 +1412,18 @@ async def close_case(case_id: str, actor_id: str = Query(...)):
         ))
 
         conn.commit()
+
+        # v1.1: Notify CIRS that anesthesia is done (non-blocking)
+        if case['cirs_registration_ref']:
+            try:
+                async with httpx.AsyncClient(timeout=CIRS_TIMEOUT) as client:
+                    await client.post(
+                        f"{CIRS_HUB_URL}/api/registrations/{case['cirs_registration_ref']}/anesthesia-done",
+                        json={"actor_id": actor_id}
+                    )
+                    logger.info(f"CIRS registration {case['cirs_registration_ref']} marked anesthesia done")
+            except Exception as e:
+                logger.warning(f"Failed to notify CIRS of anesthesia completion: {e}")
 
         return {"success": True, "status": "CLOSED"}
 
