@@ -268,12 +268,41 @@ EQUIPMENT_DATA = [
 ]
 
 # ============================================================================
-# 整合函數 - 取得所有 items (藥品 + 耗材)
+# 試劑清單 (REA- 前綴，用於韌性計算)
+# ============================================================================
+
+REAGENTS_DATA = [
+    {'code': 'REA-CBC-001', 'name': '全血球計數試劑', 'unit': 'Kit', 'min_stock': 5, 'category': '檢驗試劑',
+     'endurance_type': 'REAGENT', 'tests_per_unit': 100, 'valid_days_after_open': 28},
+    {'code': 'REA-TROP-001', 'name': '心肌旋轉蛋白試劑', 'unit': 'Kit', 'min_stock': 3, 'category': '檢驗試劑',
+     'endurance_type': 'REAGENT', 'tests_per_unit': 25, 'valid_days_after_open': 14},
+    {'code': 'REA-GLU-001', 'name': '血糖試紙', 'unit': 'Box', 'min_stock': 10, 'category': '檢驗試劑',
+     'endurance_type': 'REAGENT', 'tests_per_unit': 50, 'valid_days_after_open': None},
+    {'code': 'REA-ABG-001', 'name': '血氣分析試劑', 'unit': 'Kit', 'min_stock': 3, 'category': '檢驗試劑',
+     'endurance_type': 'REAGENT', 'tests_per_unit': 25, 'valid_days_after_open': 7},
+    {'code': 'REA-COVID-001', 'name': 'COVID快篩試劑', 'unit': 'Kit', 'min_stock': 10, 'category': '檢驗試劑',
+     'endurance_type': 'REAGENT', 'tests_per_unit': 25, 'valid_days_after_open': None},
+    {'code': 'REA-CRP-001', 'name': 'C反應蛋白試劑', 'unit': 'Kit', 'min_stock': 3, 'category': '檢驗試劑',
+     'endurance_type': 'REAGENT', 'tests_per_unit': 50, 'valid_days_after_open': 30},
+]
+
+# ============================================================================
+# 整合函數 - 取得所有 items (藥品 + 耗材 + 試劑)
 # ============================================================================
 
 def get_all_items():
-    """取得所有 items (藥品 + 耗材)"""
-    return MEDICINES_DATA + CONSUMABLES_DATA
+    """取得所有 items (藥品 + 耗材 + 試劑)"""
+    return MEDICINES_DATA + CONSUMABLES_DATA + REAGENTS_DATA
+
+
+def get_reagents_data():
+    """取得試劑資料"""
+    return REAGENTS_DATA
+
+
+def get_reagents_count():
+    """取得試劑數量"""
+    return len(REAGENTS_DATA)
 
 
 def get_medicines_count():

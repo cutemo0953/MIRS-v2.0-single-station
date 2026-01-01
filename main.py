@@ -1338,20 +1338,31 @@ class DatabaseManager:
             if med_count == 0:
                 logger.info("首次執行，開始預載政府標準資料庫...")
 
-                # 預載所有 items (藥品 + 耗材，藥品用 MED- 前綴區分)
+                # 預載所有 items (藥品 + 耗材 + 試劑，藥品用 MED- 前綴，試劑用 REA- 前綴)
                 all_items = get_all_items()
                 for item in all_items:
-                    cursor.execute("""
-                        INSERT OR IGNORE INTO items
-                        (item_code, item_name, category, unit, min_stock)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (item['code'], item['name'], item['category'], item['unit'], item['min_stock']))
+                    # 試劑有額外欄位
+                    if item['code'].startswith('REA-'):
+                        cursor.execute("""
+                            INSERT OR IGNORE INTO items
+                            (item_code, item_name, category, unit, min_stock, endurance_type, tests_per_unit, valid_days_after_open)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (item['code'], item['name'], item['category'], item['unit'], item['min_stock'],
+                              item.get('endurance_type'), item.get('tests_per_unit'), item.get('valid_days_after_open')))
+                    else:
+                        cursor.execute("""
+                            INSERT OR IGNORE INTO items
+                            (item_code, item_name, category, unit, min_stock)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, (item['code'], item['name'], item['category'], item['unit'], item['min_stock']))
 
-                # 統計藥品和耗材數量
+                # 統計藥品、耗材和試劑數量
                 medicines = [i for i in all_items if i['code'].startswith('MED-')]
-                consumables = [i for i in all_items if not i['code'].startswith('MED-')]
+                reagents = [i for i in all_items if i['code'].startswith('REA-')]
+                consumables = [i for i in all_items if not i['code'].startswith('MED-') and not i['code'].startswith('REA-')]
                 logger.info(f"✓ 預載 {len(medicines)} 種藥品 (MED- 前綴)")
                 logger.info(f"✓ 預載 {len(consumables)} 種耗材")
+                logger.info(f"✓ 預載 {len(reagents)} 種試劑 (REA- 前綴)")
 
                 # 預載設備 (v2.0 新增 type_code)
                 for e in EQUIPMENT_DATA:
@@ -3159,6 +3170,80 @@ def run_migrations():
     conn = db.get_connection()
     cursor = conn.cursor()
     try:
+        # v2.5.2: 確保 items 表有試劑欄位
+        cursor.execute("PRAGMA table_info(items)")
+        item_columns = [col[1] for col in cursor.fetchall()]
+        if item_columns and 'endurance_type' not in item_columns:
+            cursor.execute("ALTER TABLE items ADD COLUMN endurance_type TEXT")
+            cursor.execute("ALTER TABLE items ADD COLUMN tests_per_unit INTEGER")
+            cursor.execute("ALTER TABLE items ADD COLUMN valid_days_after_open INTEGER")
+            logger.info("✓ Migration: 新增 items 試劑欄位 (endurance_type, tests_per_unit, valid_days_after_open)")
+
+        # v2.5.2: 確保 resilience_config 表存在
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='resilience_config'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE resilience_config (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    station_id TEXT NOT NULL UNIQUE,
+                    isolation_target_days REAL DEFAULT 3,
+                    isolation_source TEXT DEFAULT 'manual',
+                    population_count INTEGER DEFAULT 2,
+                    population_label TEXT DEFAULT '插管患者數',
+                    oxygen_profile_id INTEGER,
+                    power_profile_id INTEGER,
+                    reagent_profile_id INTEGER,
+                    threshold_safe REAL DEFAULT 1.2,
+                    threshold_warning REAL DEFAULT 1.0,
+                    oxygen_consumption_rate REAL DEFAULT 10.0,
+                    fuel_consumption_rate REAL DEFAULT 3.0,
+                    power_consumption_watts REAL DEFAULT 500.0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_by TEXT
+                )
+            """)
+            logger.info("✓ Migration: 建立 resilience_config 表")
+
+        # v2.5.2: 確保 resilience_profiles 表存在
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='resilience_profiles'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE resilience_profiles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    station_id TEXT NOT NULL,
+                    endurance_type TEXT NOT NULL,
+                    profile_name TEXT NOT NULL,
+                    profile_name_en TEXT,
+                    burn_rate REAL NOT NULL,
+                    burn_rate_unit TEXT NOT NULL,
+                    population_multiplier INTEGER DEFAULT 0,
+                    description TEXT,
+                    is_default INTEGER DEFAULT 0,
+                    sort_order INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            logger.info("✓ Migration: 建立 resilience_profiles 表")
+
+        # v2.5.2: 確保 reagent_open_records 表存在
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='reagent_open_records'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE reagent_open_records (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    item_code TEXT NOT NULL,
+                    batch_number TEXT,
+                    station_id TEXT NOT NULL,
+                    opened_at DATETIME NOT NULL,
+                    tests_remaining INTEGER,
+                    expiry_date DATE,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            logger.info("✓ Migration: 建立 reagent_open_records 表")
+
         # Phase 4.3: 確保 equipment_check_history 有 unit_id 欄位
         cursor.execute("PRAGMA table_info(equipment_check_history)")
         columns = [col[1] for col in cursor.fetchall()]
