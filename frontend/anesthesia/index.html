@@ -1624,11 +1624,13 @@
             statusEl.style.color = 'var(--text-secondary)';
 
             try {
-                const res = await fetch(`${API_BASE}/proxy/cirs/waiting-list`);
+                // v1.1: 使用新的 waiting-anesthesia 端點
+                // 只顯示醫師看診後勾選「需麻醉」的病患
+                const res = await fetch(`${API_BASE}/proxy/cirs/waiting-anesthesia`);
                 const data = await res.json();
 
                 if (data.online && data.patients.length > 0) {
-                    statusEl.textContent = `🟢 連線 (${data.count} 位候診)`;
+                    statusEl.innerHTML = `<span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;margin-right:4px;"></span>連線 (${data.count} 位待麻醉)`;
                     statusEl.style.color = '#10b981';
 
                     listEl.innerHTML = data.patients.map(p => `
@@ -1636,29 +1638,46 @@
                              style="padding: 10px; margin-bottom: 6px; background: var(--bg-secondary); border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <span style="font-weight: 500;">${p.name || '未知'}</span>
+                                    <span style="font-weight: 500;">${p.name || p.patient_ref || '未知'}</span>
                                     <span style="color: var(--text-secondary); margin-left: 8px; font-size: 13px;">${p.patient_id || ''}</span>
                                 </div>
-                                <span style="font-size: 12px; padding: 2px 8px; background: ${getTriageColor(p.triage_category)}; border-radius: 4px;">${p.triage_category || '候診'}</span>
+                                <div style="display: flex; gap: 6px; align-items: center;">
+                                    ${p.waiting_minutes ? `<span style="font-size: 11px; color: var(--text-secondary);">等待 ${p.waiting_minutes} 分</span>` : ''}
+                                    <span style="font-size: 12px; padding: 2px 8px; background: ${getTriageColor(p.triage_category)}; border-radius: 4px;">${getPriorityLabel(p.priority) || p.triage_category || '待麻醉'}</span>
+                                </div>
                             </div>
-                            ${p.chief_complaint ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${p.chief_complaint}</div>` : ''}
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                                ${p.chief_complaint ? `<div>${p.chief_complaint}</div>` : ''}
+                                ${p.anesthesia_notes ? `<div style="color: var(--primary);">[備註] ${p.anesthesia_notes}</div>` : ''}
+                                ${p.consultation_by ? `<div>[診] ${p.consultation_by}</div>` : ''}
+                            </div>
+                            ${p.claimed_by ? `<div style="font-size: 11px; color: #f59e0b; margin-top: 4px;">[!] 已被 ${p.claimed_by} 接手</div>` : ''}
                         </div>
                     `).join('');
                 } else if (data.online && data.patients.length === 0) {
-                    statusEl.textContent = '🟢 連線 (無候診)';
+                    statusEl.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;margin-right:4px;"></span>連線 (無待麻醉)';
                     statusEl.style.color = '#10b981';
-                    listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">目前無候診病患</div>';
+                    listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">目前無待麻醉病患<br><small>醫師完成看診並勾選「需麻醉」後，病患會出現在此</small></div>';
                 } else {
-                    statusEl.textContent = '🔴 離線';
+                    statusEl.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#ef4444;border-radius:50%;margin-right:4px;"></span>離線';
                     statusEl.style.color = '#f59e0b';
-                    listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">CIRS 未連線，請手動輸入</div>';
+                    listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">CIRS 未連線，請手動輸入或掃描傷票</div>';
                 }
             } catch (err) {
                 console.error('Failed to load CIRS waiting list:', err);
-                statusEl.textContent = '🔴 離線';
+                statusEl.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#ef4444;border-radius:50%;margin-right:4px;"></span>離線';
                 statusEl.style.color = '#ef4444';
-                listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">CIRS 未連線，請手動輸入</div>';
+                listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">CIRS 未連線，請手動輸入或掃描傷票</div>';
             }
+        }
+
+        function getPriorityLabel(priority) {
+            const labels = {
+                'STAT': '急',
+                'URGENT': '緊',
+                'ROUTINE': '常'
+            };
+            return labels[priority] || '';
         }
 
         function getTriageColor(category) {

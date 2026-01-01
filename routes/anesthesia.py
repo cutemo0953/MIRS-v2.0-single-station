@@ -2477,6 +2477,106 @@ async def get_cirs_waiting_list(
         })
 
 
+@router.get("/proxy/cirs/waiting-anesthesia")
+async def get_cirs_waiting_anesthesia():
+    """
+    v1.1: 取得待麻醉清單 (使用新的 CIRS /waiting/anesthesia 端點)
+
+    只返回:
+    - status = CONSULTATION_DONE
+    - needs_anesthesia = 1
+
+    這是 v1.1 流程改進的核心：醫師完成看診後勾選「需麻醉」的病患才會出現。
+    """
+    hub_revision = 0
+
+    try:
+        async with httpx.AsyncClient(timeout=CIRS_TIMEOUT) as client:
+            # v1.1: 使用新的 waiting/anesthesia 端點
+            response = await client.get(
+                f"{CIRS_HUB_URL}/api/registrations/waiting/anesthesia"
+            )
+
+            hub_revision = int(response.headers.get("X-XIRS-Hub-Revision", 0))
+
+            if response.status_code == 200:
+                data = response.json()
+                # Transform CIRS data to MIRS format
+                patients = []
+                for reg in data.get("items", []):
+                    patients.append({
+                        "registration_id": reg.get("reg_id"),
+                        "patient_id": reg.get("person_id"),
+                        "patient_ref": reg.get("patient_ref"),
+                        "name": reg.get("display_name"),
+                        "age_group": reg.get("age_group"),
+                        "sex": reg.get("gender"),
+                        "triage_category": reg.get("triage"),
+                        "priority": reg.get("priority"),
+                        "chief_complaint": reg.get("chief_complaint"),
+                        "anesthesia_notes": reg.get("anesthesia_notes"),
+                        "consultation_by": reg.get("consultation_by"),
+                        "consultation_completed_at": reg.get("consultation_completed_at"),
+                        "waiting_minutes": reg.get("waiting_minutes"),
+                        "claimed_by": reg.get("anesthesia_claimed_by"),
+                        "claimed_at": reg.get("anesthesia_claimed_at")
+                    })
+
+                return make_xirs_response({
+                    "online": True,
+                    "source": "cirs_hub",
+                    "queue": "ANESTHESIA",
+                    "patients": patients,
+                    "count": len(patients),
+                    "protocol_version": XIRS_PROTOCOL_VERSION
+                }, hub_revision)
+            else:
+                logger.warning(f"CIRS Hub waiting/anesthesia returned {response.status_code}")
+                return make_xirs_response({
+                    "online": False,
+                    "source": "offline",
+                    "queue": "ANESTHESIA",
+                    "patients": [],
+                    "count": 0,
+                    "error": f"CIRS returned status {response.status_code}",
+                    "protocol_version": XIRS_PROTOCOL_VERSION
+                }, hub_revision)
+
+    except httpx.TimeoutException:
+        logger.warning("CIRS Hub timeout for waiting/anesthesia")
+        return make_xirs_response({
+            "online": False,
+            "source": "offline",
+            "queue": "ANESTHESIA",
+            "patients": [],
+            "count": 0,
+            "error": "CIRS Hub timeout",
+            "protocol_version": XIRS_PROTOCOL_VERSION
+        })
+    except httpx.ConnectError:
+        logger.info("CIRS Hub not reachable for waiting/anesthesia")
+        return make_xirs_response({
+            "online": False,
+            "source": "offline",
+            "queue": "ANESTHESIA",
+            "patients": [],
+            "count": 0,
+            "error": "CIRS Hub not reachable",
+            "protocol_version": XIRS_PROTOCOL_VERSION
+        })
+    except Exception as e:
+        logger.error(f"CIRS waiting/anesthesia proxy error: {e}")
+        return make_xirs_response({
+            "online": False,
+            "source": "offline",
+            "queue": "ANESTHESIA",
+            "patients": [],
+            "count": 0,
+            "error": str(e),
+            "protocol_version": XIRS_PROTOCOL_VERSION
+        })
+
+
 @router.get("/proxy/cirs/patient/{registration_id}")
 async def get_cirs_patient_details(registration_id: str):
     """
