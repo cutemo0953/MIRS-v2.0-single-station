@@ -2355,7 +2355,7 @@ import os
 from fastapi.responses import JSONResponse
 
 # CIRS Hub configuration
-CIRS_HUB_URL = os.getenv("CIRS_HUB_URL", "http://localhost:8000")
+CIRS_HUB_URL = os.getenv("CIRS_HUB_URL", "http://localhost:8090")
 CIRS_TIMEOUT = 5.0  # seconds
 
 # xIRS Protocol Version (see DEV_SPEC Section I.2)
