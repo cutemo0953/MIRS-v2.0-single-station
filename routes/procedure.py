@@ -1,6 +1,7 @@
 """
 MIRS Procedure Module - CIRS Integration
 v1.0 - 處置流程 CIRS 整合
+v1.2 - 加入 timestamp 支援離線判斷
 
 提供:
 1. CIRS 待處置清單 proxy 端點
@@ -9,6 +10,7 @@ v1.0 - 處置流程 CIRS 整合
 
 import os
 import logging
+from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
@@ -112,13 +114,19 @@ async def get_cirs_waiting_procedure():
                         "claimed_at": reg.get("procedure_claimed_at")
                     })
 
+                # v1.2: 加入 timestamp 支援離線判斷
+                local_timestamp = datetime.now().isoformat()
+                hub_timestamp = response.headers.get("Date", local_timestamp)
+
                 return make_xirs_response({
                     "online": True,
                     "source": "cirs_hub",
                     "queue": "PROCEDURE",
                     "patients": patients,
                     "count": len(patients),
-                    "protocol_version": XIRS_PROTOCOL_VERSION
+                    "protocol_version": XIRS_PROTOCOL_VERSION,
+                    "hub_timestamp": hub_timestamp,
+                    "local_timestamp": local_timestamp
                 }, hub_revision)
             else:
                 logger.warning(f"CIRS Hub waiting/procedure returned {response.status_code}")
@@ -129,7 +137,8 @@ async def get_cirs_waiting_procedure():
                     "patients": [],
                     "count": 0,
                     "error": f"CIRS returned status {response.status_code}",
-                    "protocol_version": XIRS_PROTOCOL_VERSION
+                    "protocol_version": XIRS_PROTOCOL_VERSION,
+                    "local_timestamp": datetime.now().isoformat()
                 }, hub_revision)
 
     except httpx.TimeoutException:
@@ -141,7 +150,8 @@ async def get_cirs_waiting_procedure():
             "patients": [],
             "count": 0,
             "error": "CIRS Hub timeout",
-            "protocol_version": XIRS_PROTOCOL_VERSION
+            "protocol_version": XIRS_PROTOCOL_VERSION,
+            "local_timestamp": datetime.now().isoformat()
         })
     except httpx.ConnectError:
         logger.info("CIRS Hub not reachable for waiting/procedure")
@@ -152,7 +162,8 @@ async def get_cirs_waiting_procedure():
             "patients": [],
             "count": 0,
             "error": "CIRS Hub not reachable",
-            "protocol_version": XIRS_PROTOCOL_VERSION
+            "protocol_version": XIRS_PROTOCOL_VERSION,
+            "local_timestamp": datetime.now().isoformat()
         })
     except Exception as e:
         logger.error(f"CIRS waiting/procedure proxy error: {e}")
@@ -163,7 +174,8 @@ async def get_cirs_waiting_procedure():
             "patients": [],
             "count": 0,
             "error": str(e),
-            "protocol_version": XIRS_PROTOCOL_VERSION
+            "protocol_version": XIRS_PROTOCOL_VERSION,
+            "local_timestamp": datetime.now().isoformat()
         })
 
 
