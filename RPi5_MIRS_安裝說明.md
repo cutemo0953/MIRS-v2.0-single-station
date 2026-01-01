@@ -4,7 +4,7 @@
 
 > **v2.5.3 新功能**：完整資料庫遷移 + 設備狀態修復 + 氧氣韌性計算優化
 >
-> **xIRS Hub-Satellite 架構**：MIRS 作為 CIRS Hub 的 Satellite 運行（連接埠 8090）
+> **xIRS Hub-Satellite 架構**：MIRS 作為 CIRS Hub 的 Satellite 運行（CIRS:8090, MIRS:8000）
 
 ---
 
@@ -167,14 +167,14 @@ python3 main.py
 
 # 看到以下訊息就成功了：
 # 🏥 醫療站庫存管理系統 API v2.5.3
-# 🌐 服務位址: http://0.0.0.0:8090
+# 🌐 服務位址: http://0.0.0.0:8000
 # ✓ Migration: 建立 v_resilience_equipment 視圖
 # ✓ Migration: 為韌性設備建立 X 個單位
 ```
 
 **測試連線**：
-- 主系統：http://medical-tc01.local:8090
-- 麻醉模組：http://medical-tc01.local:8090/anesthesia
+- 主系統：http://medical-tc01.local:8000
+- 麻醉模組：http://medical-tc01.local:8000/anesthesia
 - 應該會看到 MIRS 登入畫面
 
 **測試成功！按 Ctrl+C 停止，繼續下一步**
@@ -349,20 +349,19 @@ sudo nano /etc/systemd/system/mirs.service
 **貼上以下內容**：
 ```ini
 [Unit]
-Description=Medical Inventory Resource System (MIRS)
-After=network.target
+Description=MIRS Satellite v2.5.3 (Anesthesia Module)
+After=network.target cirs.service
 
 [Service]
 Type=simple
 User=medical
 WorkingDirectory=/home/medical/MIRS-v2.0-single-station
-ExecStart=/home/medical/MIRS-v2.0-single-station/venv/bin/python3 main.py
+Environment=PATH=/home/medical/CIRS/venv/bin:/usr/bin
+Environment=CIRS_HUB_URL=http://localhost:8090
+Environment=MIRS_STATION_ID=MIRS-001
+ExecStart=/home/medical/CIRS/venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=10
-
-# CIRS Hub 連線設定（Hub-Satellite 架構）
-# 如果要連接 CIRS Hub，取消註解並設定 Hub 的 IP
-#Environment="CIRS_HUB_URL=http://192.168.1.100:8000"
 
 [Install]
 WantedBy=multi-user.target
@@ -454,7 +453,7 @@ def generate_connection_card():
     station_id, station_name = get_station_info()
     wifi_ssid = get_wifi_ssid()
     wifi_password = "Medical2025"
-    system_url = "http://10.0.0.1:8090"
+    system_url = "http://10.0.0.1:8000"
     
     # 建立畫布 (A5 size, 300 DPI)
     width, height = 1748, 2480  # A5 at 300 DPI
@@ -626,7 +625,7 @@ sudo cp /home/medical/MIRS_Connection_Card_TC-01.png /media/usb/
 2. **找到並連接「Medical-TC01」**
 3. **輸入密碼：`Medical2025`**
 4. **開啟瀏覽器**
-5. **輸入網址：`http://10.0.0.1:8090`**
+5. **輸入網址：`http://10.0.0.1:8000`**
 6. **完成！**
 
 **總時間：60 秒**
@@ -637,7 +636,7 @@ sudo cp /home/medical/MIRS_Connection_Card_TC-01.png /media/usb/
 
 1. **開啟手機 WiFi**（系統會自動連上）
 2. **開啟瀏覽器**
-3. **點擊書籤或輸入：`http://10.0.0.1:8090`**
+3. **點擊書籤或輸入：`http://10.0.0.1:8000`**
 4. **完成！**
 
 **總時間：10 秒**
@@ -957,8 +956,8 @@ sudo systemctl restart hostapd
 # 確認可以連到 CIRS Hub（替換成實際 IP）
 ping 192.168.1.100
 
-# 測試 CIRS API
-curl http://192.168.1.100:8000/api/health
+# 測試 CIRS API（CIRS 預設在 8090）
+curl http://192.168.1.100:8090/api/health
 ```
 
 ### 步驟 2：設定 CIRS Hub URL
@@ -967,8 +966,8 @@ curl http://192.168.1.100:8000/api/health
 # 編輯 systemd 服務
 sudo nano /etc/systemd/system/mirs.service
 
-# 取消 Environment 那行的註解，並設定 CIRS Hub IP
-# Environment="CIRS_HUB_URL=http://192.168.1.100:8000"
+# 設定 CIRS Hub IP（CIRS 預設在 8090）
+# Environment="CIRS_HUB_URL=http://192.168.1.100:8090"
 
 # 重新載入並重啟
 sudo systemctl daemon-reload
@@ -977,7 +976,7 @@ sudo systemctl restart mirs
 
 ### 步驟 3：驗證連線
 
-開啟麻醉模組（http://10.0.0.1:8090/anesthesia），點擊「開始新案例」，
+開啟麻醉模組（http://10.0.0.1:8000/anesthesia），點擊「開始新案例」，
 應該會看到 CIRS 候診名單顯示「🟢 連線」狀態。
 
 > **離線模式**：若 CIRS Hub 無法連線，系統會自動切換為離線模式，
@@ -995,9 +994,9 @@ sudo systemctl restart mirs
 ┌─────────────────────────────────────────────────┐
 │  Raspberry Pi (Hub-Satellite Architecture)      │
 ├─────────────────────────────────────────────────┤
-│  Port 8000: CIRS Hub (社區管理 - 權威中心)       │
+│  Port 8090: CIRS Hub (社區管理 - 權威中心)       │
 │  Port 8001: HIRS (家庭物資 - 選配)               │
-│  Port 8090: MIRS Satellite (醫療站麻醉模組)      │
+│  Port 8000: MIRS Satellite (醫療站麻醉模組)      │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -1018,16 +1017,17 @@ sudo nano /etc/systemd/system/cirs.service
 **貼上以下內容**：
 ```ini
 [Unit]
-Description=CIRS Hub (Community Inventory Resilience System)
+Description=CIRS Hub Server v2.5.1
 After=network.target
 
 [Service]
 Type=simple
 User=medical
 WorkingDirectory=/home/medical/CIRS/backend
-ExecStart=/home/medical/CIRS/backend/venv/bin/python3 -c "import uvicorn; from main import app; uvicorn.run(app, host='0.0.0.0', port=8000)"
+Environment=PATH=/home/medical/CIRS/venv/bin:/usr/bin
+ExecStart=/home/medical/CIRS/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8090
 Restart=always
-RestartSec=10
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
@@ -1075,19 +1075,23 @@ sudo systemctl status cirs hirs mirs
 
 ```bash
 # 測試各服務
-curl http://localhost:8000/api/health  # CIRS Hub
+curl http://localhost:8090/api/health  # CIRS Hub
 curl http://localhost:8001/            # HIRS
-curl http://localhost:8090/api/health  # MIRS Satellite
+curl http://localhost:8000/api/health  # MIRS Satellite
+
+# 測試 v1.1 麻醉流程
+curl http://localhost:8090/api/registrations/waiting/anesthesia  # CIRS 待麻醉清單
+curl http://localhost:8000/api/anesthesia/proxy/cirs/waiting-anesthesia  # MIRS proxy
 ```
 
 ### 存取方式
 
 | 服務 | URL | 說明 |
 |------|-----|------|
-| CIRS Hub | http://10.0.0.1:8000 | 社區管理、檢傷、掛號 |
+| CIRS Hub | http://10.0.0.1:8090 | 社區管理、檢傷、掛號 |
 | HIRS | http://10.0.0.1:8001 | 家庭物資管理 |
-| MIRS | http://10.0.0.1:8090 | 醫療站物資 |
-| 麻醉模組 | http://10.0.0.1:8090/anesthesia | 麻醉記錄 |
+| MIRS | http://10.0.0.1:8000 | 醫療站物資 |
+| 麻醉模組 | http://10.0.0.1:8000/anesthesia | 麻醉記錄 |
 
 ---
 
