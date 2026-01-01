@@ -482,23 +482,36 @@ class ResilienceService:
         #         e.g., O2 concentrator limited by power is already reflected in power lifeline
         weakest = None
         min_hours = float('inf')
-        for l in lifelines:
-            # Skip if this lifeline is limited by a dependency (its hours come from the dependency)
-            dep = l.get('dependency')
-            if dep and dep.get('is_limiting'):
-                continue
 
+        # v2.5.3: 分別計算電力和氧氣的最佳時數
+        # 氧氣供應取各來源的最大值（濃縮機有電時可用，鋼瓶作為備用）
+        power_hours = 0
+        oxygen_max_hours = 0
+
+        for l in lifelines:
             eff_hours = l['endurance']['effective_hours']
             # Handle string '∞' or actual infinity
-            if isinstance(eff_hours, str) or eff_hours == float('inf'):
-                continue
-            if eff_hours < min_hours:
-                min_hours = eff_hours
-                weakest = {
-                    'item': l['name'],
-                    'hours': eff_hours,
-                    'type': l['type']
-                }
+            if isinstance(eff_hours, str):
+                eff_hours = float('inf')
+
+            if l['type'] == 'POWER':
+                power_hours = eff_hours if eff_hours != float('inf') else power_hours
+            elif l['type'] == 'OXYGEN':
+                # 氧氣取各來源的最大值（濃縮機有電時可持續供氧）
+                if eff_hours != float('inf') and eff_hours > oxygen_max_hours:
+                    oxygen_max_hours = eff_hours
+
+        # Weakest link 在電力和氧氣之間選擇
+        effective_lifelines = []
+        if power_hours > 0:
+            effective_lifelines.append({'type': 'POWER', 'hours': power_hours, 'item': '電力供應'})
+        if oxygen_max_hours > 0:
+            effective_lifelines.append({'type': 'OXYGEN', 'hours': oxygen_max_hours, 'item': '氧氣供應'})
+
+        for eff in effective_lifelines:
+            if eff['hours'] < min_hours:
+                min_hours = eff['hours']
+                weakest = eff
 
         # v1.4.4: Extract oxygen supplies with unit details for frontend
         oxygen_items = []
@@ -547,7 +560,10 @@ class ResilienceService:
                 'weakest_link': weakest,
                 'can_survive_isolation': overall_status != StatusLevel.CRITICAL.value,
                 'critical_items': [l['item_code'] for l in lifelines if l['status'] == StatusLevel.CRITICAL.value],
-                'warning_items': [l['item_code'] for l in lifelines if l['status'] == StatusLevel.WARNING.value]
+                'warning_items': [l['item_code'] for l in lifelines if l['status'] == StatusLevel.WARNING.value],
+                # v2.5.3: 獨立運作時數（電力/氧氣各取最佳來源）
+                'power_hours': round(power_hours, 1) if power_hours > 0 else None,
+                'oxygen_hours': round(oxygen_max_hours, 1) if oxygen_max_hours > 0 else None
             }
         }
 
