@@ -6,82 +6,21 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>醫療站庫存管理系統 v1.4.9</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Tailwind 自定義色系配置
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'teal-custom': {
-                            500: '#205555',
-                            600: '#194444',
-                            700: '#123333',
-                            50: '#e6f2f2',
-                        },
-                        'teal-variant': {
-                            900: '#224D60',
-                            800: '#205555',
-                            700: '#2C7471',
-                            600: '#286768',
-                            500: '#83D4D2',
-                            100: '#D5EEEE',
-                        },
-                        'treatment': {
-                            500: '#4E5488',
-                            50: '#F3F2F8',
-                        },
-                        'blood': {
-                            600: '#B85D42',
-                            500: '#CC7251',
-                            200: '#F6CCCD',
-                            50: '#FDF5F5',
-                        },
-                        'claude-red': {
-                            500: '#D96754',
-                            600: '#C4564A',
-                        },
-                        'equipment': {
-                            900: '#2D3531',  // 深色灰綠
-                            500: '#6C7362',  // 主色橄欖綠
-                            200: '#D7C8B0',  // 淺米色
-                            100: '#E8E3DB',  // 極淺米色
-                        },
-                        'sky-custom': {
-                            600: '#245FA7',
-                            500: '#5B9BD5',
-                        },
-                        'dispense-purple': {
-                            900: '#371e7e',
-                            700: '#7e2e83',
-                            500: '#9cacb5',
-                            50: '#f5f3f9',
-                        },
-                        'pharma': {
-                            900: '#115e59',
-                            700: '#0f766e',
-                            600: '#0d9488',
-                            500: '#14b8a6',
-                            200: '#99f6e4',
-                            100: '#ccfbf1',
-                            50: '#f0fdfa',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <!-- QRCode library - 使用 qrcodejs (DOM-based, 穩定可用) -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <title>醫療站庫存管理系統 v1.5.0</title>
+    <!-- v1.5.0: 本地化依賴，支援離線運作 -->
+    <link rel="stylesheet" href="/static/css/tailwind.min.css">
+    <link rel="stylesheet" href="/static/css/mirs-colors.css">
+    <script defer src="/static/js/alpine.min.js"></script>
+    <script src="/static/js/qrcode.min.js"></script>
     <script>
         // 驗證 QRCode 載入
-        if (typeof QRCode !== 'undefined') {
-            console.log('[QRCode] qrcodejs library loaded successfully');
-        } else {
-            console.error('[QRCode] qrcodejs library failed to load from CDN');
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof QRCode !== 'undefined') {
+                console.log('[QRCode] qrcodejs library loaded successfully');
+            } else {
+                console.error('[QRCode] qrcodejs library NOT loaded');
+            }
+        });
     </script>
     <style>
         [x-cloak] { display: none !important; }

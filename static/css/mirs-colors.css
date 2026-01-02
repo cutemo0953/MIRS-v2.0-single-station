@@ -1,0 +1,164 @@
+/**
+ * MIRS Custom Colors - 離線支援
+ * 將 Tailwind config 中的自定義色轉為 CSS
+ */
+
+:root {
+    /* teal-custom */
+    --color-teal-custom-50: #e6f2f2;
+    --color-teal-custom-500: #205555;
+    --color-teal-custom-600: #194444;
+    --color-teal-custom-700: #123333;
+
+    /* teal-variant */
+    --color-teal-variant-100: #D5EEEE;
+    --color-teal-variant-500: #83D4D2;
+    --color-teal-variant-600: #286768;
+    --color-teal-variant-700: #2C7471;
+    --color-teal-variant-800: #205555;
+    --color-teal-variant-900: #224D60;
+
+    /* treatment */
+    --color-treatment-50: #F3F2F8;
+    --color-treatment-500: #4E5488;
+
+    /* blood */
+    --color-blood-50: #FDF5F5;
+    --color-blood-200: #F6CCCD;
+    --color-blood-500: #CC7251;
+    --color-blood-600: #B85D42;
+
+    /* claude-red */
+    --color-claude-red-500: #D96754;
+    --color-claude-red-600: #C4564A;
+
+    /* equipment */
+    --color-equipment-100: #E8E3DB;
+    --color-equipment-200: #D7C8B0;
+    --color-equipment-500: #6C7362;
+    --color-equipment-900: #2D3531;
+
+    /* sky-custom */
+    --color-sky-custom-500: #5B9BD5;
+    --color-sky-custom-600: #245FA7;
+
+    /* dispense-purple */
+    --color-dispense-purple-50: #f5f3f9;
+    --color-dispense-purple-500: #9cacb5;
+    --color-dispense-purple-700: #7e2e83;
+    --color-dispense-purple-900: #371e7e;
+
+    /* pharma */
+    --color-pharma-50: #f0fdfa;
+    --color-pharma-100: #ccfbf1;
+    --color-pharma-200: #99f6e4;
+    --color-pharma-500: #14b8a6;
+    --color-pharma-600: #0d9488;
+    --color-pharma-700: #0f766e;
+    --color-pharma-900: #115e59;
+}
+
+/* =============== teal-custom =============== */
+.bg-teal-custom-50 { background-color: var(--color-teal-custom-50) !important; }
+.bg-teal-custom-500 { background-color: var(--color-teal-custom-500) !important; }
+.bg-teal-custom-600 { background-color: var(--color-teal-custom-600) !important; }
+.bg-teal-custom-700 { background-color: var(--color-teal-custom-700) !important; }
+.text-teal-custom-50 { color: var(--color-teal-custom-50) !important; }
+.text-teal-custom-500 { color: var(--color-teal-custom-500) !important; }
+.text-teal-custom-600 { color: var(--color-teal-custom-600) !important; }
+.text-teal-custom-700 { color: var(--color-teal-custom-700) !important; }
+.border-teal-custom-500 { border-color: var(--color-teal-custom-500) !important; }
+.border-teal-custom-600 { border-color: var(--color-teal-custom-600) !important; }
+.ring-teal-custom-500 { --tw-ring-color: var(--color-teal-custom-500) !important; }
+.focus\:ring-teal-custom-500:focus { --tw-ring-color: var(--color-teal-custom-500) !important; }
+.hover\:bg-teal-custom-600:hover { background-color: var(--color-teal-custom-600) !important; }
+.hover\:bg-teal-custom-700:hover { background-color: var(--color-teal-custom-700) !important; }
+.hover\:text-teal-custom-500:hover { color: var(--color-teal-custom-500) !important; }
+.hover\:text-teal-custom-600:hover { color: var(--color-teal-custom-600) !important; }
+.hover\:border-teal-custom-500:hover { border-color: var(--color-teal-custom-500) !important; }
+.from-teal-custom-500 { --tw-gradient-from: var(--color-teal-custom-500) !important; }
+.to-teal-custom-600 { --tw-gradient-to: var(--color-teal-custom-600) !important; }
+
+/* =============== teal-variant =============== */
+.bg-teal-variant-100 { background-color: var(--color-teal-variant-100) !important; }
+.bg-teal-variant-500 { background-color: var(--color-teal-variant-500) !important; }
+.bg-teal-variant-600 { background-color: var(--color-teal-variant-600) !important; }
+.bg-teal-variant-700 { background-color: var(--color-teal-variant-700) !important; }
+.bg-teal-variant-800 { background-color: var(--color-teal-variant-800) !important; }
+.bg-teal-variant-900 { background-color: var(--color-teal-variant-900) !important; }
+.text-teal-variant-100 { color: var(--color-teal-variant-100) !important; }
+.text-teal-variant-500 { color: var(--color-teal-variant-500) !important; }
+.text-teal-variant-600 { color: var(--color-teal-variant-600) !important; }
+.text-teal-variant-700 { color: var(--color-teal-variant-700) !important; }
+.text-teal-variant-800 { color: var(--color-teal-variant-800) !important; }
+.text-teal-variant-900 { color: var(--color-teal-variant-900) !important; }
+.border-teal-variant-500 { border-color: var(--color-teal-variant-500) !important; }
+.border-teal-variant-600 { border-color: var(--color-teal-variant-600) !important; }
+.from-teal-variant-800 { --tw-gradient-from: var(--color-teal-variant-800) !important; }
+.to-teal-variant-600 { --tw-gradient-to: var(--color-teal-variant-600) !important; }
+
+/* =============== treatment =============== */
+.bg-treatment-50 { background-color: var(--color-treatment-50) !important; }
+.bg-treatment-500 { background-color: var(--color-treatment-500) !important; }
+.text-treatment-500 { color: var(--color-treatment-500) !important; }
+.border-treatment-500 { border-color: var(--color-treatment-500) !important; }
+
+/* =============== blood =============== */
+.bg-blood-50 { background-color: var(--color-blood-50) !important; }
+.bg-blood-200 { background-color: var(--color-blood-200) !important; }
+.bg-blood-500 { background-color: var(--color-blood-500) !important; }
+.bg-blood-600 { background-color: var(--color-blood-600) !important; }
+.text-blood-500 { color: var(--color-blood-500) !important; }
+.text-blood-600 { color: var(--color-blood-600) !important; }
+.border-blood-500 { border-color: var(--color-blood-500) !important; }
+
+/* =============== claude-red =============== */
+.bg-claude-red-500 { background-color: var(--color-claude-red-500) !important; }
+.bg-claude-red-600 { background-color: var(--color-claude-red-600) !important; }
+.text-claude-red-500 { color: var(--color-claude-red-500) !important; }
+.text-claude-red-600 { color: var(--color-claude-red-600) !important; }
+.hover\:bg-claude-red-600:hover { background-color: var(--color-claude-red-600) !important; }
+
+/* =============== equipment =============== */
+.bg-equipment-100 { background-color: var(--color-equipment-100) !important; }
+.bg-equipment-200 { background-color: var(--color-equipment-200) !important; }
+.bg-equipment-500 { background-color: var(--color-equipment-500) !important; }
+.bg-equipment-900 { background-color: var(--color-equipment-900) !important; }
+.text-equipment-500 { color: var(--color-equipment-500) !important; }
+.text-equipment-900 { color: var(--color-equipment-900) !important; }
+.border-equipment-500 { border-color: var(--color-equipment-500) !important; }
+
+/* =============== sky-custom =============== */
+.bg-sky-custom-500 { background-color: var(--color-sky-custom-500) !important; }
+.bg-sky-custom-600 { background-color: var(--color-sky-custom-600) !important; }
+.text-sky-custom-500 { color: var(--color-sky-custom-500) !important; }
+.text-sky-custom-600 { color: var(--color-sky-custom-600) !important; }
+.hover\:bg-sky-custom-600:hover { background-color: var(--color-sky-custom-600) !important; }
+
+/* =============== dispense-purple =============== */
+.bg-dispense-purple-50 { background-color: var(--color-dispense-purple-50) !important; }
+.bg-dispense-purple-500 { background-color: var(--color-dispense-purple-500) !important; }
+.bg-dispense-purple-700 { background-color: var(--color-dispense-purple-700) !important; }
+.bg-dispense-purple-900 { background-color: var(--color-dispense-purple-900) !important; }
+.text-dispense-purple-500 { color: var(--color-dispense-purple-500) !important; }
+.text-dispense-purple-700 { color: var(--color-dispense-purple-700) !important; }
+.text-dispense-purple-900 { color: var(--color-dispense-purple-900) !important; }
+.from-dispense-purple-900 { --tw-gradient-from: var(--color-dispense-purple-900) !important; }
+.to-dispense-purple-700 { --tw-gradient-to: var(--color-dispense-purple-700) !important; }
+
+/* =============== pharma =============== */
+.bg-pharma-50 { background-color: var(--color-pharma-50) !important; }
+.bg-pharma-100 { background-color: var(--color-pharma-100) !important; }
+.bg-pharma-200 { background-color: var(--color-pharma-200) !important; }
+.bg-pharma-500 { background-color: var(--color-pharma-500) !important; }
+.bg-pharma-600 { background-color: var(--color-pharma-600) !important; }
+.bg-pharma-700 { background-color: var(--color-pharma-700) !important; }
+.bg-pharma-900 { background-color: var(--color-pharma-900) !important; }
+.text-pharma-500 { color: var(--color-pharma-500) !important; }
+.text-pharma-600 { color: var(--color-pharma-600) !important; }
+.text-pharma-700 { color: var(--color-pharma-700) !important; }
+.text-pharma-900 { color: var(--color-pharma-900) !important; }
+.border-pharma-500 { border-color: var(--color-pharma-500) !important; }
+.border-pharma-600 { border-color: var(--color-pharma-600) !important; }
+.hover\:bg-pharma-600:hover { background-color: var(--color-pharma-600) !important; }
+.hover\:bg-pharma-700:hover { background-color: var(--color-pharma-700) !important; }
