@@ -6,6 +6,15 @@
 
 ---
 
+## [2.5.5] - 2026-01-02
+
+### 修復 (Fixed)
+- **Mobile PWA 離線支援**：移除 Tailwind CDN，改用本地靜態檔案
+  - `static/mobile/index.html` 使用 `/static/css/tailwind.min.css`
+  - 新增 primary 色系到 `mirs-colors.css`（支援 primary-50 ~ primary-900）
+
+---
+
 ## [2.5.4] - 2026-01-01
 
 ### 新增 (Added)

@@ -162,3 +162,28 @@
 .border-pharma-600 { border-color: var(--color-pharma-600) !important; }
 .hover\:bg-pharma-600:hover { background-color: var(--color-pharma-600) !important; }
 .hover\:bg-pharma-700:hover { background-color: var(--color-pharma-700) !important; }
+
+/* =============== primary (alias to teal) =============== */
+.bg-primary-50 { background-color: #f0fdfa !important; }
+.bg-primary-100 { background-color: #ccfbf1 !important; }
+.bg-primary-200 { background-color: #99f6e4 !important; }
+.bg-primary-300 { background-color: #5eead4 !important; }
+.bg-primary-400 { background-color: #2dd4bf !important; }
+.bg-primary-500 { background-color: #14b8a6 !important; }
+.bg-primary-600 { background-color: #0d9488 !important; }
+.bg-primary-700 { background-color: #0f766e !important; }
+.bg-primary-800 { background-color: #115e59 !important; }
+.bg-primary-900 { background-color: #134e4a !important; }
+.text-primary-50 { color: #f0fdfa !important; }
+.text-primary-100 { color: #ccfbf1 !important; }
+.text-primary-500 { color: #14b8a6 !important; }
+.text-primary-600 { color: #0d9488 !important; }
+.text-primary-700 { color: #0f766e !important; }
+.text-primary-800 { color: #115e59 !important; }
+.text-primary-900 { color: #134e4a !important; }
+.border-primary-500 { border-color: #14b8a6 !important; }
+.border-primary-600 { border-color: #0d9488 !important; }
+.hover\:bg-primary-600:hover { background-color: #0d9488 !important; }
+.hover\:bg-primary-700:hover { background-color: #0f766e !important; }
+.ring-primary-500 { --tw-ring-color: #14b8a6 !important; }
+.focus\:ring-primary-500:focus { --tw-ring-color: #14b8a6 !important; }
