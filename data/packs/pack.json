@@ -1,0 +1,27 @@
+{
+  "pack_id": "surgery_codes_TW_20260102",
+  "effective_date": "2026-01-02",
+  "source": "OrthoAssistance CSV - De Novo Orthopedics",
+  "schema_version": "1.0",
+  "description": "台灣骨科手術代碼與自費項目主檔",
+  "sha256": "745a6478a615422e06ae19f40bde59328e33841d5dd897d9440dc943f0c69246",
+  "files": {
+    "surgery_codes_TW_20260102.csv": {
+      "table": "surgery_codes",
+      "rows": 256,
+      "sha256": "28916d081864c1fa5d78def48f7eff83ce9f5ab937403b84c69a595a81190fde"
+    },
+    "surgery_categories_TW_20260102.csv": {
+      "table": "surgery_categories",
+      "rows": 20,
+      "sha256": "964e16fb980a3a532dcc3f7dc6a2e463595301477c23b054aa57b2bb383a8895"
+    },
+    "selfpay_items_TW_20260102.csv": {
+      "table": "selfpay_items",
+      "rows": 167,
+      "sha256": "d5d42429cd023cf21fc5634cf3a3bcdd000bd5b5dbc185e9f0dea0c76a683ee4"
+    }
+  },
+  "tables": ["surgery_categories", "surgery_codes", "selfpay_items"],
+  "created_at": "2026-01-02T00:00:00Z"
+}

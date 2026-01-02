@@ -63,6 +63,14 @@ except ImportError as e:
     PROCEDURE_MODULE_AVAILABLE = False
     procedure_router = None
 
+# v1.5 新增: 手術代碼與自費項目模組
+try:
+    from routes.surgery_codes import router as surgery_codes_router
+    SURGERY_CODES_MODULE_AVAILABLE = True
+except ImportError as e:
+    SURGERY_CODES_MODULE_AVAILABLE = False
+    surgery_codes_router = None
+
 
 # ============================================================================
 # 日誌配置
@@ -8479,6 +8487,13 @@ else:
 if PROCEDURE_MODULE_AVAILABLE and procedure_router:
     app.include_router(procedure_router)
     logger.info("✓ MIRS Procedure Module v1.0 已啟用 (/api/procedure)")
+
+# v1.5: 手術代碼與自費項目模組路由
+if SURGERY_CODES_MODULE_AVAILABLE and surgery_codes_router:
+    app.include_router(surgery_codes_router)
+    logger.info("✓ MIRS Surgery Codes Module v1.0 已啟用 (/api/surgery-codes)")
+else:
+    logger.warning("手術代碼模組未啟用")
 
 
 class ResilienceConfigUpdate(BaseModel):
