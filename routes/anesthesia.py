@@ -2382,9 +2382,67 @@ from fastapi.responses import JSONResponse
 CIRS_HUB_URL = os.getenv("CIRS_HUB_URL", "http://localhost:8090")
 CIRS_TIMEOUT = 5.0  # seconds
 
+# Vercel demo mode detection
+IS_VERCEL = os.environ.get("VERCEL") == "1"
+
 # xIRS Protocol Version (see DEV_SPEC Section I.2)
 XIRS_PROTOCOL_VERSION = "1.0"
 STATION_ID = os.getenv("MIRS_STATION_ID", "MIRS-UNKNOWN")
+
+# Demo data for Vercel mode (simulated anesthesia waiting list)
+DEMO_ANESTHESIA_PATIENTS = [
+    {
+        "registration_id": "REG-DEMO-001",
+        "patient_id": "P-DEMO-001",
+        "patient_ref": "D001",
+        "name": "王大明",
+        "age_group": "55-64",
+        "sex": "M",
+        "triage_category": "3",
+        "priority": "NORMAL",
+        "chief_complaint": "右股骨頸骨折，需術前麻醉評估",
+        "anesthesia_notes": "患者有高血壓病史，術前需確認血壓控制情況",
+        "consultation_by": "陳醫師",
+        "consultation_completed_at": None,
+        "waiting_minutes": 45,
+        "claimed_by": None,
+        "claimed_at": None
+    },
+    {
+        "registration_id": "REG-DEMO-002",
+        "patient_id": "P-DEMO-002",
+        "patient_ref": "D002",
+        "name": "林小華",
+        "age_group": "35-44",
+        "sex": "F",
+        "triage_category": "2",
+        "priority": "URGENT",
+        "chief_complaint": "急性闘尾炎，需緊急手術",
+        "anesthesia_notes": "禁食6小時以上，無藥物過敏史",
+        "consultation_by": "張醫師",
+        "consultation_completed_at": None,
+        "waiting_minutes": 15,
+        "claimed_by": None,
+        "claimed_at": None
+    },
+    {
+        "registration_id": "REG-DEMO-003",
+        "patient_id": "P-DEMO-003",
+        "patient_ref": "D003",
+        "name": "陳志明",
+        "age_group": "65-74",
+        "sex": "M",
+        "triage_category": "3",
+        "priority": "NORMAL",
+        "chief_complaint": "左膝退化性關節炎，擬行人工膝關節置換術",
+        "anesthesia_notes": "糖尿病史，需確認血糖控制；建議脊椎麻醉",
+        "consultation_by": "李醫師",
+        "consultation_completed_at": None,
+        "waiting_minutes": 90,
+        "claimed_by": None,
+        "claimed_at": None
+    }
+]
 
 
 def make_xirs_response(data: dict, hub_revision: int = 0) -> JSONResponse:
@@ -2511,8 +2569,23 @@ async def get_cirs_waiting_anesthesia():
     - needs_anesthesia = 1
 
     這是 v1.1 流程改進的核心：醫師完成看診後勾選「需麻醉」的病患才會出現。
+
+    v1.5.2: 在 Vercel demo 模式下返回模擬資料供測試。
     """
     hub_revision = 0
+
+    # v1.5.2: Vercel demo mode - return simulated patients
+    if IS_VERCEL:
+        return make_xirs_response({
+            "online": True,
+            "source": "demo",
+            "queue": "ANESTHESIA",
+            "patients": DEMO_ANESTHESIA_PATIENTS,
+            "count": len(DEMO_ANESTHESIA_PATIENTS),
+            "demo_mode": True,
+            "demo_note": "這是展示用模擬資料，實際部署請連接 CIRS Hub",
+            "protocol_version": XIRS_PROTOCOL_VERSION
+        })
 
     try:
         async with httpx.AsyncClient(timeout=CIRS_TIMEOUT) as client:
