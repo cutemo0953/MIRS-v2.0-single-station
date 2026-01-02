@@ -75,10 +75,9 @@ CREATE TABLE nhi_procedures (
     keywords TEXT,                       -- '股骨,骨折,ORIF' (逗號分隔)
     pinyin TEXT,                         -- 'guganguzhekaifangfuweishu' (拼音)
 
-    -- 使用頻率
-    is_common BOOLEAN DEFAULT FALSE,     -- 常用標記
-    use_count INTEGER DEFAULT 0,         -- 使用次數（動態更新）
-    last_used DATETIME,                  -- 最後使用時間
+    -- 使用頻率（僅標記，不動態計數）
+    is_common BOOLEAN DEFAULT FALSE,     -- 常用標記（由管理者手動設定）
+    -- 註：use_count/last_used 已移除，改由 ops log 統計
 
     -- 狀態
     is_active BOOLEAN DEFAULT TRUE,
@@ -160,10 +159,9 @@ CREATE TABLE selfpay_items (
     inventory_sku TEXT,                  -- 連動 MIRS 庫存 SKU
     min_stock INTEGER,                   -- 最低庫存警示
 
-    -- 使用頻率
-    is_common BOOLEAN DEFAULT FALSE,
-    use_count INTEGER DEFAULT 0,
-    last_used DATETIME,
+    -- 使用頻率（僅標記，不動態計數）
+    is_common BOOLEAN DEFAULT FALSE,     -- 常用標記（由管理者手動設定）
+    -- 註：use_count/last_used 已移除，改由 ops log 統計
 
     -- 狀態
     is_active BOOLEAN DEFAULT TRUE,
@@ -194,8 +192,9 @@ CREATE TABLE surgery_procedures (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     case_id TEXT NOT NULL,               -- 關聯手術案例
 
-    -- 處置資訊 (最多3筆健保碼)
-    procedure_order INTEGER NOT NULL,    -- 1, 2, 3 (順序)
+    -- 處置資訊
+    -- 註：「最多3筆」為 UI 限制，Schema 不設硬性限制以保留彈性
+    procedure_order INTEGER NOT NULL,    -- 順序（第4筆以後給付0%）
     procedure_code TEXT NOT NULL,        -- 健保代碼
     procedure_name TEXT,                 -- 處置名稱
 
@@ -228,10 +227,10 @@ CREATE TABLE surgery_selfpay_items (
     quantity INTEGER DEFAULT 1,
     subtotal INTEGER,                    -- unit_price * quantity
 
-    -- 稅務
-    is_taxable BOOLEAN DEFAULT TRUE,
-    tax_rate REAL DEFAULT 0.05,          -- 5% VAT
-    tax_amount INTEGER,
+    -- 稅務（v1.1 修正：使用 tax_type 取代 is_taxable）
+    tax_type TEXT DEFAULT 'TAXABLE',     -- 'TAXABLE' | 'EXEMPT' | 'ZERO_RATED'
+    tax_rate REAL DEFAULT 0.05,          -- 5% VAT（當 tax_type='TAXABLE'）
+    tax_amount INTEGER,                  -- 應以整數運算計算，避免浮點誤差
 
     -- 狀態
     status TEXT DEFAULT 'PENDING',       -- 'PENDING', 'BILLED', 'PAID', 'WAIVED'
@@ -248,12 +247,12 @@ CREATE TABLE surgery_selfpay_items (
 
 -- 處置代碼查詢
 CREATE INDEX idx_nhi_procedures_category ON nhi_procedures(category_code);
-CREATE INDEX idx_nhi_procedures_common ON nhi_procedures(is_common, use_count DESC);
+CREATE INDEX idx_nhi_procedures_common ON nhi_procedures(is_common DESC);
 CREATE INDEX idx_nhi_procedures_points ON nhi_procedures(points DESC);
 
 -- 自費品項查詢
 CREATE INDEX idx_selfpay_category ON selfpay_items(category_code, display_order);
-CREATE INDEX idx_selfpay_common ON selfpay_items(is_common, use_count DESC);
+CREATE INDEX idx_selfpay_common ON selfpay_items(is_common DESC);
 CREATE INDEX idx_selfpay_price ON selfpay_items(unit_price);
 
 -- 案例查詢
@@ -602,8 +601,7 @@ async def search_procedures(query: str, limit: int = 20) -> List[dict]:
         WHERE nhi_procedures_fts MATCH ?
         ORDER BY
             p.is_common DESC,
-            relevance,
-            p.use_count DESC
+            relevance
         LIMIT ?
     """, (f'"{query}"*', limit))
 
@@ -768,5 +766,11 @@ D10241-1,邦美傑格 迷你縫合錨釘,5-縫合錨釘,35000,組,TRUE,93
 
 **De Novo Orthopedics Inc. / 谷盺生物科技股份有限公司**
 
-*文件版本: Draft 1.0*
-*更新日期: 2025-12-29*
+*文件版本: Draft 1.1*
+*更新日期: 2026-01-02*
+
+### 修訂紀錄
+| 版本 | 日期 | 變更 |
+|------|------|------|
+| 1.1 | 2026-01-02 | 移除 use_count/last_used (改由 ops log 統計)；is_taxable → tax_type；「3筆」限制移至 UI 層 |
+| 1.0 | 2025-12-29 | 初版 |
