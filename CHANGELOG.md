@@ -6,6 +6,23 @@
 
 ---
 
+## [2.8.0] - 2026-01-03
+
+### 新增 (Added)
+- **健保手術碼完整匯入**：整合健保署第七節手術碼 1,681 筆
+  - 總計 1,687 筆術式代碼（原 255 + 新增 1,432）
+  - 點數範圍：140 ~ 246,516 點
+  - 保留骨科常用 17 筆 `is_common=1` 標記
+- **NHI 萃取腳本**：`scripts/extract_nhi_surgery_codes.py`（從 PDF 萃取）
+- **合併腳本**：`scripts/merge_nhi_surgery_codes.py`（合併到 surgery_codes）
+- **資料包**：`data/packs/nhi_sec7/sec7_surgery_codes_points.csv`
+- **EMT Transfer PWA 規格書**：`docs/DEV_SPEC_EMT_TRANSFER_PWA.md`
+  - 病患轉送物資規劃（氧氣、輸液、設備電量）
+  - 安全係數 ×3 計算
+  - 返站 Recheck + 外帶物資入庫流程
+
+---
+
 ## [2.7.4] - 2026-01-03
 
 ### 新增 (Added)

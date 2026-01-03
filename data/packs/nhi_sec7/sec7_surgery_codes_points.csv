@@ -1,0 +1,1682 @@
+code,points,name,group,subgroup
+62001C,1300,－ 直徑小於一公分 within 1cm in diameter,第七節,顏面皮膚及皮下腫瘤切除術
+62002C,2520,－ 直徑一至二公分 1cm to 2cm in diameter,第七節,顏面皮膚及皮下腫瘤切除術
+62003C,5514,－ 直徑超過二公分 over 2cm in diameter,第七節,顏面皮膚及皮下腫瘤切除術
+62007C,5929,"皮膚全層植補術 FTSG - 小於十平方公分 Full thickness skin graft, (FTSG)",第七節,顏面皮膚及皮下腫瘤切除術
+62008B,9360,管形皮膚移植術 Tube pedicle graft,第七節,顏面皮膚及皮下腫瘤切除術
+62009C,2290,"肌肉或深部組織腫瘤切除術及異物取出術 Excision of muscle or deep tissue tumor, deep foreign body",第七節,顏面皮膚及皮下腫瘤切除術
+62010C,1623,－ 小 小於二公分 within 2cm,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62011C,1927,－ 中 二公分至四公分 2 to 4cm,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62012C,3371,－ 大 四公分至十公分 4 to10cm,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62013C,5751,交指皮瓣移植術 Cross finger skin flap,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62014C,4544,－小於二十五平方公分 within 25 c㎡,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62015B,5267,－二十五至一百平方公分 25 to 100 c㎡,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62016B,3588,－每增加一百平方公分 every incerase of 100c㎡,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62017C,3247,複合移植 Composite graft,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62018C,4352,Ｚ－形皮瓣 Z-plasty,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62019B,3030,氬氣雷射治療 Argon laser therapy,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62020B,3213,二氧化碳雷射手術 CO2 laser operation 註：不得同時申報65079B。,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62021C,3100,腋下汗腺切除術 二邊 Skoog operation,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62022C,8700,－ 直徑小於二公分 within 2cm in diameter,第七節,皮膚惡性腫瘤切除及植皮術
+62023B,10880,－ 直徑二至五公分 2cm to 5cm in diameter,第七節,皮膚惡性腫瘤切除及植皮術
+62024B,13090,－ 直徑超過五公分 over 5cm in diameter,第七節,皮膚惡性腫瘤切除及植皮術
+62025B,10351,肌肉瓣或肌皮瓣 Muscle or myocutaneous flap,第七節,皮膚惡性腫瘤切除及植皮術
+62026B,10880,咽部皮瓣手術 Pharyngeal flap,第七節,皮膚惡性腫瘤切除及植皮術
+62027B,9312,唇部皮瓣手術 Lip flap 註：唇部皮瓣包括Abbe flap及Exlander flap。,第七節,皮膚惡性腫瘤切除及植皮術
+62029B,13111,交腳皮瓣移植術 Cross leg skin flap,第七節,皮膚惡性腫瘤切除及植皮術
+62030B,7540,交掌皮瓣移植術 Cross palm skin flap,第七節,皮膚惡性腫瘤切除及植皮術
+62031B,11124,交臂皮瓣移植術 Cross arm skin flap,第七節,皮膚惡性腫瘤切除及植皮術
+62032B,26627,－ 皮瓣移植 skin flap,第七節,皮膚惡性腫瘤切除及植皮術
+62033B,26765,－ 肌肉移植 muscle flap,第七節,皮膚惡性腫瘤切除及植皮術
+62034B,38342,－ 骨移植 bone flap,第七節,皮膚惡性腫瘤切除及植皮術
+62035B,38342,－ 腸系膜移植 omentum flap,第七節,皮膚惡性腫瘤切除及植皮術
+62036B,38342,－ 小腸移植 intestinal flap,第七節,皮膚惡性腫瘤切除及植皮術
+62037B,26627,－ 游離筋膜瓣移植 free fascia flap,第七節,皮膚惡性腫瘤切除及植皮術
+62038B,38342,－ 游離功能性肌瓣移植 free functioning muscle transfer,第七節,皮膚惡性腫瘤切除及植皮術
+62040B,9420,管型皮片整位術,第七節,皮膚惡性腫瘤切除及植皮術
+62041B,1544,微晶 & 一般磨皮術(小於五公分) Micro & general dermabrasion(<5cm) 註：限皮膚類澱粉症及表皮母斑症病患申報。,第七節,皮膚惡性腫瘤切除及植皮術
+62042B,1640,微晶 & 一般磨皮術(五至十公分) Micro & general dermabrasion(5-10cm) 註：限皮膚類澱粉症及表皮母斑症病患申報。,第七節,皮膚惡性腫瘤切除及植皮術
+62043B,2130,微晶 & 一般磨皮術(超過十公分) Micro & general dermabrasion(>10cm) 註：限皮膚類澱粉症及表皮母斑症病患申報。,第七節,皮膚惡性腫瘤切除及植皮術
+62044B,2200,肌肉切片 Muscle biopsy,第七節,皮膚惡性腫瘤切除及植皮術
+62045B,3336,局部皮瓣(小於一公分),第七節,皮膚惡性腫瘤切除及植皮術
+62046C,3350,局部皮瓣(一至二公分) Local flap (1-2cm) 註：屬西醫基層總額部門院所，除山地離島地區外，限由專 任醫師開立處方及執行始可申報。,第七節,皮膚惡性腫瘤切除及植皮術
+62047C,7310,局部皮瓣(超過二公分) Local flap (>2cm) 註：屬西醫基層總額部門院所，除山地離島地區外，限由專 任醫師開立處方及執行始可申報。,第七節,皮膚惡性腫瘤切除及植皮術
+62049B,5183,手部V-Y 型皮瓣手術 V-Y advancement flap (hand),第七節,皮膚惡性腫瘤切除及植皮術
+62051B,10880,三角胸皮瓣 Delto-pectoralis flap,第七節,皮膚惡性腫瘤切除及植皮術
+62052B,10440,舌瓣 Tongue flap,第七節,皮膚惡性腫瘤切除及植皮術
+62053B,10880,肌移位術 Muscle rotation flap,第七節,皮膚惡性腫瘤切除及植皮術
+62054B,10880,皮腱膜移位術 Fasciocutaneous rotation flap,第七節,皮膚惡性腫瘤切除及植皮術
+62055B,10880,皮肌移位 Myocutaneous rotation flap,第七節,皮膚惡性腫瘤切除及植皮術
+62056B,7540,腹股溝皮瓣移植術 Groin flap,第七節,皮膚惡性腫瘤切除及植皮術
+62058B,24250,大胸肌皮瓣 Pectoralis major myocutaneous flap,第七節,皮膚惡性腫瘤切除及植皮術
+62059B,7310,旋轉皮瓣移植術(手部以外) Rotation flap 註：限手部以外之大型皮瓣移植。,第七節,皮膚惡性腫瘤切除及植皮術
+62060B,7310,移前皮瓣移植術 Advance flap,第七節,皮膚惡性腫瘤切除及植皮術
+62062C,1180,"腫瘤組織檢查切片術,部位未明示 Tumor unspecified site biosy",第七節,皮膚惡性腫瘤切除及植皮術
+62063B,18780,舌再接手術 Replantation of tongue 註：限舌頭完全斷裂行顯微手術者申報。,第七節,皮膚惡性腫瘤切除及植皮術
+62064C,5416,皮膚全層植補術FTSG - 每增加十平方公分 Full-thickness skin graft --add 10 c ㎡,第七節,顏面皮膚及皮下腫瘤切除術
+62065C,6057,"臉、頸部植皮-五平方公分 Face, neck -5c㎡",第七節,顏面皮膚及皮下腫瘤切除術
+62066C,1730,"臉、頸部植皮- 每增加五平方公分 Face, neck -every 5 c㎡ of increase",第七節,顏面皮膚及皮下腫瘤切除術
+62067C,5954,"手部、會陰、腳植皮 -五平方公分 Skin graft for hand,perineum, and foot-5c㎡",第七節,顏面皮膚及皮下腫瘤切除術
+62068C,1644,"手部、會陰、腳植皮 - 每增加五平方公分 Skin graft for hand,perineum, and foot-every 5c㎡",第七節,顏面皮膚及皮下腫瘤切除術
+62069C,4986,V-Y 形皮瓣 V-Y plasty,第七節,臉部以外皮膚及皮下腫瘤摘除術
+62070B,7487,口腔粘膜皮瓣手術 Oral mucous flap 1.口腔粘膜包括齒齦、頰部、顎部及舌部粘膜。 2.內含一般材料費及單次使用鑽針，得另加計百分之七十二。,第七節,皮膚惡性腫瘤切除及植皮術
+62071B,2848,鉺雅鉻雷射手術 Erb-YAG laser operation 註：含一般材料費，得另加計百分之四。,第七節,皮膚惡性腫瘤切除及植皮術
+62072B,10861,水刀清創 Hydrosurgery debridement 1.適應症：二度燙傷以上及總燙傷面積百分之二十以上，接 受自體皮膚移植手術當次得申報水刀清創。 2.支付規範：,第七節,皮膚惡性腫瘤切除及植皮術
+62073B,47775,－單區塊組織瓣 one-perforator,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+62074B,55237,－雙區塊組織瓣 two-perforators,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+62075B,62698,－三區塊以上組織瓣 three-perforators and above,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63001B,5514,－ 單側 unilateral,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63002B,8670,－ 雙側 bilateral,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63003B,6752,－ 單側 unilateral,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63004B,8430,－ 雙側 bilateral,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63005C,4349,－ 單側 unilateral,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63006C,4784,－ 雙側 bilateral,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63007B,25595,－ 單側 unilateral,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63008B,38393,－ 雙側 bilateral,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63009C,7588,皮下乳房切除術 Subcutaneous mastectomy,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63010C,2801,乳房腫瘤組織檢查切片術 Breast tumor biopsy,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63011C,5452,術前定位下乳房腫瘤切除術，單側 Breast tumor excision after needle localization,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63012B,15798,乳房部分切除手術併前哨淋巴結摘除手術－單側 Partial mastectomy and sentinel node(s) excision－unilateral 註： 1.適應症：惡性乳癌或乳房原位癌經診斷疑有高度惡性或侵 犯性乳癌者。 2.支付規範： (1)術中進行切片送病理冷凍切片檢查，以不得申報 63005C、63006C、63010C為原則，倘因術前穿刺無法 確認診斷者，須於病歷註明理由並檢附相關證明備查， 始得申報。 (2)一般材料費，得另加計百分之五十。,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63013B,23637,乳房部分切除手術併標準腋下淋巴廓清術－單側 Partial mastectomy + axillary lymph node dissection－ unilateral 註： 1.適應症：惡性乳癌或乳房原位癌經診斷疑有高度惡性或侵 犯性乳癌者。 2.支付規範：,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63014B,23390,乳房全切除手術併前哨淋巴結摘除手術－單側 Simple mastectomy + sentinel lymph node biopsy－unilateral 註： 1.適應症：惡性乳癌或乳房原位癌經診斷疑有高度惡性或侵 犯性乳癌者。 2.支付規範： (1)不得同時申報：63004B。 (2)術中進行切片送病理冷凍切片檢查，以不得申報 63005C、63006C、63010C為原則，倘因術前穿刺無法 確認診斷者，須於病歷註明理由並檢附相關證明備查， 始得申報。 (3)一般材料費，得另加計百分之三十三。,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63015B,10046,乳房部分切除手術－單側 Partial mastectomy－unilateral 註： 1.適應症：惡性乳癌或乳房原位癌經診斷疑有高度惡性或侵 犯性乳癌者。 2.支付規範： (1)術中進行切片送病理冷凍切片檢查，以不得申報 63005C、63006C、63010C為原則，倘因術前穿刺無法 確認診斷者，須於病歷註明理由並檢附相關證明備查， 始得申報。 (2)一般材料費，得另加計百分之五十四。,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+63016B,18555,乳房全切除手術－單側 Simple mastectomy－unilateral 註： 1.適應症：惡性乳癌或乳房原位癌經診斷疑有高度惡性或侵 犯性乳癌者。 2.支付規範： (1)不得同時申報：63004B。 (2)術中進行切片送病理冷凍切片檢查，以不得申報 63005C、63006C、63010C為原則，倘因術前穿刺無法 確認診斷者，須於病歷註明理由並檢附相關證明備查， 始得申報。 (3)一般材料費，得另加計百分之三十三。,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64001B,4458,骨開窗術 Fenestration 註：一般材料費及單次使用鑽石鑽頭、氣動切割鑽頭，得另 加計百分之一百二十九。,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64002B,4018,骨或軟骨移植術 Bone or osteochondral graft,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64003C,5852,"骨髓炎之死骨切除術或蝶形手術及擴創術 （包含指骨、掌骨、蹠骨） Sequestretomy or saucerization & debridement for osteomyelitis (including phalanges, metacarpals, metatarsals) 註： 1.如係膿瘍切開者應依切開創傷處理申報。 2.一般材料費及單次使用鑽石鑽頭、氣動切割鑽頭，得另加 計百分之一百十一。",第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64004C,6771,"骨髓炎之死骨切除術或蝶形手術及擴創術 （包含脛骨、腓骨、橈骨、尺骨、膝骨、骨盤） Sequestretomy or saucerization & debridement for osteomyelitis(including tibia, fibula, radius ulna humerus, pelvis) 註： 1.如係膿瘍切開者依切開創傷處理申報。 2.一般材料費及單次使用鑽石鑽頭、氣動切割鑽頭，得另加 計百分之一百零三。",第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64005B,6802,骨髓炎之死骨切除術或蝶形手術及擴創術 (包括：頭骨、顱骨、股骨、肋骨、脊椎骨) Sequestrectomy or saucerization & debridement for osteomyelitis 註： 1.如係膿瘍切開者依切開創傷處理申報。 2.一般材料費及單次使用鑽石鑽頭、氣動切割鑽頭，得另加 計百分之一百零三。,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64006B,5681,"矯正切骨術－肱骨、尺骨、橈骨、股骨、脛骨或腓骨 Corrective osteotomy of humerus,ulna,radius,femur,tibia or fibula 註：一般材料費及單次使用骨鋸片，得另加計百分之一百。",第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64007B,4315,骨片切取術 Ostectomy 註：一般材料費及單次使用鑽石鑽頭、氣動切割鑽頭，得另 加計百分之一百三十二。,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64008C,2566,鼻骨骨折閉鎖復位術 Closed reduction of nasal bone fracture,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64012B,4296,脊椎肋骨突起切除術 Costo-transversectomy,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64013B,4401,"鎖骨部份摘除術 Excision of clavicle, partial",第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64014B,7380,"鎖骨全部摘除術 Excision of clavicle, total",第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64015C,5604,鎖骨骨折開放復位術 Open Reduction of clavicle fracture,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64016C,2058,鎖骨骨折固定術 Close reduction & immobilization of fractured clavicle,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64017C,460,肋骨骨折固定術（膠布固定法） Immobilization of rib fracture,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64020B,2510,肋骨部份切除術 Partial excision of rib,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64021B,1790,胸壁無熱性膿瘍根治手術 Radical curettage of thoracic cold abscess,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64022B,7285,－ 大腿 thigh,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64023B,6057,"－ 小腿、上臂、前臂 leg, arm, forearm",第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64024B,4555,"－ 腕、踝 wrist, ankle",第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64025C,3701,"－ 指、趾 finger, toe",第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64026B,4532,"－ 大腿、小腿、上臂、前臂 thigh, leg, arm, forearm",第七節,斷端成形術
+64027C,3144,"－ 指、趾 finger,toe",第七節,斷端成形術
+64028C,11000,股骨幹骨折開放性復位術 Open reduction for fracture of femoral shaft 註：一般材料費及單次使用鑽頭，得另加計百分之七十。,第七節,斷端成形術
+64029B,12000,股骨頸骨折開放性復位術 Open reduction for fracture of femoral neck 註： 1.包含股骨粗隆間或股骨粗隆周邊骨折 including intertrochan or peritrochanteric fracture。 2.一般材料費及單次使用骨鋸片，得另加計百分之七十六。,第七節,斷端成形術
+64030B,14000,"股骨頸骨折開放性復位術,帶肌肉血管骨移植 Open reduction for fracture of femoral neck with muscle pedicle bone graft",第七節,斷端成形術
+64031C,10000,脛骨骨折開放性復位術 Open reduction for fracture of tibia 註：一般材料費及單次使用鑽頭，得另加計百分之七十二。,第七節,斷端成形術
+64032B,4938,"橈骨、尺骨骨折開放性復位術 Open reduction for fracture of radius,ulna 註：一般材料費及單次使用鑽頭，得另加計百分之九十一。",第七節,斷端成形術
+64034B,4480,膝蓋骨骨折開放性復位術 Open reduction for fracture of patella,第七節,斷端成形術
+64035C,6720,"腕、跗、掌、蹠骨骨折開放性復位術 Open reduction for fracture of carpal, tarsal,meta-carpal,meta-tarsal 註：一般材料費及單次使用整型用電燒頭，得另加計百分之 九十七。",第七節,斷端成形術
+64036C,3176,指、趾骨骨折開放性復位術 Open reduction for fracture of fingers and toes,第七節,斷端成形術
+64037B,3352,手、足骨摘除術 Excision of carpal and tarsal bone,第七節,斷端成形術
+64041C,3250,大腿骨骨折徒手復位術 Close reduction for fracture of femur bone,第七節,斷端成形術
+64042C,3857,脊椎骨、盆骨骨折徒手復位術 Close reduction for fracture of spine or pelvis bone,第七節,斷端成形術
+64043C,2928,"下腿骨、上臂骨骨折徒手復位術 Close reduction for fracture of tibia, humerus",第七節,斷端成形術
+64044C,2845,前臂骨骨折徒手復位術 Close reduction for fracture of forearm bone,第七節,斷端成形術
+64045C,2474,腕骨骨折徒手復位術 Close reduction for fracture of carpal bone,第七節,斷端成形術
+64046C,2262,踝骨骨折徒手復位術 Close reduction for fracture of ankle bone,第七節,斷端成形術
+64047C,1800,掌骨骨折徒手復位術 Close reduction for fracture of metacarpal bone 註：申報費用時應檢附x光片。,第七節,斷端成形術
+64048C,1206,蹠骨骨折徒手復位術 Close reduction for fracture of metatarsal bone,第七節,斷端成形術
+64049C,1740,指、趾骨骨折徒手復位術 Close reduction for fracture of bones for fingers and toes 註：申報費用時應檢附x光片。,第七節,斷端成形術
+64050B,6140,膝蓋骨(髕骨)位置重整術 Realiqnment of patella,第七節,斷端成形術
+64052B,7391,－ 股關節 hip,第七節,急性化膿性關節炎切開術
+64053B,6373,"－ 肩關節、肘關節、腕關節、膝關節、踝關節 shoulder, elbow, wrist , knee or ankle",第七節,急性化膿性關節炎切開術
+64054B,8290,－ 股關節 hip,第七節,滑膜切除術或關節囊切除術
+64055B,7080,－ 膝關節 knee,第七節,滑膜切除術或關節囊切除術
+64056B,5632,"－ 肩關節、肘關節、腕關節或踝關節 shoulder elbow, wrist or ankle",第七節,滑膜切除術或關節囊切除術
+64057B,4473,－ 指趾 phalanges,第七節,滑膜切除術或關節囊切除術
+64058B,4820,"指、趾關節固定術 Arthrodesis of finger, toe",第七節,滑膜切除術或關節囊切除術
+64059B,6149,肘關節截斷術 Disarticulation of elbow,第七節,滑膜切除術或關節囊切除術
+64060B,6324,腕關節截斷術 Disarticulation of wrist,第七節,滑膜切除術或關節囊切除術
+64061B,5720,膝關節截斷術 Disarticulation of knee,第七節,滑膜切除術或關節囊切除術
+64062B,6424,踝關節截斷術 Disarticulation of ankle,第七節,滑膜切除術或關節囊切除術
+64063C,3609,指、趾關節截斷術 Disarticulation of finger or toe,第七節,滑膜切除術或關節囊切除術
+64064B,7212,股關節脫位開放性復位術 Open reduction for dislocation of hip joint,第七節,滑膜切除術或關節囊切除術
+64065B,5834,肩關節脫位開放性復位術 Open reduction for dislocation of shoulder joint,第七節,滑膜切除術或關節囊切除術
+64066C,5899,肘關節脫位開放性復位術 Open reduction for dislocation of elbow joint,第七節,滑膜切除術或關節囊切除術
+64067C,6349,膝關節脫位開放性復位術 Open reduction for dislocation of knee joint,第七節,滑膜切除術或關節囊切除術
+64068C,4090,腕關節脫位開放性復位術 Open reduction for dislocation of wrist joint,第七節,滑膜切除術或關節囊切除術
+64069C,4548,踝關節脫位開放性復位術 Open reduction for dislocation of ankle joint,第七節,滑膜切除術或關節囊切除術
+64070C,3380,"指、趾關節脫位開放性復位術 Open reduction for dislocation of finger, toe 註：一般材料費及單次使用小骨鋸片，得另加計百分之八十",第七節,滑膜切除術或關節囊切除術
+64071B,4257,胸鎖關節脫位開放性復位術 Open reduction for dislocation of sterno-clavicular,第七節,滑膜切除術或關節囊切除術
+64072B,5684,肩鎖關節脫位開放性復位術 Open reduction for dislocation of acromio-clavicle joint,第七節,滑膜切除術或關節囊切除術
+64073C,2401,股關節脫位徒手復位術 Close reduction for dislocation of hip joint,第七節,滑膜切除術或關節囊切除術
+64074C,1540,肩關節脫位徒手復位術 Close reduction for dislocation of shoulder joint,第七節,滑膜切除術或關節囊切除術
+64075C,1289,肘關節脫位徒手復位術 Close reduction for dislocation of elbow joint,第七節,滑膜切除術或關節囊切除術
+64076C,1513,膝關節脫位徒手復位術 Close reduction for dislocation of knee joint,第七節,滑膜切除術或關節囊切除術
+64077C,1790,腕關節脫位徒手復位術 Close reduction for dislocation of wrist joint,第七節,滑膜切除術或關節囊切除術
+64078C,1246,踝關節脫位徒手復位術 Close reduction for dislocation of ankle joint,第七節,滑膜切除術或關節囊切除術
+64079C,852,"指、趾關節脫位徒手復位術 Close reduction for dislocation of finger,toe",第七節,滑膜切除術或關節囊切除術
+64080C,2853,徒手關節授動術 Brisement force (manipulation of joint),第七節,滑膜切除術或關節囊切除術
+64081C,2500,板機指手術 Trigger finger 註：媽媽手手術(Trigger finger or De Quervain's Tendinitis) 可 比照申報,第七節,滑膜切除術或關節囊切除術
+64082B,4162,"－腰肌炎、臂肌炎或大腿肌炎 myositis of positis , gluteal or femural",第七節,滑膜切除術或關節囊切除術
+64083B,3274,－其他部位 other myositis,第七節,滑膜切除術或關節囊切除術
+64084B,3963,斜角肌切斷術 Myotomy of scalaneus muscle,第七節,滑膜切除術或關節囊切除術
+64085B,5977,斜頸手術 Operation for torticollis/wry neck,第七節,滑膜切除術或關節囊切除術
+64086B,5861,"頸部瘻管、頸部囊腫摘出術 Excision of cervical fistula, cervical cyst",第七節,滑膜切除術或關節囊切除術
+64087C,2765,腱鞘囊摘出術、液囊腫瘤摘出術 Excision of ganglion or hygroma,第七節,滑膜切除術或關節囊切除術
+64088C,4807,腱、韌帶皮下斷裂縫合術 Subcutaneous tenorrhaphy,第七節,滑膜切除術或關節囊切除術
+64089C,2727,腱、韌帶皮下切斷手術 Subcutaneous tenectomy 註：屬西醫基層總額部門院所，除山地離島地區外，限由專 任醫師開立處方及執行始可申報。,第七節,滑膜切除術或關節囊切除術
+64090C,4874,－ 單腱 single,第七節,肌腱修補術
+64091C,1871,－ 每增加一條 one added,第七節,肌腱修補術
+64092B,4540,指關節側韌帶切除術 Capsulectomy of digital joint,第七節,肌腱修補術
+64095B,2754,Gillie氏手術（瞼外翻手術） Gillies' operation,第七節,肌腱修補術
+64096B,3010,"顴骨，封閉性復位Zygoma,close reduction",第七節,肌腱修補術
+64098B,7501,－ 簡單 simple,第七節,肌腱修補術
+64099B,16501,－ 複雜 complicated 註：64099B一般材料費及單次使用鑽頭，得另加計百分之六 十四。,第七節,肌腱修補術
+64100B,2603,顎骨、口蓋、舌良性腫瘤摘除術 Extirpation of benign tumors on palate or tongue 註：一般材料費及單次使用鑽頭，得另加計百分之一百二十 一。,第七節,肌腱修補術
+64101B,4812,－ 單一骨折 single,第七節,顎骨骨折開放手術
+64102B,6636,－ 複雜骨折 multiple,第七節,顎骨骨折開放手術
+64103B,5861,下顎骨斷離術 Mandibular osteotomy,第七節,顎骨骨折開放手術
+64104B,5136,－ 邊緣切除marginal,第七節,顎骨骨折開放手術
+64105B,7640,－ 部份切除 partial,第七節,顎骨骨折開放手術
+64106B,8184,－ 半切除hemi-resection,第七節,顎骨骨折開放手術
+64107C,2805,下顎骨脫位復位術 Reduction of dislocation of mandibular,第七節,顎骨骨折開放手術
+64108B,11154,下顎骨骨折開放性復位（簡單） Open reduction of mandible(simple),第七節,顎骨骨折開放手術
+64109B,6528,上顎骨懸掛式鋼絲 Maxilla suspension wiring,第七節,顎骨骨折開放手術
+64110B,7030,"上顎骨簡單開放性復位 Maxilla open reduction, simple",第七節,顎骨骨折開放手術
+64111B,14898,"上顎骨複雜開放性復位 Maxilla open reduction, complicated",第七節,顎骨骨折開放手術
+64112B,14081,－ 矽板植入 silicon sheet implant,第七節,眼眶底開放性復位術
+64113B,18430,－ 自體植入 autograft,第七節,眼眶底開放性復位術
+64114B,7392,上下顎間鋼絲固定 Inter-maxillary wiring (Inter-dental wiring),第七節,眼眶底開放性復位術
+64115B,14450,顎關節強直解除術 Release of T.M. joint ankylosis,第七節,眼眶底開放性復位術
+64116C,4150,頸部良性腫瘤切除，簡單 Benign neck mass excision (simple),第七節,眼眶底開放性復位術
+64117C,6816,跟腱斷裂縫合術 Rupture of achilles tendon primary suture,第七節,眼眶底開放性復位術
+64118B,5263,臏骨韌帶斷裂縫合術 Rupture of patella tendon repair,第七節,眼眶底開放性復位術
+64119B,5493,雙頭肌腱斷裂縫合術 Rupture of biceps tendon repair,第七節,眼眶底開放性復位術
+64120B,5862,四頭肌腱斷裂縫合術 Rupture of quadriceps tendon repair,第七節,眼眶底開放性復位術
+64121B,5534,－小破裂 small,第七節,眼眶底開放性復位術
+64122B,7070,－大破裂 large or massive 註： 1.64122B一般材料費及單次使用小骨鋸片、鑽頭、關節鏡專 用套管，得另加計百分之一百十二。 2.64121B及64122B不得同時申報64285B。,第七節,眼眶底開放性復位術
+64123B,5210,臀大肌，肩三角肌纖維化(攣縮)鬆弛術 Gluteal deltoid muscle contracture or snaping hip release.,第七節,眼眶底開放性復位術
+64124B,3765,肩峰成形術Acromioplasty,第七節,眼眶底開放性復位術
+64125C,5008,脛骨粗隆結節切除術或骨融合術 Excision or fusion of tibial tuberosity,第七節,眼眶底開放性復位術
+64126B,4853,臏骨半脫位外側放鬆術 Patella subluxation lateral release,第七節,眼眶底開放性復位術
+64127C,4980,臏骨軟骨軟化症造孔術 Chondromalacia of patella(drilling or shaving),第七節,眼眶底開放性復位術
+64128B,4940,足踝韌帶修補術 Repair of ankle joint ligaments,第七節,眼眶底開放性復位術
+64132C,4904,大腳趾外翻 Hallux valgus (McBride procedure),第七節,眼眶底開放性復位術
+64133C,5275,大腳趾外翻（截骨術）Hallux valgus (Chevron) 註：一般材料費及單次使用骨鋸片，得另加計百分之一百十 四。,第七節,眼眶底開放性復位術
+64134B,8587,拇指基關節韌帶成形術 Ligament reconstruction of basal joint,第七節,眼眶底開放性復位術
+64135B,7230,拇指基關節韌帶植入術 Ligament interposition of basal joint,第七節,眼眶底開放性復位術
+64136B,11371,掌骨肌膜植入術 Fascial interposition for carpal bone,第七節,眼眶底開放性復位術
+64137B,5186,手部根蒂皮瓣移植術,第七節,眼眶底開放性復位術
+64138C,4625,根蒂皮瓣分離術 Division of pedicle flap,第七節,眼眶底開放性復位術
+64140C,4640,甲床與手指重建術 Reconstruction of nail,第七節,眼眶底開放性復位術
+64141C,11301,一般瘢痕攣縮鬆弛術 Release of scar contracture 註： 1.限有顯著運動限制者。 2.組織擴張器之植入或取出重建比照申報。,第七節,眼眶底開放性復位術
+64142B,4910,骨瘻抑制術 Epiphysiodesis (include stapling),第七節,眼眶底開放性復位術
+64143B,6330,骨關節腫瘤摘除術 Excision of tumor mass of bone and joint 註：一般材料費及單次使用鑽石鑽頭、氣動切割鑽頭，得另 加計百分之一百零七。,第七節,眼眶底開放性復位術
+64144B,8286,脊椎椎體搔爬術或切除術，單節椎體 Curettage or excision of single vertebral body,第七節,眼眶底開放性復位術
+64148B,22812,骨盤半切斷術 Hemipelvectomy,第七節,眼眶底開放性復位術
+64149B,10140,上顎骨惡性腫瘍摘除術合併淋巴切除 Excision operation of malignant tumor of upper jaw with lymphadectomy,第七節,眼眶底開放性復位術
+64150B,18000,上顎骨惡性腫瘍摘除術合併頸部清除術 Excision operation of malignant tumor of upper jaw with neck dissection,第七節,眼眶底開放性復位術
+64151B,10140,下顎骨惡性腫瘍摘除術合併淋巴切除 Excision operation of malignant tumor of lower jaw with lymphadectomy,第七節,眼眶底開放性復位術
+64152B,21600,下顎骨惡性腫瘍摘除術合併頸部清除 Excision operation of malignant tumor of lower jaw with neck dissection,第七節,眼眶底開放性復位術
+64153B,26157,－ 一隻手指 one finger,第七節,眼眶底開放性復位術
+64154B,34416,－ 二隻手指 two fingers,第七節,眼眶底開放性復位術
+64155B,50076,－ 三隻手指 three fingers,第七節,眼眶底開放性復位術
+64156B,65724,－ 四隻手指 four fingers,第七節,眼眶底開放性復位術
+64157B,81360,－ 五隻手指 five fingers,第七節,眼眶底開放性復位術
+64158B,36970,"斷肢再接手術 Replantation-arm, leg ,metatarsal or foot 註：限有顯微手術能力特約醫院實施，申報時應檢附術前術 後彩色照片。",第七節,註：限有顯微手術能力特約醫院實施，申報時應檢附術前術
+64159B,57036,"趾至指斷指再接手術，一指，包括趾切斷及受植部位準備 Including toe replantation, toe to finger amputation & recipient site preparation, one finger 註：限有顯微手術能力特約醫院實施，申報時應檢附術前術 後彩色照片。",第七節,註：限有顯微手術能力特約醫院實施，申報時應檢附術前術
+64160B,13190,脊椎骨折開放性復位術 Open reduction for fracture of spine,第七節,註：限有顯微手術能力特約醫院實施，申報時應檢附術前術
+64161B,10560,骨盆骨折開放性復位術 Open reduction for fracture of pelvis,第七節,註：限有顯微手術能力特約醫院實施，申報時應檢附術前術
+64162B,19608,全股關節置換術 Total hip replacement 註：一般材料費及單次使用骨鋸片，得另加計百分之六十七。,第七節,註：限有顯微手術能力特約醫院實施，申報時應檢附術前術
+64163B,9320,全肩關節置換術 Total shoulder replacement 註：不得同時申報64284B、64285B。,第七節,註：限有顯微手術能力特約醫院實施，申報時應檢附術前術
+64164B,19608,全膝關節置換術 Total knee replacement 註：一般材料費及單次使用切骨鋸片、鋸片，得另加計百分 之六十六。,第七節,註：限有顯微手術能力特約醫院實施，申報時應檢附術前術
+64165B,9035,全肘關節置換術 Total elbow replacement,第七節,註：限有顯微手術能力特約醫院實施，申報時應檢附術前術
+64166B,8830,全腕關節置換術 Total wrist replacement,第七節,註：限有顯微手術能力特約醫院實施，申報時應檢附術前術
+64167B,8830,全踝關節置換術 Total ankle replacement 註：不得同時申報64282B。,第七節,註：限有顯微手術能力特約醫院實施，申報時應檢附術前術
+64168B,4292,全指、趾關節置換術 Total finger or toe replacement,第七節,註：限有顯微手術能力特約醫院實施，申報時應檢附術前術
+64169B,11550,－ 只置換股骨髁或脛骨高丘或半膝關節或只換髕骨 femoral condylar or tibial plateau or unicompartment 註： 1.全人工膝蓋骨置換術比照申報。 2.64169B一般材料費及單次使用骨鋸片、鑽頭，得另加計百 分之九十六。,第七節,部分關節置換術併整型術
+64170B,11500,－ 只置換髖臼或股骨或半股關節或半肩關節 cup or hip prosthesis or unicompartment 註：64170B一般材料費及單次使用鋸片，得另加計百分之六 十五。,第七節,部分關節置換術併整型術
+64171B,13460,股關節整型術 Arthroplasty of hip joint 註： 1.不含關節置換手術的關節整型術。 2.一般材料費及單次使用骨鋸片，得另加計百分之七十三。,第七節,部分關節置換術併整型術
+64172B,8740,肘關節整型術 Arthroplasty of elbow joint 註：不含關節置換手術的關節整型術,第七節,部分關節置換術併整型術
+64173B,8740,肩關節整形術 Arthroplasty of shoulder joint 註：不含關節置換手術的關節整型術,第七節,註：不含關節置換手術的關節整型術
+64174B,6615,腕關節整形術 Arthroplasty of wrist joint 註：不含關節置換手術的關節整型術,第七節,註：不含關節置換手術的關節整型術
+64175B,7920,踝關節整形術 Arthroplasty of ankle joint 註： 1.不含關節置換手術的關節整型術 2.不得同時申報64282B。,第七節,註：不含關節置換手術的關節整型術
+64176B,9090,膝關節整形術 Arthroplasty of knee joint 註：不含關節置換手術的關節整型術,第七節,1.不含關節置換手術的關節整型術
+64177B,6300,全指、趾關節、全掌指及蹠趾成形術 Arthroplasty of finger、toe、metatarsal or metacarpal joint 註：不含關節置換手術的關節整型術,第七節,註：不含關節置換手術的關節整型術
+64178B,13989,股關節固定術 Arthrodesis of hip joint,第七節,註：不含關節置換手術的關節整型術
+64179B,11364,肩關節固定術 Arthrodesis of shoulder joint,第七節,註：不含關節置換手術的關節整型術
+64180B,9040,膝關節固定術 Arthrodesis of knee joint,第七節,註：不含關節置換手術的關節整型術
+64181B,9840,肘關節固定術 Arthrodesis of elbow joint,第七節,註：不含關節置換手術的關節整型術
+64182B,6300,腕關節或腕骨、掌骨關節固定術 Arthrodesis of wrist joint or carpal joint,第七節,註：不含關節置換手術的關節整型術
+64183B,8200,踝關節固定術 Arthrodesis of ankle joint 註：不得同時申報64282B。,第七節,註：不含關節置換手術的關節整型術
+64184B,14580,股關節截斷術 Disarticulation of hip,第七節,註：不含關節置換手術的關節整型術
+64185B,12672,肩關節截斷術 Disarticulation of shoulder,第七節,註：不含關節置換手術的關節整型術
+64186B,6252,顎關節授動術 Arthoplasty of temporomandibular joint,第七節,註：不含關節置換手術的關節整型術
+64187B,11830,十字韌帶重建術 Reconstruction of cruciate ligament 註： 1.不得同時申報64283B。 2.一般材料費及單次使用電動刨刀，得另加計百分之七十。,第七節,註：不含關節置換手術的關節整型術
+64188B,7060,十字韌帶修補術 Repair of cruciate ligament,第七節,註：不含關節置換手術的關節整型術
+64189B,6040,肌腱移植術－單腱 Tendon graft-single,第七節,註：不含關節置換手術的關節整型術
+64190B,2120,註：每增加一條加 one added。,第七節,註：不含關節置換手術的關節整型術
+64191B,6000,肌腱轉移或移位 Tendon transposition or tendon transfer,第七節,註：不含關節置換手術的關節整型術
+64192B,2975,註：每增加一條加one added。,第七節,註：不含關節置換手術的關節整型術
+64193B,4207,肌腱放長術 Tendon lengthening,第七節,註：不含關節置換手術的關節整型術
+64194C,4000,肌腱黏連分離術 Tenolysis,第七節,註：不含關節置換手術的關節整型術
+64195C,5236,肌腱或韌帶完全切斷修補 Tendon or ligament repair (complete disruption),第七節,註：不含關節置換手術的關節整型術
+64196B,7640,"肌腱或韌帶修補，囊內 Tendon or ligament repair , intraarticular",第七節,註：不含關節置換手術的關節整型術
+64197C,6046,肌腱切開或筋膜切開 Tenotomy or fasciotomy,第七節,註：不含關節置換手術的關節整型術
+64199B,2890,"－ 腕、踝 wrist, ankle",第七節,註：不含關節置換手術的關節整型術
+64200B,2540,"－ 指、趾 finger, toe",第七節,註：不含關節置換手術的關節整型術
+64201B,32680,人工全髖關節再置換 Revision total hip replacement,第七節,註：不含關節置換手術的關節整型術
+64202B,32680,人工全膝關節再置換 Revision total knee replacement 註：一般材料費及單次使用骨鋸片，得另加計百分之六十二。,第七節,註：不含關節置換手術的關節整型術
+64203B,9830,髖關節切除成形術 Girdlestone procedure of hip,第七節,註：不含關節置換手術的關節整型術
+64204B,21167,"惡性骨瘤廣泛切除(一次) Wide excision-bone tumor,malignant",第七節,註：不含關節置換手術的關節整型術
+64205B,25574,"惡性骨瘤二次廣泛切除 Wide excision-bone,soft tissue,tumor, malignant, two stage",第七節,註：不含關節置換手術的關節整型術
+64206B,9830,"良性骨瘤刮除術及骨移植 Benign bone tumor, curettage and bone graft 註：一般材料費及單次使用鑽石鑽頭、氣動切割鑽頭，得另 加計百分之八十八。",第七節,註：不含關節置換手術的關節整型術
+64207B,17183,"軟組織惡性腫瘤廣泛切除 Wide excision – soft tissue,tumor, malignant",第七節,註：不含關節置換手術的關節整型術
+64208C,9080,"軟組織良性腫瘤切除術,大或深 Excision of soft tissue tumor, benign, large or deep 註：一般材料費及單次使用整型用電燒頭，得另加計百分之 八十五。",第七節,註：不含關節置換手術的關節整型術
+64209B,28152,上肢廣泛性肩關節截除術 Forequater amputation,第七節,註：不含關節置換手術的關節整型術
+64210B,6780,跟腱斷裂重建術 Rupture of achilles tendon reconstruction,第七節,註：不含關節置換手術的關節整型術
+64211B,6780,臏骨韌帶斷裂重建術 Rupture of patella tendon reconstruction,第七節,註：不含關節置換手術的關節整型術
+64212B,6780,"膝內外側韌帶修補術 MCL, LCL repair",第七節,註：不含關節置換手術的關節整型術
+64213B,9100,"膝內外側韌帶重建術 MCL, LCL reconstruction",第七節,註：不含關節置換手術的關節整型術
+64214B,6780,踝前脛腓韌帶重建術 ATF reconstruction,第七節,註：不含關節置換手術的關節整型術
+64218B,8000,半月軟骨部分切除或修補術 Partial menisetomy or meniscus repair 註： 1.含內視鏡費在內。 2.一般材料費及單次使用關節鏡磨刀，得另加計百分之九十 八。,第七節,註：不含關節置換手術的關節整型術
+64219B,7900,"復發性肩關節前脫臼,開放性復位及關節囊成形術 Recurrent anterior shoulder dislocation capsular shift procedure",第七節,註：不含關節置換手術的關節整型術
+64227B,7260,拇指基關節置換術 Prothetic arthroplasty of basal joint,第七節,註：不含關節置換手術的關節整型術
+64228B,4971,區域筋膜切除術 Regional fasciectomy 註：一般材料費及單次使用整型用電燒頭，得另加計百分之 一百十二。,第七節,註：不含關節置換手術的關節整型術
+64229B,9200,島狀根帶蒂皮瓣移植 Island pedicle flap,第七節,註：不含關節置換手術的關節整型術
+64230B,22716,"游離骨骼肌肉移植術 Free vascularized bone graft, free muscle graft",第七節,註：不含關節置換手術的關節整型術
+64231B,21542,拇指重建手術 Pollicization,第七節,註：不含關節置換手術的關節整型術
+64232B,7760,掌側板關節成形術 Volar plate arthroplasty,第七節,註：不含關節置換手術的關節整型術
+64233B,5310,人工肌鍵植入術 Tendon prosthesis implant,第七節,註：不含關節置換手術的關節整型術
+64234B,6040,遠端橈尺關節重建術 Distal radio-ulnar joint reconstruction,第七節,註：不含關節置換手術的關節整型術
+64235B,9804,近關節肩岬骨骨折開放性復位術 Open reduction for scapula fracture juxta-articular,第七節,註：不含關節置換手術的關節整型術
+64236B,15901,髖臼骨折開放性復位術 Open reduction for acetabulum or hip socket fracture,第七節,註：不含關節置換手術的關節整型術
+64237C,4597,骨骼外固定器裝置術 Application of external fixation appratus 註： 1.未作開放整復手術逕行裝置之病人按支付點數金額給付。 2.如併行開放整復手術之病人依各該手術項目申報。 3.一般材料費及單次使用小骨鋸片，得另加計百分之八十。,第七節,註：不含關節置換手術的關節整型術
+64238B,6371,股骨頭壞死鑽洞手術 Cord decompression for ANFH (trephing),第七節,註：不含關節置換手術的關節整型術
+64239B,8000,"開放性或閉鎖性肱骨粗隆或骨幹或踝部骨折，開放性復位術 Open reduction for closed or open humeral fracture; tuberosity, shaft or coudyles 註：一般材料費及單次使用鑽頭，得另加計百分之七十九。",第七節,註：不含關節置換手術的關節整型術
+64240B,15400,－縮短Shorting,第七節,註：不含關節置換手術的關節整型術
+64241B,16800,－延長Lengthening,第七節,註：不含關節置換手術的關節整型術
+64242B,4827,"橈骨頭切除術 Excision,radial head",第七節,註：不含關節置換手術的關節整型術
+64243B,3000,－關節鏡探查手術，併施行滑膜切片，灌洗，清創 Arthroscopy with synovial biopsy，irrigation & larvage ， debridement,第七節,註：不含關節置換手術的關節整型術
+64244B,8000,－關節鏡下關節面磨平成形術，打洞，游離體或骨軟骨碎片 取出手術 Arthroscopic shaving or abrasion arthroplasty，drilling or pinning or removal of loose body or osteochrondral fragment 註： 1.以上64243B及64244B二項點數皆含鏡檢費用。 2.64243B一般材料費及單次使用關節鏡磨刀，得另加計百分,第七節,註：不含關節置換手術的關節整型術
+64245C,4182,骨內固定物拔除術 Removal of internal fixator －骨盆，髖骨，肱骨，股骨，尺骨，橈骨，脛骨,第七節,取出手術
+64246B,6000,骨內固定物拔除術 Removal of internal fixator －脊椎,第七節,取出手術
+64247C,3589,骨內固定物拔除術 Removal of internal fixator －其他部位 註：一般材料費及單次使用鑽頭，得另加計百分之八十。,第七節,取出手術
+64248C,680,尾胝骨骨折及脫位徒手復位術 Close reduction for fracture or dislocation of coccyx joint,第七節,取出手術
+64249B,4480,膝蓋骨切除術 Patellectomy,第七節,取出手術
+64251B,5928,龐氏杵狀足矯正術 Clubfoot Ponseti manipulation,第七節,取出手術
+64254C,2030,貝克氏囊腫截除術 Baker’s cyst excision,第七節,取出手術
+64255B,8240,顎骨矯正術(先天畸型矯正) Orthognathic surgery,第七節,取出手術
+64257B,9700,顏面骨移植術(先天畸形或外傷腫瘍摘除) Facial bone graft,第七節,取出手術
+64258B,15650,人工半髖關節再置換術 Revision of bipolar prothesis,第七節,取出手術
+64259B,11500,半肩關節成形術 Shoulder joint hemiarthroplasty,第七節,取出手術
+64260B,16960,三重骨盆股骨切開加股骨縮短術(先天髖關節脫臼) Pelvic triple osteotomy and femorl shortening(CHD),第七節,取出手術
+64261C,5070,肌腱固定術Tenodesis,第七節,取出手術
+64262C,5070,肌肉修補術(四肢) Muscle repair,第七節,取出手術
+64263B,7640,膝關節半月軟骨修補術Meniscus repair 註：不含內視鏡之費用,第七節,取出手術
+64264C,3240,肌切開術 Myotomy,第七節,取出手術
+64265C,3240,內視鏡腕道減壓術 Endoscopic carpal tunnel release,第七節,取出手術
+64266B,15300,脊椎骨全部切除術 Vertebroectomy,第七節,取出手術
+64267C,6000,舟狀骨骨折開放性復位術 Scaphoid Bone Fracture （Open reduction of Scaphoid Fracture）,第七節,取出手術
+64268B,4265,矯正切骨術-其他部位;骨盆除外 Corrective osteotomy-others;pelvic bone excluded 註：一般材料費及單次使用骨鋸片，得另加計百分之一百十 六。,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64269B,6737,脊椎體矯正切骨術(一節) Corrective osteotomy for one vertebral segment 註：脊椎體超過二節者，應以本項再加申報64270B 一次， 依此類推。,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64270B,3224,脊椎體矯正切骨術，每多一節 Each additional vertebral segment of corrective osteotomy,第七節,顯微血管游離瓣手術－穿通枝瓣移植
+64271C,4389,橈骨尺骨遠心端骨折經皮穿刺內固定復位手術 Percutaneous internal fixation for fracture of distal radius or ulna,第七節,斷端成形術
+64272C,5691,腓外踝或脛內踝單一骨折開放性復位術 Open reduction for unimalleolar fracture of ankle,第七節,滑膜切除術或關節囊切除術
+64273C,6695,足踝關節內、外或後踝之雙踝或三踝骨折開放性復位術 Open reduction for bimalleolar or trimalleolar fracture of ankle,第七節,滑膜切除術或關節囊切除術
+64274C,10855,"臉、頸部瘢痕攣縮鬆弛術 Release of scar contracture, face, neck 註： 1.限有顯著運動限制者。 2.組織擴張器之植入或取出重建比照申報。",第七節,眼眶底開放性復位術
+64275C,9733,"手、腳、會陰瘢痕攣縮鬆弛術 Release of scar contracture, hand, foot, perineum 註： 1.限有顯著運動限制者。 2.組織擴張器之植入或取出重建比照申報。",第七節,眼眶底開放性復位術
+64276B,4489,"脊椎椎體搔爬術或切除術，每多一節椎體 Curettage or excision of vertebral body, each additional vertebral body",第七節,眼眶底開放性復位術
+64277C,3939,肌腱或韌帶不完全切斷修補 Tendon or ligament repair (incomplete disruption),第七節,註：不含關節置換手術的關節整型術
+64278B,38332,手指移位以重建手指 Transposition of digit for finger reconstruction,第七節,註：不含關節置換手術的關節整型術
+64279B,14379,重行椎間盤切除術：頸椎、胸椎、腰椎 Revisional diskectomy：cervical、 thoracic、lumbar 註：,第七節,取出手術
+64280B,21496,重行脊椎後融合術-有固定物 Revisional posterior spinal fusion with instrumentation 註： 1.適應症：脊椎手術術後，再發脊椎病變導致神經學症狀， 包含： (1)接受椎間盤切除後之脊椎病變。 (2)接受椎板切除後之脊堆病變。 (3)原脊堆融合後鄰近節段退化(Adjacent syndrome)不穩。 (4)原脊椎融合術後，融合不全(Pseudoarthrosis) 再發型椎 間盤突出導致脊髓或神經根病變。 2.不得同時申報編號：64246B、83046B、83097B。,第七節,取出手術
+64281B,17093,"後足關節固定術、三關節固定術 Hindfoot Arthrodesis、Triple arthrodesis, etc. 註： 適應症：後足關節炎，跟骨、舟狀骨、方形骨或距骨骨折、 病變或腫瘤。後足變形或不穩定（如扁平足、空凹足、內翻 足、外翻足）。",第七節,取出手術
+64282B,33454,脛-距-跟骨融合術 Tibia-talus-calcaneus arthrodesis 註： 1.限骨科專科醫師執行。 2.不得同時申報64167B、64175B 及64183B。 3.含一般材料費，得另加計百分之七。,第七節,註：不含關節置換手術的關節整型術
+64283B,17708,十字韌帶再重建手術 Revision cruciate ligament reconstruction 註： 1.不得同時申報64187B。 2.含一般材料費，得另加計百分之七。,第七節,註：不含關節置換手術的關節整型術
+64284B,30016,人工全肩關節再置換手術 Revision total shoulder replacement 註： 1. 須事前審查，須檢附病史清晰可判讀之X-RAY及MRI影像 學檢查。 2. 不得同時申報：64163B、64198B。 3.一般材料費，得另加計百分之二十。,第七節,取出手術
+64285B,29128,反置人工全肩關節置換手術 Reverse total shoulder replacement 註： 1.符合下列適應症之一： (1)肩關節旋轉肌群無法修復且造成重大失能(達到顯著運 動失能)，且六十五歲以上者。旋轉肌群無法修復之審 查標準為肩核磁共振顯示旋轉肌群有巨大斷裂且合併 旋轉肌群古塔里耶分級（Goutallier grade） 3 以上脂肪 浸潤變化。 (2)肩盂骨性缺損合併關節病變需置換人工肩關節，且六十 五歲以上者。肩盂骨性缺損之審查標準為肩關節盂骨缺 損達威祿士分類（Walch classification）B 以上或肩盂後 轉（glenoid retroversion）15 度以上。,第七節,取出手術
+65001B,2034,－ 孤立性 single,第七節,取出手術
+65002B,2314,－ 多發性 multiple,第七節,取出手術
+65003B,1755,"鼻甲電燒灼 Nasal turbinate, electric cauterization 註： 1.單側或雙側(uni or bil)。 2.須檢附經藥物治療三個月以上無效之證明。",第七節,取出手術
+65004B,4860,粘膜下中膈矯正術 (S.M.R) Submucous resection of septum 註： 1.單側或雙側(uni or bil)。 2.一般材料費及單次使用切割工具及潤滑器/散熱器，得另加 計百分之一百二十二。,第七節,取出手術
+65005B,2419,"全部或部分鼻甲切除 Turbinectomy, total or partial",第七節,取出手術
+65006B,2314,上頷竇造口術 Antrostomy for maxillary sinus,第七節,取出手術
+65007B,1867,冷凍手術 Cryosurgery,第七節,取出手術
+65008C,1413,鼻咽切片 Nasopharyngenal biopsy,第七節,取出手術
+65009B,5370,"上頷竇切開術，單側 Caldwell Luc's operation, unilateral 註：上額開窗術(palatal fenestration)比照申報。",第七節,取出手術
+65010B,8040,上頷竇與篩竇切開術 Caldwell Luc's operation & ethmoidectomy,第七節,取出手術
+65011B,4650,竇瘻管修復術 Repair of sinus fistula,第七節,取出手術
+65012B,4439,鼻內篩骨竇手術 Endonasal ethmoidectomy,第七節,取出手術
+65013B,8855,多竇副鼻竇手術 Multiple sinusectomy 註：一般材料費及單次使用電磁器械追蹤器、病人追蹤器， 得另加計百分之一百二十一。,第七節,取出手術
+65014B,10307,全副鼻竇切除術 Pansinusectomy 註： 1.含鼻外及口內徑路。 2.一般材料費及單次使用器械追蹤器、病人追蹤器，得另加 計百分之一百十二。,第七節,取出手術
+65015B,7296,"術後頰囊腫摘出術Post operation cheek cyst, revised Luc's op",第七節,取出手術
+65016B,6586,淚囊鼻腔造瘻術 Dacryocystorhinostomy 註： 1.一般材料費及特殊材料費，得另加計百分之九十六。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,取出手術
+65017C,2506,鼻粘連解除術 Lysis of nasal synechia,第七節,取出手術
+65018B,6750,－ 單側 unilateral,第七節,取出手術
+65019B,8911,－ 雙側 bilateral 註： 1.須檢附X光片或照片，並經藥物治療三個月以上無效之證 明。 2.單側（65018B）指合併單側下鼻甲之全部或部分切除，雙 側（65019B）指合併雙側下鼻甲之全部或部分切除，二者 皆不得同時申報65005B。,第七節,取出手術
+65020C,1856,鼻部軟組織切片 Biopsy nose soft tissue,第七節,取出手術
+65021C,2077,鼻中膈膿瘍或血腫引流 Drainage. abscess or hematoma nasal septal,第七節,取出手術
+65022C,2684,鼻內膿瘍或鼻側軟骨血腫引流 Drainage abscess intranasal or hematoma of lateral cartilage,第七節,取出手術
+65023B,4860,－ 單側 unilateral,第七節,取出手術
+65024B,6264,－ 雙側 bilateral,第七節,取出手術
+65025B,3711,鼻竇探查術 Exploratory antrotomy,第七節,取出手術
+65026B,3711,"萎縮性鼻炎手術，單側 Atrophic rhinitis operation ,unilateral",第七節,取出手術
+65028B,6074,口腔鼻腔瘻管修補術 Repair of oroantral fistula,第七節,取出手術
+65029B,4310,下鼻甲成型術 Infestor turbinoplasty,第七節,取出手術
+65030B,9691,經鼻外篩竇切除術 Ethmoidectomy external,第七節,取出手術
+65031B,4551,鼻中膈穿孔縫合術 Closure of perforation of septum,第七節,取出手術
+65032B,6469,鼻中膈造形術 Septal reconstruction/septoplasty,第七節,取出手術
+65033B,3711,一般鼻甲黏膜切除術 Ordinary conchotomy,第七節,取出手術
+65034B,8450,鼻成形術 Rhinoplasty 註：限外傷引起之鼻變形者。,第七節,取出手術
+65035B,8450,翼管神經切除術 Vidian neurectomy,第七節,取出手術
+65036B,7456,鼻腫瘤切除並植皮 Excision of nasal tumor with skin graft,第七節,取出手術
+65037B,11412,前額竇切除術 Lynch's operation,第七節,取出手術
+65038B,22361,－ 部份 partial,第七節,取出手術
+65039B,26628,－ 全部 total,第七節,取出手術
+65040B,9592,經軟顎鼻咽探查術 Nasopharyngeal exploration through palate approach,第七節,取出手術
+65041B,14016,"鼻內惡性腫瘤切除術 Excision of intranasal tumor, malignant",第七節,取出手術
+65042B,7100,後鼻孔閉鎖症開放術 Opening of choanal atresia,第七節,取出手術
+65043B,9752,上頷篩竇骨蝶骨根本手術 Maxillary ethmoid sphenoid sinus radical operation,第七節,取出手術
+65044B,9720,腫瘤切除從額竇 Excision of tumor from frontal sinus,第七節,取出手術
+65045B,6540,腫瘤切除從上額竇 Excision of tumor from maxillary sinus,第七節,取出手術
+65046B,7571,腫瘤切除從篩竇 Excision of tumor from ethmoidal sinus,第七節,取出手術
+65047B,8606,－ 經鼻 trans nasal,第七節,取出手術
+65048B,14974,－ 經口 trans oral,第七節,取出手術
+65049B,10867,Denker's 手術 Denker's operation,第七節,取出手術
+65050B,34891,鼻咽腫瘤切除術 Excision of nasopharyngeal tumor,第七節,取出手術
+65051B,9641,Killian 手術 （額竇前壁切除術） Killian operation,第七節,取出手術
+65052B,5379,蝶竇手術 Sphenoidectomy,第七節,取出手術
+65053B,9314,鼻與顎囊腫切除 Excision of nasopalatinal cyst 註：鼻帆腫瘤(nasoalveolar tumor)比照申報。,第七節,取出手術
+65054B,7072,經鼻鼻後孔閉塞修補 Repair choanal atresia intranasal,第七節,取出手術
+65055B,8526,經鼻中膈鼻後孔閉塞修補 Repair choanal atresia transseptal,第七節,取出手術
+65056B,8282,經上顎鼻後孔閉塞修補 Repair choanal atresia transspalatine,第七節,取出手術
+65057B,24300,顱顏合併手術 Craniofacial resection,第七節,取出手術
+65058B,21956,脫手套法正中顏面手術併顏面骨復位術 Degloving midfacial surgery with facial bone reposition,第七節,取出手術
+65059B,8220,鼻骨折開放性復位 Open reduction of nasal fracture,第七節,取出手術
+65060B,12426,經外側篩竇切除修補腦脊髓液鼻漏 External ethmoidectomy for CSF rhiorrhea,第七節,取出手術
+65063B,6823,－ 單側 unilateral,第七節,內視鏡功能鼻竇手術
+65064B,7913,－ 雙側 bilateral,第七節,內視鏡功能鼻竇手術
+65065B,12728,經外側前額竇及篩竇切除術 External frontoethmoidectomy,第七節,內視鏡功能鼻竇手術
+65066B,16596,經外側前額竇及篩竇切除術及粘膜骨膜瓣重建術 External frontoethmoidectomy with mucoperitoneal flap reconstruction,第七節,內視鏡功能鼻竇手術
+65067B,16596,前額竇骨成形術 Osteoplastic approach for frontal sinus surgery,第七節,內視鏡功能鼻竇手術
+65068B,13830,前額竇骨成形術及脂肪填塞 Osteoplastic approach for frontal sinus surgery with fat obliteration,第七節,內視鏡功能鼻竇手術
+65069B,9934,前額竇開窗術 Trephination of frontal sinus,第七節,內視鏡功能鼻竇手術
+65070B,7290,鼻鈕扣放置術 Nasal button insertion,第七節,內視鏡功能鼻竇手術
+65071B,21788,側鼻切開腫瘤摘除術併顏面骨復位術 Lateral rhinotomy with facial bone reposition,第七節,內視鏡功能鼻竇手術
+65072B,3108,鼻雷射手術 Nasal laser surgery 註： 1.須檢附經藥物治療三個月以上無效之證明。 2.不得同時申報65079B。,第七節,內視鏡功能鼻竇手術
+65074B,1570,黏膜下透熱法 Submucosal diathermy 註：須檢附經藥物治療三個月以上無效之證明。,第七節,內視鏡功能鼻竇手術
+65075B,19786,副咽腫瘤-經下顎骨切開,第七節,取出手術
+65076B,12126,脫手套法正中顏面手術不合併顏面骨復位術 Degloving midfacial surgery without facial bone reposition,第七節,取出手術
+65077B,12963,側鼻切開腫瘤摘除術不合併顏面骨復位術 Lateral rhinotomy without facial bone reposition,第七節,內視鏡功能鼻竇手術
+65078B,22904,內視鏡修正式Lothrop 手術 Endoscopic modified Lothrop procedure 註： 1.適應症： (1)須經ESS 手術後仍失敗復發，或frontal recess 骨質新生 沾黏之慢性鼻竇炎、慢性額竇炎。 (2)急性復發性額竇炎。 (3)鼻腔與鼻竇惡性腫瘤、額葉惡性腫瘤、嗅覺神經惡性腫 瘤、顱骨及顏面骨之惡性或良性腫瘤、腦膜良性腫瘤、,第七節,內視鏡功能鼻竇手術
+65079B,6732,內視鏡蝶腭動脈結紮術 Endoscopic Sphenopalatine Artery Ligation 註： 1.適應症：頑固性的後鼻出血，經保守治療(包括觀察、局部 加壓、靜脈止血劑滴注及鼻內填塞止血)無效。 2.限耳鼻喉科專科醫師執行。 3.申報費用需檢附保守治療無效之證明、相關影像學報告或 照片。 4.不得同時申報54011C、62020B及65072B。 5.一般材料費，得另加計百分之三。,第七節,內視鏡功能鼻竇手術
+66002B,4771,"單純性喉直達鏡並做聲帶或會厭軟骨腫瘤切除或剝去 Simple laryngoscopy, operative including excision of tumor and/or stripping or vocal cords or epiglottis",第七節,內視鏡功能鼻竇手術
+66003B,6349,聲帶內 Teflon 注射 Teflon intracordal injection,第七節,內視鏡功能鼻竇手術
+66004B,8298,－單純性 simple,第七節,內視鏡功能鼻竇手術
+66005B,12444,－複雜性 complicated,第七節,內視鏡功能鼻竇手術
+66006B,5400,氣管永久造孔術 Permanent tracheostomy,第七節,內視鏡功能鼻竇手術
+66007B,10195,－單純性 simple,第七節,內視鏡功能鼻竇手術
+66008B,16773,－複雜性 complicated,第七節,內視鏡功能鼻竇手術
+66009B,6330,喉切開術 Laryngotomy,第七節,內視鏡功能鼻竇手術
+66012B,23078,全喉切除術不含頸淋巴腺根除術 Laryngectomy without neck dissection,第七節,內視鏡功能鼻竇手術
+66013B,32603,全喉切除術併行頸淋巴腺根除術 Laryngectomy with radical neck dissection,第七節,內視鏡功能鼻竇手術
+66014B,29160,全喉切除術同時併行氣管食道分路手術 Laryngectomy with T-E shunt,第七節,內視鏡功能鼻竇手術
+66015B,19125,水平式喉部份切除術 Horizontal partial laryngectomy,第七節,內視鏡功能鼻竇手術
+66016B,18630,垂直式（側方或前方）喉部份切除術 Vertical (lateral/anerior) partial laryngectomy,第七節,內視鏡功能鼻竇手術
+66017B,20859,頸淋巴腺根除術 Radical neck dissection,第七節,內視鏡功能鼻竇手術
+66018B,12672,杓狀軟骨截除術或杓狀軟骨固定術 Arytenoidectomy or Arytenoidopexy,第七節,內視鏡功能鼻竇手術
+66019B,8700,"經內視鏡做杓狀軟骨切除 Arytenoidectomy, endoscopic",第七節,內視鏡功能鼻竇手術
+66020B,15499,聲帶上部份喉切除術 Supraglottic laryngectomy,第七節,內視鏡功能鼻竇手術
+66021B,19440,氣管膺復重建 Laryngotracheal reconstruction,第七節,內視鏡功能鼻竇手術
+66022B,16476,喉膺復重建 Larynx reconstruction,第七節,內視鏡功能鼻竇手術
+66023B,24300,喉咽切除術 Laryngopharyngectomy,第七節,內視鏡功能鼻竇手術
+66024B,8707,機能性喉頭軟骨整形術－兩型性 Thyroid cartilage plasty-two types,第七節,內視鏡功能鼻竇手術
+66025B,9100,懸壅顎咽成形術 UPPP uvulopalatopharyngoplasty,第七節,內視鏡功能鼻竇手術
+66026B,9462,環咽肌切開術 Cricopharyn geal myotomy,第七節,內視鏡功能鼻竇手術
+66028B,9830,氣管造口整形術Stomaplasty,第七節,內視鏡功能鼻竇手術
+66029B,4663,甲狀舌骨囊腫切除 Total excision of thyroglossal duct cyst,第七節,內視鏡功能鼻竇手術
+66030B,7050,腮弓囊腫切除 Excision of branchial arch cyst,第七節,內視鏡功能鼻竇手術
+66032B,7381,"複雜性喉直達鏡並做聲帶或會厭軟骨腫瘤切除或剝去 Complicated laryngoscopy, operative including excision of tumor and/or stripping or vocal cords or epiglottis",第七節,內視鏡功能鼻竇手術
+67001B,10858,胸壁切除術(小於十公分) Chest wall resection<10cm 註： 1.胸壁切除至少應含蓋二個以上不同之組織(如骨骼、肌肉等)。 2.胸骨部分切除術(小於十公分)比照申報。,第七節,內視鏡功能鼻竇手術
+67002B,9199,開胸探查術Exploratory thoracotomy 註：如即時實施手術，按各該手術項目申報。,第七節,內視鏡功能鼻竇手術
+67003B,9406,胸骨或肋骨骨折開放復位手術 Correction for sternal or rib fracture open reduction,第七節,內視鏡功能鼻竇手術
+67004B,10145,經胸迷走神經切斷術 Trans-thoracic vagotomy,第七節,內視鏡功能鼻竇手術
+67005B,15965,胸腺切除術 Thymectomy,第七節,內視鏡功能鼻竇手術
+67006C,3544,密閉式引流術 Closed drainage,第七節,內視鏡功能鼻竇手術
+67007B,9927,開放式引流術 Open drainage,第七節,內視鏡功能鼻竇手術
+67008B,5690,簡單胸廓擴創術 小於十公分 Simple debridement of chest wall <10cm 註：包括傷口縫合 including wound closure。,第七節,內視鏡功能鼻竇手術
+67009B,8769,探查式肺切開術 Exploratory pneumonotomy 註：如即時實施手術，按各該手術項目申報。,第七節,內視鏡功能鼻竇手術
+67010B,21869,肺單元切除術 Segmental resection,第七節,內視鏡功能鼻竇手術
+67011B,21746,肺楔狀或部份切除術 Wedge or partial resection of lung,第七節,內視鏡功能鼻竇手術
+67012C,4987,－氣管鏡 by bronchoscopy,第七節,氣管、支氣管、細支氣管異物除去術
+67013B,17342,氣管支氣管傷修補術 Repair of tracheo-bronchial tree,第七節,氣管、支氣管、細支氣管異物除去術
+67014B,20955,氣管支氣管再造術 Reconstruction of tracheo-bronchial tree,第七節,氣管、支氣管、細支氣管異物除去術
+67015B,27193,胸壁切除術及肌肉移植術 Chest wall resection & myoplasty,第七節,氣管、支氣管、細支氣管異物除去術
+67016B,18496,胸腔成形術合併肌肉移植或人工網膜修補術 Thoracoplasty with myoplasty (or mesh),第七節,氣管、支氣管、細支氣管異物除去術
+67019B,23921,肺膜剝脫術 Decortication of pleura,第七節,氣管、支氣管、細支氣管異物除去術
+67020B,21514,"胸膜內( 外 )肺鬆解術（剝離術） Pneumonolysis, intrapleural(extrapleural)",第七節,氣管、支氣管、細支氣管異物除去術
+67022B,27784,全肺切除及胸廓成形術或支氣管成形術 Pneumonectomy with concomitent thoracoplasty or bronchoplasty 註：包括肺膜剝脫術在內。,第七節,氣管、支氣管、細支氣管異物除去術
+67023B,25597,一葉肺葉切除 Lobectomy,第七節,氣管、支氣管、細支氣管異物除去術
+67024B,27908,"肺全切除術 Pneumonectomy, total 註：包括肺膜剝脫術在內。",第七節,氣管、支氣管、細支氣管異物除去術
+67025B,8480,球填充術 Plombage thoracoplasty,第七節,氣管、支氣管、細支氣管異物除去術
+67026B,11927,空洞成形術 Cavernostomy 註：球取出術比照申報。,第七節,氣管、支氣管、細支氣管異物除去術
+67027B,22823,支氣管瘻管閉鎖術 Close of bronchial fistula,第七節,氣管、支氣管、細支氣管異物除去術
+67028B,24682,肺合併臟器切除 Combined resection of lung cancer,第七節,氣管、支氣管、細支氣管異物除去術
+67029B,29531,肺袖式切除 Sleeve resection,第七節,氣管、支氣管、細支氣管異物除去術
+67030B,3186,重次開胸手術,第七節,氣管、支氣管、細支氣管異物除去術
+67031B,14537,門脈減壓術 Surgery of portal hypertension,第七節,氣管、支氣管、細支氣管異物除去術
+67032B,22534,－開胸術by exploration,第七節,氣管、支氣管、細支氣管異物除去術
+67033B,24905,支氣管鏡併做腫瘤切(摘)除 Bronchoscopic excision/removal of tumor 註：含一般材料費及特殊材料費。,第七節,氣管、支氣管、細支氣管異物除去術
+67034B,9199,胸膜固定(黏合)術 Pleurodesis,第七節,氣管、支氣管、細支氣管異物除去術
+67035B,8535,肺膿瘍切開術,第七節,氣管、支氣管、細支氣管異物除去術
+67036B,28104,先天性凹凸胸矯正術 Reconstruction of congenital funnel or pigeon chest,第七節,氣管、支氣管、細支氣管異物除去術
+67037B,2779,支氣管內擴張術 Endobronchial dilatation 註：適應症 (1)不適雷射治療之氣管支氣管狹窄。 (2)不適冷凍治療之氣管支氣管狹窄。 (3)不適放置支架治療之氣管支氣管狹窄。 (4)於施行局部放射治療前之先前擴張。 (5)於放置支架前之先前擴張。 (6)支架發生阻塞之擴張。,第七節,氣管、支氣管、細支氣管異物除去術
+67038B,15316,胸壁切除術(十公分以上) Chest wall resection≧10cm 註： 1.胸壁切除至少應含蓋二個以上不同之組織(如骨骼、肌肉等)。 2.胸骨部分切除術(十公分以上)比照申報。,第七節,內視鏡功能鼻竇手術
+67039B,22462,"惡性腫瘤胸壁切除 Wide excision of malignant chest wall diseases 註：胸壁切除至少應含蓋二個以上不同之組織(如骨骼,肌肉等)。",第七節,內視鏡功能鼻竇手術
+67040B,18226,廣泛性胸腺切除 Extensive thymectomy,第七節,內視鏡功能鼻竇手術
+67041B,8422,複雜胸廓擴創術 十公分以上 Complicated debridement of chest wall≧10cm 註：包括傷口縫合 including wound closure。,第七節,內視鏡功能鼻竇手術
+67042B,27700,二葉肺葉切除 Bilobectomy,第七節,氣管、支氣管、細支氣管異物除去術
+67043B,19816,簡單凹凸胸矯正術 (小於六根) Reconstruction of congenital funnel or pigeon chest 註：年齡未滿十七歲。,第七節,氣管、支氣管、細支氣管異物除去術
+67044B,26819,複雜凹凸胸矯正術 (六根以上) Complicated correction of chest wall deformity 註：年齡未滿十七歲。,第七節,氣管、支氣管、細支氣管異物除去術
+67045B,22494,成人凹凸胸矯正術 Correction of adult chest wall deformity,第七節,氣管、支氣管、細支氣管異物除去術
+67046C,9954,氣管內腔置管術 Tracheal stent intubation,第七節,氣管、支氣管、細支氣管異物除去術
+67047B,28705,胸腔鏡肺膜剝脫術 Thoracoscopic Decortication of Pleura,第七節,氣管、支氣管、細支氣管異物除去術
+67048B,11039,胸腔鏡肋膜黏合術 Thoracoscopic Pleurodesis,第七節,氣管、支氣管、細支氣管異物除去術
+67049B,54210,胸腔鏡全肺切除術 Thoracoscopic Pneumonectomy 註：包括肺膜剝脫術在內,第七節,氣管、支氣管、細支氣管異物除去術
+67050B,41752,胸腔鏡肺葉切除術 Thoracoscopic Lobectomy,第七節,氣管、支氣管、細支氣管異物除去術
+67051B,25404,胸腔鏡肺楔狀或部分切除術 Thoracoscopic wedge or Partial resection of the Lung,第七節,氣管、支氣管、細支氣管異物除去術
+67052B,25199,胸腔鏡胸管結紮術 VATS with thoracic duct ligation 註：含一般材料費，得另加計百分之三十二。,第七節,氣管、支氣管、細支氣管異物除去術
+67053B,57344,胸腔鏡肺分葉切除術 Thoracoscopic segmentectomy of lung 註： 1.適應症： (1)早期侷限性肺癌 stage I。 (2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術 者。 (3)具合併症且內科治療無效之感染性疾病。 2.含一般材料費，得另加計百分之十一。 3.執行「機械手臂輔助肺分葉切除術」，須符合下列規範： (1)醫師資格： A.具機械手臂輔助手術系統「胸腔心臟科」認證學會認證醫 師資格。 B.前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認 證方式及認證培訓機構證明)予保險人審核通過。 (2)執行手術之醫師名單應報經保險人核定。 (3)其手術費按保險人規範之未列項申報方式辦理，比照本項申,第七節,氣管、支氣管、細支氣管異物除去術
+67054B,58517,胸腔鏡肺葉袖形切除術 Thoracoscopic sleeve lobectomy 註： 1.適應症 (1)肺癌病人腫瘤侵犯支氣管分岐處又不適合作全肺葉切除術的 病人。 (2)良性腫瘤侵犯肺葉分歧處欲切除有病變之肺葉而保留功能正 常之肺葉。 2.含一般材料費，得另加計百分之四。,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+67055B,14930,納氏胸廓異常矯正術 Nuss Procedure for chest wall deformity 1.適應症： (1)Haller index 或CT index > 3.25。 (2)有呼吸功能障礙，慢性支氣管炎，或肺纖維化病變者。 (3)併有心理影響，經精神科醫師評估有矯治之需要者。,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68001B,11510,探查性心包膜切開術 Pericardiotomy with exploration v,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68002B,1405,心包膜穿刺放液術 Pericardiocentesis v,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68003B,26188,心包膜切除術 Pericardiectomy v,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68005B,18691,心臟縫補術 Cardiorrhaphy for heart wound or injury v,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68006B,20898,探查性開心術：包括移除異物 Exploratory cardiotomy including removal of foreign body 註：有（無）繞道之手術費用一致。 v,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68007B,22390,"人工A.S.D. Blalock-Hanlon 法 Creation of atrial septal defect, Blalock-Hanlon type, closed v",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68008B,15540,"人工A.S.D. Rashkind 法 Creation, atrial-septal-defect Rashkind type, including-cardiac catheterization 註：經靜脈或氣球法(transvenous or balloon method)。 v",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68009B,25013,人工 A.S.D.血流進口阻斷法 Creation of A.S.D. with inflow occlusion v,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68010B,29099,心內腫瘤切除及繞道手術 Excision of tumor intracardiac v,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68011B,15190,經胸切開術裝置或置換永久性心內節律器及心肌電極 Insertion or replacement of permanent internal pacemaker & myocardial electrodes by thoracotomy v,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68012B,5484,插入或置換永久性節律器—單導線 Insertion or replacement of permanent pacemaker —Single electrode catheter v,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68013B,4610,"經靜脈插入暫時性電極 Temporary insertion, transvenous electrode v",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68015B,46285,瓣膜成形術 Valvular and/or annuloplasty v,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68016B,52377,主動脈瓣或二尖瓣或三尖瓣之置換手術 Single valve replacement v,第七節,計百分之一百三十申報，並於申報費用後二個月內應上傳手術
+68017B,58738,兩個瓣膜換置 Double valves replacement v,第七節,計百分之一百三十申報，並於申報費用後二個月內應上傳手術
+68018B,69541,三個瓣膜換置 Triple valves replacement v,第七節,計百分之一百三十申報，並於申報費用後二個月內應上傳手術
+68019B,43671,"心室動脈瘤之修補 Repair, ventricular aneurysm 註：有（無）繞道之手術費用一致。 v",第七節,計百分之一百三十申報，並於申報費用後二個月內應上傳手術
+68020B,26388,"A.S.D.修補 Repair, atrial septal defect, secundum v",第七節,計百分之一百三十申報，並於申報費用後二個月內應上傳手術
+68021B,36035,"心內膜墊缺陷之修補手術 Repair, endocardial cushion defect v",第七節,計百分之一百三十申報，並於申報費用後二個月內應上傳手術
+68022B,36604,"Valsalva-sinus 瘻管之修補手術 Repair, fistula sinus of valsalva v",第七節,計百分之一百三十申報，並於申報費用後二個月內應上傳手術
+68023B,44014,－ 一條血管 one vessel v,第七節,冠狀動脈繞道手術
+68024B,54161,－ 二條血管 two vessels v,第七節,冠狀動脈繞道手術
+68025B,60603,－ 三條血管 three vessels v,第七節,冠狀動脈繞道手術
+68026B,45692,"腔靜脈回流右心房異常之修補手術 Repair, anomalous venous return total or partial v",第七節,冠狀動脈繞道手術
+68027B,36888,室中隔缺損(VSD)修補手術 Repair ventricular septal defect v,第七節,冠狀動脈繞道手術
+68028B,54884,四合群症之修補(T.F) Repair tetralogy of Fallot v,第七節,冠狀動脈繞道手術
+68029B,26505,二尖瓣擴張術 Closed mitral or open mitral commissurotomy 註：肺動脈瓣狹窄擴張術 (pulmonary valve commissurotomy)比照 申報。 v,第七節,冠狀動脈繞道手術
+68030B,6050,心內膜切片 Endocardium biopsy v,第七節,冠狀動脈繞道手術
+68031B,6342,心外膜切片 Epicardium biopsy v,第七節,冠狀動脈繞道手術
+68032B,60105,主動脈轉位症手術 v,第七節,冠狀動脈繞道手術
+68034B,21166,心臟摘取 Heart procurement v,第七節,冠狀動脈繞道手術
+68035B,183312,心臟植入 Heart implantation 註： 1.施行診療項目68034B、68035B 手術之醫院及醫師條件如下： (1)醫院條件： A.須為「中華民國心臟醫學會」及「台灣胸腔及心臟血管外 科學會」所認定之專科醫師訓練醫院。 B.應有專任具臨床藥理、病理、移植免疫、感染症及血液學 專長之醫師。 (2)醫師條件： 手術主持醫師須有主持開心手術五百例以上之經驗。 2.施行診療項目68035B之適應症如下，並應由醫院申報事前審查： (1)心臟衰竭且Maximal VO2<10ml /kg/min者。 (2) 心臟衰竭達紐約心臟功能第四度，且Maximal VO2<14ml/kg/min者。,第七節,冠狀動脈繞道手術
+68036B,19910,"體外循環維生系統(ECMO)建立(第一次) Extracorporeal circulation – first time 1.使用之適應症如下： (1)心因性休克 A.心臟手術重建後，暫時性心臟功能障礙(Stunned heart)。 B.Bridge：為準備心臟手術或心室輔助器或心臟移植，而暫 代心臟功能。 C.可回復性的心肌病變 D.肺栓塞(Pulmonary embolism) E.急性心肌梗塞併心因性休克。 F.其他心因性休克。 (2)呼吸性衰竭 A.FiO2：1.0,PaO2＜60mmHg，己排除可逆轉之原因。 B.CO2 retention，造成血行動力學不穩，已排除可逆轉之原 因。",第七節,冠狀動脈繞道手術
+68037B,178634,－單肺 Unilateral lung v,第七節,冠狀動脈繞道手術
+68038B,18658,肺臟摘取 Lung harvest (donor pneumonectomy) v,第七節,冠狀動脈繞道手術
+68039B,36474,四合群症之繞道手術 B-T shunt of TF v,第七節,6.肺臟捐贈者若為非保險對象，捐贈者摘取所需之檢驗費、手術
+68040B,96975,經導管主動脈瓣膜置換術 Transcatheter Aortic Valve Implantation(TAVI) 註： 1. 適應症： (1)嚴重主動脈狹窄病人須全部具備下列四項條件： A.有New York Heart Association Function Class II-IV 之心衰 竭症狀。 B.以心臟超音波測量主動脈開口面積＜0.8c㎡、＜0.6c㎡/ ㎡、經主動脈瓣平均壓力差≧ 40mmHg或主動脈瓣血流流 速≧4.0m/sec。 C.必須至少二位心臟外科專科醫師判定無法以傳統開心手 術進行主動脈瓣膜置換或開刀危險性過高。 D.臨床判定病人至少有一年以上之存活機率。 (2)嚴重主動脈人工生物瓣膜損壞病人，須全部具備下列四項必,第七節,6.肺臟捐贈者若為非保險對象，捐贈者摘取所需之檢驗費、手術
+68041B,7174,插入或置換永久性節律器—多導線 Insertion or replacement of permanent pacemaker —Multiple electrode catheters v,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+68042B,48742,右心室至肺動脈心導管連接術(萊斯特利術式) （Rastelli operation） 註： 1.適應症：法洛氏四合症、肺動脈發育不全合併心室中膈缺損、 v,第七節,6.肺臟捐贈者若為非保險對象，捐贈者摘取所需之檢驗費、手術
+68043B,86451,A型急性主動脈剝離術 Surgery for A type aortic dissection 註： 1.一般材料費，得加計百分之十一。 2.不得同時申報編號68015B(係指主動脈瓣膜)、69024B、69036B。 v,第七節,6.肺臟捐贈者若為非保險對象，捐贈者摘取所需之檢驗費、手術
+68047B,246516,－雙肺，連續性或同時性 bilateral sequential or en bloc double lung 註： 1.68037B、68047B及68038B手術之醫院及醫師條件應報請中央衛 生主管機關核定，如醫院條件變更或主持醫師異動時，仍應重 行報請核定。 2.施行68037B及68047B之適應症如下，並應由醫院申報事前審查： (1) Group A 阻塞性肺疾病 (Obstructive Lung Disease) ：符合肺 移植適應症之診斷並符合下列任一條件者： A.第一秒最大呼氣量(FEV1.0) < 35 % 預測值。 B.氧合指數(PaO₂/FiO₂ ratio)<300。,第七節,冠狀動脈繞道手術
+68048B,5686,經皮穿腔心臟中膈肌切除術 Percutaneous transluminal septal myocardial ablation 註：適應症： (1)阻塞型肥厚性心肌病變合併心衰竭症狀達第三級(含)以 上，並對藥物治療反應不良。 (2)左心室出口通道壓力差達三十毫米汞柱(休息狀態)，或經 藥物刺激/心室期外收縮後達六十毫米汞柱以上。 (3)左心室中膈壁厚度達十五毫米汞柱以上。 v,第七節,6.肺臟捐贈者若為非保險對象，捐贈者摘取所需之檢驗費、手術
+68049B,20720,胸腔鏡心包膜開窗術 Thoracoscopic Pericardial Window v,第七節,6.肺臟捐贈者若為非保險對象，捐贈者摘取所需之檢驗費、手術
+68050B,27272,心房切割隔間之不整脈手術 Arrhythmia surgery via atriotomy 註： 1.適應症： (1)心房振顫有栓子之年輕病人不能口服抗凝劑者。 (2)瓣膜性心臟病病人同時伴有慢性心房振顫，尤其接受瓣成型 術或組織瓣置換者。 (3)口服抗凝劑下尚再發血栓塞症者。 (4)冠心病手術同時併有持續性心房振顫者。 (5)對左心房衰竭選擇性手術能改變心臟功能者。 (6)對內科藥物及燒灼術無效之心房振顫者。 2.執行「機械手臂輔助心房切割隔間之不整脈手術」，須符合下列 規範： (1)適應症：低風險之心房顫動心臟病病人，且 STS Score≦3%。 (2)醫院條件： v,第七節,6.肺臟捐贈者若為非保險對象，捐贈者摘取所需之檢驗費、手術
+68051B,91656,心室輔助裝置植入 Ventricular Assist System implantation 註： 1.適應症： (1)心臟衰竭且Maximal VO2<10ml /kg/min者。 (2) 心臟衰竭達紐約心臟功能第四度，且Maximal VO2<14ml/kg/min者。 (3)心臟衰竭核醫檢查LVEF<20%，經六個月以上藥物(包括ACE inhibitors、Digoxin、Diuretics等)治療仍無法改善者；如有重 度二尖瓣閉鎖不全，經核醫檢查LVEF<25%者。 (4)嚴重心肌缺血，核醫檢查LVEF<20%，經核醫心肌灌注掃描 及心導管等檢查，證實無法以傳統冠狀動脈繞道手術治療者。,第七節,B.醫院每年需具二十五例以上之心房切割隔間之不整脈手術
+68052B,11505,「體外心肺循環」(Cardiopulmonary bypass) 註： 1.適應症如下： a.神經外科手術需體外循環者，例如基底動脈瘤手術。 b.肺臟移植及肺臟手術須體外循環時。 c.心血管手術需體外循環者。 d.氣道手術（Airway surgery）。 2.本項不適用本節通則第六、七條規定。 3.病患第一次使用體外循環維生系統以本項申報，若病情需要延 長使用而更換系統管線，則以47089B申報。 v,第七節,冠狀動脈繞道手術
+68053B,82610,－ 四條血管 four vessels v,第七節,冠狀動脈繞道手術
+68054B,87684,－ 五條血管 five vessels v,第七節,冠狀動脈繞道手術
+68055B,90905,－ 六條血管 six vessels v,第七節,冠狀動脈繞道手術
+68056B,67684,心房-肺動脈迴路成形術 Fontan operation v,第七節,冠狀動脈繞道手術
+68057B,98957,"經導管肺動脈瓣膜置換術 Transcatheter pulmonary valve implantation ,TPVI 註： 1.適應症：須符合下列四項條件。 (1)法洛氏四重症手術後或主動脈瓣狹窄接受Ross 術後，發生肺 動脈瓣嚴重逆流，造成右心室擴大，或有心衰竭症狀者。 (2)以磁振造影MRI 檢查(至少具備以下任三項條件)： A.肺動脈瓣逆流指數(Pulmonary Regurgitation Index fraction v",第七節,6.肺臟捐贈者若為非保險對象，捐贈者摘取所需之檢驗費、手術
+68058B,106339,尾崎式手術（主動脈瓣之自體/人工心包膜新瓣葉重建手術） Ozaki procedure: Aortic Valve Neocuspidization with Glutaraldehyde-treated Autologous Pericardium v,第七節,B.醫院每年需具二十五例以上之心房切割隔間之不整脈手術
+68059B,146634,尾崎式手術（主動脈瓣之自體/人工心包膜新瓣葉重建手術）-包含 心臟瓣膜彌補物尺寸器 Ozaki procedure: Aortic Valve Neocuspidization with Glutaraldehyde-treated Autologous Pericardium-with Ozaki AVNeo Sizer v,第七節,B.醫院每年需具二十五例以上之心房切割隔間之不整脈手術
+68060B,99428,經導管二尖瓣緣對緣修補術 Transcatheter edge-to-edge Mitral valve repair 1.適應症： (1)顯著症狀之重度二尖瓣逆流（經超音波檢查須符合下列任一 條件：Central jet MR >40% LA or holosystolic eccentric jet MR/Vena contracta ≧0.7cm/Regurgitant volume ≧60 mL/Regurgitant fraction≧50%/ERO≧0.40cm2），且符合下列 任一適應症： v,第七節,B.醫院每年需具二十五例以上之心房切割隔間之不整脈手術
+69001B,7014,"動脈栓塞物切除術 Embolectomy, arterial",第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69002B,7014,"經動脈導管之栓塞物切除術 Embolectomy, arterial catheter",第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69003B,7014,"靜脈血栓切除術 Thrombectomy, venous",第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69004B,16820,動脈內膜切除術 Arterial endarterectomy with or without bypass graft 註：併或不併行繞道移植。,第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69005B,5055,"血管探查 Exploration, vascular 註：如併行手術，按各該手術項目申報。",第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69006C,1360,"血液透析用之血管插管（自靜脈到靜脈） Insertion cannula for hemodialysis or other purpose, vein to vein",第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69007B,2910,"動靜脈之血管插管：Scribner型 Insertion cannula arterio-venous, external scribner type 註： 1.包括A-V shunt。 2.Gimino型血管插管(Gimino type A-V cannula insertion)比照申 報。",第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69008B,9949,血管吻合術 Anastomosis of blood vessel 註：本項係指主動脈或主靜脈之吻合。,第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69009B,9612,動脈縫合 Arteriorrhaphy 註： 1.本項係指主動脈之縫合。 2.靜脈縫合比照申報。,第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69010B,5077,"頸動脈之結紮 Ligation external, carotid artery",第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69011B,5560,"股靜脈結紮 Ligation, femoral vein",第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69012B,16829,"下腹動脈結紮後分離（用於產後大出血或骨盆出血） Hypogastric artery ligation related to postpartum hemorrhage or uncontrolled bleeding of pelvis 註：骼靜脈的結紮與分離 Ligation and/or division of common iliac vein 及內腸骨動脈結紮 Ligation of hypogastric artery unilateral or bilateral,比照申報。",第七節,D. 心臟外科醫師須具二十例以上二尖瓣膜手術
+69013B,5461,長隱靜脈於隱－股交接處的結紮和分離 Ligation & division of long saphenous vein at sapheno-femoral junction,第七節,vein 及內腸骨動脈結紮
+69014B,5787,－單側 unilateral,第七節,vein 及內腸骨動脈結紮
+69015B,8155,－雙側 bilateral,第七節,vein 及內腸骨動脈結紮
+69016B,7109,－單側 unilateral,第七節,vein 及內腸骨動脈結紮
+69017B,8295,－雙側 bilateral,第七節,vein 及內腸骨動脈結紮
+69018B,4844,頸靜脈結紮 Ligation of jugular venous,第七節,vein 及內腸骨動脈結紮
+69019B,8238,"根除性筋膜下剝出(如Luinton法)有或無皮膚移植 Stripping, subfascial, radical as Linton type with or without skin graft",第七節,vein 及內腸骨動脈結紮
+69020B,4567,小隱靜脈在隱－膝膕靜脈交接處的結紮和分離 Ligation and division of short saphenous vein at sapheno- popliteal junction,第七節,vein 及內腸骨動脈結紮
+69021C,3371,"其他小靜脈曲張之縫合，結紮或剝除 Suture, ligation or stripping of minor varicose vein",第七節,vein 及內腸骨動脈結紮
+69022B,21568,"肺動脈栓塞切除術 Embolectomy, pulmonary artery",第七節,vein 及內腸骨動脈結紮
+69023B,13113,"頸 (肢體)動靜瘻管之切除移植及直接修補，右繞道手術 Excision and graft bypass or direct repair of A-V fistula, neck or extremity 註：動脈瘤切除(aneurysm excision)比照申報。",第七節,vein 及內腸骨動脈結紮
+69024B,33678,—升主動脈,第七節,胸（腹）部動靜瘻管之切除移植及直接修補手術
+69025B,23080,肺動脈結紮 Pulmonary artery banding,第七節,胸（腹）部動靜瘻管之切除移植及直接修補手術
+69026B,28201,主動脈－肺動脈開窗之修補手術 Repair aorto-pulmonary window 註：主動脈弓畸型 (Repair aortic arch anomalies as vascular ring) 比照申報。,第七節,胸（腹）部動靜瘻管之切除移植及直接修補手術
+69027B,22135,主動脈狹窄之修補 Repair coarctation aorta,第七節,胸（腹）部動靜瘻管之切除移植及直接修補手術
+69028B,13556,"頸動脈體瘤切除術 Excision tumor, carotid body",第七節,胸（腹）部動靜瘻管之切除移植及直接修補手術
+69029B,5610,－頸部 neck,第七節,術後出血或栓塞探查術
+69030B,4820,－胸部 chest,第七節,術後出血或栓塞探查術
+69031B,16016,存開性動脈導管手術 Surgical obliteration for PDA,第七節,術後出血或栓塞探查術
+69032C,6506,末稍血管修補及吻合術 Repair and anastomosis of peripheral vessel 註：動靜脈瘻管成形術(A-V fistula)比照申報。,第七節,術後出血或栓塞探查術
+69033B,26812,肺動脈瓣氣球擴張術 Balloon pulmonary valvuloplasty,第七節,術後出血或栓塞探查術
+69034C,9354,動靜脈造瘻術合併人工血管使用(兩處吻合) A-V shunt with goretex graft,第七節,術後出血或栓塞探查術
+69035B,67242,主動脈根部術（含主動脈瓣置換或保留）,第七節,術後出血或栓塞探查術
+69036B,40956,—主動脈弓,第七節,胸（腹）部動靜瘻管之切除移植及直接修補手術
+69037B,35926,—降主動脈,第七節,胸（腹）部動靜瘻管之切除移植及直接修補手術
+69038C,8374,末稍血管修補及吻合術併血管移植 Repair or anastomosis of peripheral vessel with graft,第七節,術後出血或栓塞探查術
+69039B,7449,內頸靜脈切開，永久導管放置術 Permanent Catheter implantation through internal jugular vein,第七節,術後出血或栓塞探查術
+69040B,8804,子宮動脈結紮與分離 uterine artery ligation,第七節,vein 及內腸骨動脈結紮
+69041B,23272,開放性周邊動靜脈血管繞道手術-使用人工血管 Open vascular bypass grafting with synthetic graft,第七節,術後出血或栓塞探查術
+69042B,31028,— 一條血管繞道 single bypass grafting,第七節,術後出血或栓塞探查術
+69043B,40724,— 兩條以上血管繞道multiple bypass grafting,第七節,術後出血或栓塞探查術
+70001B,18425,脾臟切除術 Splenectomy,第七節,術後出血或栓塞探查術
+70002B,13379,脾臟修補術 Splenorrhaphy,第七節,術後出血或栓塞探查術
+70003B,13414,部份脾切除術 Partial splenectomy,第七節,術後出血或栓塞探查術
+70004B,6410,自體脾再植 Auto-implantation of spleen,第七節,術後出血或栓塞探查術
+70005B,11910,脾腎靜脈分流術（包含脾摘除） Splenorenal shunt (including splenectomy),第七節,術後出血或栓塞探查術
+70006B,22108,腹腔鏡脾切除術 Laparoscopic Splenectomy,第七節,術後出血或栓塞探查術
+70201C,530,淋巴腺活體切片 Biopsy lymphnode,第七節,術後出血或栓塞探查術
+70202C,732,－ 淺部 superficial,第七節,術後出血或栓塞探查術
+70203B,1812,－ 深部 deep,第七節,術後出血或栓塞探查術
+70204B,3535,腋下淋巴腺腫切除術 Removal of axillary lymphnode 註：頸淋巴腺腫切除(remove of cervicle lymphnode)比照。,第七節,術後出血或栓塞探查術
+70205B,13515,標準腋下淋巴廓清術 Axillary lymph node dissection 註： 1.適應症：惡性乳癌、黑色素瘤及鱗狀上皮細胞癌。 2.一般材料費，得另加計百分之四十一。,第七節,術後出血或栓塞探查術
+70206C,2267,腹股溝淋巴腺腫切除術 Excision of inguinal lymphnode,第七節,術後出血或栓塞探查術
+70207B,7795,腹股溝淋巴腺腫根治清除術 Radical inguinal lymphnode dissection,第七節,術後出血或栓塞探查術
+70208B,20771,骨盆腔淋巴腺切除術 Pelvic lymphadenectomy,第七節,術後出血或栓塞探查術
+70209B,18059,後腹膜腔淋巴腺切除術 Retroperitoneal lymphadenectomy 註：主動脈旁淋巴切除術(paraaortic lymph node dissection)比照申 報。,第七節,術後出血或栓塞探查術
+70210B,11116,－ Unilateral 單側,第七節,髖鼠蹊部淋巴根除術
+70211B,16038,－ Bilateral 雙側,第七節,髖鼠蹊部淋巴根除術
+70212B,6110,淋巴囊腫去除術 Lymphocelectomy,第七節,髖鼠蹊部淋巴根除術
+70213B,14559,根除性淋巴切除術(肺葉切除或全肺切除時),第七節,髖鼠蹊部淋巴根除術
+70214B,11784,縱膈腔或胸腔內淋巴根除術 Mediastinal or thoacic L.N. dissections,第七節,術後出血或栓塞探查術
+70215B,31780,腹腔鏡骨盆腔淋巴腺切除術 Laparoscopic pelvic lymphadenectomy,第七節,術後出血或栓塞探查術
+70216B,22574,腹腔鏡後腹膜腔淋巴腺切除術 Laparoscopic retroperitoneal lymphadenectomy 註：腹腔鏡主動脈旁淋巴腺切除術(Laparoscopic paraaortic lymphadenectomy)比照申報,第七節,術後出血或栓塞探查術
+70401B,16389,良性簡單縱膈腔腫瘤切除(小於五公分) Benign mediastinal mass excision (< 5cm),第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70402B,11014,縱膈膜切開術 Mediastinotomy,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70403B,10602,"由胸部穿過肋膜進入取出異物 Removal of foreign body, mediastinum transthoracic,intercostal approach",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70404B,12145,橫膈摺疊術 Diaphragmatic fundo-plication,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70405B,20876,經由腹腔之橫膈赫尼亞之修補 Repair of diaphragmatic hernia trans-abdominal,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70406B,17654,經胸廓進入橫膈赫尼亞之修補 Repair of diaphragmatic hernia transthoracic,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70407B,15781,外傷性急性橫膈赫尼亞之修補 Repair of acute traumatic Diaphragmentic hernia 註：不分術式。,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70408B,6347,"由頸部進入縱膈腔切開術合併探查或引流 Mediastinotomy with exploration or drainage,cervical approach",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70409B,11278,由胸部進入縱膈腔切開術合併探查或引流 Mediastinotomy with exploration or drainage transthoracic intercostal apporach,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70410B,11730,由胸骨切開進入縱膈腔切開術合併探查或引流 Mediastinotomy with exploration or drainage by sternal split,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70411B,5382,"由頸部進入取出異物 Removal foreign body of mediastinum,cervical of approach",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70412B,11403,由胸骨切開進入取出異物 Removal of foreign body mediastinum by sternal split,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70413B,19245,"由胸腹部合併進入橫膈赫尼亞之修補 Repair of diaphragmatic hernia, combined thoraco-abdominal approach",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70414B,18966,良性複雜縱膈腔腫瘤切除(五公分以上) Benign complicated mediastinal mass excision (≧5cm),第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70415B,22069,惡性縱膈腔腫瘤切除 Malignant mediastinal tumor resection,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70416B,20457,胸腔鏡縱膈腔腫瘤切除術(小於五公分) Thorecoscopic Excision of Mediastinal Tumor (<5cm),第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70417B,23673,胸腔鏡縱膈腔腫瘤切除術(五公分以上) Thorecoscopic Excision of Mediastinal Tumor (≧5cm),第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70418B,18948,腹腔鏡Nissen氏胃摺疊術 Laparoscopic Nissen Fundoplication,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70419B,9474,Nissen氏胃摺疊術 Nissen Fundoplication,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+70420B,32160,腹腔鏡經由腹腔之橫膈疝氣之修補 Laparoscopic repair of diaphragmatic hernia trans-abdominal,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71001B,9681,口腔或口咽腫瘤切除 Oral tumor or oropharynx excision,第七節,髖鼠蹊部淋巴根除術
+71002C,3643,蝦蟆腫切開術 Incision of ranula,第七節,髖鼠蹊部淋巴根除術
+71003C,4508,蝦蟆腫切除術 Excision of ranula,第七節,髖鼠蹊部淋巴根除術
+71004B,7624,舌部份／楔狀切除術 Partial/wedge glossectomy,第七節,髖鼠蹊部淋巴根除術
+71005C,2855,舌修補術 Repair of tongue injury or wound 註：唇修補(lip repair)比照創傷處置。,第七節,髖鼠蹊部淋巴根除術
+71006C,6204,顎扁桃摘出術 Resection of Platine tonsil 註：兩側(bilateral)。,第七節,髖鼠蹊部淋巴根除術
+71007C,5170,舌扁桃切除術 Lingual tonsillectomy,第七節,髖鼠蹊部淋巴根除術
+71008C,6204,咽扁桃切除術 Adenoid tonsillectomy,第七節,髖鼠蹊部淋巴根除術
+71009C,810,冷凍扁桃腺手術 Cryotherapy for tonsillar,第七節,髖鼠蹊部淋巴根除術
+71010B,9192,下頷腺切除術 Ablation of submaxillary gland,第七節,髖鼠蹊部淋巴根除術
+71011C,1614,口腔黏膜切片 Biopsy of oral mucosa,第七節,髖鼠蹊部淋巴根除術
+71012B,28350,口腔或口咽腫瘤切除，並頸淋巴腺根除術 Oral tumor or oropharynx excision with radical neck dissection,第七節,髖鼠蹊部淋巴根除術
+71013B,26892,舌癌摘出術，包括淋巴節切除及頸部清除術 Tongue cancer excision with lymphadenectomy & radical neck dissection,第七節,髖鼠蹊部淋巴根除術
+71014B,19231,舌骨上區清除術 Suprahyoid dissection,第七節,髖鼠蹊部淋巴根除術
+71015B,12150,耳下腺腫瘤切除術 Excision of parotid tumor,第七節,髖鼠蹊部淋巴根除術
+71016B,8872,舌半切除術 Hemiglossectomy,第七節,髖鼠蹊部淋巴根除術
+71017B,17940,舌全切除術 Total glossectomy,第七節,髖鼠蹊部淋巴根除術
+71018B,6043,內上頷動脈結紮 Ligation of internal maxillary artery,第七節,髖鼠蹊部淋巴根除術
+71019B,24622,"腮腺切除術，全葉摘除 Parotidectomy, total lobectomy",第七節,髖鼠蹊部淋巴根除術
+71020B,21120,"腮腺切除術，切除 Parotidectomy, excision",第七節,髖鼠蹊部淋巴根除術
+71021B,20288,口腔底部整體切除術 Commando op.,第七節,髖鼠蹊部淋巴根除術
+71022B,24864,口腔複合性切除術 Composite resection for oral cancer,第七節,髖鼠蹊部淋巴根除術
+71023B,6822,深頸部切開引流術 Deep neck incision & drainage,第七節,髖鼠蹊部淋巴根除術
+71201B,12471,食道肌切開術 Esophageal myomectomy 註：Heller type 為限。,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71202B,17090,食道憩窒切除術 Excision of esophageal diverticulum,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71203C,8882,食道內腔置管術 Endoesophageal intubation,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71204B,27957,食道胃底改道術 Esophagofundostomy bypass,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71205B,28467,食道胃底吻合術 Esophagofundostomy,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71206B,28265,食道胃改道術 Esophagogastrostomy bypass,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71207B,1420,"逆行食道擴張術 Retrograde esophageal dilatation (esophagectasia, retrograde)",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71208B,11318,食道、胃瘻管縫合術 Esophagogastric fistula closure,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71209B,48195,食道切除術 Esophagectomy,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71210B,56646,食道切除再造術 Esophagectomy & reconstruction,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71211B,15265,食道切開術 Esophagotomy 註：經頸或經胸 transcervicle or transthoracic。,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71212B,14456,食道瘤及囊腫切除術 Excision of esophageal cyst & tumor,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71213B,49521,－以胃管重建 with gastric tube,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71214B,21818,食道裂傷修補術 Repair of esophageal laceration,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71215B,40769,"一般性食道癌摘除術（含淋巴節清掃） Simple excision of esophageal cancer, with lymphadenectomy 註：癌症病期二期以下（一、二期）為一般性（依病理報告）。",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71216B,19544,"食道靜脈瘤曲張結紮,經胸或經腹 Ligation of esophageal varices, transthoracic or transabdominal",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71217B,27219,－經胸 transthoracic,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71218B,26349,－經腹 transabdominal,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71219B,10632,胃食道內管留置（胃賁門癌或食道癌） Esophagogastric stent for esophagus or cardia portion cancer,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71220B,35926,－以大腸重建 with colon,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71221B,39024,－以小腸重建 with small intestine,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71222B,57599,"複雜性食道癌摘除術（含淋巴節清掃） Complicated excision of esophageal cancer, with lymphadenectomy 註：癌症病期二級以上（含）為複雜性（依病理報告）。",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71223B,15266,胸腔鏡食道瘤及囊腫切除術 Thoracoscopic Excision of Esophageal Cyst and Tumor,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71224B,60155,胸腔鏡食道切除術 Thoracoscopic Esophagectomy,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71225B,17959,胸腔鏡或腹腔鏡食道肌肉切開術 Thoracoscopic or Laparoscopic Esophagomyotomy(Heller myotomy) 註：Heller type 為限,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71226B,27515,胸(腹)腔鏡食道憩窒切除術 Thoracoscopic (Laparoscopic) excision of esophageal diverticulum,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71227B,74282,胸(腹)腔鏡食道胃管重建術 Thoracoscopic (Laparoscopic) esophageal reconstruction with gastric conduit,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71228B,22546,"腹腔鏡食道靜脈瘤曲張結紮，經胸或經腹 Laparoscopic ligation of esophageal varices, transthoracic or transabdominal",第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+71229B,40206,腹腔鏡食道靜脈瘤曲張結紮，脾臟切除併近心端胃血管去除－經 腹 Laparoscopic devascularization procedure- transabdominal,第七節,(2)肺單元分葉內之癌症且心肺功能不佳者，不適合肺葉切除術
+72001B,12417,－ 探查性 exploration,第七節,髖鼠蹊部淋巴根除術
+72002B,12726,－ 異物移除 removal of foreign body,第七節,髖鼠蹊部淋巴根除術
+72003B,7541,"幽門肌肉切開術(Fredet-Ramstedt型手術） Pyloromyotomy, Fredet-Ramstedt",第七節,髖鼠蹊部淋巴根除術
+72006B,17749,"胃潰瘍或腫瘤的局部切除 Local excision, ulcer or tumor",第七節,髖鼠蹊部淋巴根除術
+72007B,31540,"胃全部切除術 Gastrectomy,total & angreconstruction 註：胃大塊切除術 enblock total gastrectomy 比照申報。",第七節,髖鼠蹊部淋巴根除術
+72008B,13716,胃造瘻術及幽門成形術 Gastrostomy & pyloroplasty,第七節,髖鼠蹊部淋巴根除術
+72009B,21383,次全或半胃切除術及胃十二指腸吻合術 Subtotal gastrectomy or hemigastrectomy with gastro-duodenostomy －無迷走神經切除 without vagotomy,第七節,髖鼠蹊部淋巴根除術
+72010B,20583,"次全或半胃切除術 Gastrectomy,subtotal or hemigastrectomy －伴有迷走神經切除 with vagotomy",第七節,髖鼠蹊部淋巴根除術
+72011B,18443,迷走神經切斷術加幽門成形術 Vagotomy and pyloroplasty,第七節,髖鼠蹊部淋巴根除術
+72012B,11848,幽門成形術 Pyloroplasty,第七節,髖鼠蹊部淋巴根除術
+72013B,11146,胃十二指腸造口吻合術 Gastro-duodenostomy 註：Braum 氏手術比照申報。,第七節,髖鼠蹊部淋巴根除術
+72014B,17818,胃空腸造口吻合術 Gastrojejunostomy,第七節,髖鼠蹊部淋巴根除術
+72015B,10152,胃小腸造口吻合術 Gastroenterostomy,第七節,髖鼠蹊部淋巴根除術
+72016B,18125,胃空腸造口吻合術（伴有迷走神經切斷術） Gastrojejunostomy with vagotomy,第七節,髖鼠蹊部淋巴根除術
+72017C,11560,胃造口術 Gastrostomy,第七節,髖鼠蹊部淋巴根除術
+72018B,17716,"十二指腸縫合術（十二指腸潰瘍穿孔的縫合） Duodenorrhpahy, suture of perforated ulcer",第七節,髖鼠蹊部淋巴根除術
+72019B,17387,"胃縫合術（胃潰瘍穿孔及胃部傷口的縫合） Gastrorrhaphy, suture or repair wound, injury perforated ulcer of stomach",第七節,髖鼠蹊部淋巴根除術
+72020B,15839,胃十二指腸造口再修正併或不併迷走神經切除 Revision of gastroduodenostomy with or without vagotomy,第七節,髖鼠蹊部淋巴根除術
+72021B,7830,胃切除後因出血而再剖開 Re-exploration for postgastrectomy bleeding,第七節,髖鼠蹊部淋巴根除術
+72022C,7591,胃造口閉口 Closure of gastrostomy,第七節,髖鼠蹊部淋巴根除術
+72023B,9627,十二指腸造口術 Duodenostomy,第七節,髖鼠蹊部淋巴根除術
+72024B,12935,十二指腸腫瘤切除 Excision of duodenum tumor,第七節,髖鼠蹊部淋巴根除術
+72025B,8532,十二指腸憩室切除或內翻 Excision or inversion of duodenal diverticulum,第七節,髖鼠蹊部淋巴根除術
+72026B,11480,十二指腸瘻管閉合 Closure of duodenal fistula,第七節,髖鼠蹊部淋巴根除術
+72027B,10596,十二指腸阻塞 Duodenal obstruction,第七節,髖鼠蹊部淋巴根除術
+72028B,11912,高度選擇性迷走神經切斷術 Highly selective vagotomy,第七節,髖鼠蹊部淋巴根除術
+72029B,8093,迷走神經切斷術 Vagotomy,第七節,髖鼠蹊部淋巴根除術
+72030B,26231,胃賁門及食道切除再造術 Proximal gastrectomy & esophagectomy & reconstruction,第七節,髖鼠蹊部淋巴根除術
+72031B,40939,"胃全部切除術併行脾或部份胰切除 Gastrectomy, total, with splenectomy or partital pancreatectomy",第七節,髖鼠蹊部淋巴根除術
+72033B,13717,胃空腸造口再修正 Revision of gastrojejunostomy,第七節,髖鼠蹊部淋巴根除術
+72034B,11940,"殘留胃竇切除術 Resection of retained antrum, postgastrectomy",第七節,髖鼠蹊部淋巴根除術
+72036B,17712,經十二指腸括約肌成形術 Transduodenal sphinteroplasty,第七節,髖鼠蹊部淋巴根除術
+72037B,11370,胃折疊術 Plication of stomach,第七節,髖鼠蹊部淋巴根除術
+72038B,13068,胃固定術(胃扭結) Gastropexy for gastric volvulus,第七節,髖鼠蹊部淋巴根除術
+72039B,14832,消化道華達壺腹切開術 EPT (endoscopic papillectomy),第七節,髖鼠蹊部淋巴根除術
+72040B,12810,抗胃食道逆流術 Belsy’s mark iv anti-reflux procedure,第七節,髖鼠蹊部淋巴根除術
+72042B,20954,－ 潰瘍縫合及止血 with suture repair of bleeding ulcer,第七節,髖鼠蹊部淋巴根除術
+72043B,27798,次全或半胃切除術及胃空腸吻合術 Subtotal gastrectomy or hemigastrectomy with gastrojejunostomy －無迷走神經切除 without vagotomy,第七節,髖鼠蹊部淋巴根除術
+72044B,18807,次全或半胃切除術及胃空腸吻合術 Roux-en-Y 型－無迷走神經 切除 Subtotal gastrectomy or hemigastrectomy with Roux-en-Y gastrojejunostomy -without vagotomy,第七節,髖鼠蹊部淋巴根除術
+72045C,11906,腹腔鏡胃造瘻術 Laparoscopic gastrostomy,第七節,髖鼠蹊部淋巴根除術
+72046B,34241,"95%胃切除及淋巴清除及腸胃重建 Near total gastrectomy, with LN dissection, with reconstruction",第七節,髖鼠蹊部淋巴根除術
+72047B,36709,"次全胃切除及淋巴清除及腸胃重建 Radical subtotal gastrectomy, with reconstruction",第七節,髖鼠蹊部淋巴根除術
+72048B,33357,腹腔鏡胃亞全切除術 Laparoscopic subtotal gastrectomy 註：執行「機械手臂輔助胃亞全切除術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,髖鼠蹊部淋巴根除術
+72049B,15577,腹腔鏡胃迷走神經切斷術合併引流術 Laparoscopic valgotomy and drainage,第七節,髖鼠蹊部淋巴根除術
+72050B,8199,內視鏡黏膜切除術 註：,第七節,髖鼠蹊部淋巴根除術
+72051B,38360,腹腔鏡胃袖狀切除術 Laparoscopic Sleeve Gastrectomy 註： 1.適應症（須符合下列各項條件）： (1)身體質量指數BMI≧37.5Kg/㎡；BMI≧32.5Kg/㎡合併有高危 險併發症，如:第二型糖尿病病人醣化血紅素經內科治療後仍 ≧7.5%、高血壓、呼吸中止症候群等。 (2)須減重門診滿半年(或門診相關佐證滿半年)及經運動及飲食 控制在半年以上。 (3)年齡在二十歲以上至未滿六十六歲。 (4)無其它內分泌疾病引起之病態肥胖。 (5)無酗酒、嗑藥及其它精神疾病。 (6)精神狀態健全，經由精神科專科醫師會診認定無異常。 2.限消化外科專科醫師執行。 3.含一般材料費，得另加計百分之二十四。,第七節,髖鼠蹊部淋巴根除術
+72052B,41697,腹腔鏡胃繞道手術 Laparoscopic Gastric Bypass 註： 1.適應症（須符合下列各項條件）： (1)身體質量指數BMI≧37.5Kg/㎡；BMI≧32.5Kg/㎡合併有高危,第七節,髖鼠蹊部淋巴根除術
+72053B,13951,"腹腔鏡幽門肌肉切開術 Laparoscopic pyloromyotomy, Fredet-Ramstedt",第七節,髖鼠蹊部淋巴根除術
+72054B,22646,腹腔鏡胃部分切除術（潰瘍或腫瘤） Laparoscopic partial gastrectomy（ulcer or tumor） 註：執行「機械手臂輔助胃部分切除術」，須符合下列規範： 1.醫師資格： (1) 具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,髖鼠蹊部淋巴根除術
+72055B,18125,腹腔鏡胃空腸造口吻合術 Laparoscopic gastrojejunostomy 註：執行「機械手臂輔助胃空腸造口吻合術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,髖鼠蹊部淋巴根除術
+72056B,27031,"腹腔鏡十二指腸縫合術（十二指腸潰瘍穿孔的縫合） Laparoscopic duodenorrhaphy, suture of perforated ulcer",第七節,髖鼠蹊部淋巴根除術
+72057B,29378,腹腔鏡胃縫合術（胃潰瘍穿孔及胃損傷縫合） Laparoscopic gastrorrhaphy(perforated peptic ulcer or stomach injury),第七節,髖鼠蹊部淋巴根除術
+72058B,70546,"腹腔鏡全胃切除-併淋巴清除及腸胃重建 Laparoscopic total gastrectomy with lymph node dissection,with reconstruction (any type) 註：執行「機械手臂輔助全胃切除-併淋巴清除及腸胃重建」，須 符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者",第七節,髖鼠蹊部淋巴根除術
+72059B,60163,"腹腔鏡次全胃切除-併淋巴清除及腸胃重建 Laparoscopic subtotal gastrectomy with lymph node dissection,with reconstruction (any type) 註：執行「機械手臂輔助次全胃切除-併淋巴清除及腸胃重建」， 須符合下列規範： 1.醫師資格：",第七節,髖鼠蹊部淋巴根除術
+73001B,16515,"腸粘連分離術 Enterolysis, freeing adhesion",第七節,髖鼠蹊部淋巴根除術
+73002B,17603,－併行腸減壓 with bowel decompression,第七節,髖鼠蹊部淋巴根除術
+73003B,21447,－併有腸切除及吻合 with resection & anastomosis of intestine,第七節,髖鼠蹊部淋巴根除術
+73004B,9390,"腸外置術（Mikulicz切除） Exteriorization of intestine, Mikulicz resection",第七節,髖鼠蹊部淋巴根除術
+73005B,13370,腸套疊之還原 Reduction of intussusception 註：剖腹治療腸軸扭轉(laparotomy for volrulus) 比照申報。,第七節,髖鼠蹊部淋巴根除術
+73006B,15715,腸套疊還原及腸切除和吻合 Reduction of intussusception with bowel resection & anastomosis,第七節,髖鼠蹊部淋巴根除術
+73007B,12517,腸套疊還原及腸造口或結腸造口 Reduction of intussusception with enterostomy or colostomy,第七節,髖鼠蹊部淋巴根除術
+73008B,14001,"良性腸病灶切除術 Excision, Benign bowel lesion",第七節,髖鼠蹊部淋巴根除術
+73009B,9191,邁克氏憩室切除術 Meckel's diverticulectomy,第七節,髖鼠蹊部淋巴根除術
+73010B,14850,"小腸切除術加吻合術 Resection of small bowel, with anastomosis",第七節,髖鼠蹊部淋巴根除術
+73011B,14346,"結腸部分切除術加吻合術 Colectomy, partial, with anastomosis",第七節,腹壁損傷修復術
+73012B,34141,"根治性半結腸切除術加吻合術，升結腸 Colectomy, radical hemicolectomy with anastomosis, ascending colon 註：根治性橫行結腸切除術 (transverse colectomy Radical Hemicolectomy)比照申報。",第七節,腹壁損傷修復術
+73013B,22008,降結腸或乙狀結腸切除術加吻合術 Left hemicolectomy or sigmoid colectomy,第七節,註：根治性橫行結腸切除術
+73014B,35995,降結腸或乙狀結腸切除術併行吻合術及淋巴節清掃 Left hemicolectomy or sigmoid colectomy with anastomosis with lymph node,第七節,註：根治性橫行結腸切除術
+73015B,22299,－ 良性 benign,第七節,結腸全切或次全切除術
+73017B,26249,"結腸全切除術併行直腸切除術及迴腸造口 Colectomy, total with proctectomy, with ileostomy",第七節,結腸全切或次全切除術
+73018B,6974,"單純性結腸造口或腸造口矯正 Revision of colostomy or enterostomy simple,superficial",第七節,結腸全切或次全切除術
+73020C,10356,蹄形小腸或結腸造瘻管關閉 Closure of enterostomy or Colostomy（loop or double-barrel）,第七節,髖鼠蹊部淋巴根除術
+73022B,10160,腸造口術(包括結腸、空腸、永久性小腸) Enterostomy (including colostomy 、Jujunostomy 、permanent enterostomy),第七節,結腸全切或次全切除術
+73023B,12247,－ 小腸與皮膚 Enterocutaneous,第七節,髖鼠蹊部淋巴根除術
+73024B,13046,－ 小腸與結腸（或與小腸） entero-colic or entero-entero,第七節,髖鼠蹊部淋巴根除術
+73025B,14088,－ 其他器官或包括合併症 fistula of bowel with other organs or complicated,第七節,髖鼠蹊部淋巴根除術
+73026B,10335,－ 結腸與皮膚 colocutaneous,第七節,結腸全切或次全切除術
+73027B,10905,－ 胃與結腸(不包括胃切除) gastroclic without gastrectomy,第七節,結腸全切或次全切除術
+73028B,12200,－ 胃與結腸(包括胃切除) gastroclic with gastrectomy,第七節,結腸全切或次全切除術
+73029B,15227,－ 結腸與其他器官或合併症 fistula of colon with other organs or complicated,第七節,結腸全切或次全切除術
+73030B,14216,－小腸與小腸（十二指腸）吻合術 entero-enterostomy or duodeno-enterostomy,第七節,髖鼠蹊部淋巴根除術
+73031B,17420,"－ 迴腸與結腸吻合術，有間路法 ileo-colostomy,side to side anas.",第七節,髖鼠蹊部淋巴根除術
+73032B,12068,－ 由小腸閉鎖或狹窄引起 for intestinal atresia or stenosis,第七節,髖鼠蹊部淋巴根除術
+73033B,11254,小腸穿孔縫補術 Repair of intestinal perforation,第七節,髖鼠蹊部淋巴根除術
+73034B,7662,腸系膜之縫合及修補 Suture and repair of mesentery,第七節,髖鼠蹊部淋巴根除術
+73035B,8219,小腸瘜肉切除術 Resection of intestinal polyp,第七節,髖鼠蹊部淋巴根除術
+73036B,9135,"小腸折瘻術 Intestinal plication, Noble type",第七節,髖鼠蹊部淋巴根除術
+73037B,7024,管腸造口或管盲腸造口 Tube enterostomy or tube cecostomy,第七節,髖鼠蹊部淋巴根除術
+73038B,11513,"迴腸結腸吻合處切開及重建術 Take down of anastomosis, revision of ileo-colostomy and reconstruction",第七節,結腸全切或次全切除術
+73039B,12527,"經由剖腹術行小腸或結腸造瘻管關閉及吻合 Closure of enterostomy or colostomy anastomosis ,by laparotomy 註：關閉Hartmann colostomy比照申報",第七節,結腸全切或次全切除術
+73040B,13815,迴腸尿液引流袋修正術 Revision of ileasl conduit,第七節,結腸全切或次全切除術
+73041B,5300,腸反逆流合術 Antireflux procedure in the intestine,第七節,髖鼠蹊部淋巴根除術
+73042B,13057,"複雜性（進入腹腔）結腸造口或腸造口矯正 Revision of colostomy or enterostomy complicated, deep",第七節,結腸全切或次全切除術
+73043B,18795,腹腔鏡腸粘連剝離術 Laparoscopic adhesionolysis,第七節,髖鼠蹊部淋巴根除術
+73044B,8429,腹腔鏡空腸造瘻術 Laparoscopic jejunostomy,第七節,髖鼠蹊部淋巴根除術
+73045B,40409,經腹腔鏡右側大腸切除術加吻合術 Laparoscopic right colectomy and anastomosis 註：執行「機械手臂輔助右側大腸切除術加吻術」，須符合下列 規範： 1.醫師資格： (1)具機械手臂輔助手術系統「大腸直腸外科」認證學會認證醫 師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,結腸全切或次全切除術
+73046B,30394,－ 良性 benign,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+73047B,25506,－ 惡性 malignant,第七節,結腸全切或次全切除術
+73048B,38097,－ 惡性 malignant,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+73050B,25970,屍體小腸摘取術 Cadaveric small intestine harvest 註： 相關規範： 1.執行人員及醫院資格須通過衛生福利部（前衛生署）小腸移植 執行醫師及醫院資格審核。 2.不得同時申報之診療項目及編號：73010B(小腸切除術加吻合 術)。 3.一般材料費，得另加計百分之九十六。,第七節,髖鼠蹊部淋巴根除術
+73051B,30084,腹腔鏡腸套疊之還原 Laparoscopic reduction of intussusception,第七節,髖鼠蹊部淋巴根除術
+73052B,35359,腹腔鏡腸套疊還原-併腸切除和吻合 Laparoscopic reduction of intussusception with bowel resection & anastomosis,第七節,髖鼠蹊部淋巴根除術
+73053B,17385,腹腔鏡腸套疊還原-併腸造口或結腸造口 Laparoscopic reduction of intussusception with enterostomy or colostomy,第七節,髖鼠蹊部淋巴根除術
+73054B,22946,腹腔鏡良性小腸病灶切除術 Laparoscopic excision of benign small intestine lesion,第七節,髖鼠蹊部淋巴根除術
+73055B,24338,"腹腔鏡部分小腸切除術加吻合術 Laparoscopic resection of small intestine,with anastomosis",第七節,髖鼠蹊部淋巴根除術
+73056B,19925,腹腔鏡部分大腸切除術 Laparoscopic partial colectomy,第七節,腹壁損傷修復術
+73057B,46327,腹腔鏡左半結腸切除術 Laparoscopic left hemicolectomy 註：執行「機械手臂輔助左半結腸切除術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「大腸直腸外科」認證學會認證醫 師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核 定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,註：根治性橫行結腸切除術
+74001B,7857,闌尾膿瘍之引流 Drainage of appendiceal abscess transabdominal,第七節,1.執行人員及醫院資格須通過衛生福利部（前衛生署）小腸移植
+74002B,9528,闌尾切除術 Appendectomy,第七節,1.執行人員及醫院資格須通過衛生福利部（前衛生署）小腸移植
+74003B,9761,闌尾瘻管關閉 Closure of appendiceal fistula,第七節,1.執行人員及醫院資格須通過衛生福利部（前衛生署）小腸移植
+74004B,11433,腹腔鏡闌尾切除術 Laparoscopic appendectomy,第七節,1.執行人員及醫院資格須通過衛生福利部（前衛生署）小腸移植
+74005B,12416,腹腔鏡闌尾膿瘍之引流 Laparoscopic drainage of appendiceal abscess,第七節,1.執行人員及醫院資格須通過衛生福利部（前衛生署）小腸移植
+74201C,3206,直腸周圍膿瘍之切開引流 Incision and drainage for periproctal abscess,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74202C,2520,直腸活體組織切片 Rectal incisional biopsy 註：針刺切片(needle biopsy)比照辦理。,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74203C,12509,直腸裂傷或損傷之修補 Repair of rectal laceration or injury 註：直腸瘻管修補(Repair of Rectal fistula)比照申請。,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74204B,10512,"直腸固定術 Thiersh or Delorme, Rectopexy by stitches fixation",第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74205B,35315,根治性直腸切除術 (含骨盆腔淋巴腺切除術) Radical protectomy with pelvic lymph node dissection,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74206B,20980,－ 良性 benign,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74207C,8213,經直腸大腸息肉切除術 Transrectal colonic Polypectomy 註： 1.適應症： (1)內視鏡切除後之疤痕殘留腫瘤性息肉，以49027C、49032C、 49033C或72050B清除仍無法成功者。 (2)至少有一顆息肉大於一公分且為困難型息肉(例如扁平型、沒 有根蒂息肉)。 2.限外科專科醫師執行。 3.須檢附報告及照片，且照片內容至少須包括下列三項： (1)切除前病灶整體型態。 (2)切除後傷口。 (3)息肉切除含尺之相片。 4.不得同時申報49027C、49032C及49033C。,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74208B,16293,"直腸脫出根治手術（經會陰接近及吻合） Rectal procidentia, perineal approach ,with resection & anastomosis",第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74209B,18948,"直腸脫出手術（腹部接近） Rectal procidentia, abdominal approach 註：Ripstein方式比照申報。",第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74210B,11237,"薦骨與尾骨腫瘤切除，良性 Excision, sacrococcygeal tumor, benign 註：肛門周圍與直腸周圍腫瘤(including Perianal. Perirectal tumor.) 比照申報。",第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74211B,14642,直腸上皮絨毛腺腫廣泛性切除術或癌症局部切除 Extensive excision of sacrococcygeal rectal villous adenoma or malignancy 註：直腸後惡性腫瘤 (including retro rectal space tumor)比照申報。,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74212B,6952,直腸狹窄整形術 Rectoplasty for stricture or stenosis,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74213B,40511,復原性直腸切除以及直腸、肛門吻合術 Restorative proctectomy with colo-anal anastomosis 註：本項不含加做之大腸或小腸造口（not including colostomy or ileostomy）。,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74214B,36197,"復原性大腸直腸切除迴腸儲存袋以及迴腸肛門吻合術 Restorative proctocolectomy, pelvic ileal pouch with ileoanal anastomosis 註：本項不含加做之小腸造口（not including ileostomy）。",第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74215B,17111,"直腸膀胱瘻管切除術 Closure fistula,reco-vesical 註：經腹腔做的直腸陰道瘻管( transabdominal closure of rectovaginal fistula)比照辦理。",第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74216B,42428,直腸癌腹部會陰聯合切除術,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74217B,27633,乙狀結腸及直腸切除後 Pull through 方法行直腸肛門吻合術 Proctosigmoidectomy with pull through colon anal anastomosis,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74219B,12192,"經尾骨由直腸後部切開行良性病灶切除方法 Posterior proctotomy, transacrococcygeal excision of benign lesion 註：含Kraske和Mason手術方式。",第七節,門吻合術
+74220B,14469,"經尾骨由直腸後部切開行直腸癌切除方法 Posterior proctotomy, transacrococcygeal resection of malignant tumor 註：含Kraske和Mason手術方式。",第七節,門吻合術
+74221B,63767,腹腔鏡低前位直腸切除術 Laparoscopic low anterior resection of rectum 註： 1.本項不含加做之大腸或小腸造口（not including colostomy or ileostomy）。 2.執行「機械手臂輔助低前位直腸切除術」，須符合下列規範： (1)醫師資格： A.具機械手臂輔助手術系統「大腸直腸外科」認證學會認證 醫師資格。 B.前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認 證方式及認證培訓機構證明)予保險人審核通過。 (2)執行手術之醫師名單應報經保險人核定。 (3)其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74222B,38764,"乙狀結腸及直腸切除後 Pull through 方法行結腸造袋及結腸袋肛 門吻合術 Proctosigmoidectomy with pull through colon anal anastomosis,reconstruction with colonic pouch",第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74223B,22303,－ 惡性 malignant,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74224B,58927,腹腔鏡腹部會陰聯合切除術 Laparoscopic combined abdominoperineal resection 註：執行「機械手臂輔助直腸癌腹部會陰聯合切除術」，須符合 下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「大腸直腸外科」認證學會認證醫 師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74225B,26725,腹腔鏡Hartmann氏直腸手術 Laparoscopic Hartmann's operation,第七節,經腹腔鏡乙狀結腸切除術加吻合術
+74401C,3622,"皮下瘻管切開術或切除術 Fistulotomy or fistulectomy,simple, subcutaneous 註：指低位之括約肌間瘻管。",第七節,門吻合術
+74402C,2235,"肛門括約肌切開術 Sphincterotomy ,anal",第七節,門吻合術
+74403C,2248,"肛門裂縫切除術或潰瘍切除術 Fissurectomy or ulcerectomy, anal 註：併或不併肛門括約肌切開(with or without anal sphincterotomy)。",第七節,門吻合術
+74404C,1476,－ 單一 single,第七節,門吻合術
+74405C,2084,－ 多數 multiple,第七節,門吻合術
+74406C,3758,"外痔完全切除術 Hemorrhoidectomy, external",第七節,門吻合術
+74407C,4329,"內外痔部份切除術 Hemorrhoidectomy, partial, internal & external",第七節,門吻合術
+74408C,1255,－ 單一 single,第七節,門吻合術
+74409C,1647,－ 多數 multiple,第七節,門吻合術
+74410C,8631,"內外痔完全切除術 Hemorrhoidectomy, internal & external 註：含脫肛治療(including repair of prolaps anus)",第七節,門吻合術
+74411C,8007,肛門瘻切除或切開術併痔瘡切除 Anal fistulectomy or fistulotomy with hemorrhoidectomy,第七節,門吻合術
+74412C,2236,"外痔血栓切除 Thrombectomy, external hemorrhoid",第七節,門吻合術
+74413B,11778,肛門狹窄整形術 Anoplasty for stricture or imperforate,第七節,門吻合術
+74414B,16532,肛門括約肌失禁整形術 Sphincteroplasty for anal incontinence,第七節,門吻合術
+74415B,6537,APR術後Karlex海棉除去術 Removal of Karlex sponge s/p APR,第七節,門吻合術
+74416C,2760,結腸肛門止血術 Check anal or colon bleeding,第七節,門吻合術
+74417C,2534,內痔結紮 Internal hemorrhoid ligation,第七節,門吻合術
+74418B,11639,肛門重建或整形術以S形蒂狀移植 Anal reconstruction or anoplasty with S-pedicle graft,第七節,門吻合術
+74419B,7422,提肛肌折疊術 Levator plication procedure 註：直腸突出修補(Transanal rectocele repair)比照申報。,第七節,門吻合術
+74420C,6398,"複雜性皮下瘻管切開術或切除術 Fistulotomy or fistulectomy,complicated, subcutaneous 註：指如高位之括約肌間瘻管，穿括約肌間瘻管，馬蹄形瘻管， 括約肌上及提肛肌上瘻管。",第七節,門吻合術
+75001B,10973,"楔狀活體切片（剖腹探查術） Wedge biopsy of liver, laparotomy",第七節,門吻合術
+75002B,28933,肝部分切除術 Partial hepatectomy,第七節,門吻合術
+75003B,33241,－ 一區域 one segement,第七節,門吻合術
+75004B,35914,－ 二區域 two segements,第七節,門吻合術
+75005B,54382,－ 三區域 three segements,第七節,門吻合術
+75006B,11031,肝囊腫或肝膿瘍引流或造袋術 Drainage or marsupialization of cyst or abscess of liver,第七節,門吻合術
+75007B,14291,縫肝術（肝損傷縫合，小於五公分）,第七節,門吻合術
+75008B,17292,"縫肝術及總膽管或膽囊之引流術 Hepatorrhaphy, with common duct or gallbladder drainage",第七節,門吻合術
+75009B,15696,"縫肝術（複雜肝損傷之縫合或大於五公分） Hepatorrhaphy, suture of liver wound,complicated or >5cm",第七節,門吻合術
+75010B,11449,肝動脈結紮 Hepatic artery ligation for liver bleeding,第七節,門吻合術
+75011B,21251,肝腸吻合 Hepato-Enterostomy (Longmire Op.),第七節,門吻合術
+75012B,20796,肝門靜脈分流術 Portocavo shunt (H-graft),第七節,門吻合術
+75014B,17391,Warren氏分流術 Warren's shunt,第七節,門吻合術
+75015B,45910,右肝葉切除術 Right lobectomy,第七節,門吻合術
+75016B,40888,左肝葉切除術 Left lobectomy,第七節,門吻合術
+75017B,66301,擴大右肝葉切除術 Extended right lobectomy,第七節,門吻合術
+75018B,65134,擴大左肝葉切除術 Extended left lobectomy,第七節,門吻合術
+75019B,13980,"切肝取石術 Hepaticotomy or hepaticostomy, Removal of Calculus",第七節,門吻合術
+75021B,49416,屍體捐肝摘取 Cadaveric liver harvest(donor hepatectomy),第七節,門吻合術
+75022B,59299,活體捐肝摘取 Partial hepatectomy for livingrelated liver transplantation 註：不得加計急診加成。,第七節,門吻合術
+75023B,18584,腹腔鏡肝臟囊腫去頂術,第七節,門吻合術
+75024B,19423,"腹腔鏡楔狀肝臟切片 Wedge biopsy of liver,laparoscopy",第七節,門吻合術
+75025B,38161,腹腔鏡肝部分切除術 Laparoscopic liver resection - partial hepatectomy 註：執行「機械手臂輔助肝部分切除術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,門吻合術
+75026B,50722,－ 一區域 one segment,第七節,門吻合術
+75027B,54799,－ 二區域 two segments,第七節,門吻合術
+75028B,84096,－ 三區域 three segments,第七節,門吻合術
+75029B,21807,"腹腔鏡縫肝術（肝損傷縫合，小於五公分） Laparoscopic hepatorrhaphy,suture of liver wound < 5 cm",第七節,門吻合術
+75030B,70844,腹腔鏡右肝葉切除術 Laparoscopic liver resection - right lobectomy 註：執行「機械手臂輔助右肝葉切除術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,門吻合術
+75031B,63093,腹腔鏡左肝葉切除術 Laparoscopic liver resection - left lobectomy 註：執行「機械手臂輔助左肝葉切除術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢,第七節,門吻合術
+75034B,90483,腹腔鏡活體捐肝摘取 Laparoscopic living donor hepatectomy 註： 1.不得加計急診加成。 2.執行「機械手臂輔助肝臟移植—活體捐肝摘取」，須符合下列 規範： (1)醫師資格： A.具機械手臂輔助手術系統「消化外科」認證學會認證醫師 資格。 B.前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認 證方式及認證培訓機構證明)予保險人審核通過。 (2)執行手術之醫師名單應報經保險人核定。 (3)其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳 者本項不予支付；惟因特殊情形未在規定期限內完成上傳， 可檢具理由後補登錄。,第七節,門吻合術
+75201B,8562,膽囊造瘻術 Cholecystostomy,第七節,門吻合術
+75202B,13526,膽管截石術（經十二指腸） Choledocholithotomy (transduodenal),第七節,門吻合術
+75203B,14736,膽囊切除術 Cholecystectomy,第七節,門吻合術
+75204B,18302,總膽管空腸吻合術 Choledochojejunostomy,第七節,門吻合術
+75205B,15163,膽囊消化管吻合術 Cholecystoenterostomy,第七節,門吻合術
+75206B,21821,總膽管全切除術 Total excision of common bile duct with reconstruction,第七節,門吻合術
+75208B,15416,總膽管切開及Ｔ形管引流 Choledochotomy with T-tube drainage,第七節,門吻合術
+75209B,25768,總膽管切開摘石術及Ｔ形管引流 Choledocholithotomy with T-tube drainage,第七節,門吻合術
+75210B,17168,膽管成形術Choledochoplasty,第七節,門吻合術
+75211B,4378,膽道組織檢查切片術,第七節,門吻合術
+75212B,19459,總膽管十二指腸吻合術 Choledochoduodenostomy,第七節,門吻合術
+75213B,18444,肝外膽管成形術 Plasty of extrahepatic bile duct,第七節,門吻合術
+75214B,13259,肝瘻管縫合術 Closure of biliary fistula,第七節,門吻合術
+75215B,16209,腹腔鏡膽囊切除術 Laparoscopic cholecystectomy 註：執行「機械手臂輔助膽囊切除術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,門吻合術
+75216B,19995,ROUX-EN-Y 總肝管腸吻合術 ROUX-EN-Y hepaticojejunostomy,第七節,門吻合術
+75218B,24586,腹腔鏡膽管截石術 Laparoscopic choledocholithotripsy 註： 1.經T-tube者比照申報。 2.執行「機械手臂輔助膽管截石術」，須符合下列規範： (1)醫師資格： A.具機械手臂輔助手術系統「消化外科」認證學會認證醫師,第七節,門吻合術
+75219B,27927,腹腔鏡總膽管空腸吻合術 Laparoscopic choledochojejunostomy 註：執行「機械手臂輔助總膽管空腸吻合術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,門吻合術
+75220B,27824,腹腔鏡總膽管切開摘石術（無或有Ｔ型管引流） Laparoscopic choledocholithotomy with/without placement of T-tube 註：執行「機械手臂輔助總膽管切開摘石術(無或有Ｔ型管引 流)」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者,第七節,門吻合術
+75221B,7748,腹腔鏡膽道組織切片術 Laparoscopic biopsy of bile duct,第七節,門吻合術
+75222B,28143,腹腔鏡肝外膽管成形術 Laparoscopic plasty of extrahepatic bile duct 註：執行「機械手臂輔助肝外膽管成形術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,門吻合術
+75401B,9260,胰臟膿瘍或胰炎引流術 Drainage of pancreatic abscess or cyst or pancreatitis,第七節,門吻合術
+75402B,7956,胰組織檢查切片 Pancreas incisional biopsy,第七節,門吻合術
+75403B,13546,胰臟腫瘤或囊腫切除或摘除術 Excision or enucleation of pancreatic tumor or cyst,第七節,門吻合術
+75404B,19882,胰臟尾端部分切除術 Distal partial pancreatectomy,第七節,門吻合術
+75405B,19652,胰臟體部分切除術 Body partial pancreatectomy,第七節,門吻合術
+75406B,14160,胰瘻切除術 Pancreatic fistulectomy,第七節,門吻合術
+75407B,14555,胰囊腫至腸胃道之內部直接引流吻合術 Anastomosis of pancreatic cyst to GI tract direct internal drainage,第七節,門吻合術
+75408B,20155,胰囊腫至腸胃道之Ｙ型內部吻合術 Anastomosis of pancreatic cyst to GI tract directinternal drainage (Roux-en-Y),第七節,門吻合術
+75409B,10920,胰臟結石去除術 Removal pancreatic calculus,第七節,門吻合術
+75410B,22890,胰臟次全切除術 Pancreatectomy subtotal 註：Puestow procedure,第七節,門吻合術
+75411B,34271,胰臟全切除術 Total pancreatectomy (95%),第七節,門吻合術
+75412B,68870,"Whipple 氏胰、十二指腸切除術 Pancreatico-duodenectomy, Whipple type,with reconstruction",第七節,門吻合術
+75413B,22847,胰臟空腸吻合術 Pancreatico-Jejunostomy 註：以 end to end 或 side to side 術式實施。,第七節,門吻合術
+75414B,12799,胰囊腫造袋術,第七節,門吻合術
+75415B,21425,胰臟尾端部分切除術-脾臟保留 Distal partial pancreatectomy - spleen preservation,第七節,門吻合術
+75416B,20650,胰臟體部分切除術-脾臟保留 Body partial pancreatectomy - spleen preservation,第七節,門吻合術
+75417B,68870,"Whipple 氏胰、十二指腸切除術 幽門保留式 Pancreatico-duodenectomy, Whipple type,with reconstruction (pylorus sparing whipple op)",第七節,門吻合術
+75420B,14082,腹腔鏡胰組織切片術 Laparoscopic incisional biopsy of pancreas,第七節,門吻合術
+75421B,17867,腹腔鏡胰臟腫瘤或囊腫切除或摘除術 Laparoscopic excision or enucleation of pancreatic tumor or cyst,第七節,門吻合術
+75422B,30337,腹腔鏡遠端胰臟尾端切除術 Laparoscopic distal pancreatectomy 註：執行「機械手臂輔助胰臟尾端部分切除術」，須符合下列規 範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,門吻合術
+75423B,28050,腹腔鏡胰臟體部分切除術 Laparoscopic body partial pancreatectomy 註：執行「機械手臂輔助胰臟體部分切除術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證,第七節,門吻合術
+75424B,19329,腹腔鏡胰臟結石去除術 Laparoscopic Removal pancreatic calculus,第七節,門吻合術
+75425B,32675,腹腔鏡次全胰臟切除術 Laparoscopic subtotal pancreatectomy,第七節,門吻合術
+75426B,48919,腹腔鏡胰臟全切除術 Laparoscopic total pancreatectomy,第七節,門吻合術
+75428B,34862,腹腔鏡胰臟空腸吻合術 Laparoscopic Pancreatico-Jejunostomy 註：以 end to end 或 side to side 術式實施。,第七節,門吻合術
+75429B,30582,腹腔鏡胰臟尾端切除術-脾臟保留 Laparoscopic distal pancreatectomy- spleen preservation 註：執行「機械手臂輔助胰臟尾端部分切除術-脾臟保留」，須符 合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」認證學會認證醫師資 格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢,第七節,門吻合術
+75601C,3721,腹壁膿瘍引流術 Drainage of abdominal wall abscess,第七節,1.執行人員及醫院資格須通過衛生福利部（前衛生署）小腸移植
+75602C,5719,－ 良性 benign,第七節,腹壁腫瘤切除術
+75603B,16313,－ 惡性 malignant,第七節,腹壁腫瘤切除術
+75604B,17860,－ 併腸切除with bowel resection,第七節,腹壁腫瘤切除術
+75605C,14011,－ 無腸切除without bowel resection,第七節,腹壁腫瘤切除術
+75606B,13985,－ 併腸切除 with bowel resection,第七節,腹腔鏡腹壁疝氣修補術
+75607C,11292,－ 無腸切除 without bowel resection,第七節,腹腔鏡腹壁疝氣修補術
+75608B,12853,腰椎疝氣修補術 Repair of lumbar hernia,第七節,腹腔鏡鼠蹊疝氣修補術
+75609B,1100,腹腔膿瘍灌洗 Peritoneal lavage,第七節,腹腔鏡鼠蹊疝氣修補術
+75610B,12422,腹腔鏡疝氣修補術 Laparoscopic herniorrhaphy,第七節,腹腔鏡鼠蹊疝氣修補術
+75611C,16867,腹壁疝氣修補術，嵌頓性 － 無腸切除 Repair of ventral hernia incarceration-without bowel resection,第七節,腹腔鏡腹壁疝氣修補術
+75612C,15027,腹壁疝氣修補術，復發性 － 無腸切除 Repair of ventral hernia recurrence-without bowel resection,第七節,腹腔鏡腹壁疝氣修補術
+75613C,12890,鼠蹊疝氣修補術，嵌頓性－ 無腸切除 Repair of inguinal hernia incarceration -without bowel resection,第七節,腹腔鏡鼠蹊疝氣修補術
+75614C,12565,鼠蹊疝氣修補術，復發性－ 無腸切除 Repair of inguinal hernia recurrence - without bowel resection,第七節,腹腔鏡鼠蹊疝氣修補術
+75615C,13921,股疝氣修補術－ 無腸切除 Repair of femoral hernia - without bowel resection,第七節,腹腔鏡鼠蹊疝氣修補術
+75616B,29271,－ 併腸切除with bowel resection,第七節,腹腔鏡腹壁疝氣修補術
+75617C,23263,－ 無腸切除without bowel resection,第七節,腹腔鏡腹壁疝氣修補術
+75618B,22920,－ 併腸切除 with bowel resection,第七節,腹腔鏡鼠蹊疝氣修補術
+75619C,19987,－ 無腸切除 without bowel resection,第七節,腹腔鏡鼠蹊疝氣修補術
+75620B,19611,腹腔鏡腰椎疝氣修補術 Laparoscopic repair of lumbar hernia,第七節,腹腔鏡鼠蹊疝氣修補術
+75621C,27644,腹腔鏡腹壁疝氣修補術，嵌頓性－無腸切除 Laparoscopic Repair of ventral hernia incarceration-without bowel resection 註：執行「機械手臂輔助腹壁疝氣修補術，嵌頓性-無腸切除」， 須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」、「泌尿科」認證學會 認證醫師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證,第七節,腹腔鏡腹壁疝氣修補術
+75622C,26597,腹腔鏡腹壁疝氣修補術，復發性－無腸切除 Laparoscopic Repair of ventral hernia recurrence-without bowel resection 註：執行「機械手臂輔助腹壁疝氣修補術，復發性-無腸切除」， 須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」、「泌尿科」認證學會 認證醫師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者,第七節,腹腔鏡腹壁疝氣修補術
+75623C,21125,腹腔鏡鼠蹊疝氣修補術，嵌頓性－無腸切除 Laparoscopic Repair of inguinal hernia incarceration -without bowel resection 註：執行「機械手臂輔助鼠蹊疝氣修補術，嵌頓性-無腸切除」， 須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」、「泌尿科」認證學 會認證醫師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者,第七節,腹腔鏡鼠蹊疝氣修補術
+75624C,22239,腹腔鏡鼠蹊疝氣修補術，復發性－無腸切除 Laparoscopic Repair of inguinal hernia recurrence - without bowel resection 註：執行「機械手臂輔助鼠蹊疝氣修補術，復發性-無腸切除」， 須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「消化外科」、「泌尿科」認證學 會認證醫師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者,第七節,腹腔鏡鼠蹊疝氣修補術
+75625C,22816,腹腔鏡股疝氣修補術－無腸切除 Laparoscopic Repair of femoral hernia - without bowel resection,第七節,腹腔鏡鼠蹊疝氣修補術
+75801C,13076,腹腔內膿瘍引流術治療急性穿孔性腹膜炎 Drainage of intraabdominal abscess for acute perforation peritonitis 註：腸曲膿瘍引流術(drainage of interloop abscess)比照申報。,第七節,腹腔鏡鼠蹊疝氣修補術
+75802B,12415,膈下膿瘍引流術 Drainage of subphrenic abscess 註：後腹腔或肝上膿瘍引流術(retroperitoneal or suprahepatic abscess drainage) 比照申報。,第七節,腹腔鏡鼠蹊疝氣修補術
+75803C,9594,－ 經腹 transabdominal,第七節,骨盆腔膿瘍引流術
+75804C,4030,－ 經肛門 transanal,第七節,骨盆腔膿瘍引流術
+75805B,11947,剖腹探查術 Exploratory laparotomy 註：如即時手術，按各該手術項目支付點數申報。,第七節,骨盆腔膿瘍引流術
+75806B,13263,"腹腔良性腫瘤切除術 Excision of intraabdominal tumor, benign",第七節,骨盆腔膿瘍引流術
+75807B,17569,"後腹腔良性腫瘤切除術 Excision of retroperitoneal tumor, benign",第七節,骨盆腔膿瘍引流術
+75808B,9567,腹腔內異物卻除術 Removal of intraabdominal foreign body,第七節,骨盆腔膿瘍引流術
+75809B,9629,後腹腔剖腹探查術 Retroperitoneal exploratory laparotomy,第七節,骨盆腔膿瘍引流術
+75810B,17703,"腹腔惡性腫瘤切除術 Excision of intraabdominal tumor, malignant",第七節,骨盆腔膿瘍引流術
+75811B,22354,"後腹腔惡性腫瘤切除術併後腹腔淋巴腺摘除術 Excision of retroperitoneal tumor, malignant with retroperitoneal lymphadenectomy",第七節,骨盆腔膿瘍引流術
+75812B,9858,腹腔靜脈分流術 Peritoneo-Venous shunt,第七節,骨盆腔膿瘍引流術
+75813B,9373,臍尿管或瘻管切除術與部分膀胱切除術 Excision of Urachal duct or fistula with partial cystectomy,第七節,骨盆腔膿瘍引流術
+75814B,8037,－ 簡單 simple with/without reconstruction,第七節,腹壁損傷修復術
+75815B,12783,－ 廣泛性 extensive with reconstruction or prosthesis,第七節,腹壁損傷修復術
+75816B,7109,腹壁縫合裂開剜臟術，第二次縫合 Suture of abdominal wall for evisceration of dehiscence for secondary closure,第七節,腹壁損傷修復術
+75817C,21429,腹腔鏡腹腔內膿瘍引流術治療急性穿孔性腹膜炎 Laparoscopic Drainage of intraabdominal abscess for acute perforation peritonitis 註：腸曲膿瘍引流術(drainage of inter loop abscess)比照申報。,第七節,腹腔鏡鼠蹊疝氣修補術
+75818B,17242,腹腔鏡膈下膿瘍引流術 Laparoscopic drainage of subphrenic abscess 註：後腹腔或肝上膿瘍引流術(retroperitoneal or suprahepatic abscess drainage)比照申報。,第七節,腹腔鏡鼠蹊疝氣修補術
+75819C,16982,腹腔鏡骨盆腔膿瘍引流術－經腹 Laparoscopic Drainage of pelvic abscess- transabdominal,第七節,骨盆腔膿瘍引流術
+75820B,19580,腹腔鏡腹腔探查術 Exploratory Laparoscopic Surgery 註：如即時手術，按各該手術項目支付點數申報。,第七節,骨盆腔膿瘍引流術
+75821B,23475,"腹腔鏡腹腔內良性腫瘤切除術 Laparoscopic excision of intraabdominal tumor, benign",第七節,骨盆腔膿瘍引流術
+75822B,29608,"腹腔鏡後腹腔良性腫瘤切除術 Laparoscopic excision of retroperitoneal tumor,benign",第七節,骨盆腔膿瘍引流術
+75823B,15679,腹腔鏡腹腔內異物卻除術 Laparoscopic removal of intraabdominal foreign body,第七節,骨盆腔膿瘍引流術
+75824B,15781,腹腔鏡後腹腔探查術 Laparoscopic retroperitoneal exploration,第七節,骨盆腔膿瘍引流術
+75825B,27012,"腹腔鏡腹腔內惡性腫瘤切除術 Laparoscopic excision of intraabdominal tumor, malignant",第七節,骨盆腔膿瘍引流術
+75826B,35074,"腹腔鏡後腹腔惡性腫瘤切除術併後腹腔淋巴腺摘除術 Laparoscopic excision of retroperitoneal tumor,malignant with retroperitoneal lymphadenectomy",第七節,骨盆腔膿瘍引流術
+76001B,5946,腎周圍或腎臟腫瘤之引流術 Drainage abscess perirenal or renal,第七節,門吻合術
+76002B,16584,腎盂切開探查引流或切除 Pyelotomy with exploration drainage or pyelolithotomy,第七節,門吻合術
+76003B,7572,腎臟切片手術 Open renal biopsy Open renal biopsy,第七節,門吻合術
+76004B,10198,腎切除術 Nephrectomy 註：受腎者腎切除術比照申報。,第七節,門吻合術
+76005B,14240,腎部份切除術 Partial nephrectomy 註：腎半切除術heminephrectomy 比照申報。,第七節,門吻合術
+76006B,5880,"腎囊切除術，單側 Decapsulation cyst kidney, unilateral",第七節,門吻合術
+76007B,25780,"根治性腎切除術併行淋巴清掃術或合併局部淋巴切除術 Radical nephrectomy with lymphadectomy,or with regional LND",第七節,門吻合術
+76008B,7080,腎袋狀成形術 Kidney masupialization,第七節,門吻合術
+76009C,6828,腎臟固定術：固定式懸掛 Nephropexy fixation or suspension,第七節,門吻合術
+76010C,6340,"腎臟造瘻術（手術） Nephrostomy, operative",第七節,門吻合術
+76011B,10757,腎內取石及腎盂取石術 Nephro-pyelolithotomy,第七節,門吻合術
+76012B,15060,腎鹿角石取石術 Stag-horn stone nephro-pyelolithotomy,第七節,門吻合術
+76013B,14580,腎縫合術 Nephrorrhaphy,第七節,門吻合術
+76014B,14407,腎盂成形術 Pyeloplasty,第七節,門吻合術
+76015B,6440,腎盂造瘻術 Pyelostomy,第七節,門吻合術
+76016B,13550,經皮腎結石取石術 Percutaneous nephrostolithotomy (PCNSL) 註： 1.超音波桿、取石網等費用包含於一般材料費內。 2.限泌尿科專科醫師施行。,第七節,門吻合術
+76017B,7332,經PCN腎臟鏡術 Nephroscope (including secondary surgical operation of PCNSL) 註： 1.第二次PCNSL比照申報。 2.限泌尿科專科醫師施行。,第七節,門吻合術
+76018B,39985,屍體捐腎切除術 Nephrectomy from cadaver donor,第七節,門吻合術
+76019B,43138,活體捐腎切除術 Nephrectomy from living donor,第七節,門吻合術
+76021B,11530,腹腔鏡腎切除術 Laparoscopic nephrectomy,第七節,門吻合術
+76022B,17088,腎血管肌脂肪瘤摘除術 Enucleation of renal hematoma,第七節,門吻合術
+76023B,16980,萎縮性腎結石截除術,第七節,門吻合術
+76024B,6440,內視鏡腎盂切開術 Endoscopic pyelotomy,第七節,門吻合術
+76025B,15179,腎輸尿管切除術，不包括輸尿管膀胱袖口切除術 Nephroureterectomy without bladder cuff excision,第七節,門吻合術
+76026B,18826,腎輸尿管切除術，包括輸尿管膀胱袖口切除術 Nephroureterectomy with bladder cuff excision,第七節,門吻合術
+76027B,25486,根治性腎切除術 Radical nephrectomy,第七節,門吻合術
+76028B,34078,"根治性腎切除術合併下腔靜脈瘤栓切除術 Radical nephrectomy without regional LND,with IVC tumor thrombectomy",第七節,門吻合術
+76029B,7056,"(後)腹腔鏡腎臟囊腫除頂術 (Retroperitoneoscopy) Laparoscopy, Renal cyst unroofing",第七節,門吻合術
+76030B,35790,"(後)腹腔鏡腎臟輸尿管切除術(Retroperitoneoscopy) Laparoscopy,Nephroureterectomy 註：執行「機械手臂輔助腎臟輸尿管切除術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「泌尿科」認證學會認證醫師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。",第七節,門吻合術
+76031B,34176,"(後)腹腔鏡部分腎臟切除術 (Retroperitoneoscopy) Laparoscopy, Partial nephrectomy 註： 1.腎半切除術heminephrectomy 比照申報。 2.執行「機械手臂輔助部分腎切除」，須符合下列規範： (1)醫師資格： A.具機械手臂輔助手術系統「泌尿科」認證學會認證醫師資 格。 B.前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認 證方式及認證培訓機構證明)予保險人審核通過。 (2)執行手術之醫師名單應報經保險人核定。 (3)適應症： A.術前影像報告為非囊狀腫瘤或囊狀惡性腫瘤。 B.除上述外，術前影像報告懷疑良性腎臟腫瘤，符合下列任",第七節,門吻合術
+76032B,10757,"(後)腹腔鏡腎盂取石術 (Retroperitoneoscopy) Laparoscopy, Pyelolithotomy",第七節,門吻合術
+76033B,17885,"(後)腹腔鏡腎盂成形術 (Retroperitoneoscopy) Laparoscopy, Pyeloplasty",第七節,門吻合術
+76034C,8194,"(後)腹腔鏡腎臟固定術 (Retroperitoneoscopy) Laparoscopy, Nephropexy",第七節,門吻合術
+76035B,19375,腹腔鏡腎盂成形術 Laparoscopic pyeloplasty,第七節,門吻合術
+76036B,69021,腹腔鏡活體捐腎切除術 Laparoscopic nephrectomy from living donor,第七節,門吻合術
+76037B,46385,腹腔鏡根治性腎切除術 Laparoscopic radical nephrectomy 註：執行「機械手臂輔助根治性腎切除術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「泌尿科」認證學會認證醫師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,門吻合術
+77001B,7944,－ 上或下三分之一輸尿管,第七節,門吻合術
+77002B,6736,－ 中三分之一輸尿管,第七節,門吻合術
+77003B,10069,"輸尿管切除術，包括膀胱袖口 Ureterectomy, with bladder cuff",第七節,門吻合術
+77004B,8586,－ 單側 unilateral,第七節,門吻合術
+77005B,10572,－ 雙側 bilateral,第七節,門吻合術
+77006B,8496,－ 單側 unilateral,第七節,門吻合術
+77007B,10344,－ 雙側 bilateral,第七節,門吻合術
+77008B,12020,輸尿管腎盂造口吻合術或重建術 Ureteropyelostomy or ureteropyeloplasty,第七節,門吻合術
+77009B,12040,輸尿管和輸尿管吻合術 Ureteroureterostomy,第七節,門吻合術
+77010B,15720,輸尿管及對側輸尿管吻合術 Transureteroureterostomy,第七節,門吻合術
+77011B,14082,－ 單側 unilateral,第七節,門吻合術
+77012B,16310,－ 雙側 bilateral,第七節,門吻合術
+77013B,9600,－ 單側 unilateral,第七節,輸尿管小腸吻合術
+77014B,11333,－ 雙側 bilateral,第七節,輸尿管小腸吻合術
+77015B,10800,輸尿管乙狀結腸造口吻合術 Ureterosigmoidostomy,第七節,輸尿管小腸吻合術
+77016B,12960,－ 單側 unilateral,第七節,以腸管取代全部或部分輸尿管，包括腸管吻合術
+77017B,17040,－ 雙側 bilateral,第七節,以腸管取代全部或部分輸尿管，包括腸管吻合術
+77018B,8231,－ 單側 unilateral,第七節,輸尿管皮膚吻合術
+77019B,10148,－ 雙側 bilateral,第七節,輸尿管皮膚吻合術
+77020B,8496,"表皮輸尿管瘻管閉合術 Closure fistula, ureterocutaneous",第七節,輸尿管皮膚吻合術
+77021B,10344,"輸尿管膀胱瘻管閉合術 Closuer fistula, ureterovisceral",第七節,輸尿管皮膚吻合術
+77022B,13675,輸尿管迴腸皮膚吻合術 Uretero-ileal cutaneous diversion(ilelal conduit),第七節,輸尿管皮膚吻合術
+77023C,2506,輸尿管插管術 Ureter catheterization 註：手術中插管不另支付。,第七節,輸尿管皮膚吻合術
+77024B,2904,輸尿管狹窄內擴張術 Internal dilatation of ureteral stricture 註：輸尿管鏡另計。,第七節,輸尿管皮膚吻合術
+77026B,5537,－ 單純內視鏡操作方式simple endoscopic 註：含鏡檢費用在內。,第七節,輸尿管鏡取石術及碎石術
+77027B,9259,－ 併用超音波或電擊方式with SONO/EHL 註：含鏡檢及超音波費用在內。,第七節,輸尿管鏡取石術及碎石術
+77028B,7446,－ 併用雷射治療方式 註： 1.含鏡檢費用在內。 2.77028B含一般材料費及雷射光纖，得另加計百分之九十一。,第七節,輸尿管鏡取石術及碎石術
+77029B,11680,腹式會陰尿道懸吊術 Abdominal perineal urethral suspension (APUS),第七節,輸尿管鏡取石術及碎石術
+77030B,7410,腹腔鏡輸尿管取石術 Laparoscopic Ureterolithotomy,第七節,輸尿管鏡取石術及碎石術
+77031B,12877,輸尿管膀胱波氏瓣接合術 Ureterorrhapy,第七節,輸尿管鏡取石術及碎石術
+77032B,12960,"輸尿管迴腸經皮分流術(單側) Ureteroileal cutaneous driversion,unilateral",第七節,輸尿管鏡取石術及碎石術
+77033B,17040,"輸尿管迴腸經皮分流術(雙側) Ureteroileal cutaneous driversion, bilateral",第七節,輸尿管鏡取石術及碎石術
+77034B,7922,經內視鏡輸尿管切開術 Endoscopic ureterotomy 註：含內視鏡費。,第七節,輸尿管鏡取石術及碎石術
+77035B,6440,經尿道輸尿管憩室切開術,第七節,輸尿管鏡取石術及碎石術
+77036B,9892,"腹腔鏡高位輸尿管皮膚吻合術（單側） Laparoscopy, High cutaneous ureterostomy (unilateral)",第七節,輸尿管鏡取石術及碎石術
+77037B,12178,"腹腔鏡高位輸尿管皮膚吻合術（雙側） Laparoscopy, High cutaneous ureterostomy (bilateral)",第七節,輸尿管鏡取石術及碎石術
+77038B,15627,腹腔鏡輸尿管成形術－單側 Laparoscopic Ureteroplasty-unilateral,第七節,門吻合術
+77039B,22459,－ 單側 unilateral,第七節,腹腔鏡輸尿管膀胱重建術
+77040B,26011,－ 雙側 bilateral,第七節,腹腔鏡輸尿管膀胱重建術
+78001C,500,"膀胱抽吸 Aspiration bladder, with catheterization",第七節,輸尿管鏡取石術及碎石術
+78002C,4956,－ Open method,第七節,輸尿管鏡取石術及碎石術
+78003C,3285,－ Trocar method,第七節,輸尿管鏡取石術及碎石術
+78004C,4760,膀胱造口閉合 Closure of cystostomy,第七節,輸尿管鏡取石術及碎石術
+78005B,4523,膀胱取石術 Cystolithotomy,第七節,輸尿管鏡取石術及碎石術
+78006B,5170,單純膀胱頸切開術 Bladder neck incision,第七節,輸尿管鏡取石術及碎石術
+78007B,6440,"膀胱憩室之切除（單個或多發性者） Cystotomy for excision of bladder diverticulum, single or multiple",第七節,輸尿管鏡取石術及碎石術
+78008C,8027,含膀胱鏡檢,第七節,輸尿管鏡取石術及碎石術
+78009B,6770,－ 手術 open method,第七節,輸尿管鏡取石術及碎石術
+78010C,9670,膀胱部分切除術 Partial cystectomy,第七節,輸尿管鏡取石術及碎石術
+78011B,13799,膀胱全切除術 Cystectomy without pelvis LND without urethrectomy without bladder reconstruction,第七節,輸尿管鏡取石術及碎石術
+78012B,27464,膀胱全切除術合併原位新膀胱重建術 Cystectomy without pelvis LND without urethrectomy with orthotopic neo-bladder reconstruction,第七節,輸尿管鏡取石術及碎石術
+78013B,21450,膀胱全切除術合併骨盆腔淋巴切除術 Cystectomy with pelvis LND without urethrectomy without bladder reconstruction,第七節,輸尿管鏡取石術及碎石術
+78014B,34992,膀胱全切除術及骨盆腔淋巴切除術合併原位新膀胱重建術 Cystectomy with pelvis LND without urethrectomy with orthotopic neo-bladder reconstruction,第七節,輸尿管鏡取石術及碎石術
+78015B,8898,膀胱成形術或膀胱尿道成形術 Cystoplasty or cystourethroplasty,第七節,重建術
+78016B,10800,膀胱尿道成形術併單側或雙側輸尿管膀胱吻合術 Cystourethroplasty with unilateral or bilateral uretero neo cystotomy,第七節,重建術
+78017B,5856,"膀胱頸尿道前固定術或尿道固定術 Vesicourethropexy, anteriro or Urethropexy as Marshall-Marchetti type",第七節,重建術
+78018B,5470,膀胱縫合術 Cystorrhaphy,第七節,重建術
+78019B,11461,"膀胱陰道瘻管閉合術，由腹部開刀 Closure fistula, vesicovaginal abdominal approach",第七節,重建術
+78020B,9408,"膀胱子宮瘻管閉合術，包含子宮切除術 Closure fistula, vesicouterine with or without hysterectomy",第七節,重建術
+78021B,13895,膀胱腸管成形術，包含腸吻合 Enterocystoplasty including bowel anastomosis,第七節,重建術
+78022C,7728,皮膚膀胱造口術Cutaneous vesicostomy,第七節,重建術
+78023C,3398,膀胱尿道鏡伴有輸尿管切開術 Cystourethroscopy with internal ureterotomy 註：一般材料費及單次使用電燒切除環，得另加計百分之九十五。,第七節,重建術
+78024C,3568,膀胱尿道鏡及輸尿管取石 Cystourethroscopy with removal of ureteral calculus,第七節,重建術
+78025B,3900,經尿道膀胱頸切開術 Tur for bladder neck,第七節,重建術
+78026C,4675,"碎石取出術、簡單（在膀胱內壓碎並除去） Endoscopic cystolitholapaxy, simple crushing of calculus in bladder and remove 註 ：結石<一公分。",第七節,重建術
+78027C,5437,"碎石洗出術複雜性或大結石 Endoscopic cystalitholapaxy, complicated 註：結石>一公分。",第七節,重建術
+78028B,7427,腹式尿失禁手術 Transabdominal urinary incontinence surgery,第七節,重建術
+78029B,9116,陰道式尿失禁手術（含Kelly plication） Transvaginal urinary incontinence surgery (Kelly plication included),第七節,重建術
+78030B,18806,Burch尿失禁手術 Burch Colposuspension,第七節,重建術
+78031C,2705,間質性膀胱炎膀胱尿道鏡擴張術 Cystourethroscopy with dilation of bladder for interstitial cystitis,第七節,重建術
+78032C,7760,膀胱憩室電燒 Coagulation of bladder diverticulum,第七節,重建術
+78033C,5800,部份膀胱及膀胱憩室切除術 Partial cystectomy with excision of bladder diverticulum,第七節,重建術
+78034B,9912,膀胱破裂修補術 Repair of bladder rupture,第七節,重建術
+78035B,13763,小腸膀胱增大術 Augmentation of U-B with intestine,第七節,重建術
+78036B,13206,膀胱懸吊術 Suspension of urinary bladder,第七節,重建術
+78037B,9289,"KELLY手術 KELLY operation 註：已申報80007B(前側陰道縫合術)者,不得再申報此項。",第七節,重建術
+78038B,12352,尿道人工擴約肌植入術 Artificial urinary sphincter implantation,第七節,重建術
+78039B,18456,膀胱攝護腺根除術 Cystoprostatectomy without PLND without urethrectomy without bladder reconstruction,第七節,輸尿管鏡取石術及碎石術
+78040B,18479,膀胱全切除術合併尿道全切除術 Cystectomy without pelvis LND with urethrectomy without bladder reconstruction 註：有（無）併攝護腺根除術之手術費用一致。,第七節,輸尿管鏡取石術及碎石術
+78041B,28778,膀胱攝護腺根除術合併原位新膀胱重建術 Cystoprostatectomy without pelvis LND without urethrectomy with orthotopic neo-bladder reconstruction,第七節,輸尿管鏡取石術及碎石術
+78042B,32647,膀胱全切除術及尿道全切除術合併禁尿膀胱重建術 Cystectomy without pelvis LND with urethrectomy with continent reservoir reconstruction 註：有（無）併攝護腺根除術之手術費用一致。,第七節,輸尿管鏡取石術及碎石術
+78043B,19419,膀胱攝護腺根除術合併骨盆腔淋巴切除術,第七節,輸尿管鏡取石術及碎石術
+78044B,27805,膀胱全切除術及尿道全切除術合併骨盆腔淋巴切除術 Cystectomy with pelvis LND with urethrectomy without bladder reconstruction 註：有（無）併攝護腺根除術之手術費用一致。,第七節,輸尿管鏡取石術及碎石術
+78045B,35531,膀胱攝護腺根除術及骨盆腔淋巴切除術合併原位新膀胱重建術 Cystoprostatectomy with pelvis LND without urethrectomy with orthotopic neo-bladder reconstruction,第七節,皮分流術
+78046B,60063,膀胱全切除術及骨盆腔淋巴切除術及尿道全切除術合併禁尿膀胱 重建術 Cystectomy with pelvis LND with urethrectomy with continent reservoir reconstruction 註：有（無）併攝護腺根除術之手術費用一致。,第七節,皮分流術
+78047B,17198,"(後)腹腔鏡膀胱頸懸吊術 (Retroperitoneoscopy) Laparoscopy, Bladder neck suspension",第七節,重建術
+78048B,9274,"(後)腹腔鏡膀胱憩室切除術(單個或多發性者) (Retroperitoneoscopy) Laparoscopy, Bladder diverticulectomy",第七節,重建術
+78049C,8886,含膀胱鏡檢及輸尿管鏡檢查。 註： 1.申報費用應檢附膀胱鏡及輸尿管鏡檢查報告。 2.78008C一般材料費及單次使用電燒切除環，得另加計百分之七 十一。 3.78049C一般材料費及單次使用電燒切除環，得另加計百分之六 十九。,第七節,輸尿管鏡取石術及碎石術
+78050B,65785,腹腔鏡膀胱全切除術合併骨盆腔淋巴切除術合併正位新膀胱重建 Laparoscopic Cystectomy with pelvis LND with orthotopic neo-bladder reconstruction 註：執行「機械手臂輔助膀胱全切除術合併骨盆腔淋巴切除術合 併正位新膀胱重建」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「泌尿科」認證學會認證醫師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申,第七節,輸尿管鏡取石術及碎石術
+78051B,65785,腹腔鏡膀胱全切除術及骨盆腔淋巴切除術合併雙側輸尿管迴腸經 皮分流術 Laparoscopic radical cystectomy with pelvis LND with ileal conduit 註：執行「機械手臂輔助膀胱全切除術及骨盆腔淋巴切除術合併 雙側輸尿管迴腸經皮分流術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「泌尿科」認證學會認證醫師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者,第七節,輸尿管鏡取石術及碎石術
+78201C,4174,尿道結石（異物）除去術 Remove of urethral stone or foreign body,第七節,重建術
+78202B,6814,－ 前段尿道 anterior urethral,第七節,重建術
+78203B,8501,－ 後段尿道 posterior urehtral,第七節,重建術
+78204B,10285,"－ 包括陰莖或陰囊轉換 including urinary diversion, penile or penoscrotal",第七節,尿道整形術
+78205B,13658,－ 重複 repeat procedure,第七節,尿道整形術
+78206C,2424,"外尿道口息肉切除術 Polypectomy, external urethral",第七節,尿道整形術
+78207C,3835,尿道造瘻術 Urethrostomy,第七節,尿道整形術
+78208B,5262,"尿道憩室手術－前（後）部尿道 Urethral diverticulectomy, anterior (posterior) urethral",第七節,尿道整形術
+78209C,3502,尿道內切開術 Otis urethrotomy,第七節,尿道整形術
+78210C,4062,直視下尿道切開術 Optic uretrotomy,第七節,尿道整形術
+78211B,7348,－ 後段尿道 Posterior urethral,第七節,尿道整形術
+78212B,4334,－ 前段尿道 Anterior urethral,第七節,尿道整形術
+78213B,13416,－ glandular type,第七節,尿道整形術
+78214B,18473,－ others,第七節,尿道整形術
+78215B,6137,經尿道前列腺切開術 TUI(Transurothral incision of prostate ),第七節,尿道整形術
+78216B,4888,尿道腫瘤切除術 Resection of urethral tumor,第七節,尿道整形術
+78217B,5669,修補尿道皮瘻術 Repair of urethral cutanous fistula,第七節,尿道整形術
+78218B,9638,尿道瘻管修補術(後段) Urethral fistulectomy (posterior),第七節,尿道整形術
+78219B,7312,"雙側海棉體破裂修復術 Repair of ruptured corpus cavernosum, bilateral",第七節,尿道整形術
+78220B,6197,尿道瘻管修補術(前段) Urethral fistulectomy (anterior),第七節,尿道整形術
+78221B,3580,"單側海棉體破裂修復術 Repair of ruptured corpus cavernosum,unilateral",第七節,尿道整形術
+78222B,27617,尿道下裂重建術及陰莖痛性勃起矯正 Reconstruction of hypospadias and correction of painful erection,第七節,尿道整形術
+78223B,27617,尿道下裂第一次重建術 One stage reconstruction of hypospadias,第七節,尿道整形術
+78224B,8496,全尿道切除術 Total urethrectomy,第七節,尿道整形術
+78225B,2217,尿道周膿瘍切開引流術 I&D for peri-urethral abscess,第七節,尿道整形術
+78401C,2034,陰莖切片 Biopsy penis,第七節,尿道整形術
+78402B,5622,陰莖部份切除術 Partial amputation of penis,第七節,尿道整形術
+78403B,8578,陰莖全部切除術 Total amputation of penis,第七節,尿道整形術
+78404B,12463,陰莖癌陰莖全部切除術 Radical operation of penis cancer (partial penectomy),第七節,尿道整形術
+78405B,13327,陰莖癌陰莖部份切除合併鼠蹊淋巴切除術 Partial penectomy with inguinal LND,第七節,尿道整形術
+78406B,7393,陰莖重度創傷修補術 Penis repair for severe trauma,第七節,尿道整形術
+78407C,5425,陰囊水腫切除術 Hydrocelectomy,第七節,尿道整形術
+78408C,3623,"陰囊異物移除 Removal of foreign body, scrotum",第七節,尿道整形術
+78409B,4065,陰囊切除術 Resection of scrotum,第七節,尿道整形術
+78410B,5540,芮斯比式治療陰莖彎曲術 Nesbit procedure for curvature of penis,第七節,尿道整形術
+78411C,3074,陰囊修補術 Scrotal repair,第七節,尿道整形術
+78412C,2201,陰囊膿瘍切開引流術 I&D for scrotal abscess,第七節,尿道整形術
+78413B,12136,"陰莖癌陰莖全部切除合併會陰部尿道造口術 Total penectomy, with perineal cutaneous urethrostomy",第七節,尿道整形術
+78414B,15412,"陰莖癌陰莖全部切除合併鼠蹊淋巴切除術及會陰部尿道造口術 Total penectomy with inguinal LND, with perineal cutaneous urethrostomy",第七節,尿道整形術
+78601C,1810,"－單側切開 incisional,unilateral",第七節,尿道整形術
+78602C,2904,"－雙側切開 incisional,bilateral",第七節,尿道整形術
+78603C,5163,－ 單側 unilateral,第七節,尿道整形術
+78604B,6175,－ 雙側 bilateral,第七節,尿道整形術
+78605C,7613,－ 單側 unilateral,第七節,尿道整形術
+78606C,11722,－ 雙側 bilateral,第七節,尿道整形術
+78607C,13522,"隱睪單側睪丸固定術 Orchiopexy for undescended testis,unilateral 註：隱睪切除術比照申報。",第七節,尿道整形術
+78608C,4581,睪丸受傷之縫合或修補 Suture or repair testicular injury,第七節,尿道整形術
+78609B,5064,睪丸惡性腫瘤高位切除術 Orchidectomy for malignant tumor,第七節,尿道整形術
+78610B,14576,睪丸惡性腫瘤高位切除術併後腹腔淋巴切除術 Orchidectomy for malignant tumor including lymphadenectomy,第七節,尿道整形術
+78611C,4040,腹腔鏡睪丸切除術 Laparoscopic orchiectomy,第七節,尿道整形術
+78612C,14178,"隱睪雙側睪丸固定術 Orchiopexy for undescended testis,bilateral",第七節,尿道整形術
+78801C,5903,－ 單側 unilateral,第七節,尿道整形術
+78802B,8230,－ 雙側 bilateral,第七節,尿道整形術
+78803B,8568,－ 單側 unilateral,第七節,尿道整形術
+78804B,10802,－ 雙側 bilateral,第七節,尿道整形術
+78805C,3021,副睪丸膿瘍切開引流 I & D for epididymal abscess drainage,第七節,尿道整形術
+79001C,2693,"輸精管切開單側或雙側 Vasotomy, unilateral or bilateral 註：輸精管切除比照申報。",第七節,尿道整形術
+79002B,8431,"精囊全摘除術 Vesiculectomy, seminal vesicle",第七節,尿道整形術
+79201C,3243,"精索切除 Excision lesion, spermatic cord",第七節,尿道整形術
+79202B,4819,精索靜脈瘤手術 Varico-celectomy,第七節,尿道整形術
+79203C,5522,精索靜脈高位結紮術 High ligation or internal spermatic vein for varicocele,第七節,尿道整形術
+79204C,3250,腹腔鏡精索靜脈曲張結紮 Laparoscopic high ligation of internal spormatic vein,第七節,尿道整形術
+79401C,1841,前列腺切片－控取式 Biopsy prostate (punch),第七節,尿道整形術
+79402C,3504,前列腺切片－切開式 Biopsy prostate (incisional),第七節,尿道整形術
+79403B,26050,攝護腺癌根除性攝護腺切除術 Radical prostatectomy without pelvic lymph node dissection 註：含精囊摘除術(including vesiculectomy)。,第七節,尿道整形術
+79404B,9114,被膜下前列腺切除術 Suprapubic prostatectomy 註：前列腺結石切除術比照申報。,第七節,尿道整形術
+79405B,11011,恥骨下前列腺切除術 Retropublic prostatectomy,第七節,尿道整形術
+79406B,11055,"－切除之攝護腺重量 五至十五公克 TURP 5 - 15 gms 註： 1.含supra-pubic irrigation, sounding, urethrotomy。 2.一般材料費及單次使用電燒切除環、切割電極，得另加計百分 之七十九。",第七節,尿道整形術
+79407C,4242,經尿道切片術 Transurethral biopsies.,第七節,雙極前列腺刮除術/汽化術
+79408C,3829,前列腺膿瘍切開引流 Abscess drainage prostatic,第七節,雙極前列腺刮除術/汽化術
+79409C,3156,經腹腔前列腺囊腫切除術 Laparoscopic prostate cyst resection,第七節,雙極前列腺刮除術/汽化術
+79410B,31171,攝護腺癌根除性攝護腺切除術併雙側骨盆腔淋巴切除術 Radical prostatectomy with bilateral pelvic lymph node dissection,第七節,尿道整形術
+79411B,13210,"－切除之攝護腺重量十五至五十公克 TURP 15 - 50 gms 註： 1.含supra-pubic irrigation, sounding, urethrotomy。 2.一般材料費及單次使用電燒切除環、切割電極，得另加計百分 之七十五。",第七節,尿道整形術
+79412B,15236,－切除之攝護腺重量 大於五十公克 TURP ＞ 50 gms,第七節,尿道整形術
+79413B,11759,－切除之攝護腺重量 五至十五公克 TURP/ TUVP 5 - 15 gms 註：內含一般材料及雙極TURP/TUVP特材，得另加計142%,第七節,雙極前列腺刮除術/汽化術
+79414B,13914,－切除之攝護腺重量 十五至五十公克 TURP/ TUVP 15 - 50 gms 註：內含一般材料及雙極TURP/TUVP特材，得另加計128%,第七節,雙極前列腺刮除術/汽化術
+79415B,15940,－切除之攝護腺重量 大於五十公克 TURP/ TUVP ＞ 50 gms,第七節,雙極前列腺刮除術/汽化術
+79416C,3167,前列腺切片-超音波導引 Transrectal ultrasound guided prostate biopsy 註： 1.限泌尿科專科醫師執行。 2.不得同時申報編號79401C及19017C。 3.一般材料費，得另加計百分之十七。,第七節,雙極前列腺刮除術/汽化術
+79417B,46756,腹腔鏡攝護腺癌根除性攝護腺切除術併雙側骨盆腔淋巴切除術 Laparoscopic Radical prostatectomy with bilateral pelvic lymph node dissection 註：執行「機械手臂輔助根治性前列腺切除術」，須符合下列規 範： 1.醫師資格： (1)具機械手臂輔助手術系統「泌尿科」認證學會認證醫師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並應於申報費用後二個月內上傳手術相關資訊，未上傳者,第七節,尿道整形術
+79601C,1304,會陰膿腫切開引流（非產科） Incision and drainage of perineal abscess (Non-obstetric),第七節,雙極前列腺刮除術/汽化術
+79602C,1686,會陰修補 repair of perineum,第七節,雙極前列腺刮除術/汽化術
+79603C,1667,女陰白斑切除術 Excision of genital leukoderma,第七節,雙極前列腺刮除術/汽化術
+79604C,9115,會陰修補及肛門損傷修補 Repair of perinueum with repair of anal defects 註：陰道生產致會陰裂傷四度，得依實際縫合情形申報，應檢附 手術紀錄及術後傷口處置情形於病歷上備查。,第七節,雙極前列腺刮除術/汽化術
+79605C,7762,會陰修補及括約肌修補 Repair of perinueum with sphincter repair 註：陰道生產致會陰裂傷三度，得依實際縫合情形申報，應檢附 手術紀錄及術後傷口處置情形於病歷上備查。,第七節,雙極前列腺刮除術/汽化術
+79801C,2068,廣泛性外陰膿瘍引流術 Extended drainage of external genital abscess,第七節,雙極前列腺刮除術/汽化術
+79802C,1663,巴氏腺囊腫造袋術 Marsupialization of Bartholin's gland cyst,第七節,雙極前列腺刮除術/汽化術
+79803C,1815,巴氏腺囊切除術 Excision of Bartholin's gland 註：巴氏腺管或前庭大腺囊腫切除 (Bartholin duct cyst or sken's gland cyst excision) 比照申報。,第七節,雙極前列腺刮除術/汽化術
+79804B,10663,女陰切除術或廣泛性外陰癌組織切除(未合併皮膚或皮下組織重 建) Simple vulvectomy or wide local excision of valvar cancer,第七節,雙極前列腺刮除術/汽化術
+79806C,1477,陰蒂切除術 Clitoridectomy 註： 適應症：陰蒂表皮性病灶，如上皮內腫瘤（intrapithelial neoplasia） 或陰蒂腫瘤。,第七節,雙極前列腺刮除術/汽化術
+79807B,2992,陰蒂整形術 Clitoroplasty 註： 適應症：因腎上腺增生、或性染色體異常所造成之女性外陰發育 異常，發生陰蒂肥大者(sexual ambiguity with clitoromegaly)所行之陰蒂整型手術。,第七節,雙極前列腺刮除術/汽化術
+79808C,597,陰道前膜切開術 Hymenotomy,第七節,雙極前列腺刮除術/汽化術
+79809B,32150,根治女陰切除術 Radical Vulvgectomy 註：合併淋巴清掃。,第七節,雙極前列腺刮除術/汽化術
+79810B,14738,女陰切除術(合併皮膚或皮下組織重建) Simple vulvectomy (with skin graft or reconstruction of subcutaneous tissue),第七節,雙極前列腺刮除術/汽化術
+80001C,2253,陰道切開探查術或骨盆腔膿腫引流 Vaginotomy or drainage of pelvic abscess,第七節,雙極前列腺刮除術/汽化術
+80002C,3068,陰道囊腫切除術 Excision of vaginal cyst,第七節,雙極前列腺刮除術/汽化術
+80003B,2368,陰道中膈切除術 Resection of vaginal Septum,第七節,雙極前列腺刮除術/汽化術
+80004B,1796,陰道後穹窿切開術 Incision of posterior fornix,第七節,雙極前列腺刮除術/汽化術
+80005C,2999,陰道縫合術（縫合陰道損傷，非產科） Vaginal wall repair (Non-obstetric) 註： 1.應檢附同意書及手術紀錄備查，並詳述受傷原因。 2.屬西醫基層總額部門院所，除山地離島地區外，限由專任醫師 開立處方及執行始可申報。,第七節,雙極前列腺刮除術/汽化術
+80006C,5160,"陰道會陰縫合術：縫合陰道及會陰損傷（非產科） Colpoperineorrhaphy, suture of injury of vagina and/or perineum nonobstetrical 註： 1.應檢附同意書及手術紀錄備查，並詳述受傷原因。 2.屬西醫基層總額部門院所，除山地離島地區外，限由專任醫師 開立處方及執行始可申報。",第七節,雙極前列腺刮除術/汽化術
+80007B,4897,"前側陰道縫合術 Colporrhaphy, anterior",第七節,雙極前列腺刮除術/汽化術
+80008B,2652,"後側陰道縫合術 Colporrhaphy, Posterior 註：併會陰縫合 (with perineorrhaphy)。",第七節,雙極前列腺刮除術/汽化術
+80009B,6802,前後側陰道縫合術 Anterior and posterior colporrhaphy,第七節,雙極前列腺刮除術/汽化術
+80010B,8117,"前後側陰道縫合術：包含腸膨出修補術 Anterior and posterior colporrhaphy, (including repair of enterocele)",第七節,雙極前列腺刮除術/汽化術
+80011B,10338,從腹腔進入陰道固定術 Transabdominal colpopexy,第七節,雙極前列腺刮除術/汽化術
+80012C,979,麻醉下之陰道擴張術 Vaginal dilation under anesthesia 註：包含麻醉費用在內。,第七節,雙極前列腺刮除術/汽化術
+80014C,8171,腹腔鏡式骨盆腔子宮內膜異位症電燒及切除 — 輕度：子宮內膜 異位症分級指數小於或等於五分。 Laparoscopic fulguration or excision of pelvic endometriosis — Minimal to mild 註：子宮內膜異位症分級指數依照美國不孕症醫學會一九八五年 之分級標準。,第七節,雙極前列腺刮除術/汽化術
+80015B,7924,陰道切除術 － 陰道部份切除 Partial resection of vagina,第七節,雙極前列腺刮除術/汽化術
+80016B,8616,"陰道切除術 － 陰道全部切除，陰道式 Complete resection of vagina, vaginal approach",第七節,雙極前列腺刮除術/汽化術
+80017B,7441,陰道閉合術 LeFort colpocleisis,第七節,雙極前列腺刮除術/汽化術
+80018B,19586,人工陰道重建術 (陰道狹窄或陰道缺失),第七節,雙極前列腺刮除術/汽化術
+80019B,26312,"人工陰道重建術 (陰道狹窄或陰道缺失) －有皮膚及大腸等移植 Reconstruction of vagina (vagina stenosis or vaginal defects, with skin, colon or other graft)",第七節,－無皮膚移植
+80021B,14368,初次直腸陰道瘻管修補術 Primary recto-vaginal fistula repair,第七節,－有皮膚及大腸等移植
+80022B,10899,尿道陰道瘻管修補術 Urethral vaginal fistula repair,第七節,－有皮膚及大腸等移植
+80023B,13078,膀胱陰道瘻管修補術 Vesico vaginal fistula repair,第七節,－有皮膚及大腸等移植
+80024B,11744,"從陰道進入之陰道固定術 Colpopexy, vaginal approach",第七節,－有皮膚及大腸等移植
+80025B,15801,腹腔鏡陰道懸吊術 Laparoscopic colpopexy 註：執行「機械手臂輔助陰道懸吊術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「婦科」、「泌尿科」認證學會認 證醫師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,－有皮膚及大腸等移植
+80026B,27333,"經腹腔及陰道合併之骨盆底重建術(含子宮切除術，陰道懸吊術， 陰道前後壁修補但不含尿失禁手術) Combined abdominal and vaginal pelvic floor reconstrction (abdominal hysterectomy, sacrocolpopexy, colporrhaphy combined anterior-posterior) 註： 1.適應症： 因子宮病變需切除子宮，同時又有陰道前壁(膀胱)膨出、陰道後 壁(直腸)膨出、腸膨出等，子宮陰道脫垂的病人。 2.手術： 一次執行經腹部子宮全切除及骨盆底的重建手術－即陰道前後 壁修補，或併同施行穹窿懸吊術。",第七節,雙極前列腺刮除術/汽化術
+80027B,27661,"經陰道骨盆底重建手術（含子宮切除術，陰道懸吊術，陰道前後 壁修補但不含尿失禁手術） Transvaginal pelvic floor reconstruction (transvaginal hysterectomy vaginal suspension, colporrhaphy combined anterior-posterior) 註： 1.適應症： 子宮完全或部分脫出者，同時又有陰道前壁(膀胱)膨出、陰道後 壁(直腸)膨出、腸膨出等的病人。 2.手術： 一次執行經陰道子宮全切除及骨盆底的重建手術－即陰道前後 壁修補，或併同施行穹窿懸吊術。",第七節,雙極前列腺刮除術/汽化術
+80028B,23154,"經陰道骨盆底重建手術(陰道懸吊術，陰道前後壁修補，不含尿失 禁手術) Transvaginal pelvic floor reconstruction (vaginal suspension, colporrhaphy combined anterior-posterior) 註： 1.適應症： 不需切除子宮或子宮原本已被切除的子宮或穹窿脫垂，合併陰 道壁脫垂的病人，行懸吊術(含 Sacro-spinal ligament fixation)及 陰道前後壁修補術。 2.手術： (1)陰道前後壁修補及腸膨出修補。 (2)穹窿懸吊術(SSVS)/子宮懸吊術(SSUS)。",第七節,雙極前列腺刮除術/汽化術
+80029C,12580,腹腔鏡式骨盆腔子宮內膜異位症電燒及切 除 — 中度：子宮內膜異位症分級指數六至四十分。 Laparoscopic fulguration or excision of pelvic endometriosis — Moderate 註：子宮內膜異位症分級指數依照美國不孕症醫學會一九八五年 之分級標準。,第七節,雙極前列腺刮除術/汽化術
+80030B,14623,"陰道切除術 － 陰道全部切除，腹式合併陰道式 Complete resection of vagina, combined abdominal and vaginal approach",第七節,雙極前列腺刮除術/汽化術
+80031C,18507,腹腔鏡式骨盆腔子宮內膜異位症電燒及切除 — 重度：子宮內膜 異位症分級指數大於四十分。 Laparoscopic fulguration or excision of pelvic endometriosis — Severe 註： 1.子宮內膜異位症分級指數依照美國不孕症醫學會一九八五年之 分級標準。 2.執行「機械手臂輔助骨盆腔子宮內膜異位症切除術(重度)」，須 符合下列規範： (1)醫師資格： A.具機械手臂輔助手術系統「婦科」認證學會認證醫師資格。 B.前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認 證方式及認證培訓機構證明)予保險人審核通過。 (2)執行手術之醫師名單應報經保險人核定。,第七節,雙極前列腺刮除術/汽化術
+80032B,15328,再次直腸陰道瘻管修補術 Recurrent recto-vaginal fistula repair,第七節,－有皮膚及大腸等移植
+80033B,20164,經腹腔之骨盆底重建術 註： 1.適應症：子宮脫垂(至GradeⅡ)或子宮切除後陰道脫垂，合併陰 道旁缺損導致的膀胱膨出及小腸膨出。 2.手術：同時執行經腹腔做子宮懸吊術(或陰道懸吊)、陰道旁缺損 修補與道格拉凹整型術。 3.不得同時申報80026B、80027B、80011B、80007B、80406B、 80403B、80407B、80028B、80010B。,第七節,－有皮膚及大腸等移植
+80034B,9804,陰道人工網膜外露修復術 Vaginal mesh extrusion repair 註：不得同時申報之診療項目及編號：80008B 及74419B。,第七節,－有皮膚及大腸等移植
+80035B,11680,陰道式會陰尿道懸吊術 Vaginal perineal urethral suspension(VPUS) 註：不得同時申報之診療項目及編號：77029B 及78030B。,第七節,－有皮膚及大腸等移植
+80036C,411,陰道息肉或肉芽組織切除術 Excision of vaginal granulation tissue or polypectomy 註： 1.適應症：子宮切除或陰道生產後，產生陰道息肉或肉芽組織。 2.限婦產科專科醫師申報。 3.同處病灶不得同時申報55025C。 4.一般材料費，得另加計百分之四十六。,第七節,－有皮膚及大腸等移植
+80037C,925,—併冷凍或電燒止血 註： 1.適應症：子宮切除或陰道生產後，產生陰道息肉或肉芽組織， 處置時發生陰道出血，經初步處置後仍顯著出血，需要使用電 燒或冷凍止血。 2.限婦產科專科醫師申報。 3.同處病灶不得同時申報55025C。 4.一般材料費，得另加計百分之二十一。,第七節,－有皮膚及大腸等移植
+80038C,601,—併藥物止血 註： 1.適應症：子宮切除或陰道生產後，產生陰道息肉或肉芽組織， 處置時發生陰道出血，經初步處置後仍顯著出血，需要使用藥 物止血。 2.限婦產科專科醫師申報。 3.同處病灶不得同時申報55025C。 4.一般材料費，得另加計百分之三十二。,第七節,－有皮膚及大腸等移植
+80201C,2431,陰道式子宮頸切除術 Vaginal trachelectomy 註： 1.適應症：子宮頸之癌前病變或早期子宮頸癌。 2.手術：經由陰道進行子宮頸切除術。,第七節,－有皮膚及大腸等移植
+80202C,2431,子宮頸整形術 Tracheloplasty 註：shirodker or lash type,第七節,－有皮膚及大腸等移植
+80203C,4988,子宮頸縫合術 Cervical cerclage 註：McDonald's cerclage 比照申報。,第七節,－有皮膚及大腸等移植
+80204C,1340,子宮頸殘餘部擴張刮除術 Dilation and curettage of cervical stump,第七節,－有皮膚及大腸等移植
+80205C,2810,"子宮頸楔狀切除術 Cervical conization 註： 1.雷射錐形切除術 Laser conization, CO2比照申報。 2.西醫基層院所申報限設置有門診手術室及觀察病床者。",第七節,－有皮膚及大腸等移植
+80206B,3174,子宮頸切斷術 Cervical amputation,第七節,－有皮膚及大腸等移植
+80207C,392,子宮頸蒂瘤切除術 Cervical polypectomy,第七節,－有皮膚及大腸等移植
+80208B,5360,陰道式殘餘子宮頸切除術 Vaginal excision of cervical stump 註： 1.適應症： (1)子宮體切除後殘留子宮頸之癌前病變或早期子宮頸癌。 (2)殘留子宮頸脫垂。 2.手術：經由陰道進行殘餘子宮頸切除術。,第七節,－有皮膚及大腸等移植
+80209B,12877,經陰道子宮懸吊合併子宮頸部份切除術 Manchester operation (Transvaginal uterine suspension with partial cervicectomy) 註： 1.適應症：子宮下垂合併子宮頸拉長。 2.不得同時申報80201C、80202C、80203C、80210C 及80406B。,第七節,－有皮膚及大腸等移植
+80210C,13871,腹式子宮頸切除術 Abdominal trachelectomy 註： 1.適應症：子宮頸之癌前病變或早期子宮頸癌。 2.手術：經由開腹進行子宮頸切除術。 3.不得同時申報80201C。,第七節,－有皮膚及大腸等移植
+80211C,42638,根除式子宮頸切除術 Radical trachelectomy,第七節,－有皮膚及大腸等移植
+80212B,7165,腹式殘餘子宮頸切除術 Abdominal excision of cervical stump 註： 1.適應症： (1)子宮體切除後殘留子宮頸之癌前病變或早期子宮頸癌合併 骨盆沾粘。 (2)殘留子宮頸脫垂。 2.手術：經由開腹進行殘餘子宮頸切除術。 3.不得同時申報80208B。,第七節,－有皮膚及大腸等移植
+80401C,1799,診斷性或治療性子宮擴張刮除術（非產科） Diagnostic or therapeutic dilation and curettage (Non- obstetric) 註： 1.適用範圍：子宮異常出血、子宮內膜過厚或懷疑子宮內膜病灶、 子宮頸抹片腺體異常。 2.須檢附術後病理細胞學報告。,第七節,－有皮膚及大腸等移植
+80402C,12015,一般子宮肌瘤切除術 Uncomplicated myomectomy 註：不得同時申報80430B。,第七節,－有皮膚及大腸等移植
+80403B,15191,"一般全子宮切除術 Uncomplicated total hysterectomy 註： 1.經陰道(transvaginal hysterectomy, TVH)或經腹部(transabdominal hysterectomy, TAH)。 2.不得同時申報80430B。",第七節,－有皮膚及大腸等移植
+80404C,13285,次全子宮切除術Subtotal hysterectomy 註：不得同時申報80430B。,第七節,－有皮膚及大腸等移植
+80405C,3410,骨盆腔粘連分離術 Lysis of pelvic (abdominal) adhesion,第七節,－有皮膚及大腸等移植
+80406B,6047,子宮懸吊術 Uterine suspension 註：Spalding-Webster method 比照申報。,第七節,－有皮膚及大腸等移植
+80407B,6595,子宮廣韌帶裂傷修補或切除術 Repair or resection of broad ligament,第七節,－有皮膚及大腸等移植
+80408B,8933,子宮輸卵管造口吻合術 Hysterosalpingostomy,第七節,－有皮膚及大腸等移植
+80409B,9686,子宮縫合術 Hysterorrhaphy,第七節,－有皮膚及大腸等移植
+80410B,13711,子宮整形術 Metroplastic surgery 註：Jone's或Tompkin's op. 比照申報。,第七節,－有皮膚及大腸等移植
+80411B,11980,Spalding-Richardson 氏子宮脫出手術 Spalding-Richardson's operation,第七節,－有皮膚及大腸等移植
+80412B,28841,廣泛性全子宮切除術 Extended hysterectomy,第七節,－有皮膚及大腸等移植
+80413B,42640,子宮頸癌全子宮根除術 Radical hysterectomy for cervical cancer 註：不含淋巴結切除。,第七節,－有皮膚及大腸等移植
+80414B,25989,"陰道式子宮根治手術 (Schauta 式手術) Hysterectomy vaginal radical, Schauta type procedure",第七節,－有皮膚及大腸等移植
+80415C,19466,子宮鏡切除子宮腔隔膜或子宮肌瘤 Hysteroscopic resection of uterine septum or hysteroscopic myomectomy 註： 1.西醫基層院所申報限設置有門診手術室及觀察病床者。 2.不得同時申報80430B。,第七節,－有皮膚及大腸等移植
+80416B,29753,腹腔鏡全子宮切除術 Laparoscopic hysterectomy 註： 1.不得同時申報80430B。 2.執行「機械手臂輔助全子宮切除術」，須符合下列規範： (1)醫師資格： A.具機械手臂輔助手術系統「婦科」認證學會認證醫師資格。 B.前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認 證方式及認證培訓機構證明)予保險人審核通過。 (2)執行手術之醫師名單應報經保險人核定。 (3)其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳 者本項不予支付；惟因特殊情形未在規定期限內完成上傳， 可檢具理由後補登錄。,第七節,－有皮膚及大腸等移植
+80417B,38471,婦癌分期手術 手術範圍含：(BSO+omentectomy+ATH+retroperitoneal lymphadenectomy),第七節,－有皮膚及大腸等移植
+80418B,50588,婦癌減積手術 手術範圍含： (BSO+omentectomy+ATH+retroperitoneal lymphadenectomy)+radical dissection for debulking,第七節,－有皮膚及大腸等移植
+80419B,20121,婦癌二次剖腹探查術 Gynecologic oncology second-look laparotomy,第七節,－有皮膚及大腸等移植
+80420C,18748,複雜性子宮肌瘤切除術 Complicated myomectomy 註： 1.定義為肌瘤大於八公分、數目大於五個、子宮頸或子宮旁韌帶 內肌瘤、或子宮與腸組織間有粘黏且足以妨礙手術者。 2.不得同時申報80430B。,第七節,－有皮膚及大腸等移植
+80421B,21165,"複雜性全子宮切除術 Complicated total hysterectomy 註： 1.經陰道(transvaginal hysterectomy, TVH)或經腹部(transabdominal hysterectomy, TAH)。 2.定義為肌瘤大於八公分、數目大於五個、子宮頸或子宮旁韌帶 內肌瘤、或子宮與腸組識間有粘黏且足以妨礙手術者。 3.不得同時申報80430B。",第七節,－有皮膚及大腸等移植
+80422C,10080,子宮鏡移除異物或息肉 Hysteroscopic removal of foreign body or polyp 註：一般材料費及單次使用三十度切除環，得另加計百分之八十。,第七節,－有皮膚及大腸等移植
+80423C,12844,子宮鏡剝離子宮腔粘黏或子宮內膜電燒 Hysteroscopic lysis of uterine adhesion or endometrial ablation 註：沾黏分離之主手術得以本項手術申報，六個月最多申報一次。,第七節,－有皮膚及大腸等移植
+80424B,46270,腹腔鏡式婦癌分期手術 Laparoscopic gynecologic oncology staging surgery 註：執行「機械手臂輔助婦癌分期手術」，須符合下列規範： 1.醫師資格： (1)具機械手臂輔助手術系統「婦科」認證學會認證醫師資格。 (2)前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認證 方式及認證培訓機構證明)予保險人審核通過。 2.執行手術之醫師名單應報經保險人核定。 3.其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳者 本項不予支付；惟因特殊情形未在規定期限內完成上傳，可檢 具理由後補登錄。,第七節,－有皮膚及大腸等移植
+80425C,25907,腹腔鏡子宮肌瘤切除術,第七節,－有皮膚及大腸等移植
+80426C,4944,腹腔鏡骨盆腔粘連分離術 Laparoscopic pelvic adhesiolysis,第七節,－有皮膚及大腸等移植
+80427B,8768,腹腔鏡子宮懸吊術 Laparoscopic uterine suspension(含Gilliam),第七節,－有皮膚及大腸等移植
+80428B,8768,腹腔鏡卵巢懸吊術,第七節,－有皮膚及大腸等移植
+80429B,48183,腹腔鏡子宮頸癌全子宮根除術 Laparoscopic radical hysterectomy for cervical cancer 註： 1.不含淋巴結切除。 2.執行「機械手臂輔助子宮頸癌全子宮根除術」，須符合下列規 範： (1)醫師資格： A.具機械手臂輔助手術系統「婦科」認證學會認證醫師資格。 B.前述核發認證單位應檢附認證計畫書(須檢附訓練課程、認 證方式及認證培訓機構證明)予保險人審核通過。 (2)執行手術之醫師名單應報經保險人核定。 (3)其手術費按保險人規範之未列項申報方式辦理，比照本項申 報，並於申報費用後二個月內應上傳手術相關資訊，未上傳 者本項不予支付；惟因特殊情形未在規定期限內完成上傳，,第七節,－有皮膚及大腸等移植
+80430B,25885,腹腔鏡次全子宮切除術 Laparoscopic subtotal hysterectomy 註： 1.適應症： (1)子宮體之良性腫瘤/疾病（例如子宮肌瘤、子宮肌腺症或其他 良性疾病）所引起之腹痛、異常出血、貧血或骨盆壓迫等症 狀。 (2)執行子宮脫垂行經腹腔鏡陰道懸吊手術時，依病情需要同時 併行本項，本項不得單獨為子宮脫垂之手術。 2.禁忌症：子宮頸惡性腫瘤、子宮體惡性腫瘤、子宮頸異常增生。 3.不得併報項目：全子宮切除術（80403B、80421B、80416B）、 子宮肌瘤切除術（80402C、80420C、80415C、80425C）、次全 子宮切除術（80404C）。 4.執行「機械手臂輔助次全子宮切除術」，須符合下列規範：,第七節,－有皮膚及大腸等移植
+80603C,10739,輸卵管整形術 Salpingoplasty,第七節,－有皮膚及大腸等移植
+80604C,6665,輸卵管剝離術 Salpingolysis with microscopic 註： 1.為進行人工協助生殖技術而執行本項者，不予給付。 2.屬西醫基層總額： (1)適應症：因輸卵管沾黏而引起的腹部疼痛、腫脹，經保守性 治療無效者。 (2)除山地離島地區外，基層院所限由專任醫師開立處方及執行 始可申報。,第七節,－有皮膚及大腸等移植
+80605B,20569,輸卵管吻合術 End to end anastomosis 註：結紮後重建者，非屬本保險給付範圍。,第七節,－有皮膚及大腸等移植
+80606C,10739,輸卵管造口術 Salpingostomy without microscopic 註： 1.為進行人工協助生殖技術而執行本項者，不予給付。 2.屬西醫基層總額： (1)適應症：因輸卵管開口閉合而引起的腹部疼痛、腫脹、水樣 分泌過多，經保守性治療無效者。 (2)除山地離島地區外，基層院所限由專任醫師開立處方及執行 始可申報。,第七節,－有皮膚及大腸等移植
+80607B,12887,輸卵管補植術 Reimplantation with microscopic,第七節,－有皮膚及大腸等移植
+80608C,18257,腹腔鏡輸卵管整形術 Laparoscopic salpingoplasty,第七節,－有皮膚及大腸等移植
+80801B,19866,卵巢切除術附加大網膜切除術 Oophorectomy with omentectomy,第七節,－有皮膚及大腸等移植
+80802C,9741,－ 單側 unilateral,第七節,－有皮膚及大腸等移植
+80804C,7890,卵巢膿瘍切開引流術 Incision and drainage of ovarian abscess,第七節,－有皮膚及大腸等移植
+80805C,4079,"卵巢部份切片術 Biopsy ovary, incisional",第七節,－有皮膚及大腸等移植
+80807C,17912,－ 單側 unilateral,第七節,腹腔鏡子宮附屬器部分或全部切除術
+80809B,17280,卵巢癌再次手術探查術 Second look operation for ovarian cancer,第七節,腹腔鏡子宮附屬器部分或全部切除術
+80811C,12603,－ 雙側 bilateral,第七節,－有皮膚及大腸等移植
+80812C,20956,－ 雙側 bilateral,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81001C,7300,葡萄胎或絨毛膜癌除去術 Removal of molar pregnancy or choriocarcinoma,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81002C,10430,子宮外孕手術 Ectopic pregnancy operation,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81003C,1161,胎盤取出術 Manual removal of placenta,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81004C,10237,無妊娠併發症之剖腹產術 Cesarean section in normal pregnancy 註：合併非治療性闌尾切除不另給付。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81005C,23705,剖腹產合併次全子宮切除術 Subtotal hysterectomy after Cesarean section 註：合併非治療性闌尾切除不另給付。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81006C,2556,妊娠前十二週流產刮宮術 D&C（≦12.Week）,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81007C,9347,妊娠超過十二週流產或死胎刮宮術 D&C（ >12.Week）,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81008B,10838,子宮切開流產術 Hysterotomy for termination of pregnancy,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81009C,9347,死胎之引產（十二至二十四週） Medical induction for fetal death (12-24 weeks) 註：治療性引產比照申報。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81010C,17065,死胎之引產（超過二十四週） Medical induction for fetal death (after 24 weeks) 註：治療性引產比照申報。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81011C,19999,"有妊娠併發症之剖腹產術 Cesarean section in complicated pregnancy (defined as cases with preeclampsia, eclampsia, GDM, malpresentation, and documented major medical or surgical complications) 註： 1.合併非治療性闌尾切除不另給付。 2.妊娠併發症係指： (1)子癇前症、子癇症、妊娠糖尿病、胎位不正、和有病歷記載 之內外科併發症者。 (2)妊娠二十二週以上至未滿三十三週早產病人。(排除胎死腹 中，及符合優生保健法之中止妊娠) (3)四十歲以上初產婦。",第七節,腹腔鏡子宮附屬器部分或全部切除術
+81012B,9357,死胎破取術Destruction of the dead fetus,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81013B,65210,骨盤腔臟器摘除術 Pelvic exenteration-Total or Anterior or Posterior 註：含人造膀胱、直腸造口。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81014C,6456,"骨盆腔子宮內膜異位症，電燒及切除—輕度：子宮內膜異位症分 級指數小於或等於五分。 Fulguration or excision of pelvic endometriosis, minimal to mild 註：子宮內膜異位症分級指數依照美國不孕症醫學會一九八五年 之分級標準。",第七節,腹腔鏡子宮附屬器部分或全部切除術
+81015C,6865,經腹部子宮內避孕器移除術 Transabdominal removal of intrauterine device,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81016B,7392,薦骨前神經截斷術 Pre-sacral neurectomy,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81017C,14000,無妊娠併發症之陰道產 Vaginal delivery in normal pregnancy 註：包括會陰切開術，縫合術(縫合二度以內之裂傷)及胎盤剝離 等。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81018C,26393,雙胎分娩 Vaginal delivery of twins 註：包括會陰切開術，縫合術(縫合二度以內之裂傷)及胎盤剝離 等。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81019C,29439,多胎分娩 Vaginal delivery of multiple pregnancy 註：包括會陰切開術，縫合術(縫合二度以內之裂傷)及胎盤剝離 等。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81020C,15956,腹腔鏡子宮外孕手術(含腹腔鏡子宮外孕藥物注射) Laparoscopic surgery for ectopic pregnancy (including laparoscopic local injection) 註：西醫基層院所申報限設置有門診手術室及觀察病床者。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81021B,17295,骨盆腔惡性腫瘤消滅術 Debulking operation for pelvic cancer,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81022B,7627,敗血性流產 Septic abortion treatment,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81023C,9493,子宮內膜電燒及切除術 Endometrial ablation or transcervical endometrial resection,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81024C,23386,前胎剖腹產後之陰道生產（接生費） 註：包括會陰切開術，縫合術(縫合二度以內之裂傷)及胎盤剝離 等。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81025C,27165,前胎剖腹產後之陰道生產（雙胎分娩） 註：包括會陰切開術，縫合術(縫合二度以內之裂傷)及胎盤剝離 等。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81026C,30907,前胎剖腹產後之陰道生產（多胎分娩） 註：包括會陰切開術，縫合術(縫合二度以內之裂傷)及胎盤剝離 等。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81028C,30199,前置胎盤或植入性胎盤之剖腹產 C/S due to placenta previa or placenta accreta 註：合併非治療性闌尾切除不另給付。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81029C,23749,剖腹產合併全子宮切除術 Total hysterectomy after Cesarean section 註：合併非治療性闌尾切除不另給付。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81030C,6085,引產無效後之流產或死胎刮宮術 Dilation and evacuation after induction failure,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81031C,612,子宮內管刮除術 Endocervical curettage 註： 1.適用範圍：子宮異常出血、子宮頸抹片異常、子宮頸錐形切除 後，確認子宮內頸管病灶。 2.須檢附子宮頸抹片檢查報告及術後病理細胞學報告。,第七節,腹腔鏡子宮附屬器部分或全部切除術
+81032C,11390,"骨盆腔子宮內膜異位症，電燒及切除—中度：子宮內膜異位症分 級指數六至四十分。 Fulguration or excision of pelvic endometriosis, moderate 註：子宮內膜異位症分級指數依照美國不孕症醫學會一九八五年 之分級標準。",第七節,腹腔鏡子宮附屬器部分或全部切除術
+81033B,16210,"骨盆腔子宮內膜異位症，電燒及切除—重度：子宮內膜異位症分 級指數大於四十分。 Fulguration or excision of pelvic endometriosis, severe 註：子宮內膜異位症分級指數依照美國不孕症醫學一九八五年之 分級標準。",第七節,腹腔鏡子宮附屬器部分或全部切除術
+81034C,19999,"有妊娠併發症之陰道產 Vaginal delivery in complicated pregnancy (defined as cases with preeclampsia, eclampsia, GDM, malpresentation, and documented major medical or surgical complications) 註： 1.妊娠併發症係指： (1)子癇前症、子癇症、妊娠糖尿病、胎位不正、和有病歷記載 之內外科併發症者。 (2)妊娠二十二週以上至未滿三十三週早產病人。(排除胎死腹 中，及符合優生保健法之中止妊娠) (3)四十歲以上初產婦。 (4) BMI≧35之初產婦。",第七節,腹腔鏡子宮附屬器部分或全部切除術
+81036B,8458,腹腔鏡式薦骨前神經截斷術 Laparoscopic pre-sacral neurectomy,第七節,腹腔鏡子宮附屬器部分或全部切除術
+82001C,7536,單側次全甲狀腺切除術 Unilateral subtotal thyroidectomy,第七節,腹腔鏡子宮附屬器部分或全部切除術
+82002C,16748,雙側次全甲狀腺切除術 Bilateral subtotal thyroidectomy,第七節,腹腔鏡子宮附屬器部分或全部切除術
+82003C,8356,甲狀腺囊腫切除術 Excision of thyroid cyst,第七節,腹腔鏡子宮附屬器部分或全部切除術
+82004B,16762,單側甲狀腺全葉切除術 Unilateral total thyroidectomy,第七節,腹腔鏡子宮附屬器部分或全部切除術
+82005B,9400,－ 單側 unilateral,第七節,頸部淋巴腺刮除術
+82006B,17740,－ 雙側 bilateral,第七節,頸部淋巴腺刮除術
+82007B,10799,－單純性 Simple,第七節,頸部淋巴腺刮除術
+82008B,23294,根治性甲狀腺切除術（含單側頸部淋巴腺切除術）,第七節,頸部淋巴腺刮除術
+82009B,10430,"腎上腺切除術，單側 Adrenalectomy, unilateral",第七節,頸部淋巴腺刮除術
+82010B,13609,－單側 unilateral,第七節,頸部淋巴腺刮除術
+82011B,14400,－雙側 bilateral,第七節,頸部淋巴腺刮除術
+82012C,6910,副甲狀腺再植術 Re-implant parathyroid gland,第七節,頸部淋巴腺刮除術
+82013B,14518,副甲狀腺切除加上自體移植 Parathyroidectomy+au totransplantation,第七節,頸部淋巴腺刮除術
+82014B,19623,腹腔鏡腎上腺切除 Laparoscopic Adrenalectomy,第七節,頸部淋巴腺刮除術
+82015B,24434,單側甲狀腺全葉切除術及另一側次全甲狀腺切除術 One side total and another side subtotal thyroidectomy,第七節,腹腔鏡子宮附屬器部分或全部切除術
+82016B,22648,雙側甲狀腺全葉切除術 Bilateral total thyroidectomy,第七節,腹腔鏡子宮附屬器部分或全部切除術
+82017B,17870,再次副甲狀腺切除術 Parathyroidectomy re-exploration,第七節,頸部淋巴腺刮除術
+82018B,30119,－亞全切除術 Subtotal 註： 1.適應症： (1)嚴重之腎性副甲狀腺機能亢進 (腎衰竭後併發之副甲狀腺機 能亢進而無法以藥物控制者)。 (2)原發性副甲狀腺機能亢進中病理變化為多顆副甲狀腺增生 者。 2.含一般材料費，得另加計百分之十六。,第七節,頸部淋巴腺刮除術
+82019B,42153,－全切除術 Total,第七節,頸部淋巴腺刮除術
+83001B,19562,腦微血管減壓術 Microvascular decompression 註： 1.限神經外科專科醫師施行。 2.一般材料費及特殊材料費，得另加計百分之一百零四。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,頸部淋巴腺刮除術
+83002C,11966,－ 二節以內 ≦2 segments,第七節,頸部淋巴腺刮除術
+83003C,17366,－ 超過二節 ＞2 segments 註： 1.83002C一般材料費及單次使用鑽石鑽頭、氣動切割鑽頭，得另 加計百分之八十二。 2.83003C一般材料費及單次使用鑽石鑽頭、氣動切割鑽頭，得另 加計百分之七十三。,第七節,頸部淋巴腺刮除術
+83004B,13080,－ 單側 unilateral,第七節,頸部淋巴腺刮除術
+83005B,16496,－ 雙側 bilateral,第七節,頸部淋巴腺刮除術
+83006C,4325,－ 單側 unilateral,第七節,正中神經或尺神經腕部減壓術
+83007C,8190,－ 雙側 bilateral,第七節,正中神經或尺神經腕部減壓術
+83008C,6249,－ 單側 unilateral,第七節,側股皮下神經或後脛神經減壓術
+83009C,9715,－ 雙側 bilateral,第七節,側股皮下神經或後脛神經減壓術
+83010B,11257,腦組織活體切片 Brain biopsy 註：限神經外科專科醫師施行。,第七節,側股皮下神經或後脛神經減壓術
+83011B,9848,－ 簡單骨折 simple fracture,第七節,凹陷性顱骨骨折之手術
+83012B,12615,－ 開放骨折 open fracture,第七節,凹陷性顱骨骨折之手術
+83013C,3786,"頭顱穿洞術（止血引流、穿刺檢查） Burr hole (trephination) for hemostasis, drainage or ventricular puncture 註： 1.如以顱骨穿孔術實施其他神經外科手術，按各該手術項目所訂 點數申報。 2.一般材料費及特殊材料費，得另加計百分之三百十四。 3.上開特殊材料為單一使用之拋棄式特殊材料。",第七節,凹陷性顱骨骨折之手術
+83014C,2571,－每加一孔 one hole added,第七節,凹陷性顱骨骨折之手術
+83015C,13662,顱骨切除術 Craniectomy 註： 1.包括異物移除(remove F.B) 或減壓(decompression) 或神經切斷 (neurotomy)。 2.一般材料費及單一使用之拋棄式特殊材料費，得另加計百分之 一百三十一。,第七節,凹陷性顱骨骨折之手術
+83016B,11210,頭顱成形術 Cranioplasty 註： 1.限神經外科專科醫師施行。 2.一般材料費及特殊材料費，得另加計百分之一百四十八。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,凹陷性顱骨骨折之手術
+83017B,32193,－腦瘤大小三公分以內 ≦3cm 註： 1.一般材料費及特殊材料費，得另加計百分之九十六。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,凹陷性顱骨骨折之手術
+83018B,52106,－腦瘤大小介於三至六公分 3~6cm 註： 1.一般材料費及特殊材料費，得另加計百分之八十。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,凹陷性顱骨骨折之手術
+83019B,56942,－腦瘤大小六公分以上 ＞6cm,第七節,凹陷性顱骨骨折之手術
+83020B,19369,脊髓切斷術 Myelotomy 註：1.脊索切斷術(cordotomy) 比照申報。 2.限神經外科及骨科專科醫師施行。,第七節,凹陷性顱骨骨折之手術
+83021B,14760,後根切斷術Posterior rhizotomy 註：限神經外科及骨科專科醫師施行。,第七節,凹陷性顱骨骨折之手術
+83022C,31732,－ 頸椎 cervical,第七節,凹陷性顱骨骨折之手術
+83023C,25293,－ 胸椎 thoracic,第七節,凹陷性顱骨骨折之手術
+83024C,20550,－ 腰椎 lumbar 註：83024C一般材料費及單次使用切割附件，得另加計百分之六 十九。,第七節,凹陷性顱骨骨折之手術
+83025C,7340,頸交感神經切除術Cervical sympathectomy 註：應用於手汗症治療時，禁止施行於未滿二十歲者。,第七節,凹陷性顱骨骨折之手術
+83026C,17712,胸交感神經切除術 Dorsal sympathectomy 註：應用於手汗症治療時，禁止施行於未滿二十歲者。,第七節,凹陷性顱骨骨折之手術
+83027C,14462,腰交感神經切除術 Lumbar sympathectomy 註：應用於手汗症治療時，禁止施行於未滿二十歲者。,第七節,凹陷性顱骨骨折之手術
+83028C,4650,神經切斷術 Neurectomy,第七節,凹陷性顱骨骨折之手術
+83029C,2944,註：每加一條one added。,第七節,凹陷性顱骨骨折之手術
+83030B,9758,—肩、臀關節以上，包括臂神經叢，坐骨神經,第七節,凹陷性顱骨骨折之手術
+83032B,19876,—肩、臀關節以上，包括臂神經叢，坐骨神經,第七節,凹陷性顱骨骨折之手術
+83033B,30568,椎弓整形術 Lamino plasty,第七節,凹陷性顱骨骨折之手術
+83034B,16072,—肩、臀關節以上，包括臂神經叢，坐骨神經,第七節,凹陷性顱骨骨折之手術
+83035B,12333,顏面舌下神經吻合術 Facial hypoglossal nerve anastomosis 註：限神經外科專科醫師施行。,第七節,凹陷性顱骨骨折之手術
+83036C,20921,硬腦膜外血腫清除術 Removal of epidural hematoma 註：一般材料費及單一使用之拋棄式特殊材料費，得另加計百分 之一百零四,第七節,凹陷性顱骨骨折之手術
+83037C,20227,急性硬腦膜下血腫清除術 Removal of acute subdural hematoma 註： 1.限急診病人申報並不得加算急診加成。 2.一般材料費及單一使用之拋棄式特殊材料費，得另加計百分之 一百零六。,第七節,凹陷性顱骨骨折之手術
+83038C,12530,慢性硬腦膜下血腫清除術 Removal of chronic subdural hematoma 註： 1.一般材料費及特殊材料費，得另加計百分之一百三十二。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,凹陷性顱骨骨折之手術
+83039B,22904,腦內血腫清除術 Removal of intracerebral hematoma 註： 1.限神經外科專科醫師施行。 2.一般材料費及特殊材料費，得另加計百分之百。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,凹陷性顱骨骨折之手術
+83040B,32601,"良性脊髓腫瘤切除術 Benign intraspinal tumor, excision 註：限神經外科及骨科專科醫師施行。",第七節,凹陷性顱骨骨折之手術
+83041B,42643,"惡性脊髓腫瘤切除術 Malignant intraspinal tumor, excision 註：限神經外科及骨科專科醫師施行。",第七節,凹陷性顱骨骨折之手術
+83047B,17315,腦膜或脊髓膜突出修補術 Repair of meningocele or encephalocele 註： 1.限神經外科及骨科專科醫師施行。 2.一般材料費及特殊材料費，得另加計百分之一百十。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,脊椎內脊髓內腫瘤切除術
+83048C,4190,頭皮腫瘤 Scalp tumor 註： 1.包括頭皮縫合(suture of scalp) 2.一般頭皮縫合依第二部第二章第六節第一項創傷處置所訂點數 申報。,第七節,脊椎內脊髓內腫瘤切除術
+83049B,13378,腦室腹腔分流手術 V-P shunt 註：限神經外科專科醫師施行。,第七節,脊椎內脊髓內腫瘤切除術
+83050B,10447,水腫症腦室心房分流手術 V-A shunt 註：限神經外科專科醫師施行。,第七節,脊椎內脊髓內腫瘤切除術
+83051B,10232,腦室體外引流 External ventricular drainage 註：限神經外科專科醫師施行。,第七節,脊椎內脊髓內腫瘤切除術
+83052C,4525,歐氏貯囊置放手術 Omaya reservoir implantation 註：限神經外科專科醫師施行。,第七節,脊椎內脊髓內腫瘤切除術
+83053B,9060,腰椎蜘蛛網膜下-腹腔分流手術 Lumbar-peritoneal shunt 註：限神經外科專科醫師施行。,第七節,脊椎內脊髓內腫瘤切除術
+83054B,3139,腰椎腦脊髓液池體外引流 External lumbar cisternal drainage 註：限神經外科或麻醉專科醫師施行。,第七節,脊椎內脊髓內腫瘤切除術
+83055B,10560,腦脊髓液分流管重置 Revision of CSF shunt 註： 1.限神經外科專科醫師施行。 2.已包含移除及再置之費用。,第七節,脊椎內脊髓內腫瘤切除術
+83056B,49410,癲癇症腦葉切除術 Brain lobectomy for epilepsy 註：,第七節,脊椎內脊髓內腫瘤切除術
+83057B,30571,經由蝶竇之腦下垂體瘤切除 Transsphenoidal removal of pituitary adenoma 註： 1.限神經外科專科醫師施行。 2.一般材料費及特殊材料費，得另加計百分之八十六。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,脊椎內脊髓內腫瘤切除術
+83058B,7700,頸動脈栓塞術 Carotid embolization,第七節,脊椎內脊髓內腫瘤切除術
+83059B,5935,－ 急性結紮 Acute ligation,第七節,脊椎內脊髓內腫瘤切除術
+83063B,21751,顱內外血管吻合術 EC-IC by-pass 註： 1.限神經外科專科醫師施行。 2.一般材料費及特殊材料費，得另加計百分之九十九。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,脊椎內脊髓內腫瘤切除術
+83072B,43200,－ 二節以內 ≦2 segments,第七節,脊椎腔內動靜脈畸型切除術
+83073B,50400,－ 超過二節 ＞2 segments,第七節,脊椎腔內動靜脈畸型切除術
+83074C,2764,－ 酒精阻斷 Alcohol block,第七節,脊椎腔內動靜脈畸型切除術
+83075B,6552,－ 選擇性神經切除術Selective neurectomy,第七節,脊椎腔內動靜脈畸型切除術
+83077B,10128,－ 簡單的縫合線顱骨咬除 Simple suturectomy,第七節,脊椎腔內動靜脈畸型切除術
+83078B,10752,－ 顱骨分割法 Morcellation,第七節,脊椎腔內動靜脈畸型切除術
+83079B,5360,高頻熱凝療法 Radiofrequency coagulation 1.申請人檢附資料應符合之要件： (1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術 後Image-guided、OP note、疼痛量表等相關資料，以佐證實 施之必要性。 (2)需為中重度、慢性疼痛且經藥物、復健治療等保守療法三個 月後未改善。 (3)單一部位首次實施前需至少施行一次影像輔助診斷性阻斷 (image-guided diagnostic block)，二週後倘症狀未緩解，才可 施行RF，需檢附影像副本以資佐證。 2.施行本項之適應症如下，並應由醫院申請事前審查：,第七節,脊椎腔內動靜脈畸型切除術
+83080B,12042,顱內壓監視置入 ICP monitoring 註：限神經外科專科醫師施行。,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83081B,18000,－ 切片 for biopsy,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83082B,18000,－ 抽吸 for aspiration,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83083B,25000,－ 放射同位素置放 for implantation of radio-isotope,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83084B,25000,－ 功能性失調 for functional disorder,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83085B,4308,經內視鏡胸交感神經切斷術 Transendoscopic dorsal sympathectomy 註： 1.係指兩側手術。 2.應用於手汗症治療時，禁止施行於未滿二十歲者。,第七節,凹陷性顱骨骨折之手術
+83087B,10900,顏面神經減壓術 Facial nerve decompression 註： 1.一般材料費及特殊材料費，得另加計百分之一百四十四。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83088B,84082,顱底瘤手術 Skull Base Tumor Surgery 註： 1.適應症：腫瘤必須大於三公分以上，或是位於 C-P angle 部位 之腫瘤大於四公分以上。 2.申報時請附上術前以及術後之X 光片。 3.一般材料費及特殊材料費，得另加計百分之六十五。 4.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83089B,8497,—上臂、前臂、大腿、小腿處之神經,第七節,凹陷性顱骨骨折之手術
+83090B,8016,—手、足的神經,第七節,凹陷性顱骨骨折之手術
+83091B,21790,—上臂、前臂、大腿、小腿處之神經,第七節,凹陷性顱骨骨折之手術
+83092B,21546,—手、足的神經,第七節,凹陷性顱骨骨折之手術
+83093B,13182,—上臂、前臂、大腿、小腿處之神經,第七節,凹陷性顱骨骨折之手術
+83094B,10711,—手、足的神經,第七節,凹陷性顱骨骨折之手術
+83098B,17694,－上肢肩、下肢臀關節以上，包括腦神經的轉移,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83099B,8848,－上肢腕、下肢足踝關節以上，神經的轉移,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83100B,4423,－上肢腕、下肢足踝關節以下，神經的轉移,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83103B,15234,脊髓刺激器暫時性植入手術 Spinal cord stimulator temporary implantation 註： 1.適應症：下列疾病之慢性疼痛病人並經專科醫師以藥物及非藥 物治療（復健等非侵入性處置及微創疼痛介入性治療，例如： 脊椎注射止痛藥物、高頻熱凝療法、脈衝式射頻等）六個月仍 未改善，且經臨床心理師或精神科醫師完成心理評估者： (1)脊椎手術後疼痛症候群（Falled back surgery syndrome）。 (2)因外傷導致的複雜性局部疼痛症候群（Complex regional pain syndrome）。 (3)脊神經蜘蛛膜炎（Arachnoiditis）。 (4)神經根病變（Radiculopathy）。,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83104B,17755,脊髓刺激器永久植入手術 Spinal cord stimulator permanent implantation 註： 1.經「脊髓刺激器暫時性植入手術」疼痛改善達臨床上有意義之 程度。 2.須事前審查。 3.不得同時申報項目：83002C、83003C、32026C。 4.經台灣麻醉醫學會及社團法人台灣神經外科醫學會核發認證之 神經外科、麻醉科專科醫師執行。 5.含一般材料費，得另加計百分之二十三。,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+83105B,7174,永久性刺激器電池更換術 註：限植入永久脊髓刺激器者(含「脊髓刺激器永久植入手術」項 目實施前之病人)。,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84001C,2663,耳介膿瘍或血腫切開引流術 I & D for auricle abscess or hematoma,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84002C,140,外耳道異物除去術，使用耳道鏡 Ear canal foreign body removal with otoscope,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84003C,1360,"外耳道異物除去術，使用耳道鏡，並有麻醉 Ear canal foreign body removal, with otoscope, under anesthesia",第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84004C,850,T.D.傳統耳膜切開術 Myringotomy with T.D. plunger,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84005C,3405,耳前瘻管或囊腫切除術 Excision of preauricular fistula or cyst,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84006C,840,外耳道普通創傷縫合術 Suture of ear injury,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84007C,2316,顯微鏡／內視鏡下鼓膜切開術 Myringotomy under microscope or telescope,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84008B,4000,外耳道腫瘤顯微鏡切除術 Removal of external ear tumor (microscope),第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84009B,12252,外耳道惡性腫瘤切除術 Removal of external ear malignant tumor,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84010B,10560,外耳道閉鎖症手術 Meatoplasty & canaloplasty,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84011B,10560,外傷性耳成形術 Traumatic otoplasty,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84012B,9528,外耳道成形術 Ear canal plastic operation,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84013B,7800,耳膜成形術 Myringoplasty 註：不分手術方式,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84014B,4481,"中耳耳茸摘出術 Polypectomy, middle ear",第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84015B,4657,顯微鏡下鼓膜切開術，併鼓室通氣管插入 Myringotomy with ventilation tube insertion Under microscope,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84016B,5202,鼓室探查術 Exploratory tympanotomy,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84017B,5930,鼓膜成形術 Myringoplasty 註：包括植皮(including skin graft)在內,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84018B,11522,－ 不包括乳突鑿開術 without mastoidectomy,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84019B,15000,－ 包括乳突鑿開術 with mastoidectomy,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84020B,11360,聽小骨重建術 Ossiculoplasty,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84021B,7250,－ 簡單式 simple 註：84021B一般材料費及單次使用鑽頭，得另加計百分之九十六。,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84022B,9470,－ 修正式 modified,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84023B,17226,耳性顱內合併症手術 Intracranial operation otologically,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84024B,15395,耳性硬腦膜外膿瘍切開術 Drainage of otogenic epidural abscess,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84025B,10196,鐙骨截除及修補 Stapedectomy with prosthesis,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84026B,5455,鐙骨鬆動術 Stapes mobilization,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84027B,2665,耳後瘻孔縫合術 Suture of postauricular,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84028B,11256,內耳全摘除術 Transtympanic transmastoid labyrinthectomy,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84029B,9720,內淋巴囊減壓術 Endolymphatic sac decompression,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84030B,11364,迷路開窩術 Labyrinthotomy,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84031B,10597,迷路切除術 Labyrinthectomy 註：包括乳突鑿開術(including mastoidectomy)在內。,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84032B,34020,聽神經腫瘍切除術（經耳的） Translabyrinthine acoustic neuroma excision,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84033B,15216,"顳骨錐部切除術 Petrouectomy (apicectomy, petrous)",第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84034B,35241,顳骨全切除術併乳突鑿開術 Temporal bone resection with mastoidectomy,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84035B,8780,耳病性暈眩手術 Sacculotomy for Meniere's disease,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84036B,7410,半規管造窗術 Fenestration of semicircular canals,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84037B,18780,耳再接手術 Replantation of ear 註： 1.限外耳完全斷裂行顯微手術者申報。 2.外傷性耳成形術請按84011B申報。,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+84038B,20250,人工電子耳手術(人工耳蝸植入術) 註： 限設有聽語復健治療團隊(包括耳鼻喉科專科醫師或復健專科醫 師、聽力師、語言治療師等)之醫院申報，施行本項適應症如下： 1.兒童(未滿十八歲)： (1)兩耳聽力損失呈≧90dB HL ( 0.5、l、2、4K Hz）。 (2)先前使用助聽器三至六個月以上，助聽後開放式語言測試得 分（Speech perception score）＜50%，或是噪聲下語詞測驗 得分（Word recognition score）＜30 %。 (3)無手術植入電極之禁忌。 2.成人： (1)學語後失聰且兩耳聽力損失呈≧70dB HL ( 0.5、1、2、4K Hz）。 (2)先前使用助聽器六個月以上，助聽後開放式語言測試得分,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+85001C,6783,眼球剜出術 Enucleation,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+85002C,5946,眼球內容物剜除術 Evisceration of eyeball,第七節,(1)病歷應記載清楚、詳實及病史完整。須有理學檢查、術前術
+85003C,5099,－ 鞏膜穿孔 scleral perforation,第七節,眼球傷口之修補
+85004C,4923,－ 角、鞏膜穿孔 corneoscleral perforation,第七節,眼球傷口之修補
+85201C,2829,角膜切開術 Keratotomy,第七節,眼球傷口之修補
+85202C,1516,角膜穿刺 Paracentesis,第七節,眼球傷口之修補
+85203C,2491,"翼狀贅肉簡單切除合併角膜切除 Excision pterygium, simple with keratectomy 註：包括粘膜或皮膚移植(including membrane or skin graft) 在內。",第七節,眼球傷口之修補
+85204C,4073,"翼狀贅肉複雜切除合併角膜切除 Excision pterygium, complicated with keratectomy 註： 1.包括粘膜或皮膚移植(including membrane or skin graft) 在內。 2.報費用應檢附同側半邊眼部及眼球之照片。",第七節,眼球傷口之修補
+85205C,841,角膜縫線拆除術（顯微鏡下） Removal of corneal stitches under microscope,第七節,眼球傷口之修補
+85206C,3700,角膜縫合術 Suture of cornea,第七節,眼球傷口之修補
+85207C,1587,角膜周邊結膜切開術 Peritomy,第七節,眼球傷口之修補
+85208B,1325,角膜鞏膜緣環鑽術 Trephining corneosecleral,第七節,眼球傷口之修補
+85209C,1163,角膜崁頓異物摘除 Removal of corneal embedded foreign body,第七節,眼球傷口之修補
+85210C,3930,角膜切除術 Keratectomy,第七節,眼球傷口之修補
+85211B,10560,表層角膜晶體移植術 Epikeratophakia,第七節,眼球傷口之修補
+85212B,10560,板層角膜移植術 Lamellar keratoplasty 註： 1.一般材料費及特殊材料費，得另加計百分之一百零八。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,眼球傷口之修補
+85213B,14868,穿透性角膜移植術 Penetrating keratoplasty 註： 1.一般材料費及特殊材料費，得另加計百分之一百。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,眼球傷口之修補
+85214C,5760,輪部移植術 Limbal transplantation,第七節,眼球傷口之修補
+85215B,17740,深層前角膜移植 Deep Anterior Lamellar Keratoplasty 註： 1.一般材料費及特殊材料費，得另加計百分之六十七。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,眼球傷口之修補
+85217B,16478,角膜內皮移植（使用已分離之角膜） Descemet's Stripping Automated Endothelial Keratoplasty with precut cornea 註： 1.一般材料費及特殊材料費，得另加計百分之五十三。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,角膜內皮移植
+85401C,4346,前房異物取出術 Removal of foreign body in anterior chamber,第七節,角膜內皮移植
+85402C,1646,診斷性前房水抽吸 Diagnostic aspiration aqureous,第七節,角膜內皮移植
+85403C,2381,"前房穿刺治療玻璃體脫出 Paracentesis, anterior chamber for vitreal prolapse",第七節,角膜內皮移植
+85404C,3130,前房隅角穿刺 Goniopuncture,第七節,角膜內皮移植
+85405C,5892,前房角切開術 Goniotomy,第七節,角膜內皮移植
+85406C,1480,前房空氣注入術 Air injection into anterior chamber,第七節,角膜內皮移植
+85407C,3429,眼前房血塊清除 Removal of hyphema paracentesis,第七節,角膜內皮移植
+85601C,4790,"青光眼鞏膜切開術 Sclerotomy, for glaucoma",第七節,角膜內皮移植
+85602B,2460,艾利阿特氏手術 Elliot's operation,第七節,角膜內皮移植
+85604B,5436,"後鞏膜切開術併液體吸出 Sclerotomy, posterior, with drainage of fluid",第七節,角膜內皮移植
+85605B,6858,"後鞏膜切開術，合併磁鐵吸除眼異物 Sclerotomy, posterior, with removal of intraocular foreign body by magnetic extraction",第七節,角膜內皮移植
+85606B,7337,"後鞏膜切開術，非磁性吸除眼異物 Sclerotomy, posterior, with removal of intraocular foreign body by nonmagnetic extraction",第七節,角膜內皮移植
+85607B,11232,"眼球穿傷，鞏膜任何方式切除及修復 Perforating injury of eye ball, any type of scleral repair.",第七節,角膜內皮移植
+85608B,11540,"鞏膜切除併植入或扣壓 Resection, scleral, with graft or buckling",第七節,角膜內皮移植
+85609B,4079,鞏膜覆蓋術 Sclera graft,第七節,角膜內皮移植
+85610B,1227,鞏膜表面異物除去術 Removal of scleral surface foreign body,第七節,角膜內皮移植
+85611B,3756,鞏膜切除術 Sclerectomy,第七節,角膜內皮移植
+85801C,2898,虹膜切開術 Iridotomy 註：虹膜角膜切開術(iridosclerotomy)比照申報。,第七節,角膜內皮移植
+85802C,6930,虹膜粘連分離術 Synechiotomy (iridodialysis),第七節,角膜內皮移植
+85803C,3290,睫狀體冷凍治療 Cyclocryotherapy,第七節,角膜內皮移植
+85804C,3290,睫狀體透熱法 Cyclodiathermy 註：一般材料費及單次使用虹光雷射(探頭)，得另加計百分之三 百十七。,第七節,角膜內皮移植
+85805C,7441,小樑切開術 Trabeculotomy under microscope,第七節,角膜內皮移植
+85806C,6939,小樑切除術 Trabeculectomy under microscope 註：包括周邊虹膜切除術(peripheral iridectomy)。,第七節,角膜內皮移植
+85807C,3629,光學性虹膜切除術 Optical iridectomy 註：扇形虹膜(sector iridectomy) 比照申報。,第七節,角膜內皮移植
+85808C,2951,周邊虹膜切除術 Peripheral iridectomy,第七節,角膜內皮移植
+85810C,4733,虹膜鉗頓術 Iridencleisis for glaucoma,第七節,角膜內皮移植
+85811B,6985,角鞏膜虹膜切除術 Corneoscleral iridocyclectomy 註：虹膜鞏膜切除術(iridosclerectomy)比照申報。,第七節,角膜內皮移植
+85812C,5450,虹膜斷裂之復原 Repair of iridodialysis,第七節,角膜內皮移植
+85813C,4680,睫狀體分離術 Cyclodialysis 註：睫狀體切開術(ciliarotomy) 比照申報。,第七節,角膜內皮移植
+85814C,9130,全虹膜切除術 Complete iridectomy,第七節,角膜內皮移植
+85815C,2480,"虹膜燒灼 Cauterization, iris",第七節,角膜內皮移植
+85816B,6780,虹膜囊腫切除術 Iridocystectomy,第七節,角膜內皮移植
+85817C,5650,虹膜牽張術 Iridotasis stretching of iris,第七節,角膜內皮移植
+85818C,4204,虹膜成形術：固定戳穿（顯微鏡下手術） Iridoplasty fixation transfixation (microsurgery) 註：屬西醫基層總額部門院所，除山地離島地區外，限由專任醫 師開立處方及執行始可申報。,第七節,角膜內皮移植
+85820B,6264,睫狀體脫出部份之切除 Ciliarybody excision of prolapse,第七節,角膜內皮移植
+85821B,2989,睫狀體活體切片 Ciliary body biopsy,第七節,角膜內皮移植
+85822B,3161,前粘連分離術 Division of synechiae,第七節,角膜內皮移植
+85823B,9168,青光眼導管置入術 Glaucoma tube shunt surgery,第七節,角膜內皮移植
+86001C,3500,膜性白內障切開術 Discission of membranous cataract under microscope,第七節,角膜內皮移植
+86002C,4884,白內障線狀摘出術 Linear extraction for cataract,第七節,角膜內皮移植
+86005C,4884,白內障切囊術 Capsulectomy for cataract,第七節,角膜內皮移植
+86006C,4488,水晶體囊切開吸引術 Lens capsulotomy and aspiration of lens under microscope,第七節,角膜內皮移植
+86007C,7500,水晶體囊外（內）摘除術 Extracapsular (intracapsular) lens extraction (ECLE) (ICLE) 註： 1.包括虹膜切開術(including iridotomy)。 2.申報費用應檢附術前檢查結果、病歷影本、手術摘要。,第七節,角膜內皮移植
+86008C,9000,水晶體囊內（外）摘除術及人工水晶體置入術 Intracapsular (extracapsular) lens extraction under microscope + IOL insertion 註： 1.包括虹膜切開術(including iridotomy)。 2.申報費用應檢附術前檢查結果、病歷影本、手術摘要。 3. Phacoemulcification + PCIOL比照申報。,第七節,角膜內皮移植
+86009C,7055,囊外水晶體超音波乳化術 Phacoemulsification,第七節,角膜內皮移植
+86010B,7960,坦部水晶體切除術 Pars plana lensectomy (ocutome),第七節,角膜內皮移植
+86011C,1960,－第一次植入 primary,第七節,角膜內皮移植
+86012C,5000,－第二次植入secondary,第七節,角膜內皮移植
+86013C,5000,－調整術reposition,第七節,角膜內皮移植
+86201C,1485,玻璃體內注射 Intravitreous injection 註：不得同時申報86216C。,第七節,角膜內皮移植
+86203C,3446,前玻璃體切除術 Anterior vitrectomy (vitrector),第七節,角膜內皮移植
+86204B,4446,眼前段再造術 Anterior segment reconstruction (vitrector),第七節,角膜內皮移植
+86205B,3269,"瞳孔遮斷前玻璃體切開術 Discission, anterior hyaloid for pupillary block",第七節,角膜內皮移植
+86206C,9266,－ 簡單 simple 註：屬西醫基層總額部門院所，除山地離島地區外，限由專任醫 師開立處方及執行始可申報。,第七節,眼坦部玻璃體切除術
+86207B,14780,－ 複雜 complicated,第七節,眼坦部玻璃體切除術
+86208C,12330,晶體切除術合併玻璃體切除術 Lensectomy & vitrectomy (vitrector),第七節,眼坦部玻璃體切除術
+86209C,17550,移位晶體摘除合併玻璃體切除術 Removal of dislocated lens combined vitrectomy(vitrector) 註：屬西醫基層總額部門院所，除山地離島地區外，限由專任醫 師開立處方及執行始可申報。,第七節,眼坦部玻璃體切除術
+86210B,1705,玻璃體吸引術 Aspiration of vitreous,第七節,眼坦部玻璃體切除術
+86211B,5340,玻璃體移植術（包括鞏膜切開） Transplantation vitreous including sclerotomy,第七節,眼坦部玻璃體切除術
+86212B,9750,原發性玻璃體切除術 Primary vitrectomy for pathologic vitreous,第七節,眼坦部玻璃體切除術
+86213B,6688,玻璃體內異物除去術 Remove intraocular F.B.,第七節,眼坦部玻璃體切除術
+86214C,2969,矽油排除術 Removal of silicon oil,第七節,眼坦部玻璃體切除術
+86215C,2259,液氣體交換術 Fluid gas exchange,第七節,眼坦部玻璃體切除術
+86216C,1507,玻璃體內注射眼科新生血管抑制劑 Intravitreal injection of an anti-VEGF agent 註： 1.適應症：限施打新生血管抑制劑。 2.不得同時申報86201C。 3.含一般材料費，得另加計百分之五。,第七節,眼坦部玻璃體切除術
+86401B,6420,磁鐵吸除眼內磁性異物（表面） Removal of intraocular foreign body with magnet(surface),第七節,眼坦部玻璃體切除術
+86402C,6260,網膜透熱或冷凍法再附著術 Reattachment retina with diathermy or cryopexy 註：屬西醫基層總額部門院所，除山地離島地區外，限由專任醫 師開立處方及執行始可申報。,第七節,眼坦部玻璃體切除術
+86403B,9276,網膜再附著術及排液術 Drainage with reattachment of retina,第七節,眼坦部玻璃體切除術
+86404B,4266,視網膜變性或裂孔，冷凍治療法 Cryotherapy for retinal degeneration or break,第七節,眼坦部玻璃體切除術
+86405B,6670,磁鐵吸除眼內磁性異物（植床） Removal of intraocular foreign body with magnet (embeded),第七節,眼坦部玻璃體切除術
+86406B,3000,網膜剝離之表面鞏膜切除術 Lamellar sclera resection,第七節,眼坦部玻璃體切除術
+86407C,3591,－ 簡單 Simple 註：屬西醫基層總額部門院所，除山地離島地區外，限由專任醫 師開立處方及執行始可申報。,第七節,眼坦部玻璃體切除術
+86408B,9130,－ 複雜 Complicated,第七節,眼坦部玻璃體切除術
+86409B,11062,－ 簡單 Simple 註： 1.一般材料費、20Ga玻璃體切除術主體包及相關特殊材料費，得 另加計百分之一百七十九。 2.不得同時申報項目：86206C、86407C。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,眼坦部玻璃體切除術
+86410B,19345,－ 複雜 Complicated 註： 1.一般材料費、20Ga玻璃體切除術主體包及相關特殊材料費，得 另加計百分之一百七十五。 2.不得同時申報項目：86207B、86408B。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,眼坦部玻璃體切除術
+86411B,20550,複雜眼坦部玻璃體切除術合併鞏膜切除併植入或扣壓 Complication Pars plana vitrectomy (vitrector) with Reattachment retina with diathermy or cryopex 註： 1.一般材料費、20Ga玻璃體切除術主體包及相關特殊材料費，得 另加計百分之一百六十八。 2.不得同時申報項目：86207B、86402C、85608B。,第七節,眼坦部玻璃體切除術
+86412B,18475,微創玻璃體黃斑部手術 Microincision vitreomacular surgery 註： 1.一般材料費、23Ga（含）以上玻璃體切除術主體包及相關特殊 材料費，得另加計百分之一百五十四。 2.不得同時申報項目：86207B。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,眼坦部玻璃體切除術
+86413B,24181,微創複雜性玻璃體切除合併鞏膜扣環手術 Microincision vitreoretinal surgery combined with scleral buckle 註： 1.一般材料費、23Ga（含）以上玻璃體切除術主體包及相關特殊 材料費，得另加計百分之一百九十四。 2.不得同時申報項目：86207B、86402C、85608B、86411B。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,眼坦部玻璃體切除術
+86414B,12800,－ 簡單 Simple 註： 1.一般材料費、23Ga（含）以上玻璃體切除術主體包及相關特殊 材料費，得另加計百分之二百三十五。 2.不得同時申報項目：86206C、86407C、86409B。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,微創玻璃體切除術
+86415B,24181,－ 複雜 Complicated 註： 1.一般材料費、23Ga（含）以上玻璃體切除術主體包及相關特殊 材料費，得另加計百分之一百八十九。 2.不得同時申報項目：86207B、86408B、86410B。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,微創玻璃體切除術
+86601C,4134,－ 一條,第七節,微創玻璃體切除術
+86602C,5438,－ 二條,第七節,微創玻璃體切除術
+86603C,1562,－ 超過二條，每增一條,第七節,微創玻璃體切除術
+86604C,5869,眼肌移植術 Transplant extraocular muscle 註：單眼。,第七節,微創玻璃體切除術
+86605C,3294,眼肌腱縫合術 Suture or tucking of extraocular muscle tendon 註：單眼。,第七節,微創玻璃體切除術
+86801B,6431,眼窩剖開探查術 Orbitotomy with exploration,第七節,微創玻璃體切除術
+86802B,8890,－ 併膿瘍引流 with drainage of intraorbital abscess,第七節,微創玻璃體切除術
+86803B,11744,－ 併異物或良性腫瘤切除 with removal of intraorbital foreign body or benign tumor,第七節,微創玻璃體切除術
+86804B,9907,－ 經前方途徑 anterior approach,第七節,微創玻璃體切除術
+86805B,13109,－ 經側方途徑 lateral approach,第七節,微創玻璃體切除術
+86806B,15497,－ 經顱腔途徑 cranial approach,第七節,微創玻璃體切除術
+86807B,9892,眼窩成形術 Reconstruction of orbital socket,第七節,微創玻璃體切除術
+86808B,11624,眼窩內容剜除術 Exenteration of orbit,第七節,微創玻璃體切除術
+86809B,16352,眼窩減壓術 Orbital decompression,第七節,微創玻璃體切除術
+86810B,8163,眼窩底修補術 Repair of orbital floor,第七節,微創玻璃體切除術
+86811B,11149,"眼窩病變切除併骨移植 Excision of orbital lesion, with bone graft",第七節,微創玻璃體切除術
+87001C,1651,"眼瞼良性腫瘤切除術 Excision of lid tumor, benign",第七節,微創玻璃體切除術
+87002C,5244,"眼瞼惡性腫瘤切除術 Excision of lid tumor, malignant",第七節,微創玻璃體切除術
+87003C,6989,眼瞼瘤切除術合併眼瞼成形術 Excision of lid tumor with lid reconstruction,第七節,微創玻璃體切除術
+87004C,5449,眼瞼下垂前額懸吊術 Frontalis sling for ptosis 註：美容手術不予給付。,第七節,微創玻璃體切除術
+87005C,7760,眼瞼下垂擴筋膜懸吊術 Fascia lata sling 註：美容手術不予給付。,第七節,微創玻璃體切除術
+87006C,5598,眼瞼外翻或內翻植皮術 Skin graft for ectropion or entropion 註：含外翻或內翻矯正手術 (corrective operation for ectropion or entropion)。,第七節,微創玻璃體切除術
+87007C,3826,眼瞼乙狀成形術 Z-plasty,第七節,微創玻璃體切除術
+87008C,4070,眼瞼外翻矯正手術 Corrective operation for ectropion 註：限由合併症引起患者申報，並包括植皮在內。,第七節,微創玻璃體切除術
+87009C,4113,眼瞼內翻矯正手術 Correction of entropion 註：限由合併症引起患者申報，並包括植皮在內。,第七節,微創玻璃體切除術
+87010C,3324,"簡單眼瞼內翻手術 Operation for entropion, simple 註：包含眼皮鬆弛(Dermatochalasis)及倒睫毛(Trichiasis)手術。眼 皮鬆弛手術需個案眼皮鬆弛已遮到角膜三分之一以上及影響 視力始可施行，且需存放術前術後照片於病歷內供備查；倒 睫毛手術需個案倒插睫毛已造成角膜表皮損傷始可施行。",第七節,微創玻璃體切除術
+87011C,3367,眼瞼裂傷之修補 Repair lacerated eyelid,第七節,微創玻璃體切除術
+87012C,2068,眼緣縫合 Tarsorrhaphy for intermargin lid adhesion,第七節,微創玻璃體切除術
+87013C,3083,眥成形術 Canthoplasty,第七節,微創玻璃體切除術
+87014C,3253,眼瞼縫合術 Blepharorrhaphy 註：限眼瞼緣切除 (Excision of eye lid margin)患者申報。,第七節,微創玻璃體切除術
+87015B,1709,－ 良性 benign,第七節,微創玻璃體切除術
+87016B,2365,－ 惡性 malignancy,第七節,微創玻璃體切除術
+87017C,5820,鍉上眼瞼肌切除術 Levator muscle resection 註：先天性 (congenital) 不予給付。,第七節,微創玻璃體切除術
+87018C,4217,眼瞼成形術 Blepharoplasty for double lid fold 註： 1.限外傷(Traumatic)或因病切除患者申報。 2.包括單、雙側。,第七節,微創玻璃體切除術
+87019C,929,眥部切開術 Canthotomy,第七節,微創玻璃體切除術
+87020C,1360,眼瞼皮縫合術 （外眼部） Suture of eyelid,第七節,微創玻璃體切除術
+87021C,4057,Wheeler 氏手術 Wheeler's operation,第七節,微創玻璃體切除術
+87022C,2099,瞼板腺除術 Excision of tarsal plate,第七節,微創玻璃體切除術
+87023C,3439,眼瞼眼球黏連分離術 Relief of symblepharon,第七節,微創玻璃體切除術
+87024B,7060,眼球黏連分離併用粘膜移植 Relief of symblepharon with conjunctiva or mucosa graft,第七節,微創玻璃體切除術
+87025C,963,霰粒腫手術 Incision & curettage for chalazion,第七節,微創玻璃體切除術
+87026C,3397,眼瞼粘連分離術 Relief of ankyloblepharon,第七節,微創玻璃體切除術
+87027B,8200,原發性眼瞼痙攣症之眼肌切除術 Eyelid protractor myectomy of essential blepharospasm 註：適應症為原發性眼瞼痙攣症。,第七節,微創玻璃體切除術
+87028B,6626,眼瞼板之硬顎移植術 Hard palate graft 註： 適應症 1.嚴重上、下眼瞼切損之重建。 2.嚴重眼瞼攣縮角膜暴露之治療。,第七節,微創玻璃體切除術
+87029B,7970,HUGHES 皮瓣 Hughes flap 註： 適應症 1.嚴重下眼瞼切損(下眼瞼切損大於百分之五十)之重建。 2.下眼瞼惡性腫瘤切除。,第七節,微創玻璃體切除術
+87030B,5820,苗勒氏肌切除及提瞼肌放鬆 Mullerectomy 註：限葛瑞夫氏眼病變患者申報。,第七節,微創玻璃體切除術
+87031C,6984,下眼瞼攣縮併角膜暴露矯正術 Correction of lower lid retraction corneal exposure 註： 1.適應症為甲狀腺疾病。 2.屬西醫基層總額部門院所，除山地離島地區外，限由專任醫師 開立處方及執行始可申報。,第七節,微創玻璃體切除術
+87202C,1011,結膜縫合 Suture of conjunctiva一次,第七節,微創玻璃體切除術
+87203C,1086,結膜切片 Biopsy of conjunctiva,第七節,微創玻璃體切除術
+87204C,1315,－ 小於三mm less than 3mm,第七節,微創玻璃體切除術
+87205C,1748,－ 大於三mm large than 3mm,第七節,微創玻璃體切除術
+87206C,4503,"結膜病灶切除惡性，併粘膜移植 Excision lesion of conjunctiva, malignant with mucous membrane graft",第七節,微創玻璃體切除術
+87207B,4120,－ 有移植 with graft,第七節,微創玻璃體切除術
+87208B,2705,－ 無移植 without graft,第七節,微創玻璃體切除術
+87209C,1882,結膜瓣形成術 Conjunctival flap peritectomy,第七節,微創玻璃體切除術
+87210C,1072,"結膜良性腫瘤冷凍術 Cryotherapy of conjunctival tumor, benign",第七節,微創玻璃體切除術
+87211B,1633,"結膜惡性腫瘤冷凍術 Cryotherapy of conjunctival tumor, malignancy",第七節,微創玻璃體切除術
+87212C,2269,－ 初發 primary,第七節,微創玻璃體切除術
+87213C,3250,－ 復發 complicated or recurrent,第七節,微創玻璃體切除術
+87214B,2077,結膜囊部份成形術 Partial conjunctival sac reformation 註：包括粘膜或皮膚移植術在內(including mucous membrane or skin graft)。,第七節,微創玻璃體切除術
+87215B,4175,結膜囊全部成形術 Total conjunctival sac reformation 註：包括粘膜或皮膚移植術在內(including mucous membrane or skin graft)。,第七節,微創玻璃體切除術
+87216B,4385,皮膚及結膜成形術 Combined plastic surgery of conjuntiva and skin 註：包括粘膜或皮膚移植術在內(including mucous membrane or skin graft)。,第七節,微創玻璃體切除術
+87217B,2520,穿透傷或二次性傷口縫合結膜移植 Conjunctive flap for perforating injuries or secondary closure of operative,第七節,微創玻璃體切除術
+87218C,781,結膜縫線拆除術(顯微鏡下) Removal of conjunctival stitches under microscope 註：以療程完成為一次。,第七節,微創玻璃體切除術
+87219B,1006,外眼組織切片 Biopsy of external eye,第七節,微創玻璃體切除術
+87401C,1172,淚腺膿瘍引流 Drainage of lacrimal gland abscess 註：淚囊切開術(dacryocystotomy)比照申報。,第七節,微創玻璃體切除術
+87402B,5917,淚腺切除術 Excision lacrimal gland (dacryoadenectomy),第七節,微創玻璃體切除術
+87403B,4583,淚囊切除術 Dacryocystectomy (excision of lacrimal sac),第七節,微創玻璃體切除術
+87404B,6755,淚腺或淚囊腫瘤切除術 Excision lacrimal gland or lacrimal sac tumor,第七節,微創玻璃體切除術
+87405B,8593,淚囊鼻腔造孔術 Dacryocystorhinostomy 註： 1.若使用矽質管留置，則加報53019C。 2.一般材料費及特殊材料費，得另加計百分之九十三。 3.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,微創玻璃體切除術
+87406B,9888,結膜淚囊鼻腔造孔術 Conjunctivodacryocystorhinostomy 註： 1.一般材料費及特殊材料費，得另加計百分之八十八。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,微創玻璃體切除術
+87407C,1063,淚管切開術 Canaliculotomy,第七節,微創玻璃體切除術
+87408C,2665,淚管瘻管切除術 Fistulectomy for lacrimal fistula,第七節,微創玻璃體切除術
+87409C,3792,淚小管成形術 Plastic operation on canaliculi,第七節,微創玻璃體切除術
+87410C,1892,淚小管縫補 Suture of canaliculus,第七節,微創玻璃體切除術
+87413C,5210,"淚器基本性修復 Lacrimal apparatus, primary repair",第七節,微創玻璃體切除術
+87414B,8076,"淚器後繼性修復 Lacrimal apparatus, secondary repair",第七節,微創玻璃體切除術
+87415B,9312,－ 簡單 simple 註： 1.一般材料費及特殊材料費，得另加計百分之九十。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,微創玻璃體切除術
+87416B,11640,－ 複雜 complicated 註： 1.一般材料費及特殊材料費，得另加計百分之八十三。 2.上開特殊材料為單一使用之拋棄式特殊材料。,第七節,微創玻璃體切除術
+87417B,1028,淚管開口縫合術 Suture of punctum 註：縫合四針(含)以下者，按53031C「淚小點閉合術(每針)」申報。,第七節,微創玻璃體切除術
+88001B,30742,－含腸切除及吻合術 resection & anastomosis,第七節,新生兒壞死性腸炎手術
+88002B,24789,－含腸造口 jejunostomy/ileostomy,第七節,新生兒壞死性腸炎手術
+88003B,20238,胎糞性腹膜炎 Meconium Peritonitsis,第七節,新生兒壞死性腸炎手術
+88005B,46951,"總膽管囊腫切除術，膽管迴腸吻合術 Choledochocyst, excision & choledocho-jejunostomy",第七節,新生兒壞死性腸炎手術
+88006B,39272,食道閉鎖及食道氣管瘻管手術 Esophagoplasty with repair of T-E fistula,第七節,新生兒壞死性腸炎手術
+88007B,24073,"新生兒胃穿孔修補術 Repair of Idiopathic Gastric Perforation,neonatal",第七節,新生兒壞死性腸炎手術
+88008B,27032,橫膈疝氣修補術 Repair of Diaphragmatic Hernia,第七節,新生兒壞死性腸炎手術
+88009B,21311,"橫膈折疊術 Plication of Diaphragm, for diaphragm eventration",第七節,新生兒壞死性腸炎手術
+88011B,29069,"先天性十二指腸閉鎖或輪狀胰 Congenital Duodenal Atresia, or Annular Pancreas",第七節,新生兒壞死性腸炎手術
+88012B,15092,"腸旋轉復形術 Malrotation, Ladd's Procedure",第七節,新生兒壞死性腸炎手術
+88013B,26274,"腸閉鎖，腸切除及吻合術 Resection & Anastomosis, intestinal atresia",第七節,新生兒壞死性腸炎手術
+88014B,14092,"尾骨囊腫切除術 Sacrococcygeal tumor, excision",第七節,新生兒壞死性腸炎手術
+88015B,27189,尾骨囊腫廣泛性切除術,第七節,新生兒壞死性腸炎手術
+88016B,12682,"先天性膽道閉鎖探查術 Congenital Biliary Atresia, exploration without repair",第七節,新生兒壞死性腸炎手術
+88017B,41805,"先天性膽道閉鎖，葛西手術或其他肝腸吻合手術 Congenital Biliary Atresia, Kasai's Procedure, or other Hepato/Jejunal Anastomosis",第七節,新生兒壞死性腸炎手術
+88018B,11743,－單純性 simple,第七節,先天性腹壁缺損直接修補術
+88019B,33169,－複雜性complex,第七節,先天性腹壁缺損直接修補術
+88020B,8202,－單純性simple,第七節,新生兒臍疝氣修補術
+88021B,21846,－複雜性complex,第七節,新生兒臍疝氣修補術
+88022B,46601,"膀胱外翻關閉術 Closure, extrophy bladder",第七節,新生兒臍疝氣修補術
+88023B,29748,"囊狀淋巴管瘤切除術 Cystic hygroma, complicated, excision",第七節,新生兒臍疝氣修補術
+88024B,21960,"低位肛門成形術 Imperforate anus, low type",第七節,新生兒臍疝氣修補術
+88025B,41353,"高位肛門成形術 Imperforate anus, high type",第七節,新生兒臍疝氣修補術
+88026B,32997,"先天性巨結腸症 Congenital Megacolon, pull-through",第七節,新生兒臍疝氣修補術
+88027B,46693,"先天性無神經巨結腸症 Congenital Megacolon, total aganglionosis,pull-through",第七節,新生兒臍疝氣修補術
+88028B,28371,"尿道下裂島皮瓣尿道整型術 Urethroplasty, Island flap procedure",第七節,新生兒臍疝氣修補術
+88029C,11642,嬰兒鼠蹊疝氣 Inguinal hernia operation 註：限對未滿二歲嬰兒施行手術時申報。,第七節,新生兒臍疝氣修補術
+88030B,9909,矯正前胸部缺損 Correction of anterior wall defect,第七節,新生兒臍疝氣修補術
+88031B,18551,矯正尿道纖維黏連 Correction of chordee,第七節,新生兒臍疝氣修補術
+88032B,11597,鰓裂囊腫切除、瘻管切除 Excision of branchial cleft sinus or cyst,第七節,新生兒臍疝氣修補術
+88034B,12825,臍尿管或瘻管切除 Excision of urachus or its fistula,第七節,新生兒臍疝氣修補術
+88035B,22482,臍腸系膜瘻管切除 Excision of vitelline duct or its fistula,第七節,新生兒臍疝氣修補術
+88036B,18422,薦尾骨畸胎瘤切除 Excision of sacrococcygeal teratoma,第七節,新生兒臍疝氣修補術
+88037B,23261,腦膜或脊髓突出修補術 Repair of Meningocele or Meningomyelocele,第七節,新生兒臍疝氣修補術
+88038B,10340,骨內翻外翻 Bone Valgus or varus,第七節,新生兒臍疝氣修補術
+88039B,11316,－開放復位 open reduction,第七節,新生兒臍疝氣修補術
+88040B,2984,－閉鎖復位 closed reduction,第七節,新生兒臍疝氣修補術
+88041C,6383,併指多指（趾）切除 Reconstruction of polydactyly or syndactyly,第七節,新生兒臍疝氣修補術
+88042C,4873,多指（趾）切除每多加一個,第七節,新生兒臍疝氣修補術
+88043B,6984,－單部分 unilateral,第七節,新生兒臍疝氣修補術
+88044B,10476,－雙部分 bilateral,第七節,新生兒臍疝氣修補術
+88045B,15132,－複部分 revision,第七節,新生兒臍疝氣修補術
+88046C,4656,－未達二公分,第七節,新生兒臍疝氣修補術
+88047C,8148,－二公分至五公分,第七節,新生兒臍疝氣修補術
+88048B,10476,－超過五公分,第七節,新生兒臍疝氣修補術
+88049B,13198,"小耳重建第一期 Microtia,stage one 註：申報費用時須附術前術後照片。",第七節,新生兒臍疝氣修補術
+88051B,10577,"小耳重建第二期 Microtia,stage two 註：申報費用時須附術前術後照片。",第七節,新生兒臍疝氣修補術
+88053B,12980,"小耳重建第三期 Microtia,stage three 註：申報費用時須附術前術後照片。",第七節,新生兒臍疝氣修補術
+88054B,2364,先天性髖脫臼-換石膏 Congenital dislocation of hips-change cast,第七節,新生兒臍疝氣修補術
+88055B,76948,腹腔鏡總膽管囊腫切除術-併膽管空腸吻合術 Laparoscopic excision of choledochal cyst with choledocho-jejunostomy,第七節,新生兒壞死性腸炎手術
+88056B,67271,胸腔鏡食道閉鎖及食道氣管瘻管手術 Thoracoscopic esophagoplasty with repair of T-E fistula,第七節,新生兒壞死性腸炎手術
+88057B,38546,胸(腹)腔鏡橫膈疝氣修補術 Thoracoscopic (Laparoscopic) repair of diaphragmatic hernia,第七節,新生兒壞死性腸炎手術
+88058B,49795,"腹腔鏡先天性十二指腸閉鎖或輪狀胰 Laparoscopic congenital duodenal atresia, or annular pancreas",第七節,新生兒壞死性腸炎手術
+88059B,19843,"腹腔鏡腸旋轉復形術 Laparoscopic malrotation,Ladd’s procedure",第七節,新生兒壞死性腸炎手術
+88060B,45007,"腹腔鏡腸閉鎖，腸切除及吻合術 Laparoscopic resection ＆ anastomosis, intestinal atresia",第七節,新生兒壞死性腸炎手術
+88061B,23369,"腹腔鏡先天性膽道閉鎖探查術 Laparoscopic congenital biliary atresia, exploration without repair",第七節,新生兒壞死性腸炎手術
+88062B,71610,"腹腔鏡先天性膽道閉鎖，葛西手術或其他肝腸吻合手術 Laparoscopic congenital biliary atresia, Kasai's procedure, or other hepato/jejunal anastomosis",第七節,新生兒壞死性腸炎手術
+88063B,70837,"腹腔鏡高位肛門成形術 Laparoscopic imperforate anus, high type",第七節,新生兒臍疝氣修補術
+88064B,38192,"腹腔鏡先天性巨結腸症 Laparoscopic congenital megacolon, pull-through",第七節,新生兒臍疝氣修補術
