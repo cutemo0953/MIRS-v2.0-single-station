@@ -60,9 +60,16 @@ DEMO_MISSIONS = [
 ]
 
 DEMO_ITEMS = [
+    # TRF-DEMO-001 (EN_ROUTE) items
     {"id": 1, "mission_id": "TRF-DEMO-001", "item_type": "OXYGEN", "item_name": "E-Tank 氧氣鋼瓶", "unit": "瓶", "suggested_qty": 3, "carried_qty": 3, "calculation_explain": "6 L/min × 1.5hr × 3 = 810L → 3瓶"},
     {"id": 2, "mission_id": "TRF-DEMO-001", "item_type": "IV_FLUID", "item_name": "NS 500mL", "unit": "袋", "suggested_qty": 1, "carried_qty": 1, "calculation_explain": "100 mL/hr × 1.5hr × 3 = 450mL → 1袋"},
     {"id": 3, "mission_id": "TRF-DEMO-001", "item_type": "EQUIPMENT", "item_name": "生理監視器", "unit": "台", "suggested_qty": 1, "carried_qty": 1, "calculation_explain": "電量需求 45%"},
+    # TRF-DEMO-002 (PLANNING) items - for new mission flow
+    {"id": 4, "mission_id": "TRF-DEMO-002", "item_type": "OXYGEN", "item_name": "E-Tank 氧氣鋼瓶", "unit": "瓶", "suggested_qty": 4, "carried_qty": None, "calculation_explain": "10 L/min × 1hr × 3 = 1800L → 4瓶"},
+    {"id": 5, "mission_id": "TRF-DEMO-002", "item_type": "IV_FLUID", "item_name": "NS 500mL", "unit": "袋", "suggested_qty": 2, "carried_qty": None, "calculation_explain": "250 mL/hr × 1hr × 3 = 750mL → 2袋"},
+    {"id": 6, "mission_id": "TRF-DEMO-002", "item_type": "EQUIPMENT", "item_name": "生理監視器", "unit": "台", "suggested_qty": 1, "carried_qty": None, "calculation_explain": "電量需求 30%"},
+    {"id": 7, "mission_id": "TRF-DEMO-002", "item_type": "EQUIPMENT", "item_name": "呼吸器", "unit": "台", "suggested_qty": 1, "carried_qty": None, "calculation_explain": "呼吸器電量需求 60%"},
+    {"id": 8, "mission_id": "TRF-DEMO-002", "item_type": "MEDICATION", "item_name": "Epinephrine 1mg", "unit": "支", "suggested_qty": 2, "carried_qty": None, "calculation_explain": "急救藥物標準備量"},
 ]
 
 router = APIRouter(prefix="/api/transfer", tags=["transfer"])
@@ -523,9 +530,17 @@ async def list_missions(
 @router.post("/missions")
 async def create_mission(mission: MissionCreate):
     """建立轉送任務"""
-    # Vercel demo mode - return simulated creation
+    # Vercel demo mode - return existing PLANNING mission for demo flow
     if IS_VERCEL:
-        demo_id = f"TRF-DEMO-{datetime.now().strftime('%H%M%S')}"
+        # Use existing demo mission so loadMission() works
+        demo_mission = DEMO_MISSIONS[1]  # The PLANNING one
+        # Update demo mission with user input
+        demo_mission['destination'] = mission.destination or demo_mission['destination']
+        demo_mission['estimated_duration_min'] = mission.estimated_duration_min
+        demo_mission['oxygen_requirement_lpm'] = mission.oxygen_requirement_lpm
+        demo_mission['iv_rate_mlhr'] = mission.iv_rate_mlhr
+        demo_mission['safety_factor'] = mission.safety_factor
+
         supplies = calculate_supplies({
             'estimated_duration_min': mission.estimated_duration_min,
             'safety_factor': mission.safety_factor,
@@ -534,11 +549,11 @@ async def create_mission(mission: MissionCreate):
             'ventilator_required': mission.ventilator_required
         })
         return {
-            "mission_id": demo_id,
+            "mission_id": demo_mission['mission_id'],  # Return existing ID
             "status": "PLANNING",
             "supplies": supplies,
             "demo_mode": True,
-            "demo_note": "Demo 模式下任務不會真正建立"
+            "demo_note": "Demo 模式 - 使用模擬任務"
         }
 
     conn = get_db_connection()
