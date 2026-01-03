@@ -1048,128 +1048,120 @@
                     </table>
                 </div>
 
-                <!-- 術式主檔快查 (紫色區塊) -->
-                <div class="mt-6 border-2 border-purple-300 rounded-lg p-4 bg-purple-50" x-data="{ showSurgeryMaster: false }" x-init="if(!dataLoaded.surgeryMaster) loadSurgeryMasterStats()">
-                    <div class="flex justify-between items-center cursor-pointer" @click="showSurgeryMaster = !showSurgeryMaster">
-                        <h4 class="text-lg font-semibold text-purple-700 flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
-                            </svg>
-                            術式主檔快查
-                            <span class="text-sm font-normal text-purple-500">(點擊展開/收合)</span>
-                        </h4>
-                        <svg class="w-5 h-5 text-purple-600 transition-transform" :class="showSurgeryMaster ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                <!-- 術式主檔快查 (treatment 色系) -->
+                <div class="mt-6 border-2 border-treatment-300 rounded-lg p-4 bg-treatment-50" x-init="if(!dataLoaded.surgeryMaster) loadSurgeryMasterStats()">
+                    <h4 class="text-lg font-semibold text-treatment-700 flex items-center gap-2 mb-4">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                         </svg>
+                        術式主檔快查
+                    </h4>
+
+                    <!-- 子 Tab 切換 -->
+                    <div class="flex gap-2 mb-4">
+                        <button @click="surgeryMasterSubTab = 'codes'; if(surgeryCodes.length === 0) searchSurgeryCodes()"
+                                :class="surgeryMasterSubTab === 'codes' ? 'bg-treatment-500 text-white' : 'bg-white text-treatment-700 border border-treatment-300'"
+                                class="px-3 py-1.5 rounded text-sm font-medium transition-colors">
+                            術式代碼
+                        </button>
+                        <button @click="surgeryMasterSubTab = 'selfpay'; if(selfPayItems.length === 0) searchSelfPayItems()"
+                                :class="surgeryMasterSubTab === 'selfpay' ? 'bg-treatment-500 text-white' : 'bg-white text-treatment-700 border border-treatment-300'"
+                                class="px-3 py-1.5 rounded text-sm font-medium transition-colors">
+                            自費項目
+                        </button>
+                        <button @click="surgeryMasterSubTab = 'calculator'"
+                                :class="surgeryMasterSubTab === 'calculator' ? 'bg-treatment-500 text-white' : 'bg-white text-treatment-700 border border-treatment-300'"
+                                class="px-3 py-1.5 rounded text-sm font-medium transition-colors">
+                            點數計算
+                        </button>
                     </div>
 
-                    <div x-show="showSurgeryMaster" x-collapse class="mt-4">
-                        <!-- 子 Tab 切換 -->
-                        <div class="flex gap-2 mb-4">
-                            <button @click="surgeryMasterSubTab = 'codes'; if(surgeryCodes.length === 0) searchSurgeryCodes()"
-                                    :class="surgeryMasterSubTab === 'codes' ? 'bg-purple-600 text-white' : 'bg-white text-purple-700 border border-purple-300'"
-                                    class="px-3 py-1.5 rounded text-sm font-medium transition-colors">
-                                術式代碼
-                            </button>
-                            <button @click="surgeryMasterSubTab = 'selfpay'; if(selfPayItems.length === 0) searchSelfPayItems()"
-                                    :class="surgeryMasterSubTab === 'selfpay' ? 'bg-purple-600 text-white' : 'bg-white text-purple-700 border border-purple-300'"
-                                    class="px-3 py-1.5 rounded text-sm font-medium transition-colors">
-                                自費項目
-                            </button>
-                            <button @click="surgeryMasterSubTab = 'calculator'"
-                                    :class="surgeryMasterSubTab === 'calculator' ? 'bg-purple-600 text-white' : 'bg-white text-purple-700 border border-purple-300'"
-                                    class="px-3 py-1.5 rounded text-sm font-medium transition-colors">
-                                點數計算
-                            </button>
-                        </div>
-
-                        <!-- 術式代碼 -->
-                        <div x-show="surgeryMasterSubTab === 'codes'">
-                            <div class="flex gap-2 mb-3">
-                                <select x-model="surgeryCodeCategoryFilter" @change="searchSurgeryCodes()"
-                                        class="px-2 py-1 border border-purple-300 rounded text-sm focus:ring-purple-500">
-                                    <option value="">全部分類</option>
-                                    <template x-for="cat in surgeryCategories" :key="cat.category_code">
-                                        <option :value="cat.category_code" x-text="cat.category_name"></option>
-                                    </template>
-                                </select>
-                                <input type="text" x-model="surgeryCodeSearchText" @input.debounce.300ms="searchSurgeryCodes()"
-                                       placeholder="搜尋..." class="flex-1 px-3 py-1 border border-purple-300 rounded text-sm focus:ring-purple-500">
-                            </div>
-                            <div class="max-h-64 overflow-y-auto space-y-2">
-                                <template x-for="code in surgeryCodes.slice(0, 20)" :key="code.code">
-                                    <div class="flex justify-between items-center px-3 py-2 bg-white rounded border border-purple-200">
-                                        <div>
-                                            <span class="font-mono text-xs text-gray-500" x-text="code.code"></span>
-                                            <span class="ml-2 text-sm" x-text="code.name_zh"></span>
-                                        </div>
-                                        <span class="text-sm font-medium text-purple-600" x-text="code.points?.toLocaleString() + ' 點'"></span>
-                                    </div>
+                    <!-- 術式代碼 -->
+                    <div x-show="surgeryMasterSubTab === 'codes'">
+                        <div class="flex gap-2 mb-3">
+                            <select x-model="surgeryCodeCategoryFilter" @change="searchSurgeryCodes()"
+                                    class="px-2 py-1 border border-treatment-300 rounded text-sm focus:ring-treatment-500">
+                                <option value="">全部分類</option>
+                                <template x-for="cat in surgeryCategories" :key="cat.category_code">
+                                    <option :value="cat.category_code" x-text="cat.category_name"></option>
                                 </template>
-                            </div>
-                            <p class="text-xs text-purple-500 mt-2" x-text="'共 ' + surgeryCodes.length + ' 筆' + (surgeryCodes.length > 20 ? '，顯示前 20 筆' : '')"></p>
+                            </select>
+                            <input type="text" x-model="surgeryCodeSearchText" @input.debounce.300ms="searchSurgeryCodes()"
+                                   placeholder="搜尋..." class="flex-1 px-3 py-1 border border-treatment-300 rounded text-sm focus:ring-treatment-500">
                         </div>
-
-                        <!-- 自費項目 -->
-                        <div x-show="surgeryMasterSubTab === 'selfpay'">
-                            <div class="flex gap-2 mb-3">
-                                <select x-model="selfPayCategoryFilter" @change="searchSelfPayItems()"
-                                        class="px-2 py-1 border border-purple-300 rounded text-sm focus:ring-purple-500">
-                                    <option value="">全部分類</option>
-                                    <template x-for="cat in selfPayCategories" :key="cat.category">
-                                        <option :value="cat.category" x-text="cat.category"></option>
-                                    </template>
-                                </select>
-                                <input type="text" x-model="selfPaySearchText" @input.debounce.300ms="searchSelfPayItems()"
-                                       placeholder="搜尋..." class="flex-1 px-3 py-1 border border-purple-300 rounded text-sm focus:ring-purple-500">
-                            </div>
-                            <div class="max-h-64 overflow-y-auto space-y-2">
-                                <template x-for="item in selfPayItems.slice(0, 20)" :key="item.item_id">
-                                    <div class="flex justify-between items-center px-3 py-2 bg-white rounded border border-purple-200">
-                                        <div>
-                                            <span class="font-mono text-xs text-gray-500" x-text="item.item_id"></span>
-                                            <span class="ml-2 text-sm" x-text="item.name"></span>
-                                        </div>
-                                        <span class="text-sm font-medium text-green-600" x-text="'$' + item.unit_price?.toLocaleString()"></span>
+                        <div class="max-h-64 overflow-y-auto space-y-2">
+                            <template x-for="code in surgeryCodes.slice(0, 20)" :key="code.code">
+                                <div class="flex justify-between items-center px-3 py-2 bg-white rounded border border-treatment-200">
+                                    <div>
+                                        <span class="font-mono text-xs text-gray-500" x-text="code.code"></span>
+                                        <span class="ml-2 text-sm" x-text="code.name_zh"></span>
                                     </div>
-                                </template>
-                            </div>
-                            <p class="text-xs text-purple-500 mt-2" x-text="'共 ' + selfPayItems.length + ' 筆' + (selfPayItems.length > 20 ? '，顯示前 20 筆' : '')"></p>
-                        </div>
-
-                        <!-- 點數計算器 -->
-                        <div x-show="surgeryMasterSubTab === 'calculator'">
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <div>
-                                    <input type="text" x-model="calculatorSearchText" @input.debounce.300ms="searchForCalculator()"
-                                           placeholder="搜尋術式..." class="w-full px-3 py-2 border border-purple-300 rounded text-sm mb-2">
-                                    <div class="max-h-40 overflow-y-auto space-y-1">
-                                        <template x-for="code in calculatorSearchResults.slice(0, 10)" :key="code.code">
-                                            <button @click="addToCalculator(code)"
-                                                    class="w-full text-left px-2 py-1 text-sm bg-white rounded border border-purple-200 hover:bg-purple-100">
-                                                <span class="font-mono text-xs" x-text="code.code"></span>
-                                                <span x-text="code.name_zh"></span>
-                                                <span class="float-right text-purple-600" x-text="code.points + '點'"></span>
-                                            </button>
-                                        </template>
-                                    </div>
+                                    <span class="text-sm font-medium text-treatment-600" x-text="code.points?.toLocaleString() + ' 點'"></span>
                                 </div>
-                                <div>
-                                    <div class="space-y-1 mb-2">
-                                        <template x-for="(item, idx) in calculatorSurgeries" :key="item.code">
-                                            <div class="flex justify-between items-center px-2 py-1 rounded text-sm"
-                                                 :class="idx === 0 ? 'bg-green-100' : (idx === 1 ? 'bg-yellow-100' : 'bg-red-100')">
-                                                <span x-text="item.name_zh"></span>
-                                                <div class="flex items-center gap-2">
-                                                    <span x-text="(item.points * (idx === 0 ? 1 : (idx === 1 ? 0.5 : 0))) + '點'"></span>
-                                                    <button @click="removeFromCalculator(idx)" class="text-red-500 text-xs">✕</button>
-                                                </div>
+                            </template>
+                        </div>
+                        <p class="text-xs text-treatment-500 mt-2" x-text="'共 ' + surgeryCodes.length + ' 筆' + (surgeryCodes.length > 20 ? '，顯示前 20 筆' : '')"></p>
+                    </div>
+
+                    <!-- 自費項目 -->
+                    <div x-show="surgeryMasterSubTab === 'selfpay'">
+                        <div class="flex gap-2 mb-3">
+                            <select x-model="selfPayCategoryFilter" @change="searchSelfPayItems()"
+                                    class="px-2 py-1 border border-treatment-300 rounded text-sm focus:ring-treatment-500">
+                                <option value="">全部分類</option>
+                                <template x-for="cat in selfPayCategories" :key="cat.category">
+                                    <option :value="cat.category" x-text="cat.category"></option>
+                                </template>
+                            </select>
+                            <input type="text" x-model="selfPaySearchText" @input.debounce.300ms="searchSelfPayItems()"
+                                   placeholder="搜尋..." class="flex-1 px-3 py-1 border border-treatment-300 rounded text-sm focus:ring-treatment-500">
+                        </div>
+                        <div class="max-h-64 overflow-y-auto space-y-2">
+                            <template x-for="item in selfPayItems.slice(0, 20)" :key="item.item_id">
+                                <div class="flex justify-between items-center px-3 py-2 bg-white rounded border border-treatment-200">
+                                    <div>
+                                        <span class="font-mono text-xs text-gray-500" x-text="item.item_id"></span>
+                                        <span class="ml-2 text-sm" x-text="item.name"></span>
+                                    </div>
+                                    <span class="text-sm font-medium text-green-600" x-text="'$' + item.unit_price?.toLocaleString()"></span>
+                                </div>
+                            </template>
+                        </div>
+                        <p class="text-xs text-treatment-500 mt-2" x-text="'共 ' + selfPayItems.length + ' 筆' + (selfPayItems.length > 20 ? '，顯示前 20 筆' : '')"></p>
+                    </div>
+
+                    <!-- 點數計算器 -->
+                    <div x-show="surgeryMasterSubTab === 'calculator'">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div>
+                                <input type="text" x-model="calculatorSearchText" @input.debounce.300ms="searchForCalculator()"
+                                       placeholder="搜尋術式..." class="w-full px-3 py-2 border border-treatment-300 rounded text-sm mb-2">
+                                <div class="max-h-40 overflow-y-auto space-y-1">
+                                    <template x-for="code in calculatorSearchResults.slice(0, 10)" :key="code.code">
+                                        <button @click="addToCalculator(code)"
+                                                class="w-full text-left px-2 py-1 text-sm bg-white rounded border border-treatment-200 hover:bg-treatment-100">
+                                            <span class="font-mono text-xs" x-text="code.code"></span>
+                                            <span x-text="code.name_zh"></span>
+                                            <span class="float-right text-treatment-600" x-text="code.points + '點'"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="space-y-1 mb-2">
+                                    <template x-for="(item, idx) in calculatorSurgeries" :key="item.code">
+                                        <div class="flex justify-between items-center px-2 py-1 rounded text-sm"
+                                             :class="idx === 0 ? 'bg-green-100' : (idx === 1 ? 'bg-yellow-100' : 'bg-red-100')">
+                                            <span x-text="item.name_zh"></span>
+                                            <div class="flex items-center gap-2">
+                                                <span x-text="(item.points * (idx === 0 ? 1 : (idx === 1 ? 0.5 : 0))) + '點'"></span>
+                                                <button @click="removeFromCalculator(idx)" class="text-red-500 text-xs">✕</button>
                                             </div>
-                                        </template>
-                                    </div>
-                                    <div x-show="calculatorSurgeries.length > 0" class="text-right font-bold text-purple-700">
-                                        總計: <span x-text="calculatorSurgeries.reduce((sum, item, idx) => sum + item.points * (idx === 0 ? 1 : (idx === 1 ? 0.5 : 0)), 0).toLocaleString()"></span> 點
-                                    </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div x-show="calculatorSurgeries.length > 0" class="text-right font-bold text-treatment-700">
+                                    總計: <span x-text="calculatorSurgeries.reduce((sum, item, idx) => sum + item.points * (idx === 0 ? 1 : (idx === 1 ? 0.5 : 0)), 0).toLocaleString()"></span> 點
                                 </div>
                             </div>
                         </div>
@@ -3720,16 +3712,16 @@
                     </div>
 
                     <!-- 術中用藥 -->
-                    <div class="border-2 border-pharma-200 rounded-lg p-4">
+                    <div class="border-2 border-dispense-purple-500 rounded-lg p-4 bg-dispense-purple-50">
                         <div class="flex justify-between items-center mb-3">
                             <h4 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                                <svg class="w-5 h-5 text-pharma-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-5 h-5 text-dispense-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
                                 </svg>
                                 術中用藥
                                 <span class="text-xs text-gray-500 font-normal">(局部注射藥物)</span>
                             </h4>
-                            <button type="button" @click="addIntraopMed()" class="bg-pharma-600 text-white px-3 py-1 rounded-lg hover:bg-pharma-700 text-sm flex items-center gap-1">
+                            <button type="button" @click="addIntraopMed()" class="bg-dispense-purple-700 text-white px-3 py-1 rounded-lg hover:bg-dispense-purple-900 text-sm flex items-center gap-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                 </svg>
@@ -3739,23 +3731,23 @@
 
                         <!-- 常用術中用藥快選 -->
                         <div class="flex flex-wrap gap-2 mb-3">
-                            <button type="button" @click="addQuickIntraopMed('Morphine', '10', 'mg')" class="px-2 py-1 text-xs bg-pharma-100 text-pharma-700 rounded hover:bg-pharma-200">Morphine</button>
-                            <button type="button" @click="addQuickIntraopMed('Ketorolac', '30', 'mg')" class="px-2 py-1 text-xs bg-pharma-100 text-pharma-700 rounded hover:bg-pharma-200">Ketorolac</button>
-                            <button type="button" @click="addQuickIntraopMed('Triamcinolone', '40', 'mg')" class="px-2 py-1 text-xs bg-pharma-100 text-pharma-700 rounded hover:bg-pharma-200">Triamcinolone</button>
-                            <button type="button" @click="addQuickIntraopMed('Xylocaine 2%', '10', 'ml')" class="px-2 py-1 text-xs bg-pharma-100 text-pharma-700 rounded hover:bg-pharma-200">Xylocaine</button>
-                            <button type="button" @click="addQuickIntraopMed('Marcaine 0.5%', '10', 'ml')" class="px-2 py-1 text-xs bg-pharma-100 text-pharma-700 rounded hover:bg-pharma-200">Marcaine</button>
+                            <button type="button" @click="addQuickIntraopMed('Morphine', '10', 'mg')" class="px-2 py-1 text-xs bg-dispense-purple-50 text-dispense-purple-700 rounded border border-dispense-purple-500 hover:bg-dispense-purple-500 hover:text-white">Morphine</button>
+                            <button type="button" @click="addQuickIntraopMed('Ketorolac', '30', 'mg')" class="px-2 py-1 text-xs bg-dispense-purple-50 text-dispense-purple-700 rounded border border-dispense-purple-500 hover:bg-dispense-purple-500 hover:text-white">Ketorolac</button>
+                            <button type="button" @click="addQuickIntraopMed('Triamcinolone', '40', 'mg')" class="px-2 py-1 text-xs bg-dispense-purple-50 text-dispense-purple-700 rounded border border-dispense-purple-500 hover:bg-dispense-purple-500 hover:text-white">Triamcinolone</button>
+                            <button type="button" @click="addQuickIntraopMed('Xylocaine 2%', '10', 'ml')" class="px-2 py-1 text-xs bg-dispense-purple-50 text-dispense-purple-700 rounded border border-dispense-purple-500 hover:bg-dispense-purple-500 hover:text-white">Xylocaine</button>
+                            <button type="button" @click="addQuickIntraopMed('Marcaine 0.5%', '10', 'ml')" class="px-2 py-1 text-xs bg-dispense-purple-50 text-dispense-purple-700 rounded border border-dispense-purple-500 hover:bg-dispense-purple-500 hover:text-white">Marcaine</button>
                         </div>
 
                         <div class="space-y-3">
                             <template x-for="(med, index) in addSurgeryForm.intraopMeds" :key="index">
-                                <div class="flex gap-2 items-center border border-pharma-200 rounded-lg p-3 bg-pharma-50">
+                                <div class="flex gap-2 items-center border border-dispense-purple-500 rounded-lg p-3 bg-white">
                                     <div class="flex-1 grid grid-cols-3 gap-2">
                                         <input type="text" x-model="med.name" required placeholder="藥物名稱"
-                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pharma-500">
+                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dispense-purple-700">
                                         <input type="text" x-model="med.dose" required placeholder="劑量"
-                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pharma-500">
+                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dispense-purple-700">
                                         <input type="text" x-model="med.unit" required placeholder="單位"
-                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pharma-500">
+                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dispense-purple-700">
                                     </div>
                                     <button type="button" @click="removeIntraopMed(index)" class="text-red-600 hover:text-red-800 p-2">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

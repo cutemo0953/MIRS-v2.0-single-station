@@ -1,6 +1,6 @@
 # MIRS 處置 Tab UI 重組規格書
 
-**Version:** 2.7.0
+**Version:** 2.7.2
 **Date:** 2026-01-03
 **Status:** 已實作
 
@@ -105,51 +105,53 @@ customMedUnit: 'mg'
 
 ### 2.2 術式主檔區塊配色
 
-**使用 Purple 色系：**
+**使用 Treatment 色系 (與處置 Tab 一致)：**
 ```css
 /* 容器 */
 .surgery-master-container {
-    border: 2px solid var(--purple-300);  /* border-purple-300 */
-    background: var(--purple-50);          /* bg-purple-50 */
+    border: 2px solid var(--treatment-300);  /* border-treatment-300 */
+    background: var(--treatment-50);          /* bg-treatment-50 */
 }
 
 /* 標題 */
 .surgery-master-title {
-    color: var(--purple-700);              /* text-purple-700 */
+    color: var(--treatment-700);              /* text-treatment-700 */
 }
 
 /* 子Tab 按鈕 (選中) */
 .surgery-master-tab-active {
-    background: var(--purple-600);         /* bg-purple-600 */
+    background: var(--treatment-500);         /* bg-treatment-500 */
     color: white;
 }
 
 /* 子Tab 按鈕 (未選中) */
 .surgery-master-tab {
-    background: var(--purple-100);         /* bg-purple-100 */
-    color: var(--purple-700);              /* text-purple-700 */
+    background: white;
+    color: var(--treatment-700);              /* text-treatment-700 */
+    border: 1px solid var(--treatment-300);   /* border-treatment-300 */
 }
 ```
 
 ### 2.3 術中用藥區塊配色
 
-**使用 Pharma 色系：**
+**使用 dispense-purple 色系 (與藥品領用一致)：**
 ```css
 /* 容器 */
 .intraop-meds-container {
-    border: 2px dashed var(--pharma-300);  /* border-pharma-300 */
-    background: var(--pharma-50);           /* bg-pharma-50 */
+    border: 2px solid var(--dispense-purple-500);
+    background: var(--dispense-purple-50);
 }
 
 /* 藥物快選按鈕 */
 .med-quick-btn {
-    background: var(--pharma-100);
-    color: var(--pharma-700);
-    border: 1px solid var(--pharma-200);
+    background: var(--dispense-purple-50);
+    color: var(--dispense-purple-700);
+    border: 1px solid var(--dispense-purple-500);
 }
 
 .med-quick-btn:hover {
-    background: var(--pharma-200);
+    background: var(--dispense-purple-500);
+    color: white;
 }
 ```
 
