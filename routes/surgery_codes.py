@@ -172,7 +172,58 @@ def init_surgery_codes_schema(cursor):
         logger.warning(f"Migration file not found: {migration_path}")
         return
 
-    # 2. Check if data needs seeding
+    # 2. Fix invalid category_code (v2.9.3 migration)
+    # 代碼前綴對應分類碼 (根據 surgery_categories code_range)
+    category_map = {
+        '62': '1',   # 皮膚
+        '63': '2',   # 乳房
+        '64': '3',   # 筋骨
+        '65': '4',   # 呼吸器-鼻
+        '66': '5',   # 呼吸器-喉
+        '67': '6',   # 胸腔
+        '68': '7',   # 心臟及心包膜
+        '69': '8',   # 動脈與靜脈
+        '70': '9',   # 造血與淋巴系統
+        '71': '10',  # 消化器
+        '72': '11',  # 大腸直腸肛門
+        '73': '12',  # 肝膽胰
+        '74': '13',  # 泌尿及男性生殖
+        '75': '13',  # 泌尿及男性生殖 (extended)
+        '76': '13',  # 泌尿及男性生殖 (extended)
+        '77': '13',  # 泌尿及男性生殖 (extended)
+        '78': '13',  # 泌尿及男性生殖 (膀胱相關)
+        '79': '18',  # 視器 (extended)
+        '80': '14',  # 女性生殖 (80401-81037)
+        '81': '14',  # 女性生殖
+        '82': '15',  # 內分泌器
+        '83': '16',  # 神經外科
+        '84': '17',  # 聽器
+        '85': '18',  # 視器 (85001-88054)
+        '86': '18',  # 視器
+        '87': '18',  # 視器
+        '88': '18',  # 視器
+        '33': 'RD',  # 放射線診療
+    }
+    try:
+        # Check for invalid category_codes (not matching valid codes: 1-20, RD)
+        valid_codes = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','RD']
+        placeholders = ','.join(['?' for _ in valid_codes])
+        cursor.execute(f"SELECT COUNT(*) FROM surgery_codes WHERE category_code NOT IN ({placeholders})", valid_codes)
+        invalid_count = cursor.fetchone()[0]
+        if invalid_count > 0:
+            logger.info(f"Fixing {invalid_count} records with invalid category_code...")
+            for prefix, cat_code in category_map.items():
+                cursor.execute(f"""
+                    UPDATE surgery_codes
+                    SET category_code = ?
+                    WHERE code LIKE ? || '%' AND category_code NOT IN ({placeholders})
+                """, [cat_code, prefix] + valid_codes)
+            cursor.connection.commit()
+            logger.info("✓ Fixed category_code based on code prefix")
+    except Exception as e:
+        logger.warning(f"Category code fix warning: {e}")
+
+    # 3. Check if data needs seeding
     try:
         cursor.execute("SELECT COUNT(*) FROM surgery_codes")
         code_count = cursor.fetchone()[0]
@@ -297,6 +348,44 @@ def _seed_surgery_data(cursor):
             logger.info(f"✓ Imported {count} self-pay items")
 
     # 4. Import NHI Section 7 surgery codes (additional)
+    # 代碼前綴對應分類碼 (根據 surgery_categories code_range)
+    def get_category_from_code(code: str) -> str:
+        """根據健保代碼前綴判斷分類"""
+        if not code or len(code) < 2:
+            return '7'
+        prefix = code[:2]
+        category_map = {
+            '62': '1',   # 皮膚
+            '63': '2',   # 乳房
+            '64': '3',   # 筋骨
+            '65': '4',   # 呼吸器-鼻
+            '66': '5',   # 呼吸器-喉
+            '67': '6',   # 胸腔
+            '68': '7',   # 心臟及心包膜
+            '69': '8',   # 動脈與靜脈
+            '70': '9',   # 造血與淋巴系統
+            '71': '10',  # 消化器
+            '72': '11',  # 大腸直腸肛門
+            '73': '12',  # 肝膽胰
+            '74': '13',  # 泌尿及男性生殖
+            '75': '13',  # 泌尿及男性生殖 (extended)
+            '76': '13',  # 泌尿及男性生殖 (extended)
+            '77': '13',  # 泌尿及男性生殖 (extended)
+            '78': '13',  # 泌尿及男性生殖 (膀胱相關)
+            '79': '18',  # 視器 (extended)
+            '80': '14',  # 女性生殖 (80401-81037)
+            '81': '14',  # 女性生殖
+            '82': '15',  # 內分泌器
+            '83': '16',  # 神經外科
+            '84': '17',  # 聽器
+            '85': '18',  # 視器 (85001-88054)
+            '86': '18',  # 視器
+            '87': '18',  # 視器
+            '88': '18',  # 視器
+            '33': 'RD',  # 放射線診療
+        }
+        return category_map.get(prefix, '7')
+
     nhi_csv = pack_dir / "nhi_sec7" / "sec7_surgery_codes_points.csv"
     if nhi_csv.exists():
         logger.info("Importing NHI Section 7 surgery codes...")
@@ -305,15 +394,17 @@ def _seed_surgery_data(cursor):
             count = 0
             for row in reader:
                 try:
+                    code = row.get('code', '').strip()
+                    category_code = get_category_from_code(code)
                     # Use name as name_zh, subgroup as keywords
                     cursor.execute("""
                         INSERT OR IGNORE INTO surgery_codes
                         (code, name_zh, name_en, category_code, points, keywords, is_common, notes)
                         VALUES (?, ?, '', ?, ?, ?, 0, ?)
                     """, (
-                        row.get('code', '').strip(),
+                        code,
                         row.get('name', '').strip(),
-                        row.get('subgroup', '')[:20] if row.get('subgroup') else '7',
+                        category_code,
                         int(row.get('points', 0) or 0),
                         row.get('subgroup', '').strip(),
                         f"NHI {row.get('group', '')}"
