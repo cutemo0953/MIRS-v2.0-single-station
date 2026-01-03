@@ -5,7 +5,16 @@
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
-        "maxLambdaSize": "50mb"
+        "maxLambdaSize": "50mb",
+        "includeFiles": [
+          "main.py",
+          "routes/**",
+          "data/**",
+          "database/**",
+          "services/**",
+          "seeder_demo.py",
+          "Index.html"
+        ]
       }
     },
     {
