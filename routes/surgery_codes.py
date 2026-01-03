@@ -186,6 +186,17 @@ def init_surgery_codes_schema(cursor):
         logger.info(f"Surgery codes table has {code_count} records, skipping seed")
 
 
+def _parse_bool(value) -> int:
+    """Parse boolean-like value to int (0 or 1)."""
+    if isinstance(value, bool):
+        return 1 if value else 0
+    if isinstance(value, int):
+        return 1 if value else 0
+    if isinstance(value, str):
+        return 1 if value.upper() in ('TRUE', 'YES', '1', 'Y') else 0
+    return 0
+
+
 def _seed_surgery_data(cursor):
     """Seed surgery codes data from data/packs CSV files."""
     import csv
@@ -248,7 +259,7 @@ def _seed_surgery_data(cursor):
                         row.get('category_code', row.get('category', '')).strip(),
                         int(row.get('points', 0) or 0),
                         row.get('keywords', '').strip(),
-                        int(row.get('is_common', 0) or 0),
+                        _parse_bool(row.get('is_common', 0)),
                         row.get('notes', '').strip()
                     ))
                     count += 1
@@ -274,7 +285,7 @@ def _seed_surgery_data(cursor):
                         row.get('category', '').strip(),
                         float(row.get('unit_price', 0) or 0),
                         row.get('unit', '組').strip(),
-                        int(row.get('is_common', 0) or 0),
+                        _parse_bool(row.get('is_common', 0)),
                         int(row.get('display_order', 0) or 0),
                         row.get('notes', '').strip()
                     ))
