@@ -296,6 +296,46 @@ def _seed_surgery_data(cursor):
             cursor.connection.commit()
             logger.info(f"✓ Imported {count} self-pay items")
 
+    # 4. Import NHI Section 7 surgery codes (additional)
+    nhi_csv = pack_dir / "nhi_sec7" / "sec7_surgery_codes_points.csv"
+    if nhi_csv.exists():
+        logger.info("Importing NHI Section 7 surgery codes...")
+        with open(nhi_csv, 'r', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            count = 0
+            for row in reader:
+                try:
+                    # Use name as name_zh, subgroup as keywords
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO surgery_codes
+                        (code, name_zh, name_en, category_code, points, keywords, is_common, notes)
+                        VALUES (?, ?, '', ?, ?, ?, 0, ?)
+                    """, (
+                        row.get('code', '').strip(),
+                        row.get('name', '').strip(),
+                        row.get('subgroup', '')[:20] if row.get('subgroup') else '7',
+                        int(row.get('points', 0) or 0),
+                        row.get('subgroup', '').strip(),
+                        f"NHI {row.get('group', '')}"
+                    ))
+                    count += 1
+                except Exception as e:
+                    logger.warning(f"NHI surgery code import error: {e}")
+            cursor.connection.commit()
+            logger.info(f"✓ Imported {count} NHI surgery codes")
+
+    # 5. Rebuild FTS index
+    try:
+        cursor.execute("DELETE FROM surgery_codes_fts")
+        cursor.execute("""
+            INSERT INTO surgery_codes_fts (rowid, code, name_zh, name_en, keywords)
+            SELECT rowid, code, name_zh, name_en, keywords FROM surgery_codes
+        """)
+        cursor.connection.commit()
+        logger.info("✓ FTS index rebuilt")
+    except Exception as e:
+        logger.warning(f"FTS rebuild warning: {e}")
+
 
 # =============================================================================
 # Surgery Categories Endpoints
