@@ -98,10 +98,31 @@
 .to-teal-variant-600 { --tw-gradient-to: var(--color-teal-variant-600) !important; }
 
 /* =============== treatment =============== */
-.bg-treatment-50 { background-color: var(--color-treatment-50) !important; }
-.bg-treatment-500 { background-color: var(--color-treatment-500) !important; }
-.text-treatment-500 { color: var(--color-treatment-500) !important; }
-.border-treatment-500 { border-color: var(--color-treatment-500) !important; }
+/* 完整色階 - 基於 #4E5488 生成 */
+.bg-treatment-50 { background-color: #f3f3f7 !important; }
+.bg-treatment-100 { background-color: #e7e8ef !important; }
+.bg-treatment-200 { background-color: #c8cad9 !important; }
+.bg-treatment-300 { background-color: #a8abc3 !important; }
+.bg-treatment-400 { background-color: #7b80a6 !important; }
+.bg-treatment-500 { background-color: #4E5488 !important; }
+.bg-treatment-600 { background-color: #3d4270 !important; }
+.bg-treatment-700 { background-color: #2f3358 !important; }
+.text-treatment-50 { color: #f3f3f7 !important; }
+.text-treatment-100 { color: #e7e8ef !important; }
+.text-treatment-200 { color: #c8cad9 !important; }
+.text-treatment-500 { color: #4E5488 !important; }
+.text-treatment-600 { color: #3d4270 !important; }
+.text-treatment-700 { color: #2f3358 !important; }
+.border-treatment-100 { border-color: #e7e8ef !important; }
+.border-treatment-200 { border-color: #c8cad9 !important; }
+.border-treatment-300 { border-color: #a8abc3 !important; }
+.border-treatment-400 { border-color: #7b80a6 !important; }
+.border-treatment-500 { border-color: #4E5488 !important; }
+.hover\:bg-treatment-100:hover { background-color: #e7e8ef !important; }
+.hover\:bg-treatment-600:hover { background-color: #3d4270 !important; }
+.hover\:border-treatment-400:hover { border-color: #7b80a6 !important; }
+.focus\:ring-treatment-500:focus { --tw-ring-color: #4E5488 !important; }
+.ring-treatment-500 { --tw-ring-color: #4E5488 !important; }
 
 /* =============== blood =============== */
 .bg-blood-50 { background-color: var(--color-blood-50) !important; }
@@ -158,10 +179,14 @@
 .text-pharma-600 { color: var(--color-pharma-600) !important; }
 .text-pharma-700 { color: var(--color-pharma-700) !important; }
 .text-pharma-900 { color: var(--color-pharma-900) !important; }
+.border-pharma-200 { border-color: var(--color-pharma-200) !important; }
 .border-pharma-500 { border-color: var(--color-pharma-500) !important; }
 .border-pharma-600 { border-color: var(--color-pharma-600) !important; }
+.hover\:bg-pharma-200:hover { background-color: var(--color-pharma-200) !important; }
 .hover\:bg-pharma-600:hover { background-color: var(--color-pharma-600) !important; }
 .hover\:bg-pharma-700:hover { background-color: var(--color-pharma-700) !important; }
+.focus\:ring-pharma-500:focus { --tw-ring-color: var(--color-pharma-500) !important; }
+.ring-pharma-500 { --tw-ring-color: var(--color-pharma-500) !important; }
 
 /* =============== primary (alias to teal) =============== */
 .bg-primary-50 { background-color: #f0fdfa !important; }

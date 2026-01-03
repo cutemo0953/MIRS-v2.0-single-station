@@ -571,14 +571,14 @@
                     <span class="text-sm sm:text-base font-medium truncate">庫存查詢</span>
                 </button>
 
-                <!-- 進貨登記 - 天藍色系 -->
-                <button @click="switchTab('receive')"
-                        :class="currentTab === 'receive' ? 'bg-sky-custom-600 text-white font-semibold shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                <!-- 術式主檔 - 處置色系 #4E5488 -->
+                <button @click="switchTab('surgeryMaster')"
+                        :class="currentTab === 'surgeryMaster' ? 'bg-treatment-500 text-white font-semibold shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                         class="flex-1 py-2.5 sm:py-3 px-2 sm:px-3 md:px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 min-w-0">
                     <svg class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                     </svg>
-                    <span class="text-sm sm:text-base font-medium truncate">進貨登記</span>
+                    <span class="text-sm sm:text-base font-medium truncate">術式主檔</span>
                 </button>
 
                 <!-- 處置 - 處置色系 #4E5488 -->
@@ -620,16 +620,6 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
                     <span class="text-sm sm:text-base font-medium truncate">韌性估算</span>
-                </button>
-
-                <!-- 術式主檔 - 紫色系 #8B5CF6 -->
-                <button @click="switchTab('surgeryMaster')"
-                        :class="currentTab === 'surgeryMaster' ? 'bg-violet-500 text-white font-semibold shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                        class="flex-1 py-2.5 sm:py-3 px-2 sm:px-3 md:px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 min-w-0">
-                    <svg class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
-                    </svg>
-                    <span class="text-sm sm:text-base font-medium truncate">術式主檔</span>
                 </button>
 
             </div>
@@ -890,7 +880,7 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                         </svg>
-                        <span>處置記錄</span>
+                        <span>處置耗材記錄</span>
                     </button>
                     <button @click="treatmentMode = 'consume'"
                             :class="treatmentMode === 'consume' ? 'bg-treatment-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
@@ -911,7 +901,7 @@
                 </div>
             </div>
 
-            <!-- 處置記錄模式 (手術記錄) -->
+            <!-- 處置耗材記錄模式 (手術記錄) -->
             <div x-show="treatmentMode === 'surgery'" x-init="loadCirsProcedureWaiting()">
 
                 <!-- v1.1: CIRS 待處置清單 -->
@@ -980,7 +970,7 @@
 
                     <div x-show="!cirsProcedureStatus.online" class="text-center text-gray-500 py-4">
                         CIRS 未連線
-                        <div class="text-xs text-gray-400 mt-1">請使用下方「新增處置記錄」手動輸入</div>
+                        <div class="text-xs text-gray-400 mt-1">請使用下方「新增處置耗材記錄」手動輸入</div>
                     </div>
                 </div>
 
@@ -995,7 +985,7 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
-                        <span>手動新增處置記錄</span>
+                        <span>手動新增處置耗材記錄</span>
                     </button>
                     <button @click.prevent.stop="exportSurgeryCSV()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2580,13 +2570,13 @@
         <div :style="currentTab === 'surgeryMaster' ? '' : 'display: none !important'" class="bg-white rounded-xl shadow-lg p-3 sm:p-4 md:p-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                 <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <svg class="w-6 h-6 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6 text-treatment-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                     </svg>
                     術式主檔
                 </h2>
                 <div class="flex gap-2">
-                    <button @click="loadSurgeryMasterStats()" class="px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600 transition-colors flex items-center gap-2">
+                    <button @click="loadSurgeryMasterStats()" class="px-4 py-2 bg-treatment-500 text-white rounded-lg hover:bg-treatment-600 transition-colors flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                         </svg>
@@ -2598,17 +2588,17 @@
             <!-- 子 Tab 切換 -->
             <div class="flex gap-2 mb-4 border-b border-gray-200 pb-2">
                 <button @click="switchSurgeryMasterSubTab('codes')"
-                        :class="surgeryMasterSubTab === 'codes' ? 'bg-violet-100 text-violet-700 border-violet-300' : 'bg-gray-50 text-gray-600 border-transparent'"
+                        :class="surgeryMasterSubTab === 'codes' ? 'bg-treatment-100 text-treatment-700 border-treatment-300' : 'bg-gray-50 text-gray-600 border-transparent'"
                         class="px-4 py-2 rounded-lg border text-sm font-medium transition-colors">
                     術式代碼
                 </button>
                 <button @click="switchSurgeryMasterSubTab('selfpay')"
-                        :class="surgeryMasterSubTab === 'selfpay' ? 'bg-violet-100 text-violet-700 border-violet-300' : 'bg-gray-50 text-gray-600 border-transparent'"
+                        :class="surgeryMasterSubTab === 'selfpay' ? 'bg-treatment-100 text-treatment-700 border-treatment-300' : 'bg-gray-50 text-gray-600 border-transparent'"
                         class="px-4 py-2 rounded-lg border text-sm font-medium transition-colors">
                     自費項目
                 </button>
                 <button @click="switchSurgeryMasterSubTab('calculator')"
-                        :class="surgeryMasterSubTab === 'calculator' ? 'bg-violet-100 text-violet-700 border-violet-300' : 'bg-gray-50 text-gray-600 border-transparent'"
+                        :class="surgeryMasterSubTab === 'calculator' ? 'bg-treatment-100 text-treatment-700 border-treatment-300' : 'bg-gray-50 text-gray-600 border-transparent'"
                         class="px-4 py-2 rounded-lg border text-sm font-medium transition-colors">
                     點數計算
                 </button>
@@ -2619,7 +2609,7 @@
                 <!-- 搜尋區 -->
                 <div class="flex flex-col sm:flex-row gap-3 mb-4">
                     <select x-model="surgeryCodeCategoryFilter" @change="searchSurgeryCodes()"
-                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 text-sm">
+                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500 text-sm">
                         <option value="">全部分類</option>
                         <template x-for="cat in surgeryCategories" :key="cat.category_code">
                             <option :value="cat.category_code" x-text="cat.category_name"></option>
@@ -2629,7 +2619,7 @@
                         <input type="text" x-model="surgeryCodeSearchText"
                                @input.debounce.300ms="searchSurgeryCodes()"
                                placeholder="輸入代碼或名稱搜尋..."
-                               class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500">
+                               class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
                         <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
@@ -2640,14 +2630,14 @@
                 <!-- 術式列表 - 手機版卡片 -->
                 <div class="block sm:hidden space-y-3 max-h-96 overflow-y-auto">
                     <template x-for="code in surgeryCodes" :key="code.code">
-                        <div class="border rounded-lg p-3" :class="code.is_common ? 'border-violet-300 bg-violet-50' : 'border-gray-200'">
+                        <div class="border rounded-lg p-3" :class="code.is_common ? 'border-treatment-300 bg-treatment-50' : 'border-gray-200'">
                             <div class="flex justify-between items-start mb-2">
                                 <div>
                                     <span class="font-mono text-xs text-gray-500" x-text="code.code"></span>
-                                    <span x-show="code.is_common" class="ml-1 text-xs text-violet-600">★ 常用</span>
+                                    <span x-show="code.is_common" class="ml-1 text-xs text-treatment-600">★ 常用</span>
                                     <h3 class="font-medium text-gray-900" x-text="code.name_zh"></h3>
                                 </div>
-                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-violet-100 text-violet-700" x-text="code.points + ' 點'"></span>
+                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-treatment-100 text-treatment-700" x-text="code.points + ' 點'"></span>
                             </div>
                             <div class="text-xs text-gray-500" x-text="code.keywords || ''"></div>
                         </div>
@@ -2668,11 +2658,11 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <template x-for="code in surgeryCodes" :key="code.code">
-                                <tr :class="code.is_common ? 'bg-violet-50' : ''">
+                                <tr :class="code.is_common ? 'bg-treatment-50' : ''">
                                     <td class="px-4 py-2 whitespace-nowrap font-mono text-sm" x-text="code.code"></td>
                                     <td class="px-4 py-2 text-sm" x-text="code.name_zh"></td>
                                     <td class="px-4 py-2 text-sm text-gray-500" x-text="code.category_code"></td>
-                                    <td class="px-4 py-2 text-sm text-right font-medium text-violet-600" x-text="code.points?.toLocaleString()"></td>
+                                    <td class="px-4 py-2 text-sm text-right font-medium text-treatment-600" x-text="code.points?.toLocaleString()"></td>
                                     <td class="px-4 py-2 text-center" x-text="code.is_common ? '★' : ''"></td>
                                 </tr>
                             </template>
@@ -2690,7 +2680,7 @@
                 <!-- 搜尋區 -->
                 <div class="flex flex-col sm:flex-row gap-3 mb-4">
                     <select x-model="selfPayCategoryFilter" @change="searchSelfPayItems()"
-                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 text-sm">
+                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500 text-sm">
                         <option value="">全部分類</option>
                         <template x-for="cat in selfPayCategories" :key="cat.category">
                             <option :value="cat.category" x-text="cat.category + ' (' + cat.item_count + ')'"></option>
@@ -2700,7 +2690,7 @@
                         <input type="text" x-model="selfPaySearchText"
                                @input.debounce.300ms="searchSelfPayItems()"
                                placeholder="輸入代碼或名稱搜尋..."
-                               class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500">
+                               class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
                         <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
@@ -2711,11 +2701,11 @@
                 <!-- 自費項目列表 - 手機版卡片 -->
                 <div class="block sm:hidden space-y-3 max-h-96 overflow-y-auto">
                     <template x-for="item in selfPayItems" :key="item.item_id">
-                        <div class="border rounded-lg p-3" :class="item.is_common ? 'border-violet-300 bg-violet-50' : 'border-gray-200'">
+                        <div class="border rounded-lg p-3" :class="item.is_common ? 'border-treatment-300 bg-treatment-50' : 'border-gray-200'">
                             <div class="flex justify-between items-start mb-2">
                                 <div>
                                     <span class="font-mono text-xs text-gray-500" x-text="item.item_id"></span>
-                                    <span x-show="item.is_common" class="ml-1 text-xs text-violet-600">★ 常用</span>
+                                    <span x-show="item.is_common" class="ml-1 text-xs text-treatment-600">★ 常用</span>
                                     <h3 class="font-medium text-gray-900" x-text="item.name"></h3>
                                 </div>
                                 <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700" x-text="'$' + item.unit_price?.toLocaleString()"></span>
@@ -2739,7 +2729,7 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <template x-for="item in selfPayItems" :key="item.item_id">
-                                <tr :class="item.is_common ? 'bg-violet-50' : ''">
+                                <tr :class="item.is_common ? 'bg-treatment-50' : ''">
                                     <td class="px-4 py-2 whitespace-nowrap font-mono text-sm" x-text="item.item_id"></td>
                                     <td class="px-4 py-2 text-sm" x-text="item.name"></td>
                                     <td class="px-4 py-2 text-sm text-gray-500" x-text="item.category"></td>
@@ -2760,13 +2750,13 @@
             <div x-show="surgeryMasterSubTab === 'calculator'">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- 左側：選擇術式 -->
-                    <div class="bg-violet-50 rounded-lg p-4">
-                        <h3 class="font-medium text-violet-700 mb-3">選擇術式</h3>
+                    <div class="bg-treatment-50 rounded-lg p-4">
+                        <h3 class="font-medium text-treatment-700 mb-3">選擇術式</h3>
                         <div class="relative mb-3">
                             <input type="text" x-model="calculatorSearchText"
                                    @input.debounce.300ms="searchForCalculator()"
                                    placeholder="搜尋術式代碼或名稱..."
-                                   class="w-full px-4 py-2 pl-10 border border-violet-300 rounded-lg focus:ring-2 focus:ring-violet-500">
+                                   class="w-full px-4 py-2 pl-10 border border-treatment-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
                             <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                             </svg>
@@ -2775,13 +2765,13 @@
                         <div class="max-h-48 overflow-y-auto space-y-2">
                             <template x-for="code in calculatorSearchResults" :key="code.code">
                                 <button @click="addToCalculator(code)"
-                                        class="w-full text-left px-3 py-2 bg-white rounded-lg border border-violet-200 hover:border-violet-400 hover:bg-violet-100 transition-colors">
+                                        class="w-full text-left px-3 py-2 bg-white rounded-lg border border-treatment-200 hover:border-treatment-400 hover:bg-treatment-100 transition-colors">
                                     <div class="flex justify-between items-center">
                                         <div>
                                             <span class="font-mono text-xs text-gray-500" x-text="code.code"></span>
                                             <span class="ml-2 text-sm" x-text="code.name_zh"></span>
                                         </div>
-                                        <span class="text-sm font-medium text-violet-600" x-text="code.points?.toLocaleString() + ' 點'"></span>
+                                        <span class="text-sm font-medium text-treatment-600" x-text="code.points?.toLocaleString() + ' 點'"></span>
                                     </div>
                                 </button>
                             </template>
@@ -2828,12 +2818,12 @@
                         </div>
 
                         <!-- 計算結果 -->
-                        <div x-show="calculatorSurgeries.length > 0" class="bg-violet-100 rounded-lg p-4">
+                        <div x-show="calculatorSurgeries.length > 0" class="bg-treatment-100 rounded-lg p-4">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="text-gray-600">原始點數總計</span>
                                 <span class="font-medium" x-text="calculatorSurgeries.reduce((sum, s) => sum + s.points, 0).toLocaleString() + ' 點'"></span>
                             </div>
-                            <div class="flex justify-between items-center text-lg font-bold text-violet-700">
+                            <div class="flex justify-between items-center text-lg font-bold text-treatment-700">
                                 <span>遞減後點數</span>
                                 <span x-text="calculatorSurgeries.reduce((sum, s, i) => sum + s.points * (i === 0 ? 1 : (i === 1 ? 0.5 : 0)), 0).toLocaleString() + ' 點'"></span>
                             </div>
@@ -3759,14 +3749,14 @@
             </div>
         </div>
 
-        <!-- 新增處置記錄 Modal -->
+        <!-- 新增處置耗材記錄 Modal -->
         <div x-show="showAddSurgeryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-4" style="display: none;">
             <div @click.away="showAddSurgeryModal = false" class="bg-white rounded-xl shadow-2xl p-4 sm:p-5 md:p-6 max-w-2xl w-full mx-4 my-4 max-h-[95vh] overflow-y-auto">
                 <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <svg class="w-6 h-6 text-treatment-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                     </svg>
-                    新增處置記錄
+                    新增處置耗材記錄
                 </h3>
                 <form @submit.prevent="submitAddSurgery()" class="space-y-4">
                     <!-- 基本資訊 -->
@@ -3867,6 +3857,58 @@
                         </div>
                     </div>
 
+                    <!-- 術中用藥 -->
+                    <div class="border-2 border-pharma-200 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-pharma-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                                </svg>
+                                術中用藥
+                                <span class="text-xs text-gray-500 font-normal">(局部注射藥物)</span>
+                            </h4>
+                            <button type="button" @click="addIntraopMed()" class="bg-pharma-600 text-white px-3 py-1 rounded-lg hover:bg-pharma-700 text-sm flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                新增藥物
+                            </button>
+                        </div>
+
+                        <!-- 常用術中用藥快選 -->
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" @click="addQuickIntraopMed('Morphine', '10', 'mg')" class="px-2 py-1 text-xs bg-pharma-100 text-pharma-700 rounded hover:bg-pharma-200">Morphine</button>
+                            <button type="button" @click="addQuickIntraopMed('Ketorolac', '30', 'mg')" class="px-2 py-1 text-xs bg-pharma-100 text-pharma-700 rounded hover:bg-pharma-200">Ketorolac</button>
+                            <button type="button" @click="addQuickIntraopMed('Triamcinolone', '40', 'mg')" class="px-2 py-1 text-xs bg-pharma-100 text-pharma-700 rounded hover:bg-pharma-200">Triamcinolone</button>
+                            <button type="button" @click="addQuickIntraopMed('Xylocaine 2%', '10', 'ml')" class="px-2 py-1 text-xs bg-pharma-100 text-pharma-700 rounded hover:bg-pharma-200">Xylocaine</button>
+                            <button type="button" @click="addQuickIntraopMed('Marcaine 0.5%', '10', 'ml')" class="px-2 py-1 text-xs bg-pharma-100 text-pharma-700 rounded hover:bg-pharma-200">Marcaine</button>
+                        </div>
+
+                        <div class="space-y-3">
+                            <template x-for="(med, index) in addSurgeryForm.intraopMeds" :key="index">
+                                <div class="flex gap-2 items-center border border-pharma-200 rounded-lg p-3 bg-pharma-50">
+                                    <div class="flex-1 grid grid-cols-3 gap-2">
+                                        <input type="text" x-model="med.name" required placeholder="藥物名稱"
+                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pharma-500">
+                                        <input type="text" x-model="med.dose" required placeholder="劑量"
+                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pharma-500">
+                                        <input type="text" x-model="med.unit" required placeholder="單位"
+                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pharma-500">
+                                    </div>
+                                    <button type="button" @click="removeIntraopMed(index)" class="text-red-600 hover:text-red-800 p-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div x-show="addSurgeryForm.intraopMeds.length === 0" class="text-center text-gray-400 py-4">
+                            尚未新增術中用藥
+                        </div>
+                    </div>
+
                     <div class="flex gap-4 pt-4">
                         <button type="submit" class="flex-1 bg-treatment-500 text-white px-4 py-2 rounded-lg hover:bg-[#3d4270] transition-colors flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3892,9 +3934,9 @@
                     <svg class="w-6 h-6 text-treatment-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                     </svg>
-                    處置記錄詳情
+                    處置耗材記錄詳情
                 </h3>
-                
+
                 <template x-if="selectedSurgery">
                     <div class="space-y-4">
                         <!-- 基本資訊 -->
@@ -5263,6 +5305,7 @@
                     durationMinutes: null,
                     remarks: '',
                     consumptions: [],
+                    intraopMeds: [],  // 術中用藥
                     stationId: 'HC-000000',
                     // v1.1: CIRS 整合
                     cirsRegistrationRef: null,
@@ -8293,9 +8336,33 @@
                     }
                 },
 
+                // 術中用藥方法
+                addIntraopMed() {
+                    this.addSurgeryForm.intraopMeds.push({
+                        name: '',
+                        dose: '',
+                        unit: ''
+                    });
+                },
+
+                removeIntraopMed(index) {
+                    this.addSurgeryForm.intraopMeds.splice(index, 1);
+                },
+
+                addQuickIntraopMed(name, dose, unit) {
+                    // 檢查是否已存在相同藥物
+                    const existing = this.addSurgeryForm.intraopMeds.find(m => m.name === name);
+                    if (existing) {
+                        this.toast(`${name} 已在列表中`, 'warning');
+                        return;
+                    }
+                    this.addSurgeryForm.intraopMeds.push({ name, dose, unit });
+                },
+
                 async submitAddSurgery() {
-                    if (this.addSurgeryForm.consumptions.length === 0) {
-                        this.toast('請至少新增一項耗材', 'error');
+                    // 至少需要耗材或術中用藥其中之一
+                    if (this.addSurgeryForm.consumptions.length === 0 && this.addSurgeryForm.intraopMeds.length === 0) {
+                        this.toast('請至少新增一項耗材或術中用藥', 'error');
                         return;
                     }
 
@@ -8334,6 +8401,7 @@
                         durationMinutes: null,
                         remarks: '',
                         consumptions: [],
+                        intraopMeds: [],  // 術中用藥
                         stationId: this.stationId,
                         // v1.1: CIRS 整合
                         cirsRegistrationRef: null,
