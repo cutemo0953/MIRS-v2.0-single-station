@@ -390,3 +390,14 @@
 .to-red-950 { --tw-gradient-to: #450a0a !important; }
 .bg-opacity-50 { --tw-bg-opacity: 0.5 !important; }
 .backdrop-blur { backdrop-filter: blur(8px) !important; }
+
+/* --- Amber/Orange Gradients (EMT Transfer PWA) --- */
+.from-amber-500 { --tw-gradient-from: #f59e0b !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(245, 158, 11, 0)) !important; }
+.to-amber-600 { --tw-gradient-to: #d97706 !important; }
+.to-orange-500 { --tw-gradient-to: #f97316 !important; }
+.from-orange-500 { --tw-gradient-from: #f97316 !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(249, 115, 22, 0)) !important; }
+.to-orange-600 { --tw-gradient-to: #ea580c !important; }
+.bg-gradient-to-br { background-image: linear-gradient(to bottom right, var(--tw-gradient-stops)) !important; }
+.bg-white\/20 { background-color: rgba(255, 255, 255, 0.2) !important; }
+.bg-white\/30 { background-color: rgba(255, 255, 255, 0.3) !important; }
+.opacity-80 { opacity: 0.8 !important; }

@@ -95,17 +95,17 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">目的地</label>
-                        <input type="text" x-model="currentMission.destination" readonly
+                        <input type="text" :value="currentMission?.destination || ''" readonly
                                class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50">
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">預估路程</label>
                         <div class="flex items-center gap-2">
-                            <input type="number" x-model="currentMission.estimated_duration_min" readonly
+                            <input type="number" :value="currentMission?.estimated_duration_min || 0" readonly
                                    class="w-20 border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-center">
                             <span class="text-gray-500">分鐘</span>
-                            <span class="text-amber-600 font-medium" x-text="'(' + (currentMission.estimated_duration_min / 60).toFixed(1) + ' 小時)'"></span>
+                            <span class="text-amber-600 font-medium" x-text="'(' + ((currentMission?.estimated_duration_min || 0) / 60).toFixed(1) + ' 小時)'"></span>
                         </div>
                     </div>
 
@@ -113,19 +113,19 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">病患狀況</label>
                         <div class="flex gap-2 flex-wrap">
                             <span class="px-3 py-1 rounded-full text-sm"
-                                  :class="currentMission.patient_condition === 'INTUBATED' ? 'bg-red-100 text-red-700' :
-                                          currentMission.patient_condition === 'CRITICAL' ? 'bg-orange-100 text-orange-700' :
+                                  :class="currentMission?.patient_condition === 'INTUBATED' ? 'bg-red-100 text-red-700' :
+                                          currentMission?.patient_condition === 'CRITICAL' ? 'bg-orange-100 text-orange-700' :
                                           'bg-green-100 text-green-700'"
-                                  x-text="currentMission.patient_condition === 'INTUBATED' ? '插管' :
-                                          currentMission.patient_condition === 'CRITICAL' ? '危急' : '穩定'">
+                                  x-text="currentMission?.patient_condition === 'INTUBATED' ? '插管' :
+                                          currentMission?.patient_condition === 'CRITICAL' ? '危急' : '穩定'">
                             </span>
-                            <span x-show="currentMission.oxygen_requirement_lpm > 0"
+                            <span x-show="(currentMission?.oxygen_requirement_lpm || 0) > 0"
                                   class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm"
-                                  x-text="'O2: ' + currentMission.oxygen_requirement_lpm + ' L/min'">
+                                  x-text="'O2: ' + (currentMission?.oxygen_requirement_lpm || 0) + ' L/min'">
                             </span>
-                            <span x-show="currentMission.iv_rate_mlhr > 0"
+                            <span x-show="(currentMission?.iv_rate_mlhr || 0) > 0"
                                   class="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm"
-                                  x-text="'IV: ' + currentMission.iv_rate_mlhr + ' mL/hr'">
+                                  x-text="'IV: ' + (currentMission?.iv_rate_mlhr || 0) + ' mL/hr'">
                             </span>
                         </div>
                     </div>
@@ -133,7 +133,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">安全係數</label>
                         <div class="flex items-center gap-2">
-                            <span class="text-2xl font-bold text-amber-600" x-text="currentMission.safety_factor + '×'"></span>
+                            <span class="text-2xl font-bold text-amber-600" x-text="(currentMission?.safety_factor || 3) + '×'"></span>
                             <span class="text-gray-500">備量</span>
                         </div>
                     </div>
@@ -154,7 +154,7 @@
             <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold text-amber-700">物資整備</h2>
-                    <span class="text-sm text-gray-500" x-text="currentMission.estimated_duration_min + '分 × ' + currentMission.safety_factor + '倍'"></span>
+                    <span class="text-sm text-gray-500" x-text="(currentMission?.estimated_duration_min || 0) + '分 × ' + (currentMission?.safety_factor || 3) + '倍'"></span>
                 </div>
 
                 <div class="space-y-3">
@@ -209,7 +209,7 @@
             <div class="bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl shadow-lg p-6 text-white mb-4">
                 <div class="text-center mb-4">
                     <div class="text-sm opacity-80">目的地</div>
-                    <div class="text-2xl font-bold" x-text="currentMission.destination"></div>
+                    <div class="text-2xl font-bold" x-text="currentMission?.destination || '-'"></div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 mb-4">
@@ -219,14 +219,14 @@
                     </div>
                     <div class="bg-white/20 rounded-lg p-3 text-center">
                         <div class="text-xs opacity-80">預估</div>
-                        <div class="text-xl font-bold" x-text="currentMission.estimated_duration_min + ' min'"></div>
+                        <div class="text-xl font-bold" x-text="(currentMission?.estimated_duration_min || 0) + ' min'"></div>
                     </div>
                 </div>
 
                 <!-- Progress bar -->
                 <div class="h-3 bg-white/30 rounded-full overflow-hidden">
                     <div class="h-full bg-white transition-all duration-1000"
-                         :style="'width: ' + Math.min(100, (elapsedTime / currentMission.estimated_duration_min) * 100) + '%'"></div>
+                         :style="'width: ' + Math.min(100, (elapsedTime / (currentMission?.estimated_duration_min || 60)) * 100) + '%'"></div>
                 </div>
             </div>
 
@@ -332,7 +332,7 @@
                     </svg>
                 </div>
                 <h2 class="text-xl font-bold text-green-700 mb-2">任務完成</h2>
-                <p class="text-gray-500 mb-6" x-text="'任務編號: ' + currentMission.mission_id"></p>
+                <p class="text-gray-500 mb-6" x-text="'任務編號: ' + (currentMission?.mission_id || '')"></p>
                 <button @click="currentMission = null; currentStep = 0"
                         class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-xl transition">
                     開始新任務
@@ -679,6 +679,10 @@
                 },
 
                 async confirmLoadout() {
+                    if (!this.currentMission?.mission_id) {
+                        alert('錯誤：未載入任務資料');
+                        return;
+                    }
                     try {
                         const items = this.missionItems.map(i => ({
                             item_id: i.id,
@@ -719,14 +723,31 @@
 
                 startElapsedTimer() {
                     if (this.elapsedTimer) clearInterval(this.elapsedTimer);
+                    if (!this.currentMission?.departed_at) {
+                        this.elapsedTime = 0;
+                        return;
+                    }
 
                     const departed = new Date(this.currentMission.departed_at);
+                    // Validate departed date
+                    if (isNaN(departed.getTime())) {
+                        this.elapsedTime = 0;
+                        return;
+                    }
+
                     this.elapsedTimer = setInterval(() => {
                         this.elapsedTime = Math.floor((Date.now() - departed.getTime()) / 60000);
+                        // Cap at reasonable maximum (24 hours = 1440 min)
+                        if (this.elapsedTime > 1440) this.elapsedTime = 1440;
                     }, 1000);
                 },
 
                 async arriveMission() {
+                    if (!this.currentMission?.mission_id) {
+                        console.error('No current mission');
+                        alert('錯誤：未載入任務資料');
+                        return;
+                    }
                     try {
                         const res = await fetch(`/api/transfer/missions/${this.currentMission.mission_id}/arrive`, {
                             method: 'POST'
@@ -735,9 +756,13 @@
                             if (this.elapsedTimer) clearInterval(this.elapsedTimer);
                             this.currentMission.status = 'ARRIVED';
                             this.currentStep = 3;
+                        } else {
+                            const err = await res.json();
+                            alert('抵達失敗: ' + (err.detail || res.status));
                         }
                     } catch (e) {
                         console.error('Failed to arrive:', e);
+                        alert('網路錯誤，請重試');
                     }
                 },
 
