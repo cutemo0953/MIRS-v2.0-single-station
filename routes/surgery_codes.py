@@ -968,7 +968,7 @@ async def calculate_surgery_points(request: PointsCalculationRequest):
                 elif cat in categories_seen:
                     # 同類手術：第2,3項 50%，第4項+ 0%
                     same_cat_order = same_category_count.get(cat, 0)
-                    if same_cat_order < 2:  # 同類第2,3項
+                    if same_cat_order < 3:  # 同類第2,3項 (count=1,2)
                         rate = 0.5
                     else:
                         rate = 0.0

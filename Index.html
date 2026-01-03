@@ -1049,7 +1049,7 @@
                 </div>
 
                 <!-- 術式主檔快查 (treatment 色系) -->
-                <div class="mt-6 border-2 border-treatment-300 rounded-lg p-4 bg-treatment-50" x-init="if(!dataLoaded.surgeryMaster) loadSurgeryMasterStats()">
+                <div class="mt-6 border-2 border-treatment-300 rounded-lg p-4 bg-treatment-50" x-init="if(!dataLoaded.surgeryMaster) { loadSurgeryMasterStats(); loadSurgeryCategories(); loadSelfPayCategories(); }">
                     <h4 class="text-lg font-semibold text-treatment-700 flex items-center gap-2 mb-4">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
@@ -1103,31 +1103,68 @@
                         <p class="text-xs text-treatment-500 mt-2" x-text="'共 ' + surgeryCodes.length + ' 筆' + (surgeryCodes.length > 20 ? '，顯示前 20 筆' : '')"></p>
                     </div>
 
-                    <!-- 自費項目 -->
+                    <!-- 自費項目 (v2.7.3: 加入 Queue 功能) -->
                     <div x-show="surgeryMasterSubTab === 'selfpay'">
-                        <div class="flex gap-2 mb-3">
-                            <select x-model="selfPayCategoryFilter" @change="searchSelfPayItems()"
-                                    class="px-2 py-1 border border-treatment-300 rounded text-sm focus:ring-treatment-500">
-                                <option value="">全部分類</option>
-                                <template x-for="cat in selfPayCategories" :key="cat.category">
-                                    <option :value="cat.category" x-text="cat.category"></option>
-                                </template>
-                            </select>
-                            <input type="text" x-model="selfPaySearchText" @input.debounce.300ms="searchSelfPayItems()"
-                                   placeholder="搜尋..." class="flex-1 px-3 py-1 border border-treatment-300 rounded text-sm focus:ring-treatment-500">
-                        </div>
-                        <div class="max-h-64 overflow-y-auto space-y-2">
-                            <template x-for="item in selfPayItems.slice(0, 20)" :key="item.item_id">
-                                <div class="flex justify-between items-center px-3 py-2 bg-white rounded border border-treatment-200">
-                                    <div>
-                                        <span class="font-mono text-xs text-gray-500" x-text="item.item_id"></span>
-                                        <span class="ml-2 text-sm" x-text="item.name"></span>
-                                    </div>
-                                    <span class="text-sm font-medium text-green-600" x-text="'$' + item.unit_price?.toLocaleString()"></span>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <!-- 左側：自費項目列表 -->
+                            <div>
+                                <div class="flex gap-2 mb-3">
+                                    <select x-model="selfPayCategoryFilter" @change="searchSelfPayItems()"
+                                            class="px-2 py-1 border border-treatment-300 rounded text-sm focus:ring-treatment-500">
+                                        <option value="">全部分類</option>
+                                        <template x-for="cat in selfPayCategories" :key="cat.category">
+                                            <option :value="cat.category" x-text="cat.category"></option>
+                                        </template>
+                                    </select>
+                                    <input type="text" x-model="selfPaySearchText" @input.debounce.300ms="searchSelfPayItems()"
+                                           placeholder="搜尋..." class="flex-1 px-3 py-1 border border-treatment-300 rounded text-sm focus:ring-treatment-500">
                                 </div>
-                            </template>
+                                <div class="max-h-48 overflow-y-auto space-y-1">
+                                    <template x-for="item in selfPayItems.slice(0, 15)" :key="item.item_id">
+                                        <button @click="addToSelfPayQueue(item)"
+                                                class="w-full text-left flex justify-between items-center px-3 py-2 bg-white rounded border border-treatment-200 hover:bg-treatment-100 hover:border-treatment-400 transition-colors">
+                                            <div class="truncate flex-1 mr-2">
+                                                <span class="text-sm" x-text="item.name"></span>
+                                            </div>
+                                            <span class="text-sm font-medium text-green-600 whitespace-nowrap" x-text="'$' + item.unit_price?.toLocaleString()"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                                <p class="text-xs text-treatment-500 mt-1" x-text="'共 ' + selfPayItems.length + ' 筆' + (selfPayItems.length > 15 ? '，顯示前 15 筆' : '') + ' (點擊加入)'"></p>
+                            </div>
+
+                            <!-- 右側：自費 Queue -->
+                            <div class="bg-treatment-50 rounded-lg p-3">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h5 class="font-medium text-treatment-700">費用清單</h5>
+                                    <button x-show="selfPayQueue.length > 0" @click="clearSelfPayQueue()"
+                                            class="text-xs text-red-500 hover:text-red-700">清空</button>
+                                </div>
+                                <div class="max-h-40 overflow-y-auto space-y-1 mb-2">
+                                    <template x-for="(item, idx) in selfPayQueue" :key="item.item_id">
+                                        <div class="flex justify-between items-center px-2 py-1 bg-white rounded border border-treatment-200">
+                                            <span class="text-sm truncate flex-1 mr-2" x-text="item.name"></span>
+                                            <div class="flex items-center gap-1">
+                                                <button @click="updateSelfPayQueueQty(idx, -1)" class="w-5 h-5 text-xs bg-gray-200 rounded hover:bg-gray-300">−</button>
+                                                <span class="text-sm w-6 text-center" x-text="item.quantity"></span>
+                                                <button @click="updateSelfPayQueueQty(idx, 1)" class="w-5 h-5 text-xs bg-gray-200 rounded hover:bg-gray-300">+</button>
+                                                <span class="text-sm font-medium text-green-600 w-16 text-right" x-text="'$' + (item.unit_price * item.quantity).toLocaleString()"></span>
+                                                <button @click="removeFromSelfPayQueue(idx)" class="text-red-500 text-xs ml-1">✕</button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div x-show="selfPayQueue.length === 0" class="text-center text-gray-400 py-4 text-sm">
+                                    點擊左側品項加入清單
+                                </div>
+                                <div x-show="selfPayQueue.length > 0" class="border-t border-treatment-200 pt-2">
+                                    <div class="flex justify-between items-center text-treatment-700 font-bold">
+                                        <span>總計：</span>
+                                        <span class="text-lg" x-text="'$' + getSelfPayQueueTotal().toLocaleString()"></span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <p class="text-xs text-treatment-500 mt-2" x-text="'共 ' + selfPayItems.length + ' 筆' + (selfPayItems.length > 20 ? '，顯示前 20 筆' : '')"></p>
                     </div>
 
                     <!-- 點數計算器 -->
@@ -1305,7 +1342,6 @@
                     </div>
                 </div>
                 </div>
-            </div>
 
                 <!-- 藥品領用表單 (批次) -->
                 <div class="bg-gray-50 rounded-lg p-4 mb-6">
@@ -1480,6 +1516,7 @@
                         </div>
                     </template>
                 </div>
+            </div>
             </div>
         </div>
 
@@ -5262,6 +5299,8 @@
                 calculatorSearchText: '',
                 calculatorSearchResults: [],
                 calculatorShowDropdown: false,
+                // 自費項目 Queue (v2.7.3)
+                selfPayQueue: [],
 
                 // 初始化 (v1.4.5優化: 延遲載入)
                 async init() {
@@ -5729,6 +5768,42 @@
 
                 clearCalculator() {
                     this.calculatorSurgeries = [];
+                },
+
+                // 自費項目 Queue 方法 (v2.7.3)
+                addToSelfPayQueue(item) {
+                    const existing = this.selfPayQueue.find(q => q.item_id === item.item_id);
+                    if (existing) {
+                        existing.quantity++;
+                    } else {
+                        this.selfPayQueue.push({
+                            item_id: item.item_id,
+                            name: item.name,
+                            unit_price: item.unit_price || 0,
+                            unit: item.unit || '組',
+                            category: item.category,
+                            quantity: 1
+                        });
+                    }
+                },
+
+                removeFromSelfPayQueue(index) {
+                    this.selfPayQueue.splice(index, 1);
+                },
+
+                updateSelfPayQueueQty(index, delta) {
+                    const item = this.selfPayQueue[index];
+                    if (item) {
+                        item.quantity = Math.max(1, item.quantity + delta);
+                    }
+                },
+
+                getSelfPayQueueTotal() {
+                    return this.selfPayQueue.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+                },
+
+                clearSelfPayQueue() {
+                    this.selfPayQueue = [];
                 },
 
                 // 格式化數字加千分位
