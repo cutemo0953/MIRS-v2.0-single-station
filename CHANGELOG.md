@@ -6,6 +6,34 @@
 
 ---
 
+## [2.9.0] - 2026-01-03
+
+### 新增 (Added)
+- **EMT Transfer PWA 模組** (`/api/transfer`)
+  - 病患轉送任務管理（建立、確認、出發、抵達、結案）
+  - 物資需求自動計算（氧氣瓶、輸液袋、設備電量）
+  - 安全係數 ×3 備量公式
+  - 返站 Recheck 剩餘量登記
+  - 外帶物資入庫功能
+- **EMT Transfer PWA 前端** (`/static/emt/`)
+  - Amber 色系 UI（同韌性估算 Tab）
+  - 離線優先架構（Service Worker + IndexedDB）
+  - 4 步驟流程：設定 → 整備 → 轉送 → 結案
+- **資料庫 Schema** (`database/migrations/add_transfer_module.sql`)
+  - `transfer_missions`: 任務主表
+  - `transfer_items`: 物資清單
+  - `transfer_events`: 事件日誌 (Append-Only)
+  - `transfer_incoming_items`: 外帶物資
+  - `consumption_rates`: 消耗率設定
+- **庫存連動** (Phase 2)
+  - Reserve/Issue/Return 事件連動主庫存
+  - 韌性估算使用 `available = on_hand - reserved`
+
+### 變更 (Changed)
+- `main.py`: 整合 transfer router 和 schema 初始化
+
+---
+
 ## [2.8.0] - 2026-01-03
 
 ### 新增 (Added)

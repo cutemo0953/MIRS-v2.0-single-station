@@ -72,6 +72,15 @@ except ImportError as e:
     surgery_codes_router = None
     init_surgery_codes_schema = None
 
+# v2.9 新增: EMT Transfer 模組
+try:
+    from routes.transfer import router as transfer_router, init_transfer_schema
+    TRANSFER_MODULE_AVAILABLE = True
+except ImportError as e:
+    TRANSFER_MODULE_AVAILABLE = False
+    transfer_router = None
+    init_transfer_schema = None
+
 
 # ============================================================================
 # 日誌配置
@@ -1285,6 +1294,13 @@ class DatabaseManager:
                     init_surgery_codes_schema(cursor)
                 except Exception as e:
                     logger.warning(f"術式主檔模組 schema 初始化失敗: {e}")
+
+            # v2.9: 初始化 EMT Transfer 模組 schema
+            if TRANSFER_MODULE_AVAILABLE and init_transfer_schema:
+                try:
+                    init_transfer_schema(cursor)
+                except Exception as e:
+                    logger.warning(f"EMT Transfer 模組 schema 初始化失敗: {e}")
 
             conn.commit()
             logger.info(f"✓ 資料庫初始化完成: {config.get_station_id()}")
@@ -8502,6 +8518,13 @@ if SURGERY_CODES_MODULE_AVAILABLE and surgery_codes_router:
     logger.info("✓ MIRS Surgery Codes Module v1.0 已啟用 (/api/surgery-codes)")
 else:
     logger.warning("手術代碼模組未啟用")
+
+# v2.9: EMT Transfer 模組路由
+if TRANSFER_MODULE_AVAILABLE and transfer_router:
+    app.include_router(transfer_router)
+    logger.info("✓ MIRS Transfer Module v1.0 已啟用 (/api/transfer)")
+else:
+    logger.warning("EMT Transfer 模組未啟用")
 
 
 class ResilienceConfigUpdate(BaseModel):
