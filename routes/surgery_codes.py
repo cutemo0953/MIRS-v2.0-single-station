@@ -104,6 +104,7 @@ class PointsCalculationItem(BaseModel):
     code: str
     name: str
     points: int
+    category_code: Optional[str] = None  # 用於判斷同類/不同類遞減
 
 
 class PointsCalculationRequest(BaseModel):
@@ -920,12 +921,12 @@ async def calculate_surgery_points(request: PointsCalculationRequest):
     """
     計算多項手術點數 (含遞減規則)
 
-    遞減規則 (依健保規定):
-    - 第 1 項 (最高點數): 100%
-    - 第 2 項: 50%
-    - 第 3 項以上: 0%
+    遞減規則 (依全民健康保險醫療服務給付項目及支付標準):
+    - 術式依點數由高到低排列
+    - 同類手術 (同 category_code): 100% → 50% → 50% → 0%
+    - 不同類手術: 100% → 100% → 50% → 0%
 
-    註：「最多3筆」為 UI 限制，此 API 不設硬性限制
+    若未提供 category_code，使用簡易規則: 100% → 50% → 0%
     """
     if not request.surgeries:
         return PointsCalculationResponse(
@@ -941,18 +942,48 @@ async def calculate_surgery_points(request: PointsCalculationRequest):
     items = []
     total_original = 0
     total_final = 0
+    categories_seen = set()  # 追蹤已出現的分類
+    same_category_count = {}  # 追蹤每個分類出現的次數
 
     for idx, surgery in enumerate(sorted_surgeries):
         original = surgery.points
         total_original += original
 
         if request.apply_reduction:
-            if idx == 0:
-                rate = 1.0
-            elif idx == 1:
-                rate = 0.5
+            cat = surgery.category_code
+
+            if cat is None:
+                # 無分類資訊，使用簡易規則
+                if idx == 0:
+                    rate = 1.0
+                elif idx == 1:
+                    rate = 0.5
+                else:
+                    rate = 0.0
             else:
-                rate = 0.0
+                # 有分類資訊，使用完整健保規則
+                if idx == 0:
+                    # 第一項永遠 100%
+                    rate = 1.0
+                elif cat in categories_seen:
+                    # 同類手術：第2,3項 50%，第4項+ 0%
+                    same_cat_order = same_category_count.get(cat, 0)
+                    if same_cat_order < 2:  # 同類第2,3項
+                        rate = 0.5
+                    else:
+                        rate = 0.0
+                else:
+                    # 不同類手術：第2項 100%，第3項 50%，第4項+ 0%
+                    if idx == 1:
+                        rate = 1.0
+                    elif idx == 2:
+                        rate = 0.5
+                    else:
+                        rate = 0.0
+
+                # 更新計數
+                categories_seen.add(cat)
+                same_category_count[cat] = same_category_count.get(cat, 0) + 1
         else:
             rate = 1.0
 
