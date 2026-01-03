@@ -1428,6 +1428,21 @@ class DatabaseManager:
             else:
                 logger.info(f"資料庫已存在 {med_count} 種藥品，跳過預載")
 
+            # v2.9.1: 單獨檢查並載入試劑 (可能是後來新增的)
+            cursor.execute("SELECT COUNT(*) FROM items WHERE item_code LIKE 'REA-%'")
+            reagent_count = cursor.fetchone()[0]
+            if reagent_count == 0:
+                from preload_data import get_reagents_data
+                reagents = get_reagents_data()
+                for item in reagents:
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO items
+                        (item_code, item_name, category, unit, min_stock, endurance_type, tests_per_unit, valid_days_after_open)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (item['code'], item['name'], item['category'], item['unit'], item['min_stock'],
+                          item.get('endurance_type'), item.get('tests_per_unit'), item.get('valid_days_after_open')))
+                logger.info(f"✓ 補載 {len(reagents)} 種試劑 (REA- 前綴)")
+
         except ImportError:
             logger.warning("preload_data.py 不存在，使用空白資料庫")
             self._init_default_equipment(cursor)
@@ -3126,6 +3141,44 @@ async def serve_anesthesia_pwa():
         )
     else:
         raise HTTPException(status_code=404, detail="Anesthesia PWA not found")
+
+
+@app.get("/emt")
+@app.get("/emt/")
+async def serve_emt_transfer_pwa():
+    """
+    Serve EMT Transfer PWA (轉送站)
+    """
+    emt_file = PROJECT_ROOT / "static" / "emt" / "index.html"
+    if emt_file.exists():
+        return FileResponse(
+            emt_file,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    else:
+        raise HTTPException(status_code=404, detail="EMT Transfer PWA not found")
+
+
+@app.get("/emt/manifest.json")
+async def serve_emt_manifest():
+    """Serve EMT Transfer PWA manifest"""
+    manifest_file = PROJECT_ROOT / "static" / "emt" / "manifest.json"
+    if manifest_file.exists():
+        return FileResponse(manifest_file, media_type="application/manifest+json")
+    raise HTTPException(status_code=404)
+
+
+@app.get("/emt/sw.js")
+async def serve_emt_service_worker():
+    """Serve EMT Transfer Service Worker"""
+    sw_file = PROJECT_ROOT / "static" / "emt" / "sw.js"
+    if sw_file.exists():
+        return FileResponse(sw_file, media_type="application/javascript")
+    raise HTTPException(status_code=404)
 
 
 @app.get("/anesthesia/manifest.json")

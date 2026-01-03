@@ -352,3 +352,41 @@
 .text-purple-700 { color: #7e22ce !important; }
 .border-purple-300 { border-color: #d8b4fe !important; }
 .hover\:bg-purple-700:hover { background-color: #7e22ce !important; }
+
+/* --- Red (標準 Tailwind) - 血袋庫存用 --- */
+.bg-red-50 { background-color: #fef2f2 !important; }
+.bg-red-100 { background-color: #fee2e2 !important; }
+.bg-red-200 { background-color: #fecaca !important; }
+.bg-red-300 { background-color: #fca5a5 !important; }
+.bg-red-400 { background-color: #f87171 !important; }
+.bg-red-500 { background-color: #ef4444 !important; }
+.bg-red-600 { background-color: #dc2626 !important; }
+.bg-red-700 { background-color: #b91c1c !important; }
+.bg-red-800 { background-color: #991b1b !important; }
+.bg-red-900 { background-color: #7f1d1d !important; }
+.bg-red-950 { background-color: #450a0a !important; }
+.text-red-50 { color: #fef2f2 !important; }
+.text-red-100 { color: #fee2e2 !important; }
+.text-red-200 { color: #fecaca !important; }
+.text-red-500 { color: #ef4444 !important; }
+.text-red-600 { color: #dc2626 !important; }
+.text-red-700 { color: #b91c1c !important; }
+.text-red-800 { color: #991b1b !important; }
+.text-red-900 { color: #7f1d1d !important; }
+.border-red-200 { border-color: #fecaca !important; }
+.border-red-300 { border-color: #fca5a5 !important; }
+.border-red-500 { border-color: #ef4444 !important; }
+.border-red-700 { border-color: #b91c1c !important; }
+.hover\:bg-red-600:hover { background-color: #dc2626 !important; }
+.hover\:bg-red-700:hover { background-color: #b91c1c !important; }
+.hover\:bg-red-800:hover { background-color: #991b1b !important; }
+.hover\:text-red-600:hover { color: #dc2626 !important; }
+.hover\:text-red-800:hover { color: #991b1b !important; }
+.hover\:border-red-500:hover { border-color: #ef4444 !important; }
+.focus\:ring-red-500:focus { --tw-ring-color: #ef4444 !important; }
+.ring-red-500 { --tw-ring-color: #ef4444 !important; }
+/* Gradient support for blood inventory */
+.from-red-900 { --tw-gradient-from: #7f1d1d !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(127, 29, 29, 0)) !important; }
+.to-red-950 { --tw-gradient-to: #450a0a !important; }
+.bg-opacity-50 { --tw-bg-opacity: 0.5 !important; }
+.backdrop-blur { backdrop-filter: blur(8px) !important; }
