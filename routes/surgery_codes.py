@@ -220,7 +220,7 @@ def _seed_surgery_data(cursor):
 
     # 1. Import categories
     if categories_csv and categories_csv.exists():
-        with open(categories_csv, 'r', encoding='utf-8') as f:
+        with open(categories_csv, 'r', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             count = 0
             for row in reader:
@@ -243,7 +243,7 @@ def _seed_surgery_data(cursor):
 
     # 2. Import surgery codes
     if codes_csv and codes_csv.exists():
-        with open(codes_csv, 'r', encoding='utf-8') as f:
+        with open(codes_csv, 'r', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             count = 0
             for row in reader:
@@ -270,7 +270,7 @@ def _seed_surgery_data(cursor):
 
     # 3. Import self-pay items
     if selfpay_csv and selfpay_csv.exists():
-        with open(selfpay_csv, 'r', encoding='utf-8') as f:
+        with open(selfpay_csv, 'r', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             count = 0
             for row in reader:
