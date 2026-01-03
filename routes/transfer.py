@@ -1,6 +1,6 @@
 """
 MIRS EMT Transfer Module API
-Version: 1.0.0
+Version: 1.1.0
 
 病患轉送任務管理：
 - 物資計算 (3× 安全係數)
@@ -11,13 +11,59 @@ Version: 1.0.0
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 import math
 import json
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+
+# Vercel demo mode detection
+IS_VERCEL = os.environ.get("VERCEL") == "1"
+
+# Demo data for Vercel mode
+DEMO_MISSIONS = [
+    {
+        "mission_id": "TRF-DEMO-001",
+        "status": "EN_ROUTE",
+        "origin_station": "MIRS-DEMO",
+        "destination": "第二野戰醫院",
+        "estimated_duration_min": 90,
+        "patient_condition": "STABLE",
+        "patient_summary": "右脛骨開放性骨折，已固定",
+        "oxygen_requirement_lpm": 6.0,
+        "iv_rate_mlhr": 100.0,
+        "ventilator_required": 0,
+        "safety_factor": 3.0,
+        "emt_name": "王大明",
+        "departed_at": (datetime.now() - timedelta(minutes=35)).isoformat(),
+        "created_at": (datetime.now() - timedelta(hours=1)).isoformat()
+    },
+    {
+        "mission_id": "TRF-DEMO-002",
+        "status": "PLANNING",
+        "origin_station": "MIRS-DEMO",
+        "destination": "後送基地",
+        "estimated_duration_min": 60,
+        "patient_condition": "CRITICAL",
+        "patient_summary": "多發傷，血壓不穩",
+        "oxygen_requirement_lpm": 10.0,
+        "iv_rate_mlhr": 250.0,
+        "ventilator_required": 1,
+        "safety_factor": 3.0,
+        "emt_name": None,
+        "departed_at": None,
+        "created_at": datetime.now().isoformat()
+    }
+]
+
+DEMO_ITEMS = [
+    {"id": 1, "mission_id": "TRF-DEMO-001", "item_type": "OXYGEN", "item_name": "E-Tank 氧氣鋼瓶", "unit": "瓶", "suggested_qty": 3, "carried_qty": 3, "calculation_explain": "6 L/min × 1.5hr × 3 = 810L → 3瓶"},
+    {"id": 2, "mission_id": "TRF-DEMO-001", "item_type": "IV_FLUID", "item_name": "NS 500mL", "unit": "袋", "suggested_qty": 1, "carried_qty": 1, "calculation_explain": "100 mL/hr × 1.5hr × 3 = 450mL → 1袋"},
+    {"id": 3, "mission_id": "TRF-DEMO-001", "item_type": "EQUIPMENT", "item_name": "生理監視器", "unit": "台", "suggested_qty": 1, "carried_qty": 1, "calculation_explain": "電量需求 45%"},
+]
 
 router = APIRouter(prefix="/api/transfer", tags=["transfer"])
 
@@ -431,6 +477,17 @@ async def list_missions(
     offset: int = 0
 ):
     """取得轉送任務列表"""
+    # Vercel demo mode - return mock data instantly
+    if IS_VERCEL:
+        missions = DEMO_MISSIONS
+        if status:
+            missions = [m for m in missions if m['status'] == status]
+        return {
+            "missions": missions[offset:offset+limit],
+            "total": len(missions),
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -466,6 +523,24 @@ async def list_missions(
 @router.post("/missions")
 async def create_mission(mission: MissionCreate):
     """建立轉送任務"""
+    # Vercel demo mode - return simulated creation
+    if IS_VERCEL:
+        demo_id = f"TRF-DEMO-{datetime.now().strftime('%H%M%S')}"
+        supplies = calculate_supplies({
+            'estimated_duration_min': mission.estimated_duration_min,
+            'safety_factor': mission.safety_factor,
+            'oxygen_requirement_lpm': mission.oxygen_requirement_lpm,
+            'iv_rate_mlhr': mission.iv_rate_mlhr,
+            'ventilator_required': mission.ventilator_required
+        })
+        return {
+            "mission_id": demo_id,
+            "status": "PLANNING",
+            "supplies": supplies,
+            "demo_mode": True,
+            "demo_note": "Demo 模式下任務不會真正建立"
+        }
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -530,6 +605,19 @@ async def create_mission(mission: MissionCreate):
 @router.get("/missions/{mission_id}")
 async def get_mission(mission_id: str):
     """取得任務詳情"""
+    # Vercel demo mode
+    if IS_VERCEL:
+        for m in DEMO_MISSIONS:
+            if m['mission_id'] == mission_id:
+                items = [i for i in DEMO_ITEMS if i['mission_id'] == mission_id]
+                return {
+                    "mission": m,
+                    "items": items,
+                    "incoming_items": [],
+                    "demo_mode": True
+                }
+        raise HTTPException(status_code=404, detail="Mission not found (demo)")
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -593,6 +681,15 @@ async def recalculate_mission(mission_id: str):
 @router.post("/missions/{mission_id}/confirm")
 async def confirm_loadout(mission_id: str, items: List[TransferItemConfirm]):
     """確認攜帶清單 (PLANNING → READY) - 含庫存預留"""
+    # Vercel demo mode
+    if IS_VERCEL:
+        return {
+            "status": "READY",
+            "message": "Loadout confirmed (demo)",
+            "reserved_oxygen_units": 2,
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -653,6 +750,15 @@ async def confirm_loadout(mission_id: str, items: List[TransferItemConfirm]):
 @router.post("/missions/{mission_id}/depart")
 async def depart_mission(mission_id: str):
     """出發 (READY → EN_ROUTE) - 含庫存發放"""
+    # Vercel demo mode
+    if IS_VERCEL:
+        return {
+            "status": "EN_ROUTE",
+            "message": "Mission started (demo)",
+            "issued_oxygen_units": 2,
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -696,6 +802,14 @@ async def depart_mission(mission_id: str):
 @router.post("/missions/{mission_id}/arrive")
 async def arrive_mission(mission_id: str):
     """抵達 (EN_ROUTE → ARRIVED)"""
+    # Vercel demo mode
+    if IS_VERCEL:
+        return {
+            "status": "ARRIVED",
+            "actual_duration_min": 45,
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -790,6 +904,20 @@ async def add_incoming_items(mission_id: str, items: List[IncomingItem]):
 @router.post("/missions/{mission_id}/finalize")
 async def finalize_mission(mission_id: str):
     """結案 (ARRIVED → COMPLETED) - 含庫存歸還"""
+    # Vercel demo mode
+    if IS_VERCEL:
+        return {
+            "status": "COMPLETED",
+            "summary": {
+                "total_carried": 5,
+                "total_returned": 2,
+                "total_consumed": 3,
+                "incoming_items": 0,
+                "returned_oxygen_units": 2
+            },
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     cursor = conn.cursor()
 

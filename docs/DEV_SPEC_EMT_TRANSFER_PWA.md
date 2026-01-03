@@ -1,18 +1,29 @@
 # EMT Transfer PWA 開發規格書
 
-**版本**: 1.1.0
+**版本**: 2.0.0
 **日期**: 2026-01-03
-**狀態**: Phase 1 完成, Phase 2 進行中
+**狀態**: Phase 1 完成, Phase 2 規格更新
 
 ---
 
 ## 0. 摘要
 
-EMT Transfer PWA 是 MIRS 的病患轉送任務管理模組，專為救護技術員 (EMT) 設計。主要功能包括：
+EMT Transfer PWA 是 MIRS 的病患轉送任務管理模組，專為救護技術員 (EMT) 設計。
 
-- 物資需求計算（氧氣、輸液、設備電量）
-- 安全係數 ×3 備量
-- 離線優先架構
+### v2.0 主要更新
+
+1. **安全係數可調** (1-15×，預設 3×)
+2. **氧氣 PSI 追蹤** (單瓶 PSI 而非瓶數)
+3. **設備電量追蹤** (攜帶時記錄 %)
+4. **三分離計量** (攜帶/歸還/消耗 分開記錄)
+5. **韌性使用 available** (而非 on_hand)
+6. **快捷輸入** (ETA/O2/IV 預設值 + 自訂)
+
+主要功能：
+
+- 物資需求計算（氧氣 L/min、輸液 mL/hr、設備電量 %）
+- 安全係數 1-15× 備量（預設 3×）
+- 離線優先架構 (IndexedDB + Background Sync)
 - 庫存連動（Reserve → Issue → Return）
 - 外帶物資入庫
 
@@ -24,8 +35,10 @@ EMT Transfer PWA 是 MIRS 的病患轉送任務管理模組，專為救護技術
 |------|------|
 | **離線優先** | IndexedDB 本地儲存，背景同步 |
 | **Event Sourcing** | Append-only event log，可重建狀態 |
-| **安全係數** | 預設 3×，確保緊急狀況有備量 |
+| **安全係數** | 可調 1-15×（預設 3×），確保緊急狀況有備量 |
 | **庫存連動** | Reserve/Issue/Return 事件連動主庫存 |
+| **三分離計量** | 攜帶量、歸還量、消耗量 分開追蹤 |
+| **PSI 追蹤** | 氧氣瓶記錄起始/結束 PSI，計算實際消耗 |
 
 ---
 
@@ -63,36 +76,112 @@ PLANNING ──(confirm)──> READY ──(depart)──> EN_ROUTE ──(arri
 
 ## 1. 資料庫 Schema
 
-### 1.1 transfer_missions
+### 1.1 transfer_missions (v2.0 更新)
 
-| 欄位 | 類型 | 說明 |
-|------|------|------|
-| mission_id | TEXT PK | TRF-YYYYMMDD-NNN |
-| status | TEXT | PLANNING/READY/EN_ROUTE/ARRIVED/COMPLETED/ABORTED |
-| origin_station | TEXT | 出發站點 |
-| destination | TEXT | 目的地 |
-| estimated_duration_min | INT | 預估時間（分鐘） |
-| actual_duration_min | INT | 實際時間 |
-| oxygen_requirement_lpm | REAL | 氧氣需求 L/min |
-| iv_rate_mlhr | REAL | 輸液速率 mL/hr |
-| ventilator_required | INT | 是否需呼吸器 |
-| safety_factor | REAL | 安全係數（預設 3.0） |
-| patient_condition | TEXT | CRITICAL/STABLE/INTUBATED |
-| emt_name | TEXT | EMT 姓名 |
+| 欄位 | 類型 | 說明 | v2.0 |
+|------|------|------|------|
+| mission_id | TEXT PK | TRF-YYYYMMDD-NNN | |
+| status | TEXT | PLANNING/READY/EN_ROUTE/ARRIVED/COMPLETED/ABORTED | |
+| origin_station_id | TEXT | 出發站點 ID (FK → stations) | ✓ 新增 |
+| origin_station | TEXT | 出發站點名稱 (denormalized) | |
+| destination_text | TEXT | 目的地描述（自由文字） | ✓ 新增 |
+| destination | TEXT | 目的地 (legacy alias) | |
+| eta_min | INT | 預估抵達時間（分鐘） | ✓ 新增 |
+| estimated_duration_min | INT | 預估往返時間（分鐘） | |
+| actual_duration_min | INT | 實際時間 | |
+| patient_condition | TEXT | CRITICAL/STABLE/INTUBATED | |
+| o2_lpm | REAL | 氧氣需求 L/min | ✓ 新增 |
+| oxygen_requirement_lpm | REAL | (legacy alias for o2_lpm) | |
+| iv_mode | TEXT | NONE/KVO/BOLUS/CUSTOM | ✓ 新增 |
+| iv_mlhr_override | REAL | 自訂輸液速率 mL/hr (iv_mode=CUSTOM) | ✓ 新增 |
+| iv_rate_mlhr | REAL | 計算後輸液速率 mL/hr | |
+| ventilator_required | INT | 是否需呼吸器 | |
+| safety_factor | REAL | 安全係數 (1-15，預設 3.0) | ✓ 更新 |
+| oxygen_cylinders_json | TEXT | 氧氣瓶詳情 JSON (見 1.1.1) | ✓ 新增 |
+| equipment_battery_json | TEXT | 設備電量 JSON (見 1.1.2) | ✓ 新增 |
+| emt_name | TEXT | EMT 姓名 | |
+| confirmed_at | TIMESTAMP | 確認時間 | ✓ 新增 |
+| departed_at | TIMESTAMP | 出發時間 | |
+| arrived_at | TIMESTAMP | 抵達時間 | |
+| finalized_at | TIMESTAMP | 結案時間 | ✓ 新增 |
 
-### 1.2 transfer_items
+#### 1.1.1 oxygen_cylinders_json 格式
 
-| 欄位 | 類型 | 說明 |
-|------|------|------|
-| id | INT PK | 自增 |
-| mission_id | TEXT FK | 任務 ID |
-| item_type | TEXT | OXYGEN/IV_FLUID/MEDICATION/EQUIPMENT |
-| item_name | TEXT | 品項名稱 |
-| suggested_qty | REAL | 系統建議量 |
-| carried_qty | REAL | 實際攜帶量 |
-| returned_qty | REAL | 歸還量 |
-| consumed_qty | REAL | 消耗量 |
-| calculation_explain | TEXT | 計算說明 |
+每瓶氧氣獨立追蹤 PSI：
+
+```json
+[
+  {
+    "cylinder_id": "O2-E-001",
+    "cylinder_type": "E",
+    "capacity_liters": 660,
+    "starting_psi": 2100,
+    "ending_psi": null,
+    "consumed_liters": null
+  },
+  {
+    "cylinder_id": "O2-E-002",
+    "cylinder_type": "E",
+    "capacity_liters": 660,
+    "starting_psi": 1800,
+    "ending_psi": null,
+    "consumed_liters": null
+  }
+]
+```
+
+**PSI → 升計算公式**:
+```
+consumed_liters = (starting_psi - ending_psi) / 2100 × capacity_liters
+```
+
+#### 1.1.2 equipment_battery_json 格式
+
+記錄設備攜帶時電量：
+
+```json
+[
+  {
+    "equipment_id": "EQ-MONITOR-001",
+    "equipment_name": "攜帶式監視器",
+    "starting_battery_pct": 95,
+    "ending_battery_pct": null
+  },
+  {
+    "equipment_id": "EQ-VENT-001",
+    "equipment_name": "呼吸器",
+    "starting_battery_pct": 100,
+    "ending_battery_pct": null
+  }
+]
+```
+
+### 1.2 transfer_items (三分離計量)
+
+| 欄位 | 類型 | 說明 | 追蹤時機 |
+|------|------|------|----------|
+| id | INT PK | 自增 | |
+| mission_id | TEXT FK | 任務 ID | |
+| item_code | TEXT | 品項代碼 (FK → items/resources) | |
+| item_type | TEXT | OXYGEN/IV_FLUID/MEDICATION/EQUIPMENT | |
+| item_name | TEXT | 品項名稱 | |
+| unit | TEXT | 單位 (瓶/袋/支/台) | |
+| suggested_qty | REAL | 系統建議量 | PLANNING |
+| **carried_qty** | REAL | 實際攜帶量 | READY (confirm) |
+| **returned_qty** | REAL | 歸還量 | COMPLETED (finalize) |
+| **consumed_qty** | REAL | 消耗量 (calculated) | COMPLETED |
+| initial_status | TEXT | 攜帶時狀態 (PSI/電量%) | READY |
+| final_status | TEXT | 返站時狀態 | COMPLETED |
+| calculation_explain | TEXT | 計算說明 | |
+
+**三分離原則**:
+```
+consumed_qty = carried_qty - returned_qty
+```
+
+- **carried_qty**: 確認任務時記錄，觸發 RESERVE 事件
+- **returned_qty**: 結案時由 EMT 輸入
+- **consumed_qty**: 自動計算，觸發 ops_log 消耗記錄
 
 ### 1.3 transfer_events (Append-Only)
 
@@ -175,53 +264,83 @@ min_battery = battery_drain_per_hr × duration_hr × safety_factor
 
 ---
 
-## 4. 庫存連動規格
+## 4. 庫存連動規格 (v2.0 更新)
 
-### 4.1 事件流程
+### 4.1 事件契約
+
+| 動作 | 時機 | 事件類型 | 庫存影響 |
+|------|------|----------|----------|
+| **confirm** | PLANNING → READY | `TRANSFER_RESERVE` | `reserved_qty += carried_qty` |
+| **depart** | READY → EN_ROUTE | `TRANSFER_ISSUE` | `on_hand -= carried_qty`, `reserved_qty -= carried_qty` |
+| **finalize** | ARRIVED → COMPLETED | `TRANSFER_RETURN` | `on_hand += returned_qty` |
+| **abort** | 任意 → ABORTED | `TRANSFER_CANCEL` | 撤銷所有未完成事件 |
+
+### 4.2 事件流程詳情
 
 ```
 1. PLANNING → READY (confirm)
-   └─ 發射 RESERVE 事件
-   └─ resources.reserved_qty += carried_qty
-   └─ 韌性計算使用 available = on_hand - reserved
+   ├─ 發射 TRANSFER_RESERVE 事件 (per item)
+   ├─ resources.reserved_qty += carried_qty
+   ├─ 記錄 oxygen_cylinders_json 起始 PSI
+   └─ 記錄 equipment_battery_json 起始電量%
 
 2. READY → EN_ROUTE (depart)
-   └─ 發射 ISSUE 事件
-   └─ resources.on_hand_qty -= carried_qty
-   └─ resources.reserved_qty -= carried_qty
-   └─ 設備狀態 → IN_TRANSFER
+   ├─ 發射 TRANSFER_ISSUE 事件
+   ├─ resources.on_hand_qty -= carried_qty
+   ├─ resources.reserved_qty -= carried_qty
+   └─ equipment.status → 'IN_TRANSFER'
 
-3. EN_ROUTE → ARRIVED → COMPLETED (finalize)
-   └─ 發射 RETURN 事件
-   └─ resources.on_hand_qty += returned_qty
-   └─ consumed_qty = carried_qty - returned_qty
-   └─ 設備狀態 → AVAILABLE
+3. ARRIVED → COMPLETED (finalize)
+   ├─ EMT 輸入各項 returned_qty
+   ├─ EMT 輸入氧氣瓶 ending_psi
+   ├─ EMT 輸入設備 ending_battery_pct
+   ├─ 發射 TRANSFER_RETURN 事件
+   ├─ resources.on_hand_qty += returned_qty
+   ├─ consumed_qty = carried_qty - returned_qty
+   ├─ 寫入 ops_log (CONSUME 記錄)
+   └─ equipment.status → 'AVAILABLE'
 
-4. ABORTED (any state)
-   └─ 發射 CANCEL_RESERVE 事件
-   └─ resources.reserved_qty -= carried_qty (if was reserved)
+4. ABORTED (任意狀態)
+   ├─ 發射 TRANSFER_CANCEL 事件
+   ├─ if status >= READY: resources.reserved_qty -= carried_qty
+   └─ equipment.status → 'AVAILABLE'
 ```
 
-### 4.2 Invariant
+### 4.3 庫存公式 (Invariant)
 
 ```
-available = on_hand - reserved - issued_out
+available = on_hand - reserved
 ```
 
-韌性估算必須使用 `available`，而非 `on_hand`。
+**重要**: 韌性估算 **必須** 使用 `available`，**不可** 使用 `on_hand`。
 
-### 4.3 氧氣雙軌追蹤
+因為 `on_hand` 不反映正在轉送中的物資，會導致韌性估算過度樂觀。
 
-| 層級 | 追蹤對象 | 單位 |
-|------|----------|------|
-| 資產 | 鋼瓶 (cylinder) | 瓶 |
-| 消耗 | 氣體 (gas) | L 或 PSI |
+### 4.4 氧氣雙軌追蹤 (v2.0 改進)
 
-任務 loadout 記錄：
+| 層級 | 追蹤對象 | 單位 | v1.x | v2.0 |
+|------|----------|------|------|------|
+| 資產 | 鋼瓶 (cylinder) | 瓶 | ✓ | ✓ |
+| 消耗 | 氣體 (gas) | L | 估算 | **PSI 實測** |
+
+**v2.0 改進**: 不再只用瓶數估算，改為單瓶 PSI 追蹤：
+
+```
+鋼瓶類型容量參考:
+- E-tank: 660L @ 2100 PSI
+- D-tank: 350L @ 2100 PSI
+- H-tank: 6900L @ 2200 PSI
+
+計算公式:
+consumed_liters = (starting_psi - ending_psi) / full_psi × capacity_liters
+```
+
+任務 loadout 記錄 (每瓶獨立):
+- cylinder_id: 鋼瓶資產 ID
 - cylinder_type: E/D/H
-- starting_psi: 開始 PSI
+- starting_psi: 開始 PSI (confirm 時記錄)
 - ending_psi: 結束 PSI (finalize 時輸入)
-- consumed_liters: 計算消耗量
+- consumed_liters: 自動計算消耗量
 
 ---
 
@@ -245,25 +364,88 @@ available = on_hand - reserved - issued_out
 
 ---
 
-## 6. UI 入口
+## 6. UI 規格 (v2.0)
 
-**建議位置**: MIRS 主頁獨立模組，非韌性估算 Tab 內。
+### 6.1 入口
+
+**位置**: MIRS Index.html Header 按鈕 (橘色閃電圖示) → 開啟 `/emt` PWA
+
+### 6.2 建立任務畫面 (v2.0 改進)
+
+採用「預設值快捷按鈕 + 自訂數字輸入」模式：
+
+#### ETA 預估時間
+
+| 快捷鈕 | 分鐘 |
+|--------|------|
+| 30 min | 30 |
+| 1 hr | 60 |
+| 2 hr | 120 |
+| 自訂 | [數字輸入框] |
+
+#### 氧氣需求 (L/min)
+
+| 快捷鈕 | L/min | 適用情境 |
+|--------|-------|----------|
+| 2 | 2 | 鼻導管 |
+| 6 | 6 | 面罩 |
+| 10 | 10 | 插管/呼吸器 |
+| 自訂 | [數字輸入框] | |
+
+#### 輸液模式
+
+| 選項 | 速率 | 說明 |
+|------|------|------|
+| 無 (NONE) | 0 mL/hr | 不需輸液 |
+| KVO | 30 mL/hr | Keep Vein Open |
+| BOLUS | 500 mL/30min | 快速補液 |
+| 自訂 (CUSTOM) | [數字輸入框] mL/hr | |
+
+#### 安全係數
+
+滑桿或數字輸入，範圍 **1-15**，預設 **3**：
 
 ```
-MIRS 主頁
-├── 庫存總覽
-├── 藥品管理
-├── 設備管理
-├── 韌性估算
-├── Transfer (EMT)  ← 新增
-│   ├── 建立任務
-│   ├── 進行中任務
-│   └── 歷史記錄
-└── ...
+安全係數: [----●---------] 3×
+         1              15
 ```
 
-韌性估算 Tab 只顯示摘要連結：
+### 6.3 攜帶確認畫面 (v2.0 新增)
+
+確認任務時，對每項物資記錄：
+
+**消耗品**:
+- 攜帶數量 (carried_qty)
+
+**氧氣瓶** (每瓶獨立):
+- 選擇鋼瓶 (從 equipment 選擇)
+- 記錄起始 PSI
+
+**設備**:
+- 選擇設備 (從 equipment 選擇)
+- 記錄起始電量 %
+
+### 6.4 結案畫面 (v2.0 改進)
+
+EMT 輸入返站後各項剩餘：
+
+**消耗品**:
+- 歸還數量 (returned_qty)
+- 系統自動計算消耗量
+
+**氧氣瓶** (每瓶):
+- 輸入結束 PSI
+- 系統自動計算消耗升數
+
+**設備**:
+- 輸入結束電量 %
+
+### 6.5 韌性估算整合
+
+韌性估算 Tab 顯示摘要連結：
 > "影響 O2 runway 的轉送任務: X 筆" → 點擊跳轉
+
+**重要**: 韌性計算必須使用 `available = on_hand - reserved`
 
 ---
 
@@ -281,16 +463,35 @@ MIRS 主頁
 
 ## 8. 實作進度
 
+### v1.x (已完成)
+
 | Phase | 內容 | 狀態 |
 |-------|------|------|
-| 1 | Schema + API + PWA 骨架 | ✅ 完成 |
-| 2 | 庫存連動 (Reserve/Issue/Return) | 🔄 進行中 |
-| 3 | 配對機制 | ⏳ 待開發 |
-| 4 | 離線同步 (IndexedDB + Background Sync) | ⏳ 待開發 |
+| 1.1 | Schema + API + PWA 骨架 | ✅ 完成 |
+| 1.2 | 基本 UI (建立/出發/抵達/結案) | ✅ 完成 |
+| 1.3 | 任務狀態機 | ✅ 完成 |
+
+### v2.0 (規劃中)
+
+| Phase | 內容 | 狀態 |
+|-------|------|------|
+| 2.1 | Schema 升級 (PSI/電量欄位) | ⏳ 待開發 |
+| 2.2 | 庫存連動 (Reserve/Issue/Return) | ⏳ 待開發 |
+| 2.3 | UI 改進 (預設值快捷 + PSI 輸入) | ⏳ 待開發 |
+| 2.4 | 三分離計量 (攜帶/歸還/消耗) | ⏳ 待開發 |
+| 2.5 | 韌性整合 (使用 available) | ⏳ 待開發 |
+
+### v3.0 (未來)
+
+| Phase | 內容 | 狀態 |
+|-------|------|------|
+| 3.1 | 配對機制 (EMT_TRANSFER 裝置類別) | ⏳ 待開發 |
+| 3.2 | 離線同步 (IndexedDB + Background Sync) | ⏳ 待開發 |
+| 3.3 | 多站點同步 | ⏳ 待開發 |
 
 ---
 
-## 9. 測試案例
+## 9. 測試案例 (v2.0)
 
 ### 9.1 建立任務
 
@@ -298,25 +499,61 @@ MIRS 主頁
 curl -X POST http://localhost:8000/api/transfer/missions \
   -H "Content-Type: application/json" \
   -d '{
-    "destination": "第二野戰醫院",
-    "estimated_duration_min": 90,
-    "oxygen_requirement_lpm": 6,
-    "iv_rate_mlhr": 100,
-    "safety_factor": 3.0
+    "destination_text": "第二野戰醫院",
+    "eta_min": 90,
+    "patient_condition": "STABLE",
+    "o2_lpm": 6,
+    "iv_mode": "KVO",
+    "safety_factor": 3
   }'
 ```
 
 預期結果：
-- 氧氣: 6 × 60 × 1.5 × 3 = 1620L → 3 瓶 E-tank
-- 輸液: 100 × 1.5 × 3 = 450mL → 1 袋
+- 氧氣: 6 L/min × 90 min × 3 = 1620L → 3 瓶 E-tank
+- 輸液: 30 mL/hr × 1.5 hr × 3 = 135mL → 1 袋
 
-### 9.2 確認清單
+### 9.2 確認攜帶 (v2.0 含 PSI)
 
 ```bash
 curl -X POST http://localhost:8000/api/transfer/missions/TRF-20260103-001/confirm \
   -H "Content-Type: application/json" \
-  -d '[{"item_id": 1, "carried_qty": 3, "initial_status": "PSI: 2100"}]'
+  -d '{
+    "items": [
+      {"item_code": "NS-500", "carried_qty": 1}
+    ],
+    "oxygen_cylinders": [
+      {"cylinder_id": "O2-E-001", "cylinder_type": "E", "starting_psi": 2100},
+      {"cylinder_id": "O2-E-002", "cylinder_type": "E", "starting_psi": 1800}
+    ],
+    "equipment": [
+      {"equipment_id": "EQ-MONITOR-001", "starting_battery_pct": 95}
+    ]
+  }'
 ```
+
+### 9.3 結案 (v2.0 含 PSI 結束值)
+
+```bash
+curl -X POST http://localhost:8000/api/transfer/missions/TRF-20260103-001/finalize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {"item_code": "NS-500", "returned_qty": 0}
+    ],
+    "oxygen_cylinders": [
+      {"cylinder_id": "O2-E-001", "ending_psi": 1200},
+      {"cylinder_id": "O2-E-002", "ending_psi": 1500}
+    ],
+    "equipment": [
+      {"equipment_id": "EQ-MONITOR-001", "ending_battery_pct": 70}
+    ]
+  }'
+```
+
+預期計算：
+- 鋼瓶 1: (2100-1200)/2100 × 660 = 283L 消耗
+- 鋼瓶 2: (1800-1500)/2100 × 660 = 94L 消耗
+- 監視器: 95% - 70% = 25% 電量消耗
 
 ---
 
@@ -325,3 +562,14 @@ curl -X POST http://localhost:8000/api/transfer/missions/TRF-20260103-001/confir
 - ChatGPT 架構建議 (2026-01-03)
 - Gemini Event Sourcing 建議
 - MIRS Anesthesia Module 實作模式
+- EMT 實地測試回饋 (2026-01-03)
+
+---
+
+## 11. 變更記錄
+
+| 版本 | 日期 | 變更內容 |
+|------|------|----------|
+| 1.0.0 | 2026-01-02 | 初版規格 |
+| 1.1.0 | 2026-01-03 | Phase 1 完成，新增狀態機 |
+| **2.0.0** | 2026-01-03 | 重大更新：<br>- 安全係數可調 1-15<br>- PSI 單瓶追蹤<br>- 設備電量追蹤<br>- 三分離計量<br>- UI 預設值快捷<br>- 韌性使用 available |
