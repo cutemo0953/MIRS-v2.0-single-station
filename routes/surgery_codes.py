@@ -149,10 +149,9 @@ def init_surgery_codes_schema(cursor):
     Initialize surgery codes schema and seed data if empty.
     Called from main.py during database initialization.
     """
-    import os
     from pathlib import Path
 
-    # 1. Run migration SQL
+    # 1. Run migration SQL using executescript (handles multi-statement SQL properly)
     migration_path = Path(__file__).parent.parent / "database" / "migrations" / "add_surgery_codes_selfpay.sql"
 
     if migration_path.exists():
@@ -160,26 +159,25 @@ def init_surgery_codes_schema(cursor):
         with open(migration_path, 'r', encoding='utf-8') as f:
             migration_sql = f.read()
 
-        # Execute each statement separately (SQLite doesn't support multiple statements in execute)
-        for statement in migration_sql.split(';'):
-            statement = statement.strip()
-            if statement and not statement.startswith('--'):
-                try:
-                    cursor.execute(statement)
-                except Exception as e:
-                    # Ignore "table already exists" errors for IF NOT EXISTS
-                    if "already exists" not in str(e).lower():
-                        logger.warning(f"Migration statement warning: {e}")
-
-        cursor.connection.commit()
-        logger.info("✓ Surgery codes schema initialized")
+        try:
+            # executescript handles multiple statements including CREATE TRIGGER
+            cursor.connection.executescript(migration_sql)
+            logger.info("✓ Surgery codes schema initialized")
+        except Exception as e:
+            # Log but continue - tables might already exist
+            if "already exists" not in str(e).lower():
+                logger.warning(f"Migration warning: {e}")
     else:
         logger.warning(f"Migration file not found: {migration_path}")
         return
 
     # 2. Check if data needs seeding
-    cursor.execute("SELECT COUNT(*) FROM surgery_codes")
-    code_count = cursor.fetchone()[0]
+    try:
+        cursor.execute("SELECT COUNT(*) FROM surgery_codes")
+        code_count = cursor.fetchone()[0]
+    except Exception:
+        # Table might not exist yet
+        code_count = 0
 
     if code_count == 0:
         logger.info("Surgery codes table empty, seeding from data pack...")
