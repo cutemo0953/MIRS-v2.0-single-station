@@ -24,10 +24,12 @@ logger = logging.getLogger(__name__)
 IS_VERCEL = os.environ.get("VERCEL") == "1"
 
 # Demo data for Vercel mode
+# Note: All missions start as COMPLETED so the initial screen shows "Create Mission"
+# When user creates a mission, TRF-DEMO-NEW is used for the flow
 DEMO_MISSIONS = [
     {
         "mission_id": "TRF-DEMO-001",
-        "status": "EN_ROUTE",
+        "status": "COMPLETED",  # Changed to COMPLETED so it doesn't auto-load
         "origin_station": "MIRS-DEMO",
         "destination": "第二野戰醫院",
         "estimated_duration_min": 90,
@@ -38,20 +40,22 @@ DEMO_MISSIONS = [
         "ventilator_required": 0,
         "safety_factor": 3.0,
         "emt_name": "王大明",
-        "departed_at": (datetime.now() - timedelta(minutes=35)).isoformat(),
-        "created_at": (datetime.now() - timedelta(hours=1)).isoformat()
+        "departed_at": (datetime.now() - timedelta(hours=2)).isoformat(),
+        "arrived_at": (datetime.now() - timedelta(hours=1)).isoformat(),
+        "finalized_at": (datetime.now() - timedelta(minutes=30)).isoformat(),
+        "created_at": (datetime.now() - timedelta(hours=3)).isoformat()
     },
     {
-        "mission_id": "TRF-DEMO-002",
+        "mission_id": "TRF-DEMO-NEW",
         "status": "PLANNING",
         "origin_station": "MIRS-DEMO",
-        "destination": "後送基地",
+        "destination": "",
         "estimated_duration_min": 60,
-        "patient_condition": "CRITICAL",
-        "patient_summary": "多發傷，血壓不穩",
-        "oxygen_requirement_lpm": 10.0,
-        "iv_rate_mlhr": 250.0,
-        "ventilator_required": 1,
+        "patient_condition": "STABLE",
+        "patient_summary": "",
+        "oxygen_requirement_lpm": 0,
+        "iv_rate_mlhr": 0,
+        "ventilator_required": 0,
         "safety_factor": 3.0,
         "emt_name": None,
         "departed_at": None,
@@ -60,16 +64,15 @@ DEMO_MISSIONS = [
 ]
 
 DEMO_ITEMS = [
-    # TRF-DEMO-001 (EN_ROUTE) items
-    {"id": 1, "mission_id": "TRF-DEMO-001", "item_type": "OXYGEN", "item_name": "E-Tank 氧氣鋼瓶", "unit": "瓶", "suggested_qty": 3, "carried_qty": 3, "calculation_explain": "6 L/min × 1.5hr × 3 = 810L → 3瓶"},
-    {"id": 2, "mission_id": "TRF-DEMO-001", "item_type": "IV_FLUID", "item_name": "NS 500mL", "unit": "袋", "suggested_qty": 1, "carried_qty": 1, "calculation_explain": "100 mL/hr × 1.5hr × 3 = 450mL → 1袋"},
-    {"id": 3, "mission_id": "TRF-DEMO-001", "item_type": "EQUIPMENT", "item_name": "生理監視器", "unit": "台", "suggested_qty": 1, "carried_qty": 1, "calculation_explain": "電量需求 45%"},
-    # TRF-DEMO-002 (PLANNING) items - for new mission flow
-    {"id": 4, "mission_id": "TRF-DEMO-002", "item_type": "OXYGEN", "item_name": "E-Tank 氧氣鋼瓶", "unit": "瓶", "suggested_qty": 4, "carried_qty": None, "calculation_explain": "10 L/min × 1hr × 3 = 1800L → 4瓶"},
-    {"id": 5, "mission_id": "TRF-DEMO-002", "item_type": "IV_FLUID", "item_name": "NS 500mL", "unit": "袋", "suggested_qty": 2, "carried_qty": None, "calculation_explain": "250 mL/hr × 1hr × 3 = 750mL → 2袋"},
-    {"id": 6, "mission_id": "TRF-DEMO-002", "item_type": "EQUIPMENT", "item_name": "生理監視器", "unit": "台", "suggested_qty": 1, "carried_qty": None, "calculation_explain": "電量需求 30%"},
-    {"id": 7, "mission_id": "TRF-DEMO-002", "item_type": "EQUIPMENT", "item_name": "呼吸器", "unit": "台", "suggested_qty": 1, "carried_qty": None, "calculation_explain": "呼吸器電量需求 60%"},
-    {"id": 8, "mission_id": "TRF-DEMO-002", "item_type": "MEDICATION", "item_name": "Epinephrine 1mg", "unit": "支", "suggested_qty": 2, "carried_qty": None, "calculation_explain": "急救藥物標準備量"},
+    # TRF-DEMO-001 (COMPLETED) items - historical record
+    {"id": 1, "mission_id": "TRF-DEMO-001", "item_type": "OXYGEN", "item_name": "E-Tank 氧氣鋼瓶", "unit": "瓶", "suggested_qty": 3, "carried_qty": 3, "returned_qty": 1, "consumed_qty": 2, "calculation_explain": "6 L/min × 1.5hr × 3 = 810L → 3瓶"},
+    {"id": 2, "mission_id": "TRF-DEMO-001", "item_type": "IV_FLUID", "item_name": "NS 500mL", "unit": "袋", "suggested_qty": 1, "carried_qty": 1, "returned_qty": 0, "consumed_qty": 1, "calculation_explain": "100 mL/hr × 1.5hr × 3 = 450mL → 1袋"},
+    {"id": 3, "mission_id": "TRF-DEMO-001", "item_type": "EQUIPMENT", "item_name": "生理監視器", "unit": "台", "suggested_qty": 1, "carried_qty": 1, "returned_qty": 1, "consumed_qty": 0, "calculation_explain": "電量需求 45%"},
+    # TRF-DEMO-NEW (PLANNING) items - dynamically updated when user creates mission
+    {"id": 4, "mission_id": "TRF-DEMO-NEW", "item_type": "OXYGEN", "item_name": "E-Tank 氧氣鋼瓶", "unit": "瓶", "suggested_qty": 2, "carried_qty": None, "calculation_explain": "依需求計算"},
+    {"id": 5, "mission_id": "TRF-DEMO-NEW", "item_type": "IV_FLUID", "item_name": "NS 500mL", "unit": "袋", "suggested_qty": 1, "carried_qty": None, "calculation_explain": "依需求計算"},
+    {"id": 6, "mission_id": "TRF-DEMO-NEW", "item_type": "EQUIPMENT", "item_name": "生理監視器", "unit": "台", "suggested_qty": 1, "carried_qty": None, "calculation_explain": "電量需求"},
+    {"id": 7, "mission_id": "TRF-DEMO-NEW", "item_type": "MEDICATION", "item_name": "Epinephrine 1mg", "unit": "支", "suggested_qty": 2, "carried_qty": None, "calculation_explain": "急救藥物標準備量"},
 ]
 
 router = APIRouter(prefix="/api/transfer", tags=["transfer"])
@@ -532,14 +535,17 @@ async def create_mission(mission: MissionCreate):
     """建立轉送任務"""
     # Vercel demo mode - return existing PLANNING mission for demo flow
     if IS_VERCEL:
-        # Use existing demo mission so loadMission() works
-        demo_mission = DEMO_MISSIONS[1]  # The PLANNING one
+        # Use TRF-DEMO-NEW so loadMission() works
+        demo_mission = DEMO_MISSIONS[1]  # TRF-DEMO-NEW
         # Update demo mission with user input
-        demo_mission['destination'] = mission.destination or demo_mission['destination']
+        demo_mission['destination'] = mission.destination or "Demo 目的地"
         demo_mission['estimated_duration_min'] = mission.estimated_duration_min
         demo_mission['oxygen_requirement_lpm'] = mission.oxygen_requirement_lpm
         demo_mission['iv_rate_mlhr'] = mission.iv_rate_mlhr
         demo_mission['safety_factor'] = mission.safety_factor
+        demo_mission['patient_condition'] = mission.patient_condition
+        demo_mission['emt_name'] = mission.emt_name
+        demo_mission['status'] = 'PLANNING'  # Ensure it's PLANNING
 
         supplies = calculate_supplies({
             'estimated_duration_min': mission.estimated_duration_min,
@@ -548,12 +554,21 @@ async def create_mission(mission: MissionCreate):
             'iv_rate_mlhr': mission.iv_rate_mlhr,
             'ventilator_required': mission.ventilator_required
         })
+
+        # Update demo items with calculated supplies
+        for i, s in enumerate(supplies):
+            if i < len(DEMO_ITEMS) - 3:  # Update TRF-DEMO-NEW items
+                idx = i + 4 - 1  # Start from id 4
+                if idx < len(DEMO_ITEMS):
+                    DEMO_ITEMS[idx]['suggested_qty'] = s['suggested_qty']
+                    DEMO_ITEMS[idx]['calculation_explain'] = s['calculation_explain']
+
         return {
-            "mission_id": demo_mission['mission_id'],  # Return existing ID
+            "mission_id": "TRF-DEMO-NEW",
             "status": "PLANNING",
             "supplies": supplies,
             "demo_mode": True,
-            "demo_note": "Demo 模式 - 使用模擬任務"
+            "demo_note": "Demo 模式 - 任務已建立"
         }
 
     conn = get_db_connection()
