@@ -1188,17 +1188,20 @@
                                 <div class="space-y-1 mb-2">
                                     <template x-for="(item, idx) in calculatorSurgeries" :key="item.code">
                                         <div class="flex justify-between items-center px-2 py-1 rounded text-sm"
-                                             :class="idx === 0 ? 'bg-green-100' : (idx === 1 ? 'bg-yellow-100' : 'bg-red-100')">
-                                            <span x-text="item.name_zh"></span>
+                                             :class="item.reduction_rate === 1 ? 'bg-green-100' : (item.reduction_rate === 0.5 ? 'bg-yellow-100' : 'bg-red-100')">
+                                            <div class="flex-1">
+                                                <span x-text="item.name_zh"></span>
+                                                <span class="text-xs text-gray-500 ml-1" x-text="'(' + Math.round(item.reduction_rate * 100) + '%)'"></span>
+                                            </div>
                                             <div class="flex items-center gap-2">
-                                                <span x-text="(item.points * (idx === 0 ? 1 : (idx === 1 ? 0.5 : 0))) + '點'"></span>
+                                                <span x-text="(item.final_points || 0).toLocaleString() + '點'"></span>
                                                 <button @click="removeFromCalculator(idx)" class="text-red-500 text-xs">✕</button>
                                             </div>
                                         </div>
                                     </template>
                                 </div>
                                 <div x-show="calculatorSurgeries.length > 0" class="text-right font-bold text-treatment-700">
-                                    總計: <span x-text="calculatorSurgeries.reduce((sum, item, idx) => sum + item.points * (idx === 0 ? 1 : (idx === 1 ? 0.5 : 0)), 0).toLocaleString()"></span> 點
+                                    總計: <span x-text="getCalculatorTotal().toLocaleString()"></span> 點
                                 </div>
                             </div>
                         </div>
@@ -3661,10 +3664,6 @@
                             <input type="text" x-model="addSurgeryForm.triageTagId" placeholder="例如: RED-001" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">處置類型 *</label>
-                            <input type="text" x-model="addSurgeryForm.surgeryType" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
-                        </div>
-                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">主刀醫師 *</label>
                             <input type="text" x-model="addSurgeryForm.surgeonName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
                         </div>
@@ -3675,6 +3674,104 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">處置時長 (分鐘)</label>
                             <input type="number" x-model="addSurgeryForm.durationMinutes" min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
+                        </div>
+                    </div>
+
+                    <!-- 術式代碼 Queue (v2.7.4) -->
+                    <div class="border-2 border-treatment-300 rounded-lg p-4 bg-treatment-50">
+                        <h4 class="text-lg font-semibold text-treatment-700 flex items-center gap-2 mb-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                            術式代碼
+                            <span class="text-xs text-gray-500 font-normal">(可多選，自動計算遞減點數)</span>
+                        </h4>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div>
+                                <input type="text" x-model="addSurgeryForm.surgerySearchText" @input.debounce.300ms="searchFormSurgery()"
+                                       placeholder="搜尋術式..." class="w-full px-3 py-2 border border-treatment-300 rounded text-sm mb-2">
+                                <div class="max-h-32 overflow-y-auto space-y-1">
+                                    <template x-for="code in formSurgerySearchResults" :key="code.code">
+                                        <button type="button" @click="addToFormSurgeryQueue(code)"
+                                                class="w-full text-left px-2 py-1 text-sm bg-white rounded border border-treatment-200 hover:bg-treatment-100">
+                                            <span class="font-mono text-xs" x-text="code.code"></span>
+                                            <span x-text="code.name_zh"></span>
+                                            <span class="float-right text-treatment-600" x-text="code.points?.toLocaleString() + '點'"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="bg-white rounded p-2 min-h-[80px]">
+                                <div class="space-y-1 mb-2">
+                                    <template x-for="(item, idx) in addSurgeryForm.surgeryQueue" :key="item.code">
+                                        <div class="flex justify-between items-center px-2 py-1 rounded text-sm"
+                                             :class="item.reduction_rate === 1 ? 'bg-green-100' : (item.reduction_rate === 0.5 ? 'bg-yellow-100' : 'bg-red-100')">
+                                            <div class="flex-1 truncate">
+                                                <span class="text-xs" x-text="item.name_zh"></span>
+                                                <span class="text-xs text-gray-500" x-text="'(' + Math.round(item.reduction_rate * 100) + '%)'"></span>
+                                            </div>
+                                            <div class="flex items-center gap-1">
+                                                <span class="text-xs" x-text="(item.final_points || 0).toLocaleString() + '點'"></span>
+                                                <button type="button" @click="removeFromFormSurgeryQueue(idx)" class="text-red-500 text-xs">✕</button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div x-show="addSurgeryForm.surgeryQueue.length === 0" class="text-center text-gray-400 text-sm py-2">
+                                    搜尋並點擊加入術式
+                                </div>
+                                <div x-show="addSurgeryForm.surgeryQueue.length > 0" class="text-right text-sm font-bold text-treatment-700 border-t pt-1">
+                                    總計: <span x-text="getFormSurgeryTotal().toLocaleString()"></span> 點
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 自費項目 Queue (v2.7.4) -->
+                    <div class="border-2 border-green-300 rounded-lg p-4 bg-green-50">
+                        <h4 class="text-lg font-semibold text-green-700 flex items-center gap-2 mb-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            自費項目
+                            <span class="text-xs text-gray-500 font-normal">(可多選，點擊加入)</span>
+                        </h4>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div>
+                                <input type="text" x-model="addSurgeryForm.selfPayFormSearchText" @input.debounce.300ms="searchFormSelfPay()"
+                                       placeholder="搜尋自費項目..." class="w-full px-3 py-2 border border-green-300 rounded text-sm mb-2">
+                                <div class="max-h-32 overflow-y-auto space-y-1">
+                                    <template x-for="item in formSelfPaySearchResults" :key="item.item_id">
+                                        <button type="button" @click="addToFormSelfPayQueue(item)"
+                                                class="w-full text-left px-2 py-1 text-sm bg-white rounded border border-green-200 hover:bg-green-100">
+                                            <span x-text="item.name"></span>
+                                            <span class="float-right text-green-600" x-text="'$' + item.unit_price?.toLocaleString()"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="bg-white rounded p-2 min-h-[80px]">
+                                <div class="space-y-1 mb-2">
+                                    <template x-for="(item, idx) in addSurgeryForm.selfPayQueue" :key="item.item_id">
+                                        <div class="flex justify-between items-center px-2 py-1 bg-green-50 rounded text-sm">
+                                            <span class="truncate flex-1 mr-2" x-text="item.name"></span>
+                                            <div class="flex items-center gap-1">
+                                                <button type="button" @click="updateFormSelfPayQty(idx, -1)" class="w-5 h-5 text-xs bg-gray-200 rounded">−</button>
+                                                <span class="w-6 text-center" x-text="item.quantity"></span>
+                                                <button type="button" @click="updateFormSelfPayQty(idx, 1)" class="w-5 h-5 text-xs bg-gray-200 rounded">+</button>
+                                                <span class="text-green-600 w-16 text-right text-xs" x-text="'$' + (item.unit_price * item.quantity).toLocaleString()"></span>
+                                                <button type="button" @click="removeFromFormSelfPayQueue(idx)" class="text-red-500 text-xs ml-1">✕</button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div x-show="addSurgeryForm.selfPayQueue.length === 0" class="text-center text-gray-400 text-sm py-2">
+                                    搜尋並點擊加入自費項目
+                                </div>
+                                <div x-show="addSurgeryForm.selfPayQueue.length > 0" class="text-right text-sm font-bold text-green-700 border-t pt-1">
+                                    總計: $<span x-text="getFormSelfPayTotal().toLocaleString()"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -5200,8 +5297,16 @@
                     stationId: 'HC-000000',
                     // v1.1: CIRS 整合
                     cirsRegistrationRef: null,
-                    cirsPersonId: null
+                    cirsPersonId: null,
+                    // v2.7.4: 術式與自費 Queue
+                    surgeryQueue: [],      // [{code, name_zh, points, category_code, reduction_rate, final_points}]
+                    selfPayQueue: [],      // [{item_id, name, unit_price, quantity}]
+                    surgerySearchText: '', // 術式搜尋
+                    selfPayFormSearchText: '' // 自費搜尋
                 },
+                // v2.7.4: 表單術式搜尋結果
+                formSurgerySearchResults: [],
+                formSelfPaySearchResults: [],
                 surgerySearchForm: {
                     startDate: '',
                     endDate: '',
@@ -5657,18 +5762,25 @@
                 async loadSelfPayItems() {
                     this.surgeryMasterLoading = true;
                     try {
-                        let url = `${this.apiUrl}/surgery-codes/selfpay?page=${this.selfPayItemsPage}&page_size=${this.selfPayItemsPageSize}`;
-                        if (this.selfPayCategoryFilter) {
-                            url += `&category=${encodeURIComponent(this.selfPayCategoryFilter)}`;
-                        }
-                        if (this.selfPaySearchText) {
-                            url += `&q=${encodeURIComponent(this.selfPaySearchText)}`;
+                        let url;
+                        if (this.selfPaySearchText && this.selfPaySearchText.trim()) {
+                            // 有搜尋文字時使用 FTS 搜尋端點
+                            url = `${this.apiUrl}/surgery-codes/selfpay/search?q=${encodeURIComponent(this.selfPaySearchText)}&limit=50`;
+                            if (this.selfPayCategoryFilter) {
+                                url += `&category=${encodeURIComponent(this.selfPayCategoryFilter)}`;
+                            }
+                        } else {
+                            // 無搜尋文字時使用列表端點
+                            url = `${this.apiUrl}/surgery-codes/selfpay?limit=50`;
+                            if (this.selfPayCategoryFilter) {
+                                url += `&category=${encodeURIComponent(this.selfPayCategoryFilter)}`;
+                            }
                         }
                         const response = await fetch(url);
                         if (response.ok) {
                             const data = await response.json();
                             this.selfPayItems = data.items || [];
-                            this.selfPayItemsTotal = data.total || 0;
+                            this.selfPayItemsTotal = data.total || this.selfPayItems.length;
                         }
                     } catch (error) {
                         console.error('載入自費項目失敗:', error);
@@ -5721,6 +5833,7 @@
                         code: surgery.code,
                         name_zh: surgery.name_zh,
                         points: surgery.points,
+                        category_code: surgery.category_code || null,
                         reduction_rate: 1.0,
                         final_points: surgery.points
                     });
@@ -5735,27 +5848,55 @@
                     this.recalculatePoints();
                 },
 
-                recalculatePoints() {
-                    // 按點數降序排序
-                    const sorted = [...this.calculatorSurgeries].sort((a, b) => b.points - a.points);
+                async recalculatePoints() {
+                    if (this.calculatorSurgeries.length === 0) return;
 
-                    // 計算遞減
-                    sorted.forEach((s, idx) => {
-                        if (idx === 0) {
-                            s.reduction_rate = 1.0;  // 100%
-                        } else if (idx === 1) {
-                            s.reduction_rate = 0.5;  // 50%
-                        } else {
-                            s.reduction_rate = 0.0;  // 0%
+                    try {
+                        // 使用 API 計算遞減 (v2.7.4: 正確的健保規則)
+                        const response = await fetch(`${this.apiUrl}/surgery-codes/calculate-points`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                surgeries: this.calculatorSurgeries.map(s => ({
+                                    code: s.code,
+                                    name: s.name_zh,
+                                    points: s.points,
+                                    category_code: s.category_code
+                                })),
+                                apply_reduction: true
+                            })
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            // 用 API 回傳的 sequence 排序，並更新 reduction_rate 和 final_points
+                            const resultMap = {};
+                            result.items.forEach(item => {
+                                resultMap[item.code] = {
+                                    reduction_rate: item.reduction_rate,
+                                    final_points: item.final_points,
+                                    sequence: item.sequence
+                                };
+                            });
+
+                            this.calculatorSurgeries = this.calculatorSurgeries.map(s => ({
+                                ...s,
+                                reduction_rate: resultMap[s.code]?.reduction_rate ?? 1.0,
+                                final_points: resultMap[s.code]?.final_points ?? s.points,
+                                sequence: resultMap[s.code]?.sequence ?? 99
+                            }));
+
+                            // 按 sequence 排序顯示
+                            this.calculatorSurgeries.sort((a, b) => a.sequence - b.sequence);
                         }
-                        s.final_points = Math.round(s.points * s.reduction_rate);
-                    });
-
-                    // 更新陣列 (保持原順序但帶有計算結果)
-                    this.calculatorSurgeries = this.calculatorSurgeries.map(orig => {
-                        const calculated = sorted.find(s => s.code === orig.code);
-                        return { ...orig, ...calculated };
-                    });
+                    } catch (error) {
+                        console.error('計算點數失敗:', error);
+                        // Fallback: 簡易計算
+                        this.calculatorSurgeries.forEach((s, idx) => {
+                            s.reduction_rate = idx === 0 ? 1.0 : (idx <= 2 ? 0.5 : 0.0);
+                            s.final_points = Math.round(s.points * s.reduction_rate);
+                        });
+                    }
                 },
 
                 getCalculatorTotal() {
@@ -5804,6 +5945,143 @@
 
                 clearSelfPayQueue() {
                     this.selfPayQueue = [];
+                },
+
+                // ============================================================
+                // v2.7.4: 處置耗材記錄表單 Queue 方法
+                // ============================================================
+
+                async searchFormSurgery() {
+                    const q = this.addSurgeryForm.surgerySearchText;
+                    if (!q || q.length < 1) {
+                        this.formSurgerySearchResults = [];
+                        return;
+                    }
+                    try {
+                        const response = await fetch(`${this.apiUrl}/surgery-codes/codes/search?q=${encodeURIComponent(q)}&limit=10`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.formSurgerySearchResults = data.codes || [];
+                        }
+                    } catch (error) {
+                        console.error('搜尋術式失敗:', error);
+                    }
+                },
+
+                addToFormSurgeryQueue(surgery) {
+                    if (this.addSurgeryForm.surgeryQueue.find(s => s.code === surgery.code)) {
+                        this.showToastMessage('此術式已在清單中', 'warning');
+                        return;
+                    }
+                    this.addSurgeryForm.surgeryQueue.push({
+                        code: surgery.code,
+                        name_zh: surgery.name_zh,
+                        points: surgery.points,
+                        category_code: surgery.category_code || null,
+                        reduction_rate: 1.0,
+                        final_points: surgery.points
+                    });
+                    this.recalculateFormSurgeryPoints();
+                    this.addSurgeryForm.surgerySearchText = '';
+                    this.formSurgerySearchResults = [];
+                },
+
+                removeFromFormSurgeryQueue(index) {
+                    this.addSurgeryForm.surgeryQueue.splice(index, 1);
+                    this.recalculateFormSurgeryPoints();
+                },
+
+                async recalculateFormSurgeryPoints() {
+                    const queue = this.addSurgeryForm.surgeryQueue;
+                    if (queue.length === 0) return;
+
+                    try {
+                        const response = await fetch(`${this.apiUrl}/surgery-codes/calculate-points`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                surgeries: queue.map(s => ({
+                                    code: s.code,
+                                    name: s.name_zh,
+                                    points: s.points,
+                                    category_code: s.category_code
+                                })),
+                                apply_reduction: true
+                            })
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            const resultMap = {};
+                            result.items.forEach(item => {
+                                resultMap[item.code] = {
+                                    reduction_rate: item.reduction_rate,
+                                    final_points: item.final_points,
+                                    sequence: item.sequence
+                                };
+                            });
+
+                            this.addSurgeryForm.surgeryQueue = queue.map(s => ({
+                                ...s,
+                                reduction_rate: resultMap[s.code]?.reduction_rate ?? 1.0,
+                                final_points: resultMap[s.code]?.final_points ?? s.points,
+                                sequence: resultMap[s.code]?.sequence ?? 99
+                            })).sort((a, b) => a.sequence - b.sequence);
+                        }
+                    } catch (error) {
+                        console.error('計算點數失敗:', error);
+                    }
+                },
+
+                getFormSurgeryTotal() {
+                    return this.addSurgeryForm.surgeryQueue.reduce((sum, s) => sum + (s.final_points || 0), 0);
+                },
+
+                async searchFormSelfPay() {
+                    const q = this.addSurgeryForm.selfPayFormSearchText;
+                    if (!q || q.length < 1) {
+                        this.formSelfPaySearchResults = [];
+                        return;
+                    }
+                    try {
+                        const response = await fetch(`${this.apiUrl}/surgery-codes/selfpay/search?q=${encodeURIComponent(q)}&limit=10`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.formSelfPaySearchResults = data.items || [];
+                        }
+                    } catch (error) {
+                        console.error('搜尋自費項目失敗:', error);
+                    }
+                },
+
+                addToFormSelfPayQueue(item) {
+                    const existing = this.addSurgeryForm.selfPayQueue.find(q => q.item_id === item.item_id);
+                    if (existing) {
+                        existing.quantity++;
+                    } else {
+                        this.addSurgeryForm.selfPayQueue.push({
+                            item_id: item.item_id,
+                            name: item.name,
+                            unit_price: item.unit_price || 0,
+                            unit: item.unit || '組',
+                            quantity: 1
+                        });
+                    }
+                },
+
+                removeFromFormSelfPayQueue(index) {
+                    this.addSurgeryForm.selfPayQueue.splice(index, 1);
+                },
+
+                updateFormSelfPayQty(index, delta) {
+                    const item = this.addSurgeryForm.selfPayQueue[index];
+                    if (item) {
+                        item.quantity = Math.max(1, item.quantity + delta);
+                    }
+                },
+
+                getFormSelfPayTotal() {
+                    return this.addSurgeryForm.selfPayQueue.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
                 },
 
                 // 格式化數字加千分位
