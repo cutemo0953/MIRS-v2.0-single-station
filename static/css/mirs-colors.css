@@ -286,3 +286,44 @@
 .bg-indigo-600 { background-color: #4f46e5 !important; }
 .bg-indigo-700 { background-color: #4338ca !important; }
 .hover\:bg-indigo-700:hover { background-color: #4338ca !important; }
+
+/* --- Violet (標準 Tailwind) - 術式主檔用 --- */
+.bg-violet-50 { background-color: #f5f3ff !important; }
+.bg-violet-100 { background-color: #ede9fe !important; }
+.bg-violet-200 { background-color: #ddd6fe !important; }
+.bg-violet-300 { background-color: #c4b5fd !important; }
+.bg-violet-400 { background-color: #a78bfa !important; }
+.bg-violet-500 { background-color: #8b5cf6 !important; }
+.bg-violet-600 { background-color: #7c3aed !important; }
+.bg-violet-700 { background-color: #6d28d9 !important; }
+.bg-violet-800 { background-color: #5b21b6 !important; }
+.bg-violet-900 { background-color: #4c1d95 !important; }
+.text-violet-50 { color: #f5f3ff !important; }
+.text-violet-100 { color: #ede9fe !important; }
+.text-violet-500 { color: #8b5cf6 !important; }
+.text-violet-600 { color: #7c3aed !important; }
+.text-violet-700 { color: #6d28d9 !important; }
+.text-violet-800 { color: #5b21b6 !important; }
+.border-violet-200 { border-color: #ddd6fe !important; }
+.border-violet-300 { border-color: #c4b5fd !important; }
+.border-violet-400 { border-color: #a78bfa !important; }
+.border-violet-500 { border-color: #8b5cf6 !important; }
+.hover\:bg-violet-100:hover { background-color: #ede9fe !important; }
+.hover\:bg-violet-600:hover { background-color: #7c3aed !important; }
+.hover\:bg-violet-700:hover { background-color: #6d28d9 !important; }
+.hover\:border-violet-400:hover { border-color: #a78bfa !important; }
+.focus\:ring-violet-500:focus { --tw-ring-color: #8b5cf6 !important; }
+.ring-violet-500 { --tw-ring-color: #8b5cf6 !important; }
+
+/* --- Purple (標準 Tailwind) --- */
+.bg-purple-50 { background-color: #faf5ff !important; }
+.bg-purple-100 { background-color: #f3e8ff !important; }
+.bg-purple-200 { background-color: #e9d5ff !important; }
+.bg-purple-500 { background-color: #a855f7 !important; }
+.bg-purple-600 { background-color: #9333ea !important; }
+.bg-purple-700 { background-color: #7e22ce !important; }
+.text-purple-500 { color: #a855f7 !important; }
+.text-purple-600 { color: #9333ea !important; }
+.text-purple-700 { color: #7e22ce !important; }
+.border-purple-300 { border-color: #d8b4fe !important; }
+.hover\:bg-purple-700:hover { background-color: #7e22ce !important; }

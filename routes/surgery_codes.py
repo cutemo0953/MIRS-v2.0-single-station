@@ -141,6 +141,153 @@ def get_db_connection():
 
 
 # =============================================================================
+# Schema Initialization (called from main.py on startup)
+# =============================================================================
+
+def init_surgery_codes_schema(cursor):
+    """
+    Initialize surgery codes schema and seed data if empty.
+    Called from main.py during database initialization.
+    """
+    import os
+    from pathlib import Path
+
+    # 1. Run migration SQL
+    migration_path = Path(__file__).parent.parent / "database" / "migrations" / "add_surgery_codes_selfpay.sql"
+
+    if migration_path.exists():
+        logger.info("Running surgery codes migration...")
+        with open(migration_path, 'r', encoding='utf-8') as f:
+            migration_sql = f.read()
+
+        # Execute each statement separately (SQLite doesn't support multiple statements in execute)
+        for statement in migration_sql.split(';'):
+            statement = statement.strip()
+            if statement and not statement.startswith('--'):
+                try:
+                    cursor.execute(statement)
+                except Exception as e:
+                    # Ignore "table already exists" errors for IF NOT EXISTS
+                    if "already exists" not in str(e).lower():
+                        logger.warning(f"Migration statement warning: {e}")
+
+        cursor.connection.commit()
+        logger.info("✓ Surgery codes schema initialized")
+    else:
+        logger.warning(f"Migration file not found: {migration_path}")
+        return
+
+    # 2. Check if data needs seeding
+    cursor.execute("SELECT COUNT(*) FROM surgery_codes")
+    code_count = cursor.fetchone()[0]
+
+    if code_count == 0:
+        logger.info("Surgery codes table empty, seeding from data pack...")
+        _seed_surgery_data(cursor)
+    else:
+        logger.info(f"Surgery codes table has {code_count} records, skipping seed")
+
+
+def _seed_surgery_data(cursor):
+    """Seed surgery codes data from data/packs CSV files."""
+    import csv
+    from pathlib import Path
+
+    pack_dir = Path(__file__).parent.parent / "data" / "packs"
+
+    # Find CSV files
+    categories_csv = None
+    codes_csv = None
+    selfpay_csv = None
+
+    for f in pack_dir.glob("*.csv"):
+        fname = f.name.lower()
+        if "categories" in fname:
+            categories_csv = f
+        elif "surgeries" in fname or "surgery_codes" in fname:
+            codes_csv = f
+        elif "selfpay" in fname:
+            selfpay_csv = f
+
+    # 1. Import categories
+    if categories_csv and categories_csv.exists():
+        with open(categories_csv, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            count = 0
+            for row in reader:
+                try:
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO surgery_categories
+                        (category_code, category_name, code_range, notes)
+                        VALUES (?, ?, ?, ?)
+                    """, (
+                        row.get('category_code', '').strip(),
+                        row.get('category_name', '').strip(),
+                        row.get('code_range', '').strip(),
+                        row.get('notes', '').strip()
+                    ))
+                    count += 1
+                except Exception as e:
+                    logger.warning(f"Category import error: {e}")
+            cursor.connection.commit()
+            logger.info(f"✓ Imported {count} surgery categories")
+
+    # 2. Import surgery codes
+    if codes_csv and codes_csv.exists():
+        with open(codes_csv, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            count = 0
+            for row in reader:
+                try:
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO surgery_codes
+                        (code, name_zh, name_en, category_code, points, keywords, is_common, notes)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        row.get('code', '').strip(),
+                        row.get('name_zh', '').strip(),
+                        row.get('name_en', '').strip(),
+                        row.get('category_code', row.get('category', '')).strip(),
+                        int(row.get('points', 0) or 0),
+                        row.get('keywords', '').strip(),
+                        int(row.get('is_common', 0) or 0),
+                        row.get('notes', '').strip()
+                    ))
+                    count += 1
+                except Exception as e:
+                    logger.warning(f"Surgery code import error: {e}")
+            cursor.connection.commit()
+            logger.info(f"✓ Imported {count} surgery codes")
+
+    # 3. Import self-pay items
+    if selfpay_csv and selfpay_csv.exists():
+        with open(selfpay_csv, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            count = 0
+            for row in reader:
+                try:
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO selfpay_items
+                        (item_id, name, category, unit_price, unit, is_common, display_order, notes)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        row.get('item_id', '').strip(),
+                        row.get('name', '').strip(),
+                        row.get('category', '').strip(),
+                        float(row.get('unit_price', 0) or 0),
+                        row.get('unit', '組').strip(),
+                        int(row.get('is_common', 0) or 0),
+                        int(row.get('display_order', 0) or 0),
+                        row.get('notes', '').strip()
+                    ))
+                    count += 1
+                except Exception as e:
+                    logger.warning(f"Self-pay item import error: {e}")
+            cursor.connection.commit()
+            logger.info(f"✓ Imported {count} self-pay items")
+
+
+# =============================================================================
 # Surgery Categories Endpoints
 # =============================================================================
 

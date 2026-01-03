@@ -65,11 +65,12 @@ except ImportError as e:
 
 # v1.5 新增: 手術代碼與自費項目模組
 try:
-    from routes.surgery_codes import router as surgery_codes_router
+    from routes.surgery_codes import router as surgery_codes_router, init_surgery_codes_schema
     SURGERY_CODES_MODULE_AVAILABLE = True
 except ImportError as e:
     SURGERY_CODES_MODULE_AVAILABLE = False
     surgery_codes_router = None
+    init_surgery_codes_schema = None
 
 
 # ============================================================================
@@ -1277,6 +1278,13 @@ class DatabaseManager:
                     init_anesthesia_schema(cursor)
                 except Exception as e:
                     logger.warning(f"麻醉模組 schema 初始化失敗: {e}")
+
+            # v2.6: 初始化術式主檔模組 schema
+            if SURGERY_CODES_MODULE_AVAILABLE and init_surgery_codes_schema:
+                try:
+                    init_surgery_codes_schema(cursor)
+                except Exception as e:
+                    logger.warning(f"術式主檔模組 schema 初始化失敗: {e}")
 
             conn.commit()
             logger.info(f"✓ 資料庫初始化完成: {config.get_station_id()}")
