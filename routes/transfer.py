@@ -851,7 +851,9 @@ async def list_missions(
     """取得轉送任務列表"""
     # Vercel demo mode - return mock data instantly
     if IS_VERCEL:
-        missions = DEMO_MISSIONS
+        # 只回傳 COMPLETED 任務，讓使用者看到「開始新任務」畫面
+        # TRF-DEMO-NEW 會在使用者建立任務時動態使用
+        missions = [m for m in DEMO_MISSIONS if m['status'] == 'COMPLETED']
         if status:
             missions = [m for m in missions if m['status'] == status]
         return {
