@@ -151,6 +151,7 @@
 
         <!-- Step 2: Loadout Confirmation (PLANNING → READY) -->
         <div x-show="currentMission && currentStep === 1" x-cloak>
+            <!-- 一般物資 -->
             <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold text-amber-700">物資整備</h2>
@@ -158,7 +159,7 @@
                 </div>
 
                 <div class="space-y-3">
-                    <template x-for="item in missionItems" :key="item.id">
+                    <template x-for="item in missionItems.filter(i => i.item_type !== 'OXYGEN')" :key="item.id">
                         <div class="border border-amber-200 rounded-lg p-4 bg-amber-50">
                             <div class="flex justify-between items-start mb-2">
                                 <div>
@@ -173,14 +174,6 @@
                                 </div>
                             </div>
                             <div class="text-xs text-gray-500" x-text="item.calculation_explain"></div>
-
-                            <!-- Special input for oxygen PSI -->
-                            <div x-show="item.item_type === 'OXYGEN'" class="mt-2">
-                                <input type="text" x-model="item.initial_status"
-                                       placeholder="鋼瓶壓力 (如: PSI 2100)"
-                                       class="w-full border border-gray-300 rounded px-2 py-1 text-sm">
-                            </div>
-
                             <label class="flex items-center gap-2 mt-2 cursor-pointer">
                                 <input type="checkbox" x-model="item.checked" class="w-5 h-5 text-amber-500 rounded">
                                 <span class="text-sm text-gray-600">已確認</span>
@@ -190,14 +183,121 @@
                 </div>
             </div>
 
+            <!-- v2.0: 氧氣鋼瓶 PSI 追蹤 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-4" x-show="(currentMission?.oxygen_requirement_lpm || currentMission?.o2_lpm || 0) > 0">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-blue-700">氧氣鋼瓶</h2>
+                    <button @click="addCylinder()" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        + 新增鋼瓶
+                    </button>
+                </div>
+
+                <div class="space-y-3">
+                    <template x-for="(cyl, idx) in oxygenCylinders" :key="idx">
+                        <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="flex items-center gap-2">
+                                    <select x-model="cyl.cylinder_type" class="border border-blue-300 rounded px-2 py-1 text-sm bg-white">
+                                        <template x-for="(info, type) in cylinderTypes" :key="type">
+                                            <option :value="type" x-text="type + ' (' + info.capacity + 'L)'"></option>
+                                        </template>
+                                    </select>
+                                    <input type="text" x-model="cyl.unit_label" placeholder="編號"
+                                           class="w-20 border border-blue-300 rounded px-2 py-1 text-sm">
+                                </div>
+                                <button @click="oxygenCylinders.splice(idx, 1)" class="text-red-400 hover:text-red-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <label class="text-sm text-gray-600">起始 PSI:</label>
+                                <input type="number" x-model.number="cyl.starting_psi"
+                                       min="0" max="3000" placeholder="2100"
+                                       class="w-24 border border-blue-300 rounded px-2 py-1 text-center">
+                                <span class="text-xs text-gray-500" x-text="'/ ' + (cylinderTypes[cyl.cylinder_type]?.full_psi || 2100)"></span>
+                            </div>
+                            <div class="text-xs text-blue-600 mt-2" x-show="cyl.starting_psi > 0"
+                                 x-text="'可用: ' + Math.round((cyl.starting_psi / (cylinderTypes[cyl.cylinder_type]?.full_psi || 2100)) * (cylinderTypes[cyl.cylinder_type]?.capacity || 660)) + ' L'">
+                            </div>
+                            <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                                <input type="checkbox" x-model="cyl.checked" class="w-5 h-5 text-blue-500 rounded">
+                                <span class="text-sm text-gray-600">已確認</span>
+                            </label>
+                        </div>
+                    </template>
+
+                    <div x-show="oxygenCylinders.length === 0" class="text-center py-4 text-gray-400">
+                        點擊「+ 新增鋼瓶」加入氧氣鋼瓶
+                    </div>
+                </div>
+            </div>
+
+            <!-- v2.0: 設備電量追蹤 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-purple-700">設備電量</h2>
+                    <button @click="addEquipment()" class="text-purple-600 hover:text-purple-700 text-sm font-medium">
+                        + 新增設備
+                    </button>
+                </div>
+
+                <div class="space-y-3">
+                    <template x-for="(eq, idx) in equipmentBattery" :key="idx">
+                        <div class="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <select x-model="eq.equipment_type" class="border border-purple-300 rounded px-2 py-1 text-sm bg-white">
+                                        <option value="MONITOR">監視器</option>
+                                        <option value="VENTILATOR">呼吸器</option>
+                                        <option value="SUCTION">抽吸機</option>
+                                        <option value="PUMP">輸液幫浦</option>
+                                        <option value="DEFIBRILLATOR">AED</option>
+                                        <option value="OTHER">其他</option>
+                                    </select>
+                                    <input type="text" x-model="eq.equipment_name" placeholder="名稱"
+                                           class="w-28 border border-purple-300 rounded px-2 py-1 text-sm">
+                                </div>
+                                <button @click="equipmentBattery.splice(idx, 1)" class="text-red-400 hover:text-red-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <label class="text-sm text-gray-600">電量:</label>
+                                <input type="number" x-model.number="eq.starting_battery_pct"
+                                       min="0" max="100" placeholder="100"
+                                       class="w-20 border border-purple-300 rounded px-2 py-1 text-center">
+                                <span class="text-gray-500">%</span>
+                                <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="h-full transition-all"
+                                         :class="eq.starting_battery_pct >= 50 ? 'bg-green-500' : eq.starting_battery_pct >= 20 ? 'bg-yellow-500' : 'bg-red-500'"
+                                         :style="'width: ' + (eq.starting_battery_pct || 0) + '%'"></div>
+                                </div>
+                            </div>
+                            <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                                <input type="checkbox" x-model="eq.checked" class="w-5 h-5 text-purple-500 rounded">
+                                <span class="text-sm text-gray-600">已確認</span>
+                            </label>
+                        </div>
+                    </template>
+
+                    <div x-show="equipmentBattery.length === 0" class="text-center py-4 text-gray-400">
+                        點擊「+ 新增設備」追蹤電量
+                    </div>
+                </div>
+            </div>
+
             <div class="flex gap-3">
                 <button @click="goToStep(0)"
                         class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 rounded-xl transition">
                     返回
                 </button>
-                <button @click="confirmLoadout()"
-                        :disabled="!allItemsChecked"
-                        :class="allItemsChecked ? 'bg-amber-500 hover:bg-amber-600' : 'bg-gray-300 cursor-not-allowed'"
+                <button @click="confirmLoadoutV2()"
+                        :disabled="!allItemsCheckedV2"
+                        :class="allItemsCheckedV2 ? 'bg-amber-500 hover:bg-amber-600' : 'bg-gray-300 cursor-not-allowed'"
                         class="flex-1 text-white font-bold py-4 rounded-xl transition">
                     確認攜帶
                 </button>
@@ -251,11 +351,12 @@
 
         <!-- Step 4: Recheck & Finalize (ARRIVED) -->
         <div x-show="currentMission && currentStep === 3" x-cloak>
+            <!-- 一般物資確認 -->
             <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
                 <h2 class="text-lg font-bold text-amber-700 mb-4">返站物資確認</h2>
 
                 <div class="space-y-3">
-                    <template x-for="item in missionItems.filter(i => i.carried_qty > 0)" :key="item.id">
+                    <template x-for="item in missionItems.filter(i => i.carried_qty > 0 && i.item_type !== 'OXYGEN')" :key="item.id">
                         <div class="border border-gray-200 rounded-lg p-4">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-medium" x-text="item.item_name"></span>
@@ -272,12 +373,81 @@
                                       x-text="'消耗: ' + (item.carried_qty - (item.returned_qty || 0))">
                                 </span>
                             </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
 
-                            <!-- Final status for oxygen -->
-                            <div x-show="item.item_type === 'OXYGEN'" class="mt-2">
-                                <input type="text" x-model="item.final_status"
-                                       placeholder="剩餘壓力 (如: PSI 500)"
-                                       class="w-full border border-gray-300 rounded px-2 py-1 text-sm">
+            <!-- v2.0: 氧氣鋼瓶結束 PSI -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-4" x-show="oxygenCylinders.length > 0">
+                <h2 class="text-lg font-bold text-blue-700 mb-4">氧氣消耗統計</h2>
+
+                <div class="space-y-3">
+                    <template x-for="(cyl, idx) in oxygenCylinders" :key="idx">
+                        <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-gray-800" x-text="cyl.cylinder_type + (cyl.unit_label ? ' #' + cyl.unit_label : '')"></span>
+                                <span class="text-blue-600" x-text="'起始: ' + cyl.starting_psi + ' PSI'"></span>
+                            </div>
+                            <div class="flex items-center gap-3 mb-2">
+                                <label class="text-sm text-gray-600">結束 PSI:</label>
+                                <input type="number" x-model.number="cyl.ending_psi"
+                                       min="0" :max="cyl.starting_psi" placeholder="0"
+                                       class="w-24 border border-blue-300 rounded px-2 py-1 text-center">
+                            </div>
+                            <div class="text-sm" x-show="cyl.starting_psi > 0 && cyl.ending_psi !== undefined">
+                                <span class="text-red-600 font-medium"
+                                      x-text="'消耗: ' + Math.round(((cyl.starting_psi - (cyl.ending_psi || 0)) / (cylinderTypes[cyl.cylinder_type]?.full_psi || 2100)) * (cylinderTypes[cyl.cylinder_type]?.capacity || 660)) + ' L'">
+                                </span>
+                                <span class="text-gray-500 ml-2"
+                                      x-text="'(' + (cyl.starting_psi - (cyl.ending_psi || 0)) + ' PSI)'">
+                                </span>
+                            </div>
+                            <!-- PSI 可視化 -->
+                            <div class="mt-2 h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500 transition-all"
+                                     :style="'width: ' + ((cyl.ending_psi || 0) / (cylinderTypes[cyl.cylinder_type]?.full_psi || 2100) * 100) + '%'"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- 總消耗統計 -->
+                <div class="mt-4 p-3 bg-blue-100 rounded-lg" x-show="oxygenCylinders.length > 0">
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-blue-800">總氧氣消耗</span>
+                        <span class="text-lg font-bold text-blue-700" x-text="totalO2Consumed + ' L'"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- v2.0: 設備電量結算 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-4" x-show="equipmentBattery.length > 0">
+                <h2 class="text-lg font-bold text-purple-700 mb-4">設備電量結算</h2>
+
+                <div class="space-y-3">
+                    <template x-for="(eq, idx) in equipmentBattery" :key="idx">
+                        <div class="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-gray-800" x-text="eq.equipment_name || eq.equipment_type"></span>
+                                <span class="text-purple-600" x-text="'起始: ' + eq.starting_battery_pct + '%'"></span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <label class="text-sm text-gray-600">結束:</label>
+                                <input type="number" x-model.number="eq.ending_battery_pct"
+                                       min="0" :max="eq.starting_battery_pct" placeholder="0"
+                                       class="w-20 border border-purple-300 rounded px-2 py-1 text-center">
+                                <span class="text-gray-500">%</span>
+                                <span class="text-sm ml-auto"
+                                      :class="(eq.starting_battery_pct - (eq.ending_battery_pct || 0)) > 30 ? 'text-red-500' : 'text-green-500'"
+                                      x-text="'消耗: ' + (eq.starting_battery_pct - (eq.ending_battery_pct || 0)) + '%'">
+                                </span>
+                            </div>
+                            <!-- 電量可視化 -->
+                            <div class="mt-2 h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full transition-all"
+                                     :class="(eq.ending_battery_pct || 0) >= 50 ? 'bg-green-500' : (eq.ending_battery_pct || 0) >= 20 ? 'bg-yellow-500' : 'bg-red-500'"
+                                     :style="'width: ' + (eq.ending_battery_pct || 0) + '%'"></div>
                             </div>
                         </div>
                     </template>
@@ -359,15 +529,32 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">預估路程 (分鐘) *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">單程 ETA (分鐘)</label>
+                        <input type="number" x-model.number="newMission.eta_min"
+                               min="10" max="480" placeholder="60"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <div class="mt-1 flex gap-2">
+                            <button @click="newMission.eta_min = 30" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">30分</button>
+                            <button @click="newMission.eta_min = 60" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">1時</button>
+                            <button @click="newMission.eta_min = 90" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">1.5時</button>
+                            <button @click="newMission.eta_min = 120" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">2時</button>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1" x-show="newMission.eta_min > 0"
+                             x-text="'來回約 ' + (newMission.eta_min * 2) + ' 分鐘'"></div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">總任務時間 (含轉運停留)</label>
                         <input type="number" x-model.number="newMission.estimated_duration_min"
                                min="10" max="720" placeholder="120"
                                class="w-full border border-gray-300 rounded-lg px-3 py-2">
                         <div class="mt-1 flex gap-2">
-                            <button @click="newMission.estimated_duration_min = 30" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">30分</button>
-                            <button @click="newMission.estimated_duration_min = 60" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">1時</button>
-                            <button @click="newMission.estimated_duration_min = 120" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">2時</button>
-                            <button @click="newMission.estimated_duration_min = 180" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">3時</button>
+                            <button @click="newMission.estimated_duration_min = newMission.eta_min * 2 || 60"
+                                    class="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded hover:bg-amber-200">= 來回</button>
+                            <button @click="newMission.estimated_duration_min = (newMission.eta_min * 2 || 60) + 30"
+                                    class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">+30分</button>
+                            <button @click="newMission.estimated_duration_min = (newMission.eta_min * 2 || 60) + 60"
+                                    class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">+1時</button>
                         </div>
                     </div>
 
@@ -388,37 +575,61 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">氧氣需求 (L/min)</label>
-                        <div class="flex gap-2">
-                            <button @click="newMission.oxygen_requirement_lpm = 0"
-                                    :class="newMission.oxygen_requirement_lpm === 0 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
-                                    class="flex-1 py-2 rounded-lg transition">無</button>
-                            <button @click="newMission.oxygen_requirement_lpm = 2"
-                                    :class="newMission.oxygen_requirement_lpm === 2 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
-                                    class="flex-1 py-2 rounded-lg transition">2</button>
-                            <button @click="newMission.oxygen_requirement_lpm = 6"
-                                    :class="newMission.oxygen_requirement_lpm === 6 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
-                                    class="flex-1 py-2 rounded-lg transition">6</button>
-                            <button @click="newMission.oxygen_requirement_lpm = 10"
-                                    :class="newMission.oxygen_requirement_lpm === 10 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
-                                    class="flex-1 py-2 rounded-lg transition">10</button>
+                        <div class="flex gap-2 flex-wrap">
+                            <button @click="newMission.o2_lpm = 0"
+                                    :class="newMission.o2_lpm === 0 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                    class="flex-1 py-2 rounded-lg transition min-w-[45px]">無</button>
+                            <button @click="newMission.o2_lpm = 2"
+                                    :class="newMission.o2_lpm === 2 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                    class="flex-1 py-2 rounded-lg transition min-w-[45px]">2</button>
+                            <button @click="newMission.o2_lpm = 4"
+                                    :class="newMission.o2_lpm === 4 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                    class="flex-1 py-2 rounded-lg transition min-w-[45px]">4</button>
+                            <button @click="newMission.o2_lpm = 6"
+                                    :class="newMission.o2_lpm === 6 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                    class="flex-1 py-2 rounded-lg transition min-w-[45px]">6</button>
+                            <button @click="newMission.o2_lpm = 10"
+                                    :class="newMission.o2_lpm === 10 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                    class="flex-1 py-2 rounded-lg transition min-w-[45px]">10</button>
+                            <button @click="newMission.o2_lpm = 15"
+                                    :class="newMission.o2_lpm === 15 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                    class="flex-1 py-2 rounded-lg transition min-w-[45px]">15</button>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">輸液速度</label>
-                        <div class="flex gap-2">
-                            <button @click="newMission.iv_rate_mlhr = 0"
-                                    :class="newMission.iv_rate_mlhr === 0 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
-                                    class="flex-1 py-2 rounded-lg transition text-sm">無</button>
-                            <button @click="newMission.iv_rate_mlhr = 30"
-                                    :class="newMission.iv_rate_mlhr === 30 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
-                                    class="flex-1 py-2 rounded-lg transition text-sm">KVO</button>
-                            <button @click="newMission.iv_rate_mlhr = 100"
-                                    :class="newMission.iv_rate_mlhr === 100 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
-                                    class="flex-1 py-2 rounded-lg transition text-sm">維持</button>
-                            <button @click="newMission.iv_rate_mlhr = 200"
-                                    :class="newMission.iv_rate_mlhr === 200 ? 'bg-amber-500 text-white' : 'bg-gray-100'"
-                                    class="flex-1 py-2 rounded-lg transition text-sm">快速</button>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">輸液模式</label>
+                        <div class="flex gap-2 flex-wrap">
+                            <button @click="newMission.iv_mode = 'NONE'"
+                                    :class="newMission.iv_mode === 'NONE' ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                    class="flex-1 py-2 rounded-lg transition text-sm min-w-[60px]">無</button>
+                            <button @click="newMission.iv_mode = 'KVO'"
+                                    :class="newMission.iv_mode === 'KVO' ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                    class="flex-1 py-2 rounded-lg transition text-sm min-w-[60px]">KVO</button>
+                            <button @click="newMission.iv_mode = 'MAINTENANCE'"
+                                    :class="newMission.iv_mode === 'MAINTENANCE' ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                    class="flex-1 py-2 rounded-lg transition text-sm min-w-[60px]">維持</button>
+                            <button @click="newMission.iv_mode = 'BOLUS'"
+                                    :class="newMission.iv_mode === 'BOLUS' ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                    class="flex-1 py-2 rounded-lg transition text-sm min-w-[60px]">快速</button>
+                            <button @click="newMission.iv_mode = 'CUSTOM'"
+                                    :class="newMission.iv_mode === 'CUSTOM' ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                    class="flex-1 py-2 rounded-lg transition text-sm min-w-[60px]">自訂</button>
+                        </div>
+                        <div x-show="newMission.iv_mode === 'CUSTOM'" class="mt-2">
+                            <div class="flex items-center gap-2">
+                                <input type="number" x-model.number="newMission.iv_mlhr_override"
+                                       min="0" max="1000" placeholder="100"
+                                       class="w-24 border border-gray-300 rounded-lg px-3 py-2 text-center">
+                                <span class="text-gray-500">mL/hr</span>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            <span x-show="newMission.iv_mode === 'NONE'">不需輸液</span>
+                            <span x-show="newMission.iv_mode === 'KVO'">Keep Vein Open: 30 mL/hr</span>
+                            <span x-show="newMission.iv_mode === 'MAINTENANCE'">一般維持: 100 mL/hr</span>
+                            <span x-show="newMission.iv_mode === 'BOLUS'">快速補液: 500mL/30min</span>
+                            <span x-show="newMission.iv_mode === 'CUSTOM'" x-text="'自訂: ' + (newMission.iv_mlhr_override || 0) + ' mL/hr'"></span>
                         </div>
                     </div>
 
@@ -557,16 +768,32 @@
                 elapsedTime: 0,
                 elapsedTimer: null,
 
-                // New mission form
+                // New mission form (v2.0)
                 newMission: {
                     destination: '',
+                    eta_min: 60,
                     estimated_duration_min: 120,
                     patient_condition: 'STABLE',
-                    oxygen_requirement_lpm: 0,
-                    iv_rate_mlhr: 0,
+                    o2_lpm: 0,
+                    iv_mode: 'NONE',
+                    iv_mlhr_override: null,
                     ventilator_required: false,
                     safety_factor: 3.0,
                     emt_name: ''
+                },
+
+                // v2.0: 氧氣鋼瓶追蹤
+                oxygenCylinders: [],
+                // v2.0: 設備電量追蹤
+                equipmentBattery: [],
+
+                // 鋼瓶類型參考
+                cylinderTypes: {
+                    'E': { name: 'E-Tank (攜帶型)', capacity: 660, full_psi: 2100 },
+                    'D': { name: 'D-Tank (小型)', capacity: 350, full_psi: 2100 },
+                    'M': { name: 'M-Tank (中型)', capacity: 3000, full_psi: 2200 },
+                    'H': { name: 'H-Tank (大型)', capacity: 6900, full_psi: 2200 },
+                    'Jumbo-D': { name: 'Jumbo D-Tank', capacity: 640, full_psi: 2200 }
                 },
 
                 // New incoming item form
@@ -581,6 +808,24 @@
                 // Computed
                 get allItemsChecked() {
                     return this.missionItems.every(i => i.checked);
+                },
+
+                // v2.0: 檢查所有項目 (含鋼瓶和設備)
+                get allItemsCheckedV2() {
+                    const itemsOk = this.missionItems.filter(i => i.item_type !== 'OXYGEN').every(i => i.checked);
+                    const cylindersOk = this.oxygenCylinders.length === 0 || this.oxygenCylinders.every(c => c.checked && c.starting_psi > 0);
+                    const equipmentOk = this.equipmentBattery.length === 0 || this.equipmentBattery.every(e => e.checked);
+                    return itemsOk && cylindersOk && equipmentOk;
+                },
+
+                // v2.0: 總氧氣消耗量
+                get totalO2Consumed() {
+                    return this.oxygenCylinders.reduce((sum, cyl) => {
+                        if (!cyl.starting_psi || cyl.ending_psi === undefined) return sum;
+                        const cap = this.cylinderTypes[cyl.cylinder_type] || { capacity: 660, full_psi: 2100 };
+                        const consumed = ((cyl.starting_psi - (cyl.ending_psi || 0)) / cap.full_psi) * cap.capacity;
+                        return sum + Math.max(0, Math.round(consumed));
+                    }, 0);
                 },
 
                 // Methods
@@ -648,6 +893,28 @@
                     this.currentStep = step;
                 },
 
+                // v2.0: 新增氧氣鋼瓶
+                addCylinder() {
+                    this.oxygenCylinders.push({
+                        cylinder_type: 'E',
+                        unit_label: '',
+                        starting_psi: 2100,
+                        ending_psi: null,
+                        checked: false
+                    });
+                },
+
+                // v2.0: 新增設備
+                addEquipment() {
+                    this.equipmentBattery.push({
+                        equipment_type: 'MONITOR',
+                        equipment_name: '',
+                        starting_battery_pct: 100,
+                        ending_battery_pct: null,
+                        checked: false
+                    });
+                },
+
                 async createMission() {
                     try {
                         const res = await fetch('/api/transfer/missions', {
@@ -661,17 +928,22 @@
                         await this.loadMission(data.mission_id);
                         await this.loadMissionList();
 
-                        // Reset form
+                        // Reset form (v2.0)
                         this.newMission = {
                             destination: '',
+                            eta_min: 60,
                             estimated_duration_min: 120,
                             patient_condition: 'STABLE',
-                            oxygen_requirement_lpm: 0,
-                            iv_rate_mlhr: 0,
+                            o2_lpm: 0,
+                            iv_mode: 'NONE',
+                            iv_mlhr_override: null,
                             ventilator_required: false,
                             safety_factor: 3.0,
                             emt_name: ''
                         };
+                        // 清空 v2.0 追蹤資料
+                        this.oxygenCylinders = [];
+                        this.equipmentBattery = [];
                     } catch (e) {
                         console.error('Failed to create mission:', e);
                         alert('建立任務失敗');
@@ -702,6 +974,56 @@
                         }
                     } catch (e) {
                         console.error('Failed to confirm:', e);
+                        alert('確認失敗');
+                    }
+                },
+
+                // v2.0: 確認攜帶 (含 PSI/電量)
+                async confirmLoadoutV2() {
+                    if (!this.currentMission?.mission_id) {
+                        alert('錯誤：未載入任務資料');
+                        return;
+                    }
+                    try {
+                        // 一般物資
+                        const items = this.missionItems
+                            .filter(i => i.item_type !== 'OXYGEN')
+                            .map(i => ({
+                                item_id: i.id,
+                                carried_qty: i.carried_qty
+                            }));
+
+                        // 氧氣鋼瓶 (v2.0)
+                        const oxygen_cylinders = this.oxygenCylinders.map(c => ({
+                            cylinder_type: c.cylinder_type,
+                            unit_label: c.unit_label || null,
+                            starting_psi: c.starting_psi
+                        }));
+
+                        // 設備電量 (v2.0)
+                        const equipment = this.equipmentBattery.map(e => ({
+                            equipment_type: e.equipment_type,
+                            equipment_name: e.equipment_name || e.equipment_type,
+                            starting_battery_pct: e.starting_battery_pct
+                        }));
+
+                        const payload = { items, oxygen_cylinders, equipment };
+
+                        // 使用 v2.0 端點
+                        const res = await fetch(`/api/transfer/missions/${this.currentMission.mission_id}/confirm/v2`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (res.ok) {
+                            await this.departMission();
+                        } else {
+                            const err = await res.json();
+                            alert('確認失敗: ' + (err.detail || res.status));
+                        }
+                    } catch (e) {
+                        console.error('Failed to confirm v2:', e);
                         alert('確認失敗');
                     }
                 },
@@ -780,38 +1102,67 @@
 
                 async finalizeMission() {
                     try {
-                        // Submit recheck
-                        const recheckItems = this.missionItems
-                            .filter(i => i.carried_qty > 0)
+                        // v2.0: 使用 finalize/v2 端點
+                        const items = this.missionItems
+                            .filter(i => i.carried_qty > 0 && i.item_type !== 'OXYGEN')
                             .map(i => ({
                                 item_id: i.id,
-                                returned_qty: i.returned_qty || 0,
-                                final_status: i.final_status
+                                returned_qty: i.returned_qty || 0
                             }));
 
-                        await fetch(`/api/transfer/missions/${this.currentMission.mission_id}/recheck`, {
+                        const oxygen_cylinders = this.oxygenCylinders.map(c => ({
+                            cylinder_type: c.cylinder_type,
+                            unit_label: c.unit_label || null,
+                            ending_psi: c.ending_psi || 0
+                        }));
+
+                        const equipment = this.equipmentBattery.map(e => ({
+                            equipment_type: e.equipment_type,
+                            equipment_name: e.equipment_name || e.equipment_type,
+                            ending_battery_pct: e.ending_battery_pct || 0
+                        }));
+
+                        const payload = { items, oxygen_cylinders, equipment };
+
+                        // 嘗試 v2.0 端點
+                        let res = await fetch(`/api/transfer/missions/${this.currentMission.mission_id}/finalize/v2`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(recheckItems)
+                            body: JSON.stringify(payload)
                         });
 
-                        // Submit incoming items
-                        if (this.incomingItems.length > 0) {
-                            await fetch(`/api/transfer/missions/${this.currentMission.mission_id}/incoming`, {
+                        // 若 v2 失敗，fallback 到 v1
+                        if (!res.ok && res.status === 404) {
+                            // 提交 recheck
+                            await fetch(`/api/transfer/missions/${this.currentMission.mission_id}/recheck`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(this.incomingItems)
+                                body: JSON.stringify(items.map(i => ({ ...i, final_status: null })))
+                            });
+
+                            // 提交 incoming
+                            if (this.incomingItems.length > 0) {
+                                await fetch(`/api/transfer/missions/${this.currentMission.mission_id}/incoming`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(this.incomingItems)
+                                });
+                            }
+
+                            res = await fetch(`/api/transfer/missions/${this.currentMission.mission_id}/finalize`, {
+                                method: 'POST'
                             });
                         }
 
-                        // Finalize
-                        const res = await fetch(`/api/transfer/missions/${this.currentMission.mission_id}/finalize`, {
-                            method: 'POST'
-                        });
-
                         if (res.ok) {
                             this.currentMission.status = 'COMPLETED';
+                            // 清空追蹤資料
+                            this.oxygenCylinders = [];
+                            this.equipmentBattery = [];
                             await this.loadMissionList();
+                        } else {
+                            const err = await res.json();
+                            alert('結案失敗: ' + (err.detail || res.status));
                         }
                     } catch (e) {
                         console.error('Failed to finalize:', e);
