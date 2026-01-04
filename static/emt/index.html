@@ -648,11 +648,15 @@
     <div x-show="showNewMission" x-cloak
          class="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
          @click.self="showNewMission = false">
-        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto"
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] flex flex-col"
              @click.stop>
-            <div class="p-6">
-                <h2 class="text-xl font-bold text-amber-700 mb-4">新增轉送任務</h2>
+            <!-- 固定頭部 -->
+            <div class="p-6 pb-3 border-b border-gray-100 flex-shrink-0">
+                <h2 class="text-xl font-bold text-amber-700">新增轉送任務</h2>
+            </div>
 
+            <!-- 可滾動內容區 -->
+            <div class="p-6 pt-4 overflow-y-auto flex-1">
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">目的地 *</label>
@@ -783,8 +787,11 @@
                                class="w-full border border-gray-300 rounded-lg px-3 py-2">
                     </div>
                 </div>
+            </div>
 
-                <div class="flex gap-3 mt-6">
+            <!-- 固定底部按鈕 -->
+            <div class="p-6 pt-3 border-t border-gray-100 flex-shrink-0">
+                <div class="flex gap-3">
                     <button @click="showNewMission = false"
                             class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition">
                         取消
