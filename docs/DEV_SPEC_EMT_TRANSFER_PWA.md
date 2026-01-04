@@ -1,8 +1,8 @@
 # EMT Transfer PWA 開發規格書
 
 **版本**: 2.0.0
-**日期**: 2026-01-03
-**狀態**: Phase 1 完成, Phase 2 規格更新
+**日期**: 2026-01-04
+**狀態**: Phase 2 完成
 
 ---
 
@@ -471,15 +471,44 @@ EMT 輸入返站後各項剩餘：
 | 1.2 | 基本 UI (建立/出發/抵達/結案) | ✅ 完成 |
 | 1.3 | 任務狀態機 | ✅ 完成 |
 
-### v2.0 (規劃中)
+### v2.0 (已完成 2026-01-04)
 
 | Phase | 內容 | 狀態 |
 |-------|------|------|
-| 2.1 | Schema 升級 (PSI/電量欄位) | ⏳ 待開發 |
-| 2.2 | 庫存連動 (Reserve/Issue/Return) | ⏳ 待開發 |
-| 2.3 | UI 改進 (預設值快捷 + PSI 輸入) | ⏳ 待開發 |
-| 2.4 | 三分離計量 (攜帶/歸還/消耗) | ⏳ 待開發 |
-| 2.5 | 韌性整合 (使用 available) | ⏳ 待開發 |
+| 2.1 | Schema 升級 (PSI/電量欄位) | ✅ 完成 |
+| 2.2 | 庫存連動 (Reserve/Issue/Return) | ✅ 完成 |
+| 2.3 | UI 改進 (預設值快捷 + PSI 輸入) | ✅ 完成 |
+| 2.4 | 三分離計量 (攜帶/歸還/消耗) | ✅ 完成 |
+| 2.5 | 韌性整合 (使用 available) | ✅ 完成 |
+
+#### v2.0 實作細節
+
+- **2.1 Schema**: `database/migrations/transfer_v2_upgrade.sql`
+  - 新增 `transfer_oxygen_cylinders` 表 (單瓶 PSI 追蹤)
+  - 新增 `transfer_equipment_battery` 表 (設備電量追蹤)
+  - 新增 `oxygen_cylinder_types` 參考表 (E/D/M/H-Tank 容量)
+  - 新增 `iv_mode_presets` 參考表 (NONE/KVO/BOLUS/MAINTENANCE/CUSTOM)
+
+- **2.2 庫存連動**: `routes/transfer.py` v2.0.0
+  - `reserve_cylinders_v2()`: 記錄起始 PSI
+  - `reserve_equipment_v2()`: 記錄起始電量
+  - `finalize_cylinders_v2()`: 記錄結束 PSI，計算消耗公升數
+  - `finalize_equipment_v2()`: 記錄結束電量，計算消耗百分比
+  - API 端點: `/confirm/v2`, `/finalize/v2`
+
+- **2.3 UI**: `static/emt/index.html`
+  - IV 模式快捷選項 (NONE/KVO/MAINTENANCE/BOLUS/CUSTOM)
+  - O2 LPM 擴充 (0/2/4/6/10/15)
+  - ETA 單程時間欄位
+  - 氧氣鋼瓶 PSI 輸入 (支援多鋼瓶)
+  - 設備電量追蹤 (監視器/呼吸器/抽吸機)
+  - 結束 PSI/電量輸入 + 消耗可視化
+
+- **2.4 三分離**: 後端已實作 `consumed_qty = carried_qty - returned_qty`
+
+- **2.5 韌性整合**: `services/resilience_service.py`
+  - 排除 `claimed_by_mission_id IS NOT NULL` 的設備
+  - 排除 `claimed_by_case_id IS NOT NULL` 的設備
 
 ### v3.0 (未來)
 
@@ -572,4 +601,5 @@ curl -X POST http://localhost:8000/api/transfer/missions/TRF-20260103-001/finali
 |------|------|----------|
 | 1.0.0 | 2026-01-02 | 初版規格 |
 | 1.1.0 | 2026-01-03 | Phase 1 完成，新增狀態機 |
-| **2.0.0** | 2026-01-03 | 重大更新：<br>- 安全係數可調 1-15<br>- PSI 單瓶追蹤<br>- 設備電量追蹤<br>- 三分離計量<br>- UI 預設值快捷<br>- 韌性使用 available |
+| 2.0.0 | 2026-01-03 | 規格更新：安全係數可調、PSI 追蹤、三分離計量 |
+| **2.0.0** | **2026-01-04** | **Phase 2 完成**：<br>- 2.1 Schema 升級 (transfer_v2_upgrade.sql)<br>- 2.2 庫存連動 (v2.0 API 端點)<br>- 2.3 UI 改進 (IV 模式/PSI/電量)<br>- 2.4 三分離計量<br>- 2.5 韌性整合 (排除轉送中設備) |
