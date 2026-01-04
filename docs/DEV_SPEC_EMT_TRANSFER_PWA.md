@@ -1,8 +1,8 @@
 # EMT Transfer PWA 開發規格書
 
-**版本**: 2.1.0
+**版本**: 2.2.0
 **日期**: 2026-01-04
-**狀態**: Phase 2.1 完成
+**狀態**: Phase 2.2 完成
 
 ---
 
@@ -61,9 +61,9 @@ PLANNING ──(confirm)──> READY ──(depart)──> EN_ROUTE ──(arri
 
 ---
 
-## 0.3 UI 配色
+## 0.3 UI 配色 (v2.2 更新)
 
-採用 Amber 色系（同韌性估算 Tab）：
+### 主色系 (Header/按鈕)
 
 | 用途 | Tailwind Class | HEX |
 |------|----------------|-----|
@@ -71,6 +71,17 @@ PLANNING ──(confirm)──> READY ──(depart)──> EN_ROUTE ──(arri
 | 深色 | `amber-600` | `#d97706` |
 | 淺色 | `amber-100` | `#fef3c7` |
 | 背景 | `amber-50` | `#fffbeb` |
+
+### 資源區塊配色 (v2.2 新增)
+
+採用 MIRS 統一色系：
+
+| 區塊 | 主色 | HEX | 對應 MIRS |
+|------|------|-----|-----------|
+| 藥物/耗材 | `dispense-purple-700` | `#7e2e83` | 藥局配藥 |
+| 氧氣鋼瓶 | `amber-500` | `#f59e0b` | 韌性估算 |
+| 設備電量 | `equipment-500` | `#6C7362` | 設備管理 |
+| IV 輸液 | `teal-500` | `#14b8a6` | MIRS 主色 |
 
 ---
 
@@ -369,6 +380,40 @@ consumed_liters = (starting_psi - ending_psi) / full_psi × capacity_liters
 
 ## 6. UI 規格 (v2.0)
 
+### 6.0 iOS Safari 相容性 (v2.2 新增)
+
+**問題**: iOS Safari 對 `overflow-y: auto` + `max-height: 90vh` 的 Modal 不支援觸控滾動。
+
+**解決方案**: 採用全螢幕頁面式 Modal：
+
+```html
+<!-- 全螢幕 Modal 模式 -->
+<div class="fixed inset-0 bg-white z-50 overflow-y-auto ios-scroll">
+    <!-- Sticky Header -->
+    <div class="sticky top-0 bg-amber-500 text-white px-4 py-3 shadow-lg z-10">
+        <button @click="closeModal">✕</button>
+        <h2>標題</h2>
+    </div>
+    <!-- 內容自然滾動 -->
+    <div class="p-4 pb-24">
+        <!-- Modal 內容 -->
+    </div>
+</div>
+```
+
+```css
+.ios-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+```
+
+**關鍵**:
+- 移除 `max-h-[90vh]` 限制
+- 使用 `fixed inset-0` 全覆蓋
+- Header 使用 `sticky top-0`
+- 內容區域自然頁面滾動
+
 ### 6.1 入口
 
 **位置**: MIRS Index.html Header 按鈕 (橘色閃電圖示) → 開啟 `/emt` PWA
@@ -428,13 +473,13 @@ consumed_liters = (starting_psi - ending_psi) / full_psi × capacity_liters
 - 選擇設備 (從 equipment 選擇)
 - 記錄起始電量 %
 
-### 6.4 藥物/耗材區塊 (v2.1 新增)
+### 6.4 藥物/耗材區塊 (v2.2 更新)
 
-Step 2 整備畫面新增獨立區塊：
+Step 2 整備畫面新增獨立區塊，採用 **紫紅色系** (`dispense-purple`)：
 
 ```
 ┌─────────────────────────────────────┐
-│ 藥物/耗材                    + 新增項目 │
+│ 藥物/耗材 (紫紅色)          + 新增項目 │
 ├─────────────────────────────────────┤
 │ ┌─────────────────────────────────┐ │
 │ │ Epinephrine 1mg        ☑ 已確認 │ │
@@ -596,7 +641,7 @@ EMT 輸入返站後各項剩餘：
 #### v2.1 實作細節
 
 - **2.6 藥物/耗材手動增減**: `static/emt/index.html`
-  - Step 2 新增「藥物/耗材」區塊 (綠色主題)
+  - Step 2 新增「藥物/耗材」區塊 (紫紅色系 `dispense-purple`)
   - 快捷按鈕: Epinephrine, Atropine, Morphine, Ketamine, TXA, 止血帶, 胸封貼
   - 可自訂藥物名稱、數量、單位
   - `customMedications[]` 陣列，合併至 `confirmLoadoutV2()` 送出
@@ -729,3 +774,4 @@ curl -X POST http://localhost:8000/api/transfer/missions/TRF-20260103-001/finali
 | 2.0.0 | 2026-01-03 | 規格更新：安全係數可調、PSI 追蹤、三分離計量 |
 | 2.0.0 | 2026-01-04 | Phase 2 完成：Schema 升級、庫存連動、UI 改進、三分離計量、韌性整合 |
 | **2.1.0** | **2026-01-04** | **Phase 2.1 完成**：<br>- 2.6 藥物/耗材手動增減 (快捷按鈕 + 自訂)<br>- 2.7 氧氣鋼瓶認領+手動雙軌模式<br>- 2.8 可認領鋼瓶 API (`/available-cylinders`) |
+| **2.2.0** | **2026-01-04** | **UI/UX 改進**：<br>- **iOS Safari 滾動修復**: 全螢幕頁面式 Modal (移除 `max-h-[90vh]`)<br>- **MIRS 配色統一**: 藥物/耗材→紫紅色、氧氣→amber、設備→equipment 色系<br>- 新增 sticky header 支援觸控滾動 |
