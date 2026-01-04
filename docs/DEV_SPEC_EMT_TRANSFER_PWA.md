@@ -1,8 +1,8 @@
 # EMT Transfer PWA 開發規格書
 
-**版本**: 2.0.0
+**版本**: 2.1.0
 **日期**: 2026-01-04
-**狀態**: Phase 2 完成
+**狀態**: Phase 2.1 完成
 
 ---
 
@@ -254,13 +254,16 @@ min_battery = battery_drain_per_hr × duration_hr × safety_factor
 | GET | `/api/transfer/missions/{id}` | 任務詳情 |
 | POST | `/api/transfer/missions/{id}/calculate` | 重算物資 |
 | POST | `/api/transfer/missions/{id}/confirm` | 確認清單 (→READY) |
+| POST | `/api/transfer/missions/{id}/confirm/v2` | v2.0 確認 (含 PSI/電量) |
 | POST | `/api/transfer/missions/{id}/depart` | 出發 (→EN_ROUTE) |
 | POST | `/api/transfer/missions/{id}/arrive` | 抵達 (→ARRIVED) |
 | POST | `/api/transfer/missions/{id}/recheck` | 返站確認剩餘量 |
 | POST | `/api/transfer/missions/{id}/incoming` | 登記外帶物資 |
 | POST | `/api/transfer/missions/{id}/finalize` | 結案 (→COMPLETED) |
+| POST | `/api/transfer/missions/{id}/finalize/v2` | v2.0 結案 (含 PSI/電量) |
 | POST | `/api/transfer/missions/{id}/abort` | 中止 (→ABORTED) |
 | GET | `/api/transfer/consumption-rates` | 消耗率設定 |
+| GET | `/api/transfer/available-cylinders` | v2.1 可認領氧氣鋼瓶 |
 
 ---
 
@@ -425,7 +428,79 @@ consumed_liters = (starting_psi - ending_psi) / full_psi × capacity_liters
 - 選擇設備 (從 equipment 選擇)
 - 記錄起始電量 %
 
-### 6.4 結案畫面 (v2.0 改進)
+### 6.4 藥物/耗材區塊 (v2.1 新增)
+
+Step 2 整備畫面新增獨立區塊：
+
+```
+┌─────────────────────────────────────┐
+│ 藥物/耗材                    + 新增項目 │
+├─────────────────────────────────────┤
+│ ┌─────────────────────────────────┐ │
+│ │ Epinephrine 1mg        ☑ 已確認 │ │
+│ │ 數量: [2] 支                    │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ 快捷: [Epi] [Atropine] [Morphine]  │
+│       [Ketamine] [TXA] [止血帶]     │
+└─────────────────────────────────────┘
+```
+
+**快捷按鈕預設值**:
+
+| 快捷鈕 | 藥物名稱 | 預設數量 | 單位 |
+|--------|----------|----------|------|
+| Epi | Epinephrine 1mg | 2 | 支 |
+| Atropine | Atropine 0.5mg | 2 | 支 |
+| Morphine | Morphine 10mg | 1 | 支 |
+| Ketamine | Ketamine 500mg | 1 | 瓶 |
+| TXA | TXA 1g | 2 | 支 |
+| 止血帶 | 止血帶 | 2 | 條 |
+| 胸封貼 | 胸腔封閉貼 | 1 | 片 |
+
+### 6.5 氧氣鋼瓶認領+手動 (v2.1 新增)
+
+氧氣鋼瓶區塊採用 Tab 切換模式：
+
+```
+┌─────────────────────────────────────┐
+│ 氧氣鋼瓶                  2 已認領  │
+├─────────────────────────────────────┤
+│  [ 認領 (庫存) ]  [ 手動輸入 ]      │
+├─────────────────────────────────────┤
+│ 從庫存認領的鋼瓶會影響韌性估算      │
+│                                     │
+│ ┌──────────────────────────┐        │
+│ │ E-001 (E) 2100 PSI (100%)│[認領]  │
+│ └──────────────────────────┘        │
+│ ┌──────────────────────────┐        │
+│ │ E-002 (E) 1785 PSI (85%) │[已認領]│
+│ └──────────────────────────┘        │
+├─────────────────────────────────────┤
+│ 已選鋼瓶 (2)                        │
+│ ┌──────────────────────────┐        │
+│ │ [庫存] E-001 (E)         │ [x]    │
+│ │ 起始 PSI: [2100] / 2100  │        │
+│ │ 可用: 660 L              │        │
+│ │ ☑ 已確認                 │        │
+│ └──────────────────────────┘        │
+│ ┌──────────────────────────┐        │
+│ │ [手動] E [___] 編號      │ [x]    │
+│ │ 起始 PSI: [2100] / 2100  │        │
+│ │ 可用: 660 L              │        │
+│ │ ☐ 已確認                 │        │
+│ └──────────────────────────┘        │
+└─────────────────────────────────────┘
+```
+
+**認領 vs 手動 差異**:
+
+| 模式 | cylinder_id | 韌性影響 | PSI 來源 | 可編輯 |
+|------|-------------|----------|----------|--------|
+| 認領 | equipment_unit.id | ✓ 會影響 | 自動帶入 | 唯讀 |
+| 手動 | null | ✗ 不影響 | 手動輸入 | 可編輯 |
+
+### 6.6 結案畫面 (v2.0 改進)
 
 EMT 輸入返站後各項剩餘：
 
@@ -509,6 +584,56 @@ EMT 輸入返站後各項剩餘：
 - **2.5 韌性整合**: `services/resilience_service.py`
   - 排除 `claimed_by_mission_id IS NOT NULL` 的設備
   - 排除 `claimed_by_case_id IS NOT NULL` 的設備
+
+### v2.1 (已完成 2026-01-04)
+
+| Phase | 內容 | 狀態 |
+|-------|------|------|
+| 2.6 | 藥物/耗材手動增減 | ✅ 完成 |
+| 2.7 | 氧氣鋼瓶認領+手動雙軌模式 | ✅ 完成 |
+| 2.8 | 可認領鋼瓶 API (`/available-cylinders`) | ✅ 完成 |
+
+#### v2.1 實作細節
+
+- **2.6 藥物/耗材手動增減**: `static/emt/index.html`
+  - Step 2 新增「藥物/耗材」區塊 (綠色主題)
+  - 快捷按鈕: Epinephrine, Atropine, Morphine, Ketamine, TXA, 止血帶, 胸封貼
+  - 可自訂藥物名稱、數量、單位
+  - `customMedications[]` 陣列，合併至 `confirmLoadoutV2()` 送出
+
+- **2.7 氧氣鋼瓶認領+手動雙軌**: `static/emt/index.html`
+  - Tab 切換: 「認領 (庫存)」vs「手動輸入」
+  - **認領模式**: 從庫存選擇可用鋼瓶，帶入 PSI 資訊
+    - 認領的鋼瓶會影響韌性估算 (`claimed_by_mission_id`)
+    - 帶有 `cylinder_id` 連結 equipment_units
+  - **手動模式**: 直接輸入鋼瓶類型/編號/PSI
+    - 不影響韌性估算 (無庫存連結)
+  - 區分標籤: 「庫存」(藍底) / 「手動」(灰底)
+
+- **2.8 可認領鋼瓶 API**: `routes/transfer.py`
+  ```
+  GET /api/transfer/available-cylinders
+  ```
+  回傳格式:
+  ```json
+  {
+    "cylinders": [
+      {
+        "id": "equipment_unit_id",
+        "unit_label": "E-001",
+        "cylinder_type": "E",
+        "level_percent": 100,
+        "estimated_psi": 2100
+      }
+    ]
+  }
+  ```
+  篩選條件:
+  - `equipment.name LIKE '%氧氣%' OR '%O2%' OR '%E-Tank%'`
+  - `status IN ('OK', 'CHECKED', 'UNCHECKED')`
+  - `is_active = 1`
+  - `claimed_by_case_id IS NULL`
+  - `claimed_by_mission_id IS NULL`
 
 ### v3.0 (未來)
 
@@ -602,4 +727,5 @@ curl -X POST http://localhost:8000/api/transfer/missions/TRF-20260103-001/finali
 | 1.0.0 | 2026-01-02 | 初版規格 |
 | 1.1.0 | 2026-01-03 | Phase 1 完成，新增狀態機 |
 | 2.0.0 | 2026-01-03 | 規格更新：安全係數可調、PSI 追蹤、三分離計量 |
-| **2.0.0** | **2026-01-04** | **Phase 2 完成**：<br>- 2.1 Schema 升級 (transfer_v2_upgrade.sql)<br>- 2.2 庫存連動 (v2.0 API 端點)<br>- 2.3 UI 改進 (IV 模式/PSI/電量)<br>- 2.4 三分離計量<br>- 2.5 韌性整合 (排除轉送中設備) |
+| 2.0.0 | 2026-01-04 | Phase 2 完成：Schema 升級、庫存連動、UI 改進、三分離計量、韌性整合 |
+| **2.1.0** | **2026-01-04** | **Phase 2.1 完成**：<br>- 2.6 藥物/耗材手動增減 (快捷按鈕 + 自訂)<br>- 2.7 氧氣鋼瓶認領+手動雙軌模式<br>- 2.8 可認領鋼瓶 API (`/available-cylinders`) |

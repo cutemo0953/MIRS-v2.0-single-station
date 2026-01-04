@@ -255,27 +255,86 @@
                 </div>
             </div>
 
-            <!-- v2.0: 氧氣鋼瓶 PSI 追蹤 -->
-            <div class="bg-white rounded-xl shadow-lg p-6 mb-4" x-show="(currentMission?.oxygen_requirement_lpm || currentMission?.o2_lpm || 0) > 0">
+            <!-- v2.0: 氧氣鋼瓶 PSI 追蹤 (認領 + 手動) -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-4" x-show="(currentMission?.oxygen_requirement_lpm || currentMission?.o2_lpm || 0) > 0" x-init="loadAvailableCylinders()">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold text-blue-700">氧氣鋼瓶</h2>
-                    <button @click="addCylinder()" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                        + 新增鋼瓶
+                    <span class="text-xs text-gray-500" x-show="oxygenCylinders.filter(c => c.claimed).length > 0"
+                          x-text="oxygenCylinders.filter(c => c.claimed).length + ' 已認領'"></span>
+                </div>
+
+                <!-- 模式切換 Tab -->
+                <div class="flex border-b border-gray-200 mb-4">
+                    <button @click="cylinderMode = 'claim'; loadAvailableCylinders()"
+                            class="flex-1 py-2 text-sm font-medium border-b-2 transition"
+                            :class="cylinderMode === 'claim' ? 'text-blue-600 border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-700'">
+                        認領 (庫存)
+                    </button>
+                    <button @click="cylinderMode = 'manual'"
+                            class="flex-1 py-2 text-sm font-medium border-b-2 transition"
+                            :class="cylinderMode === 'manual' ? 'text-blue-600 border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-700'">
+                        手動輸入
                     </button>
                 </div>
 
-                <div class="space-y-3">
+                <!-- 認領模式: 可用鋼瓶列表 -->
+                <div x-show="cylinderMode === 'claim'" class="space-y-2 mb-4">
+                    <div class="text-xs text-gray-500 mb-2">從庫存認領的鋼瓶會影響韌性估算</div>
+                    <div x-show="loadingCylinders" class="text-center py-4 text-gray-400">載入中...</div>
+                    <template x-for="cyl in availableCylinders" :key="cyl.id">
+                        <div class="flex items-center justify-between border border-blue-100 rounded-lg p-3 bg-blue-50/50">
+                            <div>
+                                <span class="font-medium text-gray-800" x-text="cyl.unit_label"></span>
+                                <span class="text-xs text-gray-500 ml-1" x-text="'(' + cyl.cylinder_type + ')'"></span>
+                                <div class="text-xs text-blue-600" x-text="cyl.estimated_psi + ' PSI (' + cyl.level_percent + '%)'"></div>
+                            </div>
+                            <button @click="claimCylinder(cyl)"
+                                    :disabled="oxygenCylinders.some(c => c.cylinder_id === cyl.id)"
+                                    class="px-3 py-1 text-sm rounded font-medium transition"
+                                    :class="oxygenCylinders.some(c => c.cylinder_id === cyl.id)
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-blue-500 text-white hover:bg-blue-600'">
+                                <span x-text="oxygenCylinders.some(c => c.cylinder_id === cyl.id) ? '已認領' : '認領'"></span>
+                            </button>
+                        </div>
+                    </template>
+                    <div x-show="!loadingCylinders && availableCylinders.length === 0" class="text-center py-4 text-gray-400">
+                        目前無可用鋼瓶
+                    </div>
+                </div>
+
+                <!-- 手動模式: 手動新增 -->
+                <div x-show="cylinderMode === 'manual'" class="mb-4">
+                    <div class="text-xs text-gray-500 mb-2">手動輸入的鋼瓶不影響韌性估算</div>
+                    <button @click="addCylinder()" class="w-full border-2 border-dashed border-blue-300 rounded-lg p-3 text-blue-600 hover:bg-blue-50 transition">
+                        + 手動新增鋼瓶
+                    </button>
+                </div>
+
+                <!-- 已選鋼瓶列表 -->
+                <div class="space-y-3" x-show="oxygenCylinders.length > 0">
+                    <div class="text-sm font-medium text-gray-700">已選鋼瓶 (<span x-text="oxygenCylinders.length"></span>)</div>
                     <template x-for="(cyl, idx) in oxygenCylinders" :key="idx">
-                        <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                        <div class="border rounded-lg p-4"
+                             :class="cyl.claimed ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-gray-50'">
                             <div class="flex justify-between items-start mb-3">
                                 <div class="flex items-center gap-2">
-                                    <select x-model="cyl.cylinder_type" class="border border-blue-300 rounded px-2 py-1 text-sm bg-white">
-                                        <template x-for="(info, type) in cylinderTypes" :key="type">
-                                            <option :value="type" x-text="type + ' (' + info.capacity + 'L)'"></option>
-                                        </template>
-                                    </select>
-                                    <input type="text" x-model="cyl.unit_label" placeholder="編號"
-                                           class="w-20 border border-blue-300 rounded px-2 py-1 text-sm">
+                                    <span x-show="cyl.claimed" class="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">庫存</span>
+                                    <span x-show="!cyl.claimed" class="text-xs bg-gray-400 text-white px-1.5 py-0.5 rounded">手動</span>
+                                    <template x-if="cyl.claimed">
+                                        <span class="font-medium text-gray-800" x-text="cyl.unit_label + ' (' + cyl.cylinder_type + ')'"></span>
+                                    </template>
+                                    <template x-if="!cyl.claimed">
+                                        <div class="flex items-center gap-2">
+                                            <select x-model="cyl.cylinder_type" class="border border-gray-300 rounded px-2 py-1 text-sm bg-white">
+                                                <template x-for="(info, type) in cylinderTypes" :key="type">
+                                                    <option :value="type" x-text="type + ' (' + info.capacity + 'L)'"></option>
+                                                </template>
+                                            </select>
+                                            <input type="text" x-model="cyl.unit_label" placeholder="編號"
+                                                   class="w-20 border border-gray-300 rounded px-2 py-1 text-sm">
+                                        </div>
+                                    </template>
                                 </div>
                                 <button @click="oxygenCylinders.splice(idx, 1)" class="text-red-400 hover:text-red-600">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,7 +346,9 @@
                                 <label class="text-sm text-gray-600">起始 PSI:</label>
                                 <input type="number" x-model.number="cyl.starting_psi"
                                        min="0" max="3000" placeholder="2100"
-                                       class="w-24 border border-blue-300 rounded px-2 py-1 text-center">
+                                       :readonly="cyl.claimed"
+                                       class="w-24 border rounded px-2 py-1 text-center"
+                                       :class="cyl.claimed ? 'bg-gray-100 border-gray-200' : 'border-blue-300'">
                                 <span class="text-xs text-gray-500" x-text="'/ ' + (cylinderTypes[cyl.cylinder_type]?.full_psi || 2100)"></span>
                             </div>
                             <div class="text-xs text-blue-600 mt-2" x-show="cyl.starting_psi > 0"
@@ -299,10 +360,10 @@
                             </label>
                         </div>
                     </template>
+                </div>
 
-                    <div x-show="oxygenCylinders.length === 0" class="text-center py-4 text-gray-400">
-                        點擊「+ 新增鋼瓶」加入氧氣鋼瓶
-                    </div>
+                <div x-show="oxygenCylinders.length === 0" class="text-center py-4 text-gray-400">
+                    從上方認領或手動新增氧氣鋼瓶
                 </div>
             </div>
 
@@ -948,6 +1009,9 @@
 
                 // v2.0: 氧氣鋼瓶追蹤
                 oxygenCylinders: [],
+                cylinderMode: 'claim',  // 'claim' 認領模式, 'manual' 手動模式
+                availableCylinders: [], // 可認領的鋼瓶列表
+                loadingCylinders: false,
                 // v2.0: 設備電量追蹤
                 equipmentBattery: [],
                 // v2.0: 自訂藥物/耗材
@@ -1066,14 +1130,49 @@
                     this.currentStep = step;
                 },
 
-                // v2.0: 新增氧氣鋼瓶
+                // v2.0: 載入可認領的氧氣鋼瓶
+                async loadAvailableCylinders() {
+                    this.loadingCylinders = true;
+                    try {
+                        const res = await fetch('/api/transfer/available-cylinders');
+                        const data = await res.json();
+                        this.availableCylinders = data.cylinders || [];
+                    } catch (e) {
+                        console.error('Failed to load available cylinders:', e);
+                        this.availableCylinders = [];
+                    } finally {
+                        this.loadingCylinders = false;
+                    }
+                },
+
+                // v2.0: 認領鋼瓶 (從庫存)
+                claimCylinder(cyl) {
+                    // 檢查是否已認領
+                    if (this.oxygenCylinders.some(c => c.cylinder_id === cyl.id)) {
+                        alert('此鋼瓶已在清單中');
+                        return;
+                    }
+                    this.oxygenCylinders.push({
+                        cylinder_id: cyl.id,  // 連結到庫存 (後端用 cylinder_id)
+                        cylinder_type: cyl.cylinder_type,
+                        unit_label: cyl.unit_label,
+                        starting_psi: cyl.estimated_psi,
+                        ending_psi: null,
+                        checked: false,
+                        claimed: true  // 標記為認領
+                    });
+                },
+
+                // v2.0: 新增氧氣鋼瓶 (手動)
                 addCylinder() {
                     this.oxygenCylinders.push({
+                        cylinder_id: null,  // 無庫存連結
                         cylinder_type: 'E',
                         unit_label: '',
                         starting_psi: 2100,
                         ending_psi: null,
-                        checked: false
+                        checked: false,
+                        claimed: false  // 標記為手動
                     });
                 },
 
@@ -1213,11 +1312,13 @@
                             is_custom: true
                         }));
 
-                        // 氧氣鋼瓶 (v2.0)
+                        // 氧氣鋼瓶 (v2.0) - 含認領資訊
                         const oxygen_cylinders = this.oxygenCylinders.map(c => ({
+                            cylinder_id: c.cylinder_id || null,  // 庫存連結 (後端用 cylinder_id)
                             cylinder_type: c.cylinder_type,
                             unit_label: c.unit_label || null,
-                            starting_psi: c.starting_psi
+                            starting_psi: c.starting_psi,
+                            claimed: c.claimed || false  // 是否從庫存認領
                         }));
 
                         // 設備電量 (v2.0)

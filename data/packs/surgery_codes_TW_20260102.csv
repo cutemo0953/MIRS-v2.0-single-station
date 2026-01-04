@@ -254,3 +254,60 @@
 64284B,人工全肩關節再置換手術,,筋骨,3,30016,,"肩,置換",FALSE
 64285B,反置人工全肩關節置換手術,,筋骨,3,29128,,"肩,置換",FALSE
 83042B,脊椎內脊髓內腫瘤切除術,,神經外科,16,36731,,脊椎,FALSE
+83001B,開顱術-幕上,Craniotomy - supratentorial,神經外科,16,25000,,"開顱,腦",TRUE
+83002B,開顱術-幕下,Craniotomy - infratentorial,神經外科,16,28000,,"開顱,腦",TRUE
+83003B,顱骨切開術,Craniectomy,神經外科,16,18000,,"開顱,顱骨",FALSE
+83010B,腦內血腫清除術,Evacuation of intracerebral hematoma,神經外科,16,22000,,"血腫,腦出血",TRUE
+83015B,硬腦膜下血腫清除術,Evacuation of subdural hematoma,神經外科,16,15000,,"血腫,硬腦膜",TRUE
+83016B,硬腦膜外血腫清除術,Evacuation of epidural hematoma,神經外科,16,14000,,"血腫,硬腦膜",TRUE
+83020B,腦室引流術,Ventricular drainage,神經外科,16,8000,,"腦室,引流",TRUE
+83025B,腦室腹腔分流術,VP shunt,神經外科,16,18000,,"分流,水腦",TRUE
+83030B,脊椎椎板切除術(單節),Laminectomy - single level,神經外科,16,12000,,"脊椎,椎板",TRUE
+83031B,脊椎椎板切除術(多節),Laminectomy - multiple levels,神經外科,16,18000,,"脊椎,椎板",TRUE
+83035B,脊椎融合術(單節),Spinal fusion - single level,神經外科,16,25000,,"脊椎,融合",TRUE
+83036B,脊椎融合術(多節),Spinal fusion - multiple levels,神經外科,16,35000,,"脊椎,融合",TRUE
+83040B,椎間盤切除術,Discectomy,神經外科,16,15000,,"椎間盤,HIVD",TRUE
+67001B,開胸探查術,Thoracotomy - exploratory,胸腔,6,12000,,"開胸,探查",TRUE
+67010B,肺葉切除術,Lobectomy,胸腔,6,25000,,"肺,肺癌",TRUE
+67011B,肺節切除術,Segmentectomy,胸腔,6,22000,,"肺,肺結節",FALSE
+67015B,全肺切除術,Pneumonectomy,胸腔,6,35000,,"肺,肺癌",FALSE
+67020B,胸腔鏡輔助肺手術,VATS,胸腔,6,18000,,"胸腔鏡,VATS",TRUE
+67025B,肋骨骨折內固定術,Rib fixation,胸腔,6,15000,,"肋骨,骨折,ORIF",TRUE
+67030B,血胸清除術,Evacuation of hemothorax,胸腔,6,10000,,"血胸,引流",TRUE
+67035B,氣胸手術,Thoracotomy for pneumothorax,胸腔,6,12000,,"氣胸,肺",TRUE
+71001B,剖腹探查術,Exploratory laparotomy,消化器,10,8000,,"剖腹,探查",TRUE
+71010B,胃切除術-部分,Partial gastrectomy,消化器,10,18000,,"胃,胃癌",TRUE
+71011B,胃切除術-全部,Total gastrectomy,消化器,10,28000,,"胃,胃癌",FALSE
+71020B,小腸切除術,Small bowel resection,消化器,10,15000,,"小腸,腸阻塞",TRUE
+71025B,闘尾切除術,Appendectomy,消化器,10,8000,,"闘尾,闘尾炎",TRUE
+71026B,腹腔鏡闘尾切除術,Laparoscopic appendectomy,消化器,10,10000,,"闘尾,闘尾炎,腹腔鏡",TRUE
+71030B,腹股溝疝氣修補術,Inguinal hernia repair,消化器,10,8000,,"疝氣,腹股溝",TRUE
+71031B,腹腔鏡疝氣修補術,Laparoscopic hernia repair,消化器,10,12000,,"疝氣,腹腔鏡",TRUE
+71040B,腸造口術,Colostomy/Ileostomy,消化器,10,10000,,"造口,腸",TRUE
+71045B,腸造口關閉術,Stoma closure,消化器,10,12000,,"造口,關閉",FALSE
+72001B,大腸切除術-部分,Partial colectomy,大腸直腸肛門,11,20000,,"大腸,大腸癌",TRUE
+72010B,直腸切除術,Rectal resection,大腸直腸肛門,11,25000,,"直腸,直腸癌",TRUE
+72015B,腹腔鏡大腸切除術,Laparoscopic colectomy,大腸直腸肛門,11,25000,,"大腸,腹腔鏡",TRUE
+72020B,痔瘡切除術,Hemorrhoidectomy,大腸直腸肛門,11,5000,,"痔瘡",TRUE
+73001B,膽囊切除術,Cholecystectomy,肝膽胰,12,12000,,"膽囊,膽結石",TRUE
+73002B,腹腔鏡膽囊切除術,Laparoscopic cholecystectomy,肝膽胰,12,15000,,"膽囊,腹腔鏡",TRUE
+73010B,總膽管探查術,Common bile duct exploration,肝膽胰,12,18000,,"總膽管,膽結石",FALSE
+73020B,肝切除術-部分,Partial hepatectomy,肝膽胰,12,35000,,"肝,肝癌",TRUE
+73030B,胰十二指腸切除術,Whipple procedure,肝膽胰,12,45000,,"胰,胰臟癌,Whipple",FALSE
+73035B,脾切除術,Splenectomy,肝膽胰,12,15000,,"脾,脾臟",TRUE
+74001B,腎切除術,Nephrectomy,泌尿及男性生殖,13,20000,,"腎,腎臟",TRUE
+74002B,腹腔鏡腎切除術,Laparoscopic nephrectomy,泌尿及男性生殖,13,25000,,"腎,腹腔鏡",TRUE
+74010B,輸尿管結石取出術,Ureterolithotomy,泌尿及男性生殖,13,12000,,"輸尿管,結石",TRUE
+74015B,膀胱切除術,Cystectomy,泌尿及男性生殖,13,28000,,"膀胱,膀胱癌",FALSE
+74020B,經尿道膀胱腫瘤切除術,TURBT,泌尿及男性生殖,13,8000,,"膀胱,TURBT",TRUE
+74025B,經尿道前列腺切除術,TURP,泌尿及男性生殖,13,10000,,"前列腺,TURP",TRUE
+74030B,前列腺根除術,Radical prostatectomy,泌尿及男性生殖,13,30000,,"前列腺,前列腺癌",TRUE
+68001B,心包膜開窗術,Pericardial window,心臟及心包膜,7,12000,,"心包膜,引流",TRUE
+68010B,冠狀動脈繞道手術(單條),CABG - single vessel,心臟及心包膜,7,45000,,"CABG,冠狀動脈",TRUE
+68011B,冠狀動脈繞道手術(多條),CABG - multiple vessels,心臟及心包膜,7,65000,,"CABG,冠狀動脈",TRUE
+68020B,心臟瓣膜置換術,Valve replacement,心臟及心包膜,7,55000,,"瓣膜,心臟",TRUE
+68025B,心臟瓣膜修補術,Valve repair,心臟及心包膜,7,45000,,"瓣膜,心臟",TRUE
+69001B,動脈瘤切除術,Aneurysm resection,動脈與靜脈,8,25000,,"動脈瘤",TRUE
+69010B,動脈繞道術,Arterial bypass,動脈與靜脈,8,22000,,"動脈,繞道",TRUE
+69015B,靜脈曲張剝離術,Varicose vein stripping,動脈與靜脈,8,8000,,"靜脈曲張",TRUE
+69020B,動靜脈廔管建立術,AV fistula creation,動脈與靜脈,8,10000,,"廔管,透析",TRUE

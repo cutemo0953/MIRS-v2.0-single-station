@@ -839,6 +839,68 @@ def calculate_supplies(mission: dict) -> List[dict]:
 
 
 # =============================================================================
+# Equipment Availability API
+# =============================================================================
+
+@router.get("/available-cylinders")
+async def get_available_cylinders():
+    """取得可用氧氣鋼瓶列表 (供認領)"""
+    # Vercel demo mode
+    if IS_VERCEL:
+        return {
+            "cylinders": [
+                {"id": "demo-1", "unit_label": "E-001", "cylinder_type": "E", "level_percent": 100, "estimated_psi": 2100},
+                {"id": "demo-2", "unit_label": "E-002", "cylinder_type": "E", "level_percent": 85, "estimated_psi": 1785},
+                {"id": "demo-3", "unit_label": "E-003", "cylinder_type": "E", "level_percent": 50, "estimated_psi": 1050},
+            ],
+            "demo_mode": True
+        }
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT eu.id, eu.unit_label, eu.level_percent, e.name
+            FROM equipment_units eu
+            JOIN equipment e ON eu.equipment_id = e.id
+            WHERE (e.name LIKE '%氧氣%' OR e.name LIKE '%O2%' OR e.name LIKE '%E-Tank%' OR e.name LIKE '%D-Tank%')
+              AND eu.status IN ('OK', 'CHECKED', 'UNCHECKED')
+              AND eu.is_active = 1
+              AND eu.claimed_by_case_id IS NULL
+              AND (eu.claimed_by_mission_id IS NULL OR eu.claimed_by_mission_id = '')
+            ORDER BY eu.level_percent DESC
+        """)
+        rows = cursor.fetchall()
+
+        cylinders = []
+        for row in rows:
+            # 判斷鋼瓶類型
+            name = row['name'].upper()
+            if 'D-TANK' in name or 'D TANK' in name:
+                cyl_type = 'D'
+                full_psi = 2100
+            elif 'H-TANK' in name or 'H TANK' in name:
+                cyl_type = 'H'
+                full_psi = 2200
+            else:
+                cyl_type = 'E'  # 預設 E-tank
+                full_psi = 2100
+
+            cylinders.append({
+                "id": row['id'],
+                "unit_label": row['unit_label'],
+                "cylinder_type": cyl_type,
+                "level_percent": row['level_percent'] or 100,
+                "estimated_psi": int((row['level_percent'] or 100) / 100 * full_psi)
+            })
+
+        return {"cylinders": cylinders}
+    finally:
+        conn.close()
+
+
+# =============================================================================
 # Mission CRUD
 # =============================================================================
 
