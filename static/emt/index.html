@@ -15,6 +15,8 @@
     <script defer src="/static/js/alpine.min.js"></script>
     <style>
         [x-cloak] { display: none !important; }
+        /* 解決 sticky header 遮住內容的問題 */
+        html { scroll-padding-top: 60px; }
         .status-dot { width: 12px; height: 12px; border-radius: 50%; }
         .status-planning { background-color: #fbbf24; }
         .status-ready { background-color: #22c55e; }
@@ -1153,6 +1155,8 @@
 
                 goToStep(step) {
                     this.currentStep = step;
+                    // 切換步驟時捲動到頂部
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 },
 
                 // v2.0: 載入可認領的氧氣鋼瓶
@@ -1260,6 +1264,9 @@
                         this.showNewMission = false;
                         await this.loadMission(data.mission_id);
                         await this.loadMissionList();
+
+                        // 捲動到頂部，避免內容被 header 遮住
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
 
                         // Reset form (v2.0)
                         this.newMission = {
