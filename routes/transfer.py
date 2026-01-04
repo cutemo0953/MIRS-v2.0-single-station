@@ -343,6 +343,245 @@ def init_transfer_schema(cursor):
 # Inventory Interlock Functions
 # =============================================================================
 
+# Cylinder capacity reference (liters at full PSI)
+CYLINDER_CAPACITY = {
+    'E': {'liters': 660, 'full_psi': 2100},
+    'D': {'liters': 350, 'full_psi': 2100},
+    'M': {'liters': 3000, 'full_psi': 2200},
+    'H': {'liters': 6900, 'full_psi': 2200},
+    'Jumbo-D': {'liters': 640, 'full_psi': 2200},
+}
+
+
+def calculate_consumed_liters(cylinder_type: str, starting_psi: int, ending_psi: int) -> float:
+    """Calculate consumed liters from PSI difference."""
+    cap = CYLINDER_CAPACITY.get(cylinder_type, CYLINDER_CAPACITY['E'])
+    if starting_psi <= 0:
+        return 0
+    consumed = (starting_psi - ending_psi) / cap['full_psi'] * cap['liters']
+    return max(0, round(consumed, 1))
+
+
+# =============================================================================
+# v2.0 Inventory Interlock - PSI & Battery Tracking
+# =============================================================================
+
+def reserve_cylinders_v2(mission_id: str, cylinders: List[dict], cursor) -> List[dict]:
+    """
+    v2.0: 預留氧氣鋼瓶 (PLANNING → READY)
+    記錄每瓶的 starting_psi 到 transfer_oxygen_cylinders 表
+    Returns: list of reserved cylinder records
+    """
+    reserved = []
+
+    for cyl in cylinders:
+        # Insert into tracking table
+        cursor.execute("""
+            INSERT INTO transfer_oxygen_cylinders (
+                mission_id, cylinder_id, cylinder_type, unit_label, starting_psi, status
+            ) VALUES (?, ?, ?, ?, ?, 'ASSIGNED')
+        """, (
+            mission_id,
+            cyl.get('cylinder_id'),
+            cyl.get('cylinder_type', 'E'),
+            cyl.get('unit_label'),
+            cyl.get('starting_psi', 0)
+        ))
+
+        # If linked to equipment_units, mark as reserved
+        if cyl.get('cylinder_id'):
+            try:
+                cursor.execute("""
+                    UPDATE equipment_units
+                    SET claimed_by_mission_id = ?,
+                        mission_claimed_at = CURRENT_TIMESTAMP,
+                        status = 'RESERVED'
+                    WHERE id = ? OR unit_label = ?
+                """, (mission_id, cyl['cylinder_id'], cyl['cylinder_id']))
+            except Exception as e:
+                logger.debug(f"Could not reserve equipment unit: {e}")
+
+        reserved.append({
+            'cylinder_id': cyl.get('cylinder_id'),
+            'cylinder_type': cyl.get('cylinder_type', 'E'),
+            'starting_psi': cyl.get('starting_psi', 0)
+        })
+        logger.info(f"Reserved O2 cylinder {cyl.get('cylinder_id') or 'unlabeled'} @ {cyl.get('starting_psi')} PSI")
+
+    return reserved
+
+
+def reserve_equipment_v2(mission_id: str, equipment: List[dict], cursor) -> List[dict]:
+    """
+    v2.0: 預留設備 (PLANNING → READY)
+    記錄每台設備的 starting_battery_pct 到 transfer_equipment_battery 表
+    """
+    reserved = []
+
+    for eq in equipment:
+        cursor.execute("""
+            INSERT INTO transfer_equipment_battery (
+                mission_id, equipment_id, equipment_name, equipment_type,
+                starting_battery_pct, status
+            ) VALUES (?, ?, ?, ?, ?, 'ASSIGNED')
+        """, (
+            mission_id,
+            eq.get('equipment_id'),
+            eq.get('equipment_name', 'Unknown'),
+            eq.get('equipment_type'),
+            eq.get('starting_battery_pct', 100)
+        ))
+
+        # If linked to equipment_units, mark as reserved
+        if eq.get('equipment_id'):
+            try:
+                cursor.execute("""
+                    UPDATE equipment_units
+                    SET claimed_by_mission_id = ?,
+                        mission_claimed_at = CURRENT_TIMESTAMP,
+                        status = 'RESERVED'
+                    WHERE id = ? OR unit_label = ?
+                """, (mission_id, eq['equipment_id'], eq['equipment_id']))
+            except Exception as e:
+                logger.debug(f"Could not reserve equipment unit: {e}")
+
+        reserved.append({
+            'equipment_id': eq.get('equipment_id'),
+            'equipment_name': eq.get('equipment_name'),
+            'starting_battery_pct': eq.get('starting_battery_pct', 100)
+        })
+        logger.info(f"Reserved equipment {eq.get('equipment_name')} @ {eq.get('starting_battery_pct')}%")
+
+    return reserved
+
+
+def finalize_cylinders_v2(mission_id: str, cylinders: List[dict], cursor) -> dict:
+    """
+    v2.0: 歸還氧氣鋼瓶 (ARRIVED → COMPLETED)
+    記錄 ending_psi，計算 consumed_liters
+    """
+    total_consumed = 0
+    finalized = []
+
+    for cyl in cylinders:
+        cyl_id = cyl.get('cylinder_id')
+        ending_psi = cyl.get('ending_psi', 0)
+
+        # Get starting PSI from tracking table
+        cursor.execute("""
+            SELECT id, cylinder_type, starting_psi
+            FROM transfer_oxygen_cylinders
+            WHERE mission_id = ? AND (cylinder_id = ? OR cylinder_id IS NULL)
+            LIMIT 1
+        """, (mission_id, cyl_id))
+        row = cursor.fetchone()
+
+        if row:
+            starting_psi = row['starting_psi'] or 0
+            cyl_type = row['cylinder_type'] or 'E'
+            consumed = calculate_consumed_liters(cyl_type, starting_psi, ending_psi)
+            total_consumed += consumed
+
+            # Update tracking table
+            cursor.execute("""
+                UPDATE transfer_oxygen_cylinders
+                SET ending_psi = ?, consumed_liters = ?, status = 'RETURNED',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (ending_psi, consumed, row['id']))
+
+            finalized.append({
+                'cylinder_id': cyl_id,
+                'starting_psi': starting_psi,
+                'ending_psi': ending_psi,
+                'consumed_liters': consumed
+            })
+
+        # Release equipment_units
+        if cyl_id:
+            try:
+                # Convert PSI to level_percent
+                cap = CYLINDER_CAPACITY.get(cyl_type, CYLINDER_CAPACITY['E'])
+                new_level = min(100, (ending_psi / cap['full_psi']) * 100)
+
+                cursor.execute("""
+                    UPDATE equipment_units
+                    SET claimed_by_mission_id = NULL,
+                        mission_claimed_at = NULL,
+                        status = 'UNCHECKED',
+                        level_percent = ?
+                    WHERE id = ? OR unit_label = ?
+                """, (new_level, cyl_id, cyl_id))
+            except Exception as e:
+                logger.debug(f"Could not release equipment unit: {e}")
+
+    return {
+        'cylinders': finalized,
+        'total_consumed_liters': total_consumed
+    }
+
+
+def finalize_equipment_v2(mission_id: str, equipment: List[dict], cursor) -> dict:
+    """
+    v2.0: 歸還設備 (ARRIVED → COMPLETED)
+    記錄 ending_battery_pct，計算 drain
+    """
+    finalized = []
+
+    for eq in equipment:
+        eq_id = eq.get('equipment_id')
+        ending_pct = eq.get('ending_battery_pct', 0)
+
+        # Get starting battery from tracking table
+        cursor.execute("""
+            SELECT id, equipment_name, starting_battery_pct
+            FROM transfer_equipment_battery
+            WHERE mission_id = ? AND (equipment_id = ? OR equipment_id IS NULL)
+            LIMIT 1
+        """, (mission_id, eq_id))
+        row = cursor.fetchone()
+
+        if row:
+            starting_pct = row['starting_battery_pct'] or 100
+            drain = starting_pct - ending_pct
+
+            # Update tracking table
+            cursor.execute("""
+                UPDATE transfer_equipment_battery
+                SET ending_battery_pct = ?, battery_drain_pct = ?, status = 'RETURNED',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (ending_pct, drain, row['id']))
+
+            finalized.append({
+                'equipment_id': eq_id,
+                'equipment_name': row['equipment_name'],
+                'starting_battery_pct': starting_pct,
+                'ending_battery_pct': ending_pct,
+                'drain_pct': drain
+            })
+
+        # Release equipment_units
+        if eq_id:
+            try:
+                cursor.execute("""
+                    UPDATE equipment_units
+                    SET claimed_by_mission_id = NULL,
+                        mission_claimed_at = NULL,
+                        status = 'UNCHECKED',
+                        level_percent = ?
+                    WHERE id = ? OR unit_label = ?
+                """, (ending_pct, eq_id, eq_id))
+            except Exception as e:
+                logger.debug(f"Could not release equipment unit: {e}")
+
+    return {'equipment': finalized}
+
+
+# =============================================================================
+# v1.x Legacy Inventory Interlock (for backwards compatibility)
+# =============================================================================
+
 def reserve_oxygen_cylinders(mission_id: str, quantity: int, cursor) -> List[int]:
     """
     預留氧氣鋼瓶 (PLANNING → READY)
@@ -916,6 +1155,89 @@ async def confirm_loadout(mission_id: str, items: List[TransferItemConfirm]):
         conn.close()
 
 
+@router.post("/missions/{mission_id}/confirm/v2")
+async def confirm_loadout_v2(mission_id: str, payload: ConfirmLoadoutV2):
+    """v2.0 確認攜帶清單 - 含 PSI/電量追蹤"""
+    # Vercel demo mode
+    if IS_VERCEL:
+        return {
+            "status": "READY",
+            "message": "Loadout confirmed (demo v2.0)",
+            "cylinders": [{"cylinder_type": "E", "starting_psi": 2100}],
+            "equipment": [{"equipment_name": "Monitor", "starting_battery_pct": 95}],
+            "demo_mode": True
+        }
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT status FROM transfer_missions WHERE mission_id = ?", (mission_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Mission not found")
+        if row['status'] != 'PLANNING':
+            raise HTTPException(status_code=400, detail="Mission must be in PLANNING status")
+
+        # Update items with carried quantities
+        for item in payload.items:
+            cursor.execute("""
+                UPDATE transfer_items
+                SET carried_qty = ?, initial_status = ?, checked = 1, checked_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND mission_id = ?
+            """, (item.carried_qty, item.initial_status, item.item_id, mission_id))
+
+        # v2.0: Reserve cylinders with PSI tracking
+        reserved_cylinders = []
+        if payload.oxygen_cylinders:
+            reserved_cylinders = reserve_cylinders_v2(
+                mission_id,
+                [c.model_dump() for c in payload.oxygen_cylinders],
+                cursor
+            )
+
+        # v2.0: Reserve equipment with battery tracking
+        reserved_equipment = []
+        if payload.equipment:
+            reserved_equipment = reserve_equipment_v2(
+                mission_id,
+                [e.model_dump() for e in payload.equipment],
+                cursor
+            )
+
+        # Update mission status and store JSON
+        cursor.execute("""
+            UPDATE transfer_missions
+            SET status = 'READY',
+                ready_at = CURRENT_TIMESTAMP,
+                confirmed_at = CURRENT_TIMESTAMP,
+                oxygen_cylinders_json = ?,
+                equipment_battery_json = ?
+            WHERE mission_id = ?
+        """, (
+            json.dumps(reserved_cylinders),
+            json.dumps(reserved_equipment),
+            mission_id
+        ))
+        conn.commit()
+
+        # Emit RESERVE event
+        emit_event(mission_id, 'TRANSFER_RESERVE', {
+            'items': [i.model_dump() for i in payload.items],
+            'cylinders': reserved_cylinders,
+            'equipment': reserved_equipment
+        })
+
+        return {
+            "status": "READY",
+            "message": "Loadout confirmed (v2.0)",
+            "cylinders": reserved_cylinders,
+            "equipment": reserved_equipment
+        }
+    finally:
+        conn.close()
+
+
 @router.post("/missions/{mission_id}/depart")
 async def depart_mission(mission_id: str):
     """出發 (READY → EN_ROUTE) - 含庫存發放"""
@@ -1145,6 +1467,112 @@ async def finalize_mission(mission_id: str):
                 "incoming_items": incoming_count,
                 "returned_oxygen_units": returned_count
             }
+        }
+    finally:
+        conn.close()
+
+
+@router.post("/missions/{mission_id}/finalize/v2")
+async def finalize_mission_v2(mission_id: str, payload: FinalizeV2):
+    """v2.0 結案 - 含 PSI/電量計算"""
+    # Vercel demo mode
+    if IS_VERCEL:
+        return {
+            "status": "COMPLETED",
+            "summary": {
+                "total_carried": 5,
+                "total_returned": 2,
+                "total_consumed": 3,
+            },
+            "cylinders": [
+                {"cylinder_type": "E", "starting_psi": 2100, "ending_psi": 1200, "consumed_liters": 283}
+            ],
+            "equipment": [
+                {"equipment_name": "Monitor", "starting_battery_pct": 95, "ending_battery_pct": 70, "drain_pct": 25}
+            ],
+            "demo_mode": True
+        }
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT status FROM transfer_missions WHERE mission_id = ?", (mission_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Mission not found")
+        if row['status'] != 'ARRIVED':
+            raise HTTPException(status_code=400, detail="Mission must be in ARRIVED status")
+
+        # Update items with returned quantities
+        for item in payload.items:
+            cursor.execute("SELECT carried_qty FROM transfer_items WHERE id = ?", (item.item_id,))
+            carried = cursor.fetchone()
+            consumed = (carried['carried_qty'] or 0) - item.returned_qty if carried else 0
+
+            cursor.execute("""
+                UPDATE transfer_items
+                SET returned_qty = ?, final_status = ?, consumed_qty = ?
+                WHERE id = ? AND mission_id = ?
+            """, (item.returned_qty, item.final_status, consumed, item.item_id, mission_id))
+
+        # v2.0: Finalize cylinders with PSI tracking
+        cylinder_result = {'cylinders': [], 'total_consumed_liters': 0}
+        if payload.oxygen_cylinders:
+            cylinder_result = finalize_cylinders_v2(
+                mission_id,
+                [c.model_dump() for c in payload.oxygen_cylinders],
+                cursor
+            )
+
+        # v2.0: Finalize equipment with battery tracking
+        equipment_result = {'equipment': []}
+        if payload.equipment:
+            equipment_result = finalize_equipment_v2(
+                mission_id,
+                [e.model_dump() for e in payload.equipment],
+                cursor
+            )
+
+        # Update mission status
+        cursor.execute("""
+            UPDATE transfer_missions
+            SET status = 'COMPLETED',
+                finalized_at = CURRENT_TIMESTAMP,
+                oxygen_cylinders_json = ?,
+                equipment_battery_json = ?
+            WHERE mission_id = ?
+        """, (
+            json.dumps(cylinder_result['cylinders']),
+            json.dumps(equipment_result['equipment']),
+            mission_id
+        ))
+        conn.commit()
+
+        # Get summary
+        cursor.execute("""
+            SELECT
+                SUM(carried_qty) as total_carried,
+                SUM(returned_qty) as total_returned,
+                SUM(consumed_qty) as total_consumed
+            FROM transfer_items WHERE mission_id = ?
+        """, (mission_id,))
+        summary = dict(cursor.fetchone())
+
+        # Emit FINALIZE event
+        emit_event(mission_id, 'TRANSFER_RETURN', {
+            'items': [i.model_dump() for i in payload.items],
+            'cylinders': cylinder_result['cylinders'],
+            'equipment': equipment_result['equipment'],
+            'total_consumed_liters': cylinder_result['total_consumed_liters']
+        })
+
+        return {
+            "status": "COMPLETED",
+            "summary": summary,
+            "cylinders": cylinder_result['cylinders'],
+            "total_consumed_liters": cylinder_result['total_consumed_liters'],
+            "equipment": equipment_result['equipment']
         }
     finally:
         conn.close()
