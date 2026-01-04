@@ -151,7 +151,7 @@
 
         <!-- Step 2: Loadout Confirmation (PLANNING → READY) -->
         <div x-show="currentMission && currentStep === 1" x-cloak>
-            <!-- 一般物資 -->
+            <!-- 一般物資 (輸液/設備) -->
             <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold text-amber-700">物資整備</h2>
@@ -159,7 +159,7 @@
                 </div>
 
                 <div class="space-y-3">
-                    <template x-for="item in missionItems.filter(i => i.item_type !== 'OXYGEN')" :key="item.id">
+                    <template x-for="item in missionItems.filter(i => i.item_type !== 'OXYGEN' && i.item_type !== 'MEDICATION')" :key="item.id">
                         <div class="border border-amber-200 rounded-lg p-4 bg-amber-50">
                             <div class="flex justify-between items-start mb-2">
                                 <div>
@@ -180,6 +180,78 @@
                             </label>
                         </div>
                     </template>
+                </div>
+            </div>
+
+            <!-- 藥物/耗材 (可增減) -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-green-700">藥物/耗材</h2>
+                    <button @click="showAddMedication = true" class="text-green-600 hover:text-green-700 text-sm font-medium">
+                        + 新增項目
+                    </button>
+                </div>
+
+                <div class="space-y-3">
+                    <template x-for="(item, idx) in missionItems.filter(i => i.item_type === 'MEDICATION')" :key="item.id || idx">
+                        <div class="border border-green-200 rounded-lg p-4 bg-green-50">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex-1">
+                                    <span class="font-medium text-gray-800" x-text="item.item_name"></span>
+                                    <span class="text-xs text-green-600 ml-2" x-text="item.calculation_explain || '手動新增'"></span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" x-model.number="item.carried_qty"
+                                           class="w-16 border border-green-300 rounded px-2 py-1 text-center"
+                                           :placeholder="item.suggested_qty || 1" min="0">
+                                    <span class="text-gray-500" x-text="item.unit"></span>
+                                    <button @click="removeMedicationItem(item)"
+                                            x-show="item.is_custom"
+                                            class="text-red-400 hover:text-red-600 ml-1">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                                <input type="checkbox" x-model="item.checked" class="w-5 h-5 text-green-500 rounded">
+                                <span class="text-sm text-gray-600">已確認</span>
+                            </label>
+                        </div>
+                    </template>
+
+                    <template x-for="(item, idx) in customMedications" :key="'custom-' + idx">
+                        <div class="border border-green-200 rounded-lg p-4 bg-green-50">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex-1">
+                                    <span class="font-medium text-gray-800" x-text="item.item_name"></span>
+                                    <span class="text-xs text-green-600 ml-2">手動新增</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" x-model.number="item.carried_qty"
+                                           class="w-16 border border-green-300 rounded px-2 py-1 text-center"
+                                           min="0">
+                                    <span class="text-gray-500" x-text="item.unit"></span>
+                                    <button @click="customMedications.splice(idx, 1)"
+                                            class="text-red-400 hover:text-red-600 ml-1">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                                <input type="checkbox" x-model="item.checked" class="w-5 h-5 text-green-500 rounded">
+                                <span class="text-sm text-gray-600">已確認</span>
+                            </label>
+                        </div>
+                    </template>
+
+                    <div x-show="missionItems.filter(i => i.item_type === 'MEDICATION').length === 0 && customMedications.length === 0"
+                         class="text-center py-4 text-gray-400">
+                        點擊「+ 新增項目」加入藥物或耗材
+                    </div>
                 </div>
             </div>
 
@@ -667,6 +739,98 @@
         </div>
     </div>
 
+    <!-- Add Medication Modal -->
+    <div x-show="showAddMedication" x-cloak
+         class="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
+         @click.self="showAddMedication = false">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md p-6" @click.stop>
+            <h3 class="text-lg font-bold text-green-700 mb-4">新增藥物/耗材</h3>
+
+            <div class="space-y-4">
+                <!-- 常用藥物快捷 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">常用項目</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button @click="quickAddMedication('Epinephrine 1mg', '支', 2)"
+                                class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm hover:bg-green-200">
+                            Epinephrine
+                        </button>
+                        <button @click="quickAddMedication('Atropine 0.5mg', '支', 2)"
+                                class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm hover:bg-green-200">
+                            Atropine
+                        </button>
+                        <button @click="quickAddMedication('Morphine 10mg', '支', 1)"
+                                class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm hover:bg-green-200">
+                            Morphine
+                        </button>
+                        <button @click="quickAddMedication('Ketamine 500mg', '瓶', 1)"
+                                class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm hover:bg-green-200">
+                            Ketamine
+                        </button>
+                        <button @click="quickAddMedication('TXA 1g', '支', 2)"
+                                class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm hover:bg-green-200">
+                            TXA
+                        </button>
+                        <button @click="quickAddMedication('止血帶', '條', 2)"
+                                class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm hover:bg-amber-200">
+                            止血帶
+                        </button>
+                        <button @click="quickAddMedication('胸腔封閉貼', '片', 1)"
+                                class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm hover:bg-amber-200">
+                            胸封貼
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-t pt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">自訂項目</label>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">品項名稱</label>
+                    <input type="text" x-model="newMedication.item_name"
+                           placeholder="如: Midazolam 5mg"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">數量</label>
+                        <input type="number" x-model.number="newMedication.carried_qty"
+                               min="1" placeholder="1"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">單位</label>
+                        <select x-model="newMedication.unit"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white">
+                            <option value="支">支</option>
+                            <option value="瓶">瓶</option>
+                            <option value="袋">袋</option>
+                            <option value="片">片</option>
+                            <option value="條">條</option>
+                            <option value="組">組</option>
+                            <option value="個">個</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button @click="showAddMedication = false"
+                        class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl">
+                    取消
+                </button>
+                <button @click="addMedication()"
+                        :disabled="!newMedication.item_name"
+                        :class="newMedication.item_name ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 cursor-not-allowed'"
+                        class="flex-1 text-white font-bold py-3 rounded-xl">
+                    新增
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Incoming Item Modal -->
     <div x-show="showAddIncoming" x-cloak
          class="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
@@ -786,6 +950,14 @@
                 oxygenCylinders: [],
                 // v2.0: 設備電量追蹤
                 equipmentBattery: [],
+                // v2.0: 自訂藥物/耗材
+                customMedications: [],
+                showAddMedication: false,
+                newMedication: {
+                    item_name: '',
+                    carried_qty: 1,
+                    unit: '支'
+                },
 
                 // 鋼瓶類型參考
                 cylinderTypes: {
@@ -810,12 +982,13 @@
                     return this.missionItems.every(i => i.checked);
                 },
 
-                // v2.0: 檢查所有項目 (含鋼瓶和設備)
+                // v2.0: 檢查所有項目 (含鋼瓶、設備、自訂藥物)
                 get allItemsCheckedV2() {
                     const itemsOk = this.missionItems.filter(i => i.item_type !== 'OXYGEN').every(i => i.checked);
                     const cylindersOk = this.oxygenCylinders.length === 0 || this.oxygenCylinders.every(c => c.checked && c.starting_psi > 0);
                     const equipmentOk = this.equipmentBattery.length === 0 || this.equipmentBattery.every(e => e.checked);
-                    return itemsOk && cylindersOk && equipmentOk;
+                    const medsOk = this.customMedications.length === 0 || this.customMedications.every(m => m.checked);
+                    return itemsOk && cylindersOk && equipmentOk && medsOk;
                 },
 
                 // v2.0: 總氧氣消耗量
@@ -915,6 +1088,42 @@
                     });
                 },
 
+                // v2.0: 新增藥物/耗材
+                addMedication() {
+                    if (!this.newMedication.item_name) return;
+                    this.customMedications.push({
+                        item_type: 'MEDICATION',
+                        item_name: this.newMedication.item_name,
+                        carried_qty: this.newMedication.carried_qty || 1,
+                        unit: this.newMedication.unit || '支',
+                        checked: false,
+                        is_custom: true
+                    });
+                    this.newMedication = { item_name: '', carried_qty: 1, unit: '支' };
+                    this.showAddMedication = false;
+                },
+
+                // v2.0: 快速新增常用藥物
+                quickAddMedication(name, unit, qty) {
+                    this.customMedications.push({
+                        item_type: 'MEDICATION',
+                        item_name: name,
+                        carried_qty: qty,
+                        unit: unit,
+                        checked: false,
+                        is_custom: true
+                    });
+                    this.showAddMedication = false;
+                },
+
+                // v2.0: 移除藥物
+                removeMedicationItem(item) {
+                    const idx = this.missionItems.indexOf(item);
+                    if (idx > -1) {
+                        this.missionItems.splice(idx, 1);
+                    }
+                },
+
                 async createMission() {
                     try {
                         const res = await fetch('/api/transfer/missions', {
@@ -944,6 +1153,7 @@
                         // 清空 v2.0 追蹤資料
                         this.oxygenCylinders = [];
                         this.equipmentBattery = [];
+                        this.customMedications = [];
                     } catch (e) {
                         console.error('Failed to create mission:', e);
                         alert('建立任務失敗');
@@ -985,13 +1195,23 @@
                         return;
                     }
                     try {
-                        // 一般物資
+                        // 一般物資 (排除 OXYGEN，含 MEDICATION)
                         const items = this.missionItems
                             .filter(i => i.item_type !== 'OXYGEN')
                             .map(i => ({
                                 item_id: i.id,
                                 carried_qty: i.carried_qty
                             }));
+
+                        // 加入自訂藥物
+                        const customMeds = this.customMedications.map(m => ({
+                            item_id: null,  // 無 ID，為自訂項目
+                            item_type: 'MEDICATION',
+                            item_name: m.item_name,
+                            carried_qty: m.carried_qty,
+                            unit: m.unit,
+                            is_custom: true
+                        }));
 
                         // 氧氣鋼瓶 (v2.0)
                         const oxygen_cylinders = this.oxygenCylinders.map(c => ({
@@ -1007,7 +1227,7 @@
                             starting_battery_pct: e.starting_battery_pct
                         }));
 
-                        const payload = { items, oxygen_cylinders, equipment };
+                        const payload = { items: [...items, ...customMeds], oxygen_cylinders, equipment };
 
                         // 使用 v2.0 端點
                         const res = await fetch(`/api/transfer/missions/${this.currentMission.mission_id}/confirm/v2`, {
@@ -1159,6 +1379,7 @@
                             // 清空追蹤資料
                             this.oxygenCylinders = [];
                             this.equipmentBattery = [];
+                            this.customMedications = [];
                             await this.loadMissionList();
                         } else {
                             const err = await res.json();
