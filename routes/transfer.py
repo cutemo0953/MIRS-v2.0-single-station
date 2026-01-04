@@ -1,11 +1,14 @@
 """
 MIRS EMT Transfer Module API
-Version: 1.1.0
+Version: 2.0.0
 
 病患轉送任務管理：
-- 物資計算 (3× 安全係數)
+- 物資計算 (1-15× 安全係數)
+- PSI 單瓶追蹤
+- 設備電量追蹤
+- 三分離計量 (攜帶/歸還/消耗)
 - 離線優先架構
-- 庫存連動
+- 庫存連動 (Reserve/Issue/Return)
 """
 
 from typing import Optional, List
@@ -83,16 +86,62 @@ router = APIRouter(prefix="/api/transfer", tags=["transfer"])
 # =============================================================================
 
 class MissionCreate(BaseModel):
-    destination: str = Field(..., min_length=1)
-    estimated_duration_min: int = Field(..., ge=10, le=720)
+    """v2.0 任務建立模型"""
+    # 目的地 (v2.0: destination_text 為主, destination 為 alias)
+    destination: Optional[str] = None
+    destination_text: Optional[str] = None
+
+    # 時間 (v2.0: eta_min 為單程, estimated_duration_min 為往返)
+    eta_min: Optional[int] = Field(None, ge=10, le=480)
+    estimated_duration_min: Optional[int] = Field(None, ge=10, le=720)
+
+    # 病患狀況
     patient_condition: Optional[str] = "STABLE"  # CRITICAL, STABLE, INTUBATED
     patient_summary: Optional[str] = None
-    oxygen_requirement_lpm: float = Field(default=0, ge=0, le=15)
-    iv_rate_mlhr: float = Field(default=0, ge=0, le=500)
+
+    # 氧氣 (v2.0: o2_lpm 為主)
+    o2_lpm: Optional[float] = Field(None, ge=0, le=15)
+    oxygen_requirement_lpm: Optional[float] = Field(None, ge=0, le=15)  # v1.x compat
+
+    # 輸液 (v2.0: iv_mode + iv_mlhr_override)
+    iv_mode: Optional[str] = "NONE"  # NONE, KVO, BOLUS, CUSTOM
+    iv_mlhr_override: Optional[float] = Field(None, ge=0, le=1000)
+    iv_rate_mlhr: Optional[float] = Field(None, ge=0, le=500)  # v1.x compat
+
+    # 其他
     ventilator_required: bool = False
-    safety_factor: float = Field(default=3.0, ge=1.0, le=5.0)
+    safety_factor: float = Field(default=3.0, ge=1.0, le=15.0)  # v2.0: 1-15
     emt_name: Optional[str] = None
     notes: Optional[str] = None
+
+    def get_destination(self) -> str:
+        """Get destination, preferring destination_text"""
+        return self.destination_text or self.destination or ""
+
+    def get_eta_min(self) -> int:
+        """Get ETA, calculating from duration if needed"""
+        if self.eta_min:
+            return self.eta_min
+        if self.estimated_duration_min:
+            return self.estimated_duration_min // 2  # Half of round-trip
+        return 60  # Default 1 hour
+
+    def get_o2_lpm(self) -> float:
+        """Get O2 L/min, with v1.x compat"""
+        return self.o2_lpm if self.o2_lpm is not None else (self.oxygen_requirement_lpm or 0)
+
+    def get_iv_rate(self) -> float:
+        """Get effective IV rate based on mode"""
+        if self.iv_mode == "NONE":
+            return 0
+        if self.iv_mode == "KVO":
+            return 30
+        if self.iv_mode == "BOLUS":
+            return 1000  # 500mL/30min equivalent
+        if self.iv_mode == "CUSTOM" and self.iv_mlhr_override:
+            return self.iv_mlhr_override
+        # v1.x compat
+        return self.iv_rate_mlhr or 0
 
 
 class MissionUpdate(BaseModel):
@@ -108,18 +157,67 @@ class MissionUpdate(BaseModel):
 
 
 class TransferItemConfirm(BaseModel):
+    """v1.x 相容的確認模型"""
     item_id: int
     carried_qty: float
     initial_status: Optional[str] = None  # e.g., "PSI: 2100"
 
 
+# =============================================================================
+# v2.0 Models - Cylinder & Battery Tracking
+# =============================================================================
+
+class OxygenCylinderConfirm(BaseModel):
+    """v2.0 氧氣瓶確認 (PSI 追蹤)"""
+    cylinder_id: Optional[str] = None       # Equipment unit ID
+    cylinder_type: str = "E"                # E, D, H, M
+    unit_label: Optional[str] = None        # Physical label
+    starting_psi: int = Field(..., ge=0, le=3000)
+
+
+class OxygenCylinderFinalize(BaseModel):
+    """v2.0 氧氣瓶結案"""
+    cylinder_id: Optional[str] = None
+    ending_psi: int = Field(..., ge=0, le=3000)
+
+
+class EquipmentBatteryConfirm(BaseModel):
+    """v2.0 設備電量確認"""
+    equipment_id: Optional[str] = None
+    equipment_name: str
+    equipment_type: Optional[str] = None    # MONITOR, VENTILATOR, SUCTION
+    starting_battery_pct: int = Field(..., ge=0, le=100)
+
+
+class EquipmentBatteryFinalize(BaseModel):
+    """v2.0 設備電量結案"""
+    equipment_id: Optional[str] = None
+    ending_battery_pct: int = Field(..., ge=0, le=100)
+
+
 class RecheckItem(BaseModel):
+    """歸還確認"""
     item_id: int
     returned_qty: float
     final_status: Optional[str] = None  # e.g., "PSI: 500"
 
 
+class ConfirmLoadoutV2(BaseModel):
+    """v2.0 確認攜帶清單"""
+    items: List[TransferItemConfirm] = []
+    oxygen_cylinders: List[OxygenCylinderConfirm] = []
+    equipment: List[EquipmentBatteryConfirm] = []
+
+
+class FinalizeV2(BaseModel):
+    """v2.0 結案"""
+    items: List[RecheckItem] = []
+    oxygen_cylinders: List[OxygenCylinderFinalize] = []
+    equipment: List[EquipmentBatteryFinalize] = []
+
+
 class IncomingItem(BaseModel):
+    """外帶物資"""
     item_type: str
     item_name: str
     quantity: float
@@ -184,24 +282,49 @@ def emit_event(mission_id: str, event_type: str, payload: dict, actor_id: str = 
 # =============================================================================
 
 def init_transfer_schema(cursor):
-    """Initialize transfer module schema."""
+    """Initialize transfer module schema (v1.0 + v2.0)."""
     from pathlib import Path
 
+    # v1.0 base migration
     migration_path = Path(__file__).parent.parent / "database" / "migrations" / "add_transfer_module.sql"
 
     if migration_path.exists():
-        logger.info("Running transfer module migration...")
+        logger.info("Running transfer module migration (v1.0)...")
         with open(migration_path, 'r', encoding='utf-8') as f:
             migration_sql = f.read()
 
         try:
             cursor.connection.executescript(migration_sql)
-            logger.info("✓ Transfer module schema initialized")
+            logger.info("✓ Transfer module schema v1.0 initialized")
         except Exception as e:
             if "already exists" not in str(e).lower():
-                logger.warning(f"Transfer migration warning: {e}")
+                logger.warning(f"Transfer v1.0 migration warning: {e}")
     else:
-        logger.warning(f"Transfer migration not found: {migration_path}")
+        logger.warning(f"Transfer v1.0 migration not found: {migration_path}")
+
+    # v2.0 upgrade migration
+    v2_migration_path = Path(__file__).parent.parent / "database" / "migrations" / "transfer_v2_upgrade.sql"
+
+    if v2_migration_path.exists():
+        logger.info("Running transfer module migration (v2.0)...")
+        with open(v2_migration_path, 'r', encoding='utf-8') as f:
+            v2_sql = f.read()
+
+        # Run each ALTER TABLE separately (SQLite doesn't support multiple in one statement)
+        for statement in v2_sql.split(';'):
+            statement = statement.strip()
+            if not statement or statement.startswith('--'):
+                continue
+            try:
+                cursor.execute(statement)
+            except Exception as e:
+                # Ignore "duplicate column" and "table already exists" errors
+                err_str = str(e).lower()
+                if "duplicate" not in err_str and "already exists" not in err_str:
+                    logger.debug(f"v2.0 migration statement skipped: {e}")
+
+        cursor.connection.commit()
+        logger.info("✓ Transfer module schema v2.0 initialized")
 
     # Add claimed_by_mission_id column to equipment_units if not exists
     try:
@@ -532,33 +655,44 @@ async def list_missions(
 
 @router.post("/missions")
 async def create_mission(mission: MissionCreate):
-    """建立轉送任務"""
+    """建立轉送任務 (v2.0)"""
+    # Extract v2.0 compatible values
+    destination = mission.get_destination()
+    eta_min = mission.get_eta_min()
+    o2_lpm = mission.get_o2_lpm()
+    iv_rate = mission.get_iv_rate()
+    duration_min = mission.estimated_duration_min or (eta_min * 2)  # Round-trip
+
     # Vercel demo mode - return existing PLANNING mission for demo flow
     if IS_VERCEL:
         # Use TRF-DEMO-NEW so loadMission() works
         demo_mission = DEMO_MISSIONS[1]  # TRF-DEMO-NEW
         # Update demo mission with user input
-        demo_mission['destination'] = mission.destination or "Demo 目的地"
-        demo_mission['estimated_duration_min'] = mission.estimated_duration_min
-        demo_mission['oxygen_requirement_lpm'] = mission.oxygen_requirement_lpm
-        demo_mission['iv_rate_mlhr'] = mission.iv_rate_mlhr
+        demo_mission['destination'] = destination or "Demo 目的地"
+        demo_mission['destination_text'] = destination
+        demo_mission['eta_min'] = eta_min
+        demo_mission['estimated_duration_min'] = duration_min
+        demo_mission['oxygen_requirement_lpm'] = o2_lpm
+        demo_mission['o2_lpm'] = o2_lpm
+        demo_mission['iv_mode'] = mission.iv_mode
+        demo_mission['iv_rate_mlhr'] = iv_rate
         demo_mission['safety_factor'] = mission.safety_factor
         demo_mission['patient_condition'] = mission.patient_condition
         demo_mission['emt_name'] = mission.emt_name
-        demo_mission['status'] = 'PLANNING'  # Ensure it's PLANNING
+        demo_mission['status'] = 'PLANNING'
 
         supplies = calculate_supplies({
-            'estimated_duration_min': mission.estimated_duration_min,
+            'estimated_duration_min': duration_min,
             'safety_factor': mission.safety_factor,
-            'oxygen_requirement_lpm': mission.oxygen_requirement_lpm,
-            'iv_rate_mlhr': mission.iv_rate_mlhr,
+            'oxygen_requirement_lpm': o2_lpm,
+            'iv_rate_mlhr': iv_rate,
             'ventilator_required': mission.ventilator_required
         })
 
         # Update demo items with calculated supplies
         for i, s in enumerate(supplies):
-            if i < len(DEMO_ITEMS) - 3:  # Update TRF-DEMO-NEW items
-                idx = i + 4 - 1  # Start from id 4
+            if i < len(DEMO_ITEMS) - 3:
+                idx = i + 3  # Start from index 3
                 if idx < len(DEMO_ITEMS):
                     DEMO_ITEMS[idx]['suggested_qty'] = s['suggested_qty']
                     DEMO_ITEMS[idx]['calculation_explain'] = s['calculation_explain']
@@ -575,26 +709,31 @@ async def create_mission(mission: MissionCreate):
     cursor = conn.cursor()
 
     try:
-        # Get station info (may not exist in all setups)
+        # Get station info
         try:
             cursor.execute("SELECT station_id, display_name FROM station_info LIMIT 1")
             station = cursor.fetchone()
-            origin = station['station_id'] if station else 'MIRS-LOCAL'
+            origin_id = station['station_id'] if station else 'MIRS-LOCAL'
+            origin_name = station['display_name'] if station else 'MIRS-LOCAL'
         except Exception:
-            origin = 'MIRS-LOCAL'
+            origin_id = 'MIRS-LOCAL'
+            origin_name = 'MIRS-LOCAL'
 
         mission_id = generate_mission_id()
 
+        # v2.0: Insert with new fields
         cursor.execute("""
             INSERT INTO transfer_missions (
-                mission_id, origin_station, destination, estimated_duration_min,
-                patient_condition, patient_summary, oxygen_requirement_lpm,
-                iv_rate_mlhr, ventilator_required, safety_factor, emt_name, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                mission_id, origin_station_id, origin_station, destination, destination_text,
+                eta_min, estimated_duration_min, patient_condition, patient_summary,
+                oxygen_requirement_lpm, iv_mode, iv_mlhr_override, iv_rate_mlhr,
+                ventilator_required, safety_factor, emt_name, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            mission_id, origin, mission.destination, mission.estimated_duration_min,
-            mission.patient_condition, mission.patient_summary, mission.oxygen_requirement_lpm,
-            mission.iv_rate_mlhr, 1 if mission.ventilator_required else 0,
+            mission_id, origin_id, origin_name, destination, destination,
+            eta_min, duration_min, mission.patient_condition, mission.patient_summary,
+            o2_lpm, mission.iv_mode, mission.iv_mlhr_override, iv_rate,
+            1 if mission.ventilator_required else 0,
             mission.safety_factor, mission.emt_name, mission.notes
         ))
         conn.commit()
@@ -604,10 +743,10 @@ async def create_mission(mission: MissionCreate):
 
         # Calculate suggested supplies
         supplies = calculate_supplies({
-            'estimated_duration_min': mission.estimated_duration_min,
+            'estimated_duration_min': duration_min,
             'safety_factor': mission.safety_factor,
-            'oxygen_requirement_lpm': mission.oxygen_requirement_lpm,
-            'iv_rate_mlhr': mission.iv_rate_mlhr,
+            'oxygen_requirement_lpm': o2_lpm,
+            'iv_rate_mlhr': iv_rate,
             'ventilator_required': mission.ventilator_required
         })
 
