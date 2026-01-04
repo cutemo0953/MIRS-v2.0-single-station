@@ -1,6 +1,6 @@
 # EMT Transfer PWA 開發規格書
 
-**版本**: 2.2.0
+**版本**: 2.2.4
 **日期**: 2026-01-04
 **狀態**: Phase 2.2 完成
 
@@ -414,6 +414,22 @@ consumed_liters = (starting_psi - ending_psi) / full_psi × capacity_liters
 - Header 使用 `sticky top-0`
 - 內容區域自然頁面滾動
 
+### 6.0.1 CSS 類別相容性 (v2.2.4)
+
+**問題**: 使用 `text-purple-700` 等 CSS 類別時，按鈕內文字可能不顯示。
+
+**原因**: mirs-colors.css 的自訂類別在某些情況下被其他樣式覆蓋。
+
+**解決方案**: 對關鍵 UI 元素使用 inline style：
+
+```html
+<!-- 使用 inline style 確保顏色正確 -->
+<button style="background:#f3e8ff; color:#7e22ce;">文字</button>
+
+<!-- 避免使用 CSS 類別 -->
+<button class="bg-purple-100 text-purple-700">文字可能不顯示</button>
+```
+
 ### 6.1 入口
 
 **位置**: MIRS Index.html Header 按鈕 (橘色閃電圖示) → 開啟 `/emt` PWA
@@ -775,3 +791,4 @@ curl -X POST http://localhost:8000/api/transfer/missions/TRF-20260103-001/finali
 | 2.0.0 | 2026-01-04 | Phase 2 完成：Schema 升級、庫存連動、UI 改進、三分離計量、韌性整合 |
 | **2.1.0** | **2026-01-04** | **Phase 2.1 完成**：<br>- 2.6 藥物/耗材手動增減 (快捷按鈕 + 自訂)<br>- 2.7 氧氣鋼瓶認領+手動雙軌模式<br>- 2.8 可認領鋼瓶 API (`/available-cylinders`) |
 | **2.2.0** | **2026-01-04** | **UI/UX 改進**：<br>- **iOS Safari 滾動修復**: 全螢幕頁面式 Modal (移除 `max-h-[90vh]`)<br>- **MIRS 配色統一**: 藥物/耗材→紫紅色、氧氣→amber、設備→equipment 色系<br>- 新增 sticky header 支援觸控滾動 |
+| **2.2.4** | **2026-01-04** | **Bug Fix**：<br>- 修正藥物快捷按鈕文字不顯示問題<br>- 改用 inline style 確保紫色正確套用 (`background:#f3e8ff; color:#7e22ce`)<br>- 修正 Vercel 自動部署未觸發問題 |
