@@ -17,6 +17,13 @@
         [x-cloak] { display: none !important; }
         /* 解決 sticky header 遮住內容的問題 */
         html { scroll-padding-top: 60px; }
+
+        /* iOS Safari 捲動修復 */
+        .ios-scroll {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+
         .status-dot { width: 12px; height: 12px; border-radius: 50%; }
         .status-planning { background-color: #fbbf24; }
         .status-ready { background-color: #22c55e; }
@@ -650,7 +657,7 @@
     <div x-show="showNewMission" x-cloak
          class="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
          @click.self="showNewMission = false">
-        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto"
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto ios-scroll"
              @click.stop>
             <!-- Sticky 頭部 -->
             <div class="sticky top-0 bg-white p-6 pb-3 border-b border-gray-100 z-10 rounded-t-2xl sm:rounded-t-2xl">
@@ -811,7 +818,7 @@
     <div x-show="showAddMedication" x-cloak
          class="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
          @click.self="showAddMedication = false">
-        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto" @click.stop>
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto ios-scroll" @click.stop>
             <!-- Sticky 頭部 -->
             <div class="sticky top-0 bg-white p-6 pb-3 border-b border-gray-100 z-10 rounded-t-2xl">
                 <h3 class="text-lg font-bold text-green-700">新增藥物/耗材</h3>
@@ -910,7 +917,7 @@
     <div x-show="showAddIncoming" x-cloak
          class="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
          @click.self="showAddIncoming = false">
-        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto" @click.stop>
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto ios-scroll" @click.stop>
             <!-- Sticky 頭部 -->
             <div class="sticky top-0 bg-white p-6 pb-3 border-b border-gray-100 z-10 rounded-t-2xl">
                 <h3 class="text-lg font-bold text-amber-700">新增外帶物資</h3>
@@ -963,7 +970,7 @@
     <div x-show="showMissionList" x-cloak
          class="fixed inset-0 bg-black/50 z-50"
          @click.self="showMissionList = false">
-        <div class="absolute right-0 top-0 bottom-0 w-80 bg-white shadow-xl overflow-y-auto"
+        <div class="absolute right-0 top-0 bottom-0 w-80 bg-white shadow-xl overflow-y-auto ios-scroll"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="translate-x-full"
              x-transition:enter-end="translate-x-0"
