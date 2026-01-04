@@ -351,6 +351,7 @@
 .text-purple-600 { color: #9333ea !important; }
 .text-purple-700 { color: #7e22ce !important; }
 .border-purple-300 { border-color: #d8b4fe !important; }
+.hover\:bg-purple-200:hover { background-color: #e9d5ff !important; }
 .hover\:bg-purple-700:hover { background-color: #7e22ce !important; }
 
 /* --- Red (標準 Tailwind) - 血袋庫存用 --- */
