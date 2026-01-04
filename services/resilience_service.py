@@ -243,11 +243,22 @@ class ResilienceService:
         all_equipment = list(cursor.fetchall())
 
         # v1.4.5: 一次取得所有 equipment_units
-        cursor.execute("""
-            SELECT equipment_id, unit_label, level_percent, status, last_check
-            FROM equipment_units
-            ORDER BY equipment_id, unit_label
-        """)
+        # v2.0: 排除轉送中和已被案例佔用的單位
+        try:
+            cursor.execute("""
+                SELECT equipment_id, unit_label, level_percent, status, last_check
+                FROM equipment_units
+                WHERE (claimed_by_mission_id IS NULL OR claimed_by_mission_id = '')
+                  AND (claimed_by_case_id IS NULL OR claimed_by_case_id = '')
+                ORDER BY equipment_id, unit_label
+            """)
+        except Exception:
+            # Fallback: columns may not exist in older DBs
+            cursor.execute("""
+                SELECT equipment_id, unit_label, level_percent, status, last_check
+                FROM equipment_units
+                ORDER BY equipment_id, unit_label
+            """)
         all_units = list(cursor.fetchall())
 
         # 建立 units lookup map
@@ -656,16 +667,28 @@ class ResilienceService:
         extra_fuel = fuel_row['total_fuel'] if fuel_row and fuel_row['total_fuel'] else 0
 
         # 5. 取得所有電力設備的 equipment_units (PER_UNIT 用)
+        # v2.0: 排除轉送中和已被案例佔用的單位
         power_eq_ids = [ps['id'] for ps in power_stations] + [g['id'] for g in generators]
         units_by_equipment = {}
         if power_eq_ids:
             placeholders = ','.join(['?' for _ in power_eq_ids])
-            cursor.execute(f"""
-                SELECT equipment_id, unit_serial, unit_label, level_percent, status, last_check
-                FROM equipment_units
-                WHERE equipment_id IN ({placeholders})
-                ORDER BY equipment_id, unit_serial
-            """, power_eq_ids)
+            try:
+                cursor.execute(f"""
+                    SELECT equipment_id, unit_serial, unit_label, level_percent, status, last_check
+                    FROM equipment_units
+                    WHERE equipment_id IN ({placeholders})
+                      AND (claimed_by_mission_id IS NULL OR claimed_by_mission_id = '')
+                      AND (claimed_by_case_id IS NULL OR claimed_by_case_id = '')
+                    ORDER BY equipment_id, unit_serial
+                """, power_eq_ids)
+            except Exception:
+                # Fallback: columns may not exist in older DBs
+                cursor.execute(f"""
+                    SELECT equipment_id, unit_serial, unit_label, level_percent, status, last_check
+                    FROM equipment_units
+                    WHERE equipment_id IN ({placeholders})
+                    ORDER BY equipment_id, unit_serial
+                """, power_eq_ids)
             for row in cursor.fetchall():
                 eq_id = row['equipment_id']
                 if eq_id not in units_by_equipment:
