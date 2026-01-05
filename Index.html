@@ -5744,18 +5744,25 @@
                     if (this.surgeryMasterLoading) return;
                     this.surgeryMasterLoading = true;
                     try {
-                        let url = `${this.apiUrl}/surgery-codes/codes?page=${this.surgeryCodesPage}&page_size=${this.surgeryCodesPageSize}`;
-                        if (this.surgeryCodeCategoryFilter) {
-                            url += `&category=${encodeURIComponent(this.surgeryCodeCategoryFilter)}`;
-                        }
-                        if (this.surgeryCodeSearchText) {
-                            url += `&q=${encodeURIComponent(this.surgeryCodeSearchText)}`;
+                        let url;
+                        if (this.surgeryCodeSearchText && this.surgeryCodeSearchText.trim()) {
+                            // 有搜尋文字時使用 FTS 搜尋端點
+                            url = `${this.apiUrl}/surgery-codes/codes/search?q=${encodeURIComponent(this.surgeryCodeSearchText)}&limit=50`;
+                            if (this.surgeryCodeCategoryFilter) {
+                                url += `&category=${encodeURIComponent(this.surgeryCodeCategoryFilter)}`;
+                            }
+                        } else {
+                            // 無搜尋文字時使用列表端點
+                            url = `${this.apiUrl}/surgery-codes/codes?page=${this.surgeryCodesPage}&page_size=${this.surgeryCodesPageSize}`;
+                            if (this.surgeryCodeCategoryFilter) {
+                                url += `&category=${encodeURIComponent(this.surgeryCodeCategoryFilter)}`;
+                            }
                         }
                         const response = await fetch(url);
                         if (response.ok) {
                             const data = await response.json();
                             this.surgeryCodes = data.codes || [];
-                            this.surgeryCodesTotal = data.total || 0;
+                            this.surgeryCodesTotal = data.total || this.surgeryCodes.length;
                         }
                     } catch (error) {
                         console.error('載入術式代碼失敗:', error);
