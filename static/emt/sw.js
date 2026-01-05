@@ -7,7 +7,7 @@
  * v3.0.0: CIRS Handoff integration (accept/reject, arrival vitals)
  */
 
-const CACHE_NAME = 'mirs-emt-v3.0.0';
+const CACHE_NAME = 'mirs-emt-v3.0.1';
 const OFFLINE_URL = '/static/emt/';
 
 const STATIC_ASSETS = [

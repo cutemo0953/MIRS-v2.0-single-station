@@ -1237,7 +1237,9 @@
                 elapsedTimer: null,
 
                 // v3.0: CIRS Handoff Integration
-                cirsHubUrl: localStorage.getItem('cirs_hub_url') || 'http://localhost:8090',
+                // Auto-detect Vercel demo: use cirs-demo.vercel.app for cross-origin handoffs
+                cirsHubUrl: localStorage.getItem('cirs_hub_url') ||
+                    (window.location.hostname.includes('vercel.app') ? 'https://cirs-demo.vercel.app' : 'http://localhost:8090'),
                 pendingHandoffs: [],
                 selectedHandoff: null,
                 showHandoffDetail: false,
