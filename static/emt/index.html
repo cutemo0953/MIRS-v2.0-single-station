@@ -761,7 +761,7 @@
                         </div>
                     </div>
 
-                    <!-- v3.1: External Source Info -->
+                    <!-- v3.1: External Source Info (只有外部轉入需要填來源單位) -->
                     <div x-show="newMission.source_type === 'EXTERNAL'" class="bg-teal-50 rounded-xl p-4 space-y-3">
                         <div>
                             <label class="block text-sm font-medium text-teal-800 mb-1">來源單位 *</label>
@@ -769,68 +769,144 @@
                                    placeholder="如: 台中榮總急診、119 救護車"
                                    class="w-full border border-teal-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500">
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-teal-800 mb-1">病患姓名</label>
-                            <input type="text" x-model="newMission.patient_name"
-                                   placeholder="王大明"
-                                   class="w-full border border-teal-300 rounded-lg px-3 py-2">
+                        <!-- v3.2: Display local station for external transfers -->
+                        <div class="flex items-center gap-2 text-sm text-teal-700">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span>接收站點: <strong x-text="stationName"></strong></span>
+                        </div>
+                    </div>
+
+                    <!-- v3.2: Display source station for internal (CIRS) transfers -->
+                    <div x-show="newMission.source_type === 'CIRS'" class="bg-gray-50 rounded-xl p-3">
+                        <div class="flex items-center gap-2 text-sm text-gray-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span>出發站點: <strong x-text="stationName"></strong></span>
+                        </div>
+                    </div>
+
+                    <!-- v3.2: Patient & Handoff Info (內部/外部轉送都可填) -->
+                    <div class="bg-amber-50 rounded-xl p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-sm font-bold text-amber-800">病患與交班資訊</h4>
+                            <span class="text-xs text-amber-600"
+                                  x-text="newMission.source_type === 'CIRS' ? '緊急/直接轉送用' : '外部轉入'"></span>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="block text-sm font-medium text-teal-800 mb-1">年齡</label>
-                                <input type="text" x-model="newMission.patient_age"
-                                       placeholder="45歲"
-                                       class="w-full border border-teal-300 rounded-lg px-3 py-2">
+                                <label class="block text-sm font-medium text-amber-800 mb-1">病患姓名</label>
+                                <input type="text" x-model="newMission.patient_name"
+                                       placeholder="王大明"
+                                       class="w-full border border-amber-300 rounded-lg px-3 py-2">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-teal-800 mb-1">檢傷等級</label>
+                                <label class="block text-sm font-medium text-amber-800 mb-1">年齡</label>
+                                <input type="text" x-model="newMission.patient_age"
+                                       placeholder="45歲"
+                                       class="w-full border border-amber-300 rounded-lg px-3 py-2">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-sm font-medium text-amber-800 mb-1">主訴</label>
+                                <input type="text" x-model="newMission.chief_complaint"
+                                       placeholder="右腿開放性骨折"
+                                       class="w-full border border-amber-300 rounded-lg px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-amber-800 mb-1">檢傷 (綠-黃-紅)</label>
                                 <div class="grid grid-cols-3 gap-1">
-                                    <button @click="newMission.triage = 'RED'"
-                                            class="py-1.5 rounded text-xs font-bold transition"
-                                            :class="newMission.triage === 'RED' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700'">紅</button>
-                                    <button @click="newMission.triage = 'YELLOW'"
-                                            class="py-1.5 rounded text-xs font-bold transition"
-                                            :class="newMission.triage === 'YELLOW' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-700'">黃</button>
                                     <button @click="newMission.triage = 'GREEN'"
                                             class="py-1.5 rounded text-xs font-bold transition"
                                             :class="newMission.triage === 'GREEN' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700'">綠</button>
+                                    <button @click="newMission.triage = 'YELLOW'"
+                                            class="py-1.5 rounded text-xs font-bold transition"
+                                            :class="newMission.triage === 'YELLOW' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-700'">黃</button>
+                                    <button @click="newMission.triage = 'RED'"
+                                            class="py-1.5 rounded text-xs font-bold transition"
+                                            :class="newMission.triage === 'RED' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700'">紅</button>
                                 </div>
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-teal-800 mb-1">主訴</label>
-                            <input type="text" x-model="newMission.chief_complaint"
-                                   placeholder="右腿開放性骨折"
-                                   class="w-full border border-teal-300 rounded-lg px-3 py-2">
-                        </div>
 
-                        <!-- MIST Format -->
-                        <div class="border-t border-teal-200 pt-3 mt-3">
-                            <h4 class="text-sm font-bold text-teal-800 mb-2">MIST 交班資訊</h4>
-                            <div class="space-y-2">
+                        <!-- ISBAR/MIST Format Selection -->
+                        <div class="border-t border-amber-200 pt-3 mt-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-sm font-bold text-amber-800">交班格式</h4>
+                                <div class="flex gap-1">
+                                    <button @click="newMission.handoff_format = 'ISBAR'"
+                                            class="px-3 py-1 rounded text-xs font-bold transition"
+                                            :class="newMission.handoff_format === 'ISBAR' ? 'bg-amber-600 text-white' : 'bg-amber-200 text-amber-700'">ISBAR</button>
+                                    <button @click="newMission.handoff_format = 'MIST'"
+                                            class="px-3 py-1 rounded text-xs font-bold transition"
+                                            :class="newMission.handoff_format === 'MIST' ? 'bg-amber-600 text-white' : 'bg-amber-200 text-amber-700'">MIST</button>
+                                </div>
+                            </div>
+
+                            <!-- ISBAR Fields -->
+                            <div x-show="newMission.handoff_format === 'ISBAR'" class="space-y-2">
                                 <div>
-                                    <label class="text-xs text-teal-700">M - Mechanism (機轉)</label>
+                                    <label class="text-xs text-amber-700">I - Identify (識別)</label>
+                                    <input type="text" x-model="newMission.isbar_identify"
+                                           placeholder="姓名、年齡、性別..."
+                                           class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-amber-700">S - Situation (現況)</label>
+                                    <textarea x-model="newMission.isbar_situation" rows="2"
+                                              placeholder="主訴、目前狀況..."
+                                              class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-amber-700">B - Background (背景)</label>
+                                    <textarea x-model="newMission.isbar_background" rows="2"
+                                              placeholder="病史、過敏史、用藥..."
+                                              class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-amber-700">A - Assessment (評估)</label>
+                                    <textarea x-model="newMission.isbar_assessment" rows="2"
+                                              placeholder="生命徵象、檢驗結果..."
+                                              class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-amber-700">R - Recommendation (建議)</label>
+                                    <textarea x-model="newMission.isbar_recommendation" rows="2"
+                                              placeholder="後續處置建議..."
+                                              class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- MIST Fields -->
+                            <div x-show="newMission.handoff_format === 'MIST'" class="space-y-2">
+                                <div>
+                                    <label class="text-xs text-amber-700">M - Mechanism (機轉)</label>
                                     <textarea x-model="newMission.mist_mechanism" rows="2"
                                               placeholder="車禍、高處墜落、穿刺傷..."
-                                              class="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                              class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm"></textarea>
                                 </div>
                                 <div>
-                                    <label class="text-xs text-teal-700">I - Injuries (傷勢)</label>
+                                    <label class="text-xs text-amber-700">I - Injuries (傷勢)</label>
                                     <textarea x-model="newMission.mist_injuries" rows="2"
                                               placeholder="右脛骨開放性骨折、左手撕裂傷..."
-                                              class="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                              class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm"></textarea>
                                 </div>
                                 <div>
-                                    <label class="text-xs text-teal-700">S - Signs (徵象)</label>
+                                    <label class="text-xs text-amber-700">S - Signs (徵象)</label>
                                     <textarea x-model="newMission.mist_signs" rows="2"
                                               placeholder="BP 110/70, HR 95, SpO2 96%, GCS E4V5M6=15..."
-                                              class="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                              class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm"></textarea>
                                 </div>
                                 <div>
-                                    <label class="text-xs text-teal-700">T - Treatment (處置)</label>
+                                    <label class="text-xs text-amber-700">T - Treatment (處置)</label>
                                     <textarea x-model="newMission.mist_treatment" rows="2"
                                               placeholder="傷口止血包紮、夾板固定、IV N/S 1000mL..."
-                                              class="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                              class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -1515,6 +1591,7 @@
                 currentStep: 0,
                 elapsedTime: 0,
                 elapsedTimer: null,
+                stationName: '醫療站',  // v3.2: Local station name
 
                 // v3.0: CIRS Handoff Integration
                 // Auto-detect Vercel demo: use cirs-demo.vercel.app for cross-origin handoffs
@@ -1558,10 +1635,19 @@
                     // v3.1: External source handoff support
                     source_type: 'CIRS',  // CIRS | EXTERNAL
                     source_org: '',       // External source organization name
+                    // v3.2: Patient info (both internal/external)
                     patient_name: '',
                     patient_age: '',
                     chief_complaint: '',
-                    triage: 'YELLOW',     // RED | YELLOW | GREEN
+                    triage: 'YELLOW',     // GREEN | YELLOW | RED
+                    // v3.2: Handoff format selection (ISBAR or MIST)
+                    handoff_format: 'MIST',  // ISBAR | MIST
+                    // ISBAR format fields
+                    isbar_identify: '',
+                    isbar_situation: '',
+                    isbar_background: '',
+                    isbar_assessment: '',
+                    isbar_recommendation: '',
                     // MIST format fields
                     mist_mechanism: '',
                     mist_injuries: '',
@@ -1635,6 +1721,17 @@
                         this.fetchPendingHandoffs();  // v3.0: refresh on reconnect
                     });
                     window.addEventListener('offline', () => this.isOnline = false);
+
+                    // v3.2: Load station name for handoff source
+                    try {
+                        const stationRes = await fetch('/api/station/info');
+                        if (stationRes.ok) {
+                            const stationData = await stationRes.json();
+                            this.stationName = stationData.station?.name || '醫療站';
+                        }
+                    } catch (e) {
+                        console.error('[EMT] Load station info error:', e);
+                    }
 
                     // Load mission list
                     await this.loadMissionList();
@@ -1998,24 +2095,47 @@
                     }
 
                     try {
-                        // v3.1: Build mission payload with external source info
+                        // v3.2: Build handoff_data for both internal and external
+                        // When patient info is provided (for urgent/direct transfers or external)
+                        const hasPatientInfo = this.newMission.patient_name || this.newMission.chief_complaint;
+                        const format = this.newMission.handoff_format;
+
+                        // Build report_content based on selected format
+                        let report_content = null;
+                        if (format === 'ISBAR') {
+                            report_content = {
+                                identify: this.newMission.isbar_identify,
+                                situation: this.newMission.isbar_situation,
+                                background: this.newMission.isbar_background,
+                                assessment: this.newMission.isbar_assessment,
+                                recommendation: this.newMission.isbar_recommendation
+                            };
+                        } else {  // MIST
+                            report_content = {
+                                mechanism: this.newMission.mist_mechanism,
+                                injuries: this.newMission.mist_injuries,
+                                signs: this.newMission.mist_signs,
+                                treatment: this.newMission.mist_treatment
+                            };
+                        }
+
+                        // Build payload
                         const payload = {
                             ...this.newMission,
-                            // v3.1: Include MIST report if external
-                            handoff_data: this.newMission.source_type === 'EXTERNAL' ? {
-                                source_type: 'EXTERNAL',
-                                source_org: this.newMission.source_org,
+                            // v3.2: Include handoff_data for both internal (urgent) and external
+                            handoff_data: hasPatientInfo || this.newMission.source_type === 'EXTERNAL' ? {
+                                source_type: this.newMission.source_type,
+                                // v3.2: source_station for CIRS, source_org for EXTERNAL
+                                source_station: this.newMission.source_type === 'CIRS' ? this.stationName : null,
+                                source_org: this.newMission.source_org || null,
+                                // v3.2: local_station is receiving station for EXTERNAL
+                                local_station: this.newMission.source_type === 'EXTERNAL' ? this.stationName : null,
                                 patient_name: this.newMission.patient_name,
                                 patient_age: this.newMission.patient_age,
                                 chief_complaint: this.newMission.chief_complaint,
                                 triage: this.newMission.triage,
-                                format: 'MIST',
-                                report_content: {
-                                    mechanism: this.newMission.mist_mechanism,
-                                    injuries: this.newMission.mist_injuries,
-                                    signs: this.newMission.mist_signs,
-                                    treatment: this.newMission.mist_treatment
-                                }
+                                format: format,
+                                report_content: report_content
                             } : null
                         };
 
@@ -2033,7 +2153,7 @@
                         // 捲動到頂部，避免內容被 header 遮住
                         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                        // Reset form (v3.1: include new fields)
+                        // Reset form (v3.2: include ISBAR fields)
                         this.newMission = {
                             destination: '',
                             eta_min: 60,
@@ -2051,6 +2171,12 @@
                             patient_age: '',
                             chief_complaint: '',
                             triage: 'YELLOW',
+                            handoff_format: 'MIST',
+                            isbar_identify: '',
+                            isbar_situation: '',
+                            isbar_background: '',
+                            isbar_assessment: '',
+                            isbar_recommendation: '',
                             mist_mechanism: '',
                             mist_injuries: '',
                             mist_signs: '',
@@ -2061,9 +2187,12 @@
                         this.equipmentBattery = [];
                         this.customMedications = [];
 
-                        // v3.1: Show success message for external source
+                        // v3.2: Show success message with handoff info
                         if (payload.handoff_data) {
-                            alert(`已建立外部轉送任務\n來源: ${payload.handoff_data.source_org}`);
+                            const srcType = payload.handoff_data.source_type === 'EXTERNAL' ? '外部轉入' : '內部直轉';
+                            const srcOrg = payload.handoff_data.source_org ? `\n來源: ${payload.handoff_data.source_org}` : '';
+                            const patient = payload.handoff_data.patient_name ? `\n病患: ${payload.handoff_data.patient_name}` : '';
+                            alert(`已建立${srcType}任務${srcOrg}${patient}`);
                         }
                     } catch (e) {
                         console.error('Failed to create mission:', e);

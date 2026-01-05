@@ -1,11 +1,11 @@
 # EMT Transfer Handoff 開發規格書 (MIRS 端)
 
-**版本**: 3.1
+**版本**: 3.2
 **日期**: 2026-01-05
 **狀態**: Draft
 **依賴**:
 - DEV_SPEC_EMT_TRANSFER_PWA.md v2.2.4
-- **CIRS: xIRS_UNIFIED_HANDOFF_SPEC_v1.2.md** ← 統一交班架構
+- **CIRS: xIRS_UNIFIED_HANDOFF_SPEC_v1.4.md** ← 統一交班架構
 
 ---
 
@@ -15,6 +15,7 @@
 |------|------|------|
 | 3.0 | 2026-01-05 | 重構為 CIRS 統一交班消費端 |
 | 3.1 | 2026-01-05 | 新增手動建立交班單 (外站轉入)、GCS E/V/M 格式、ISBAR/MIST 選擇 |
+| 3.2 | 2026-01-05 | 內部轉送也可填 ISBAR/MIST、站點名稱顯示、source_station/local_station |
 
 ---
 
