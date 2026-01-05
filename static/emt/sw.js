@@ -11,7 +11,7 @@
  * v3.2.0: Internal transfer ISBAR/MIST support, station name display, tab-style format selector
  */
 
-const CACHE_NAME = 'mirs-emt-v3.2.1';
+const CACHE_NAME = 'mirs-emt-v3.2.2';
 const OFFLINE_URL = '/static/emt/';
 
 const STATIC_ASSETS = [

@@ -174,19 +174,38 @@
                 <h2 class="text-lg font-bold text-amber-700 mb-4">任務設定</h2>
 
                 <div class="space-y-4">
+                    <!-- v3.2.1: Editable destination -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">目的地</label>
-                        <input type="text" :value="currentMission?.destination || ''" readonly
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">目的地 <span class="text-red-500">*</span></label>
+                        <input type="text" x-model="editMission.destination"
+                               placeholder="輸入目的地醫院/單位"
+                               class="w-full border border-amber-300 rounded-lg px-3 py-2 focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
                     </div>
 
+                    <!-- v3.2.1: Editable duration -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">預估路程</label>
                         <div class="flex items-center gap-2">
-                            <input type="number" :value="currentMission?.estimated_duration_min || 0" readonly
-                                   class="w-20 border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-center">
+                            <input type="number" x-model.number="editMission.estimated_duration_min" min="10" max="480"
+                                   class="w-24 border border-amber-300 rounded-lg px-3 py-2 text-center focus:border-amber-500">
                             <span class="text-gray-500">分鐘</span>
-                            <span class="text-amber-600 font-medium" x-text="'(' + ((currentMission?.estimated_duration_min || 0) / 60).toFixed(1) + ' 小時)'"></span>
+                            <span class="text-amber-600 font-medium" x-text="'(' + (editMission.estimated_duration_min / 60).toFixed(1) + ' 小時)'"></span>
+                        </div>
+                    </div>
+
+                    <!-- v3.2.1: Editable safety factor -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">安全係數</label>
+                        <div class="flex items-center gap-2">
+                            <select x-model.number="editMission.safety_factor"
+                                    class="border border-amber-300 rounded-lg px-3 py-2 focus:border-amber-500">
+                                <option value="2">2× (最低)</option>
+                                <option value="3">3× (標準)</option>
+                                <option value="5">5× (保守)</option>
+                                <option value="10">10× (長途)</option>
+                                <option value="15">15× (極端)</option>
+                            </select>
+                            <span class="text-gray-500">備量</span>
                         </div>
                     </div>
 
@@ -210,20 +229,14 @@
                             </span>
                         </div>
                     </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">安全係數</label>
-                        <div class="flex items-center gap-2">
-                            <span class="text-2xl font-bold text-amber-600" x-text="(currentMission?.safety_factor || 3) + '×'"></span>
-                            <span class="text-gray-500">備量</span>
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            <button @click="goToStep(1)"
-                    class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2">
-                <span>查看物資清單</span>
+            <button @click="updateMissionAndProceed()"
+                    :disabled="!editMission.destination?.trim()"
+                    :class="editMission.destination?.trim() ? 'bg-amber-500 hover:bg-amber-600' : 'bg-gray-300 cursor-not-allowed'"
+                    class="w-full text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2">
+                <span>確認並查看物資清單</span>
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
@@ -1597,6 +1610,12 @@
                 missionList: [],
                 currentStep: 0,
                 elapsedTime: 0,
+                // v3.2.1: Editable mission fields for Step 0
+                editMission: {
+                    destination: '',
+                    estimated_duration_min: 120,
+                    safety_factor: 3
+                },
                 elapsedTimer: null,
                 stationName: '醫療站',  // v3.2: Local station name
 
@@ -1968,6 +1987,13 @@
                         this.missionItems = data.items || [];
                         this.incomingItems = data.incoming_items || [];
 
+                        // v3.2.1: Initialize editMission for Step 0 editing
+                        this.editMission = {
+                            destination: this.currentMission.destination || '',
+                            estimated_duration_min: this.currentMission.estimated_duration_min || 120,
+                            safety_factor: this.currentMission.safety_factor || 3
+                        };
+
                         // Set initial values
                         this.missionItems.forEach(item => {
                             if (!item.carried_qty) item.carried_qty = item.suggested_qty;
@@ -1999,6 +2025,40 @@
                     this.currentStep = step;
                     // 切換步驟時捲動到頂部
                     window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
+
+                // v3.2.1: Update mission settings and proceed to loadout
+                async updateMissionAndProceed() {
+                    if (!this.currentMission?.mission_id || !this.editMission.destination?.trim()) {
+                        alert('請輸入目的地');
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`/api/transfer/missions/${this.currentMission.mission_id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                destination: this.editMission.destination.trim(),
+                                estimated_duration_min: this.editMission.estimated_duration_min,
+                                safety_factor: this.editMission.safety_factor
+                            })
+                        });
+                        if (res.ok) {
+                            // Update local mission data
+                            this.currentMission.destination = this.editMission.destination.trim();
+                            this.currentMission.estimated_duration_min = this.editMission.estimated_duration_min;
+                            this.currentMission.safety_factor = this.editMission.safety_factor;
+                            // Reload mission items (they may be recalculated based on new duration/safety)
+                            await this.loadMission(this.currentMission.mission_id);
+                            this.goToStep(1);
+                        } else {
+                            const err = await res.json();
+                            alert('更新失敗: ' + (err.detail || res.status));
+                        }
+                    } catch (e) {
+                        console.error('Failed to update mission:', e);
+                        alert('更新任務失敗');
+                    }
                 },
 
                 // v2.0: 載入可認領的氧氣鋼瓶

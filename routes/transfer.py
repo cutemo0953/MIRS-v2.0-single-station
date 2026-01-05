@@ -1145,6 +1145,58 @@ async def get_mission(mission_id: str):
         conn.close()
 
 
+class MissionUpdate(BaseModel):
+    """v3.2.1 更新任務設定"""
+    destination: Optional[str] = None
+    estimated_duration_min: Optional[int] = None
+    safety_factor: Optional[float] = None
+
+
+@router.patch("/missions/{mission_id}")
+async def update_mission(mission_id: str, request: MissionUpdate):
+    """v3.2.1 更新任務設定 (destination, duration, safety_factor)"""
+    # Vercel demo mode
+    if IS_VERCEL:
+        return {"status": "updated", "mission_id": mission_id, "demo_mode": True}
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT status FROM transfer_missions WHERE mission_id = ?", (mission_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Mission not found")
+        if row['status'] != 'PLANNING':
+            raise HTTPException(status_code=400, detail="Can only update missions in PLANNING status")
+
+        # Build update query
+        updates = []
+        params = []
+        if request.destination is not None:
+            updates.append("destination = ?")
+            params.append(request.destination)
+        if request.estimated_duration_min is not None:
+            updates.append("estimated_duration_min = ?")
+            params.append(request.estimated_duration_min)
+        if request.safety_factor is not None:
+            updates.append("safety_factor = ?")
+            params.append(request.safety_factor)
+
+        if updates:
+            params.append(mission_id)
+            cursor.execute(f"""
+                UPDATE transfer_missions
+                SET {', '.join(updates)}
+                WHERE mission_id = ?
+            """, params)
+            conn.commit()
+
+        return {"status": "updated", "mission_id": mission_id}
+    finally:
+        conn.close()
+
+
 @router.post("/missions/{mission_id}/calculate")
 async def recalculate_mission(mission_id: str):
     """重新計算物資需求"""
