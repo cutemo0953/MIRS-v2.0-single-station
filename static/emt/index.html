@@ -169,13 +169,13 @@
             </div>
         </div>
 
-        <!-- Step 1: Mission Setup (PLANNING) -->
+        <!-- Step 0: Mission Setup (PLANNING) - v3.2.5 完整欄位 -->
         <div x-show="currentMission && currentStep === 0" x-cloak>
             <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
                 <h2 class="text-lg font-bold text-amber-700 mb-4">任務設定</h2>
 
                 <div class="space-y-4">
-                    <!-- v3.2.1: Editable destination -->
+                    <!-- 目的地 -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">目的地 <span class="text-red-500">*</span></label>
                         <input type="text" x-model="editMission.destination"
@@ -183,18 +183,101 @@
                                class="w-full border border-amber-300 rounded-lg px-3 py-2 focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
                     </div>
 
-                    <!-- v3.2.1: Editable duration -->
+                    <!-- 單程 ETA -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">預估路程</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" x-model.number="editMission.estimated_duration_min" min="10" max="480"
-                                   class="w-24 border border-amber-300 rounded-lg px-3 py-2 text-center focus:border-amber-500">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">單程 ETA</label>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <input type="number" x-model.number="editMission.eta_min" min="5" max="240"
+                                   class="w-20 border border-amber-300 rounded-lg px-3 py-2 text-center focus:border-amber-500">
                             <span class="text-gray-500">分鐘</span>
-                            <span class="text-amber-600 font-medium" x-text="'(' + (editMission.estimated_duration_min / 60).toFixed(1) + ' 小時)'"></span>
+                            <div class="flex gap-1">
+                                <button @click="editMission.eta_min = 30" type="button" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">30分</button>
+                                <button @click="editMission.eta_min = 60" type="button" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">1時</button>
+                                <button @click="editMission.eta_min = 90" type="button" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">1.5時</button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- v3.2.1: Editable safety factor -->
+                    <!-- 預估總時間 (來回+處置) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">預估總時間 (來回+處置)</label>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <input type="number" x-model.number="editMission.estimated_duration_min" min="10" max="480"
+                                   class="w-20 border border-amber-300 rounded-lg px-3 py-2 text-center focus:border-amber-500">
+                            <span class="text-gray-500">分鐘</span>
+                            <span class="text-amber-600 font-medium" x-text="'(' + (editMission.estimated_duration_min / 60).toFixed(1) + ' 小時)'"></span>
+                            <div class="flex gap-1">
+                                <button @click="editMission.estimated_duration_min = (editMission.eta_min || 30) * 2" type="button" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">來回</button>
+                                <button @click="editMission.estimated_duration_min = (editMission.eta_min || 30) * 2 + 30" type="button" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">+30分</button>
+                                <button @click="editMission.estimated_duration_min = (editMission.eta_min || 30) * 2 + 60" type="button" class="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">+1時</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 病患狀況 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">病患狀況</label>
+                        <div class="flex gap-2 flex-wrap">
+                            <button @click="editMission.patient_condition = 'STABLE'" type="button"
+                                    :class="editMission.patient_condition === 'STABLE' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">穩定</button>
+                            <button @click="editMission.patient_condition = 'CRITICAL'" type="button"
+                                    :class="editMission.patient_condition === 'CRITICAL' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">危急</button>
+                            <button @click="editMission.patient_condition = 'INTUBATED'" type="button"
+                                    :class="editMission.patient_condition === 'INTUBATED' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">插管</button>
+                        </div>
+                    </div>
+
+                    <!-- 氧氣需求 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">氧氣需求</label>
+                        <div class="flex gap-2 flex-wrap">
+                            <button @click="editMission.o2_lpm = 0" type="button"
+                                    :class="editMission.o2_lpm === 0 ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">無</button>
+                            <button @click="editMission.o2_lpm = 3" type="button"
+                                    :class="editMission.o2_lpm === 3 ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">3L</button>
+                            <button @click="editMission.o2_lpm = 6" type="button"
+                                    :class="editMission.o2_lpm === 6 ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">6L</button>
+                            <button @click="editMission.o2_lpm = 10" type="button"
+                                    :class="editMission.o2_lpm === 10 ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">10L</button>
+                            <button @click="editMission.o2_lpm = 15" type="button"
+                                    :class="editMission.o2_lpm === 15 ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">15L</button>
+                        </div>
+                    </div>
+
+                    <!-- 輸液需求 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">輸液需求</label>
+                        <div class="flex gap-2 flex-wrap">
+                            <button @click="editMission.iv_mode = 'NONE'" type="button"
+                                    :class="editMission.iv_mode === 'NONE' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">無</button>
+                            <button @click="editMission.iv_mode = 'KVO'" type="button"
+                                    :class="editMission.iv_mode === 'KVO' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">KVO</button>
+                            <button @click="editMission.iv_mode = 'MAINTENANCE'" type="button"
+                                    :class="editMission.iv_mode === 'MAINTENANCE' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">維持</button>
+                            <button @click="editMission.iv_mode = 'BOLUS'" type="button"
+                                    :class="editMission.iv_mode === 'BOLUS' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'"
+                                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">快補</button>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            <span x-show="editMission.iv_mode === 'NONE'">不需輸液</span>
+                            <span x-show="editMission.iv_mode === 'KVO'">Keep Vein Open: 30 mL/hr</span>
+                            <span x-show="editMission.iv_mode === 'MAINTENANCE'">一般維持: 100 mL/hr</span>
+                            <span x-show="editMission.iv_mode === 'BOLUS'">快速補液: 500mL/30min</span>
+                        </div>
+                    </div>
+
+                    <!-- 安全係數 -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">安全係數</label>
                         <div class="flex items-center gap-2">
@@ -210,25 +293,12 @@
                         </div>
                     </div>
 
+                    <!-- EMT 姓名 -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">病患狀況</label>
-                        <div class="flex gap-2 flex-wrap">
-                            <span class="px-3 py-1 rounded-full text-sm"
-                                  :class="currentMission?.patient_condition === 'INTUBATED' ? 'bg-red-100 text-red-700' :
-                                          currentMission?.patient_condition === 'CRITICAL' ? 'bg-orange-100 text-orange-700' :
-                                          'bg-green-100 text-green-700'"
-                                  x-text="currentMission?.patient_condition === 'INTUBATED' ? '插管' :
-                                          currentMission?.patient_condition === 'CRITICAL' ? '危急' : '穩定'">
-                            </span>
-                            <span x-show="(currentMission?.oxygen_requirement_lpm || 0) > 0"
-                                  class="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-sm"
-                                  x-text="'O2: ' + (currentMission?.oxygen_requirement_lpm || 0) + ' L/min'">
-                            </span>
-                            <span x-show="(currentMission?.iv_rate_mlhr || 0) > 0"
-                                  class="px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-sm"
-                                  x-text="'IV: ' + (currentMission?.iv_rate_mlhr || 0) + ' mL/hr'">
-                            </span>
-                        </div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">EMT 姓名</label>
+                        <input type="text" x-model="editMission.emt_name"
+                               placeholder="輸入負責 EMT 姓名"
+                               class="w-full border border-amber-300 rounded-lg px-3 py-2 focus:border-amber-500">
                     </div>
                 </div>
             </div>
@@ -237,7 +307,7 @@
                     :disabled="!editMission.destination?.trim()"
                     :class="editMission.destination?.trim() ? 'bg-amber-500 hover:bg-amber-600' : 'bg-gray-300 cursor-not-allowed'"
                     class="w-full text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2">
-                <span>確認並查看物資清單</span>
+                <span>確認並計算物資需求</span>
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
@@ -1995,11 +2065,16 @@
                         // v3.2.3: Debug logging
                         console.log('[EMT] loadMission:', missionId, 'status:', this.currentMission?.status);
 
-                        // v3.2.1: Initialize editMission for Step 0 editing
+                        // v3.2.5: Initialize editMission with all fields
                         this.editMission = {
                             destination: this.currentMission.destination || '',
+                            eta_min: this.currentMission.eta_min || Math.round((this.currentMission.estimated_duration_min || 120) / 2),
                             estimated_duration_min: this.currentMission.estimated_duration_min || 120,
-                            safety_factor: this.currentMission.safety_factor || 3
+                            patient_condition: this.currentMission.patient_condition || 'STABLE',
+                            o2_lpm: this.currentMission.oxygen_requirement_lpm || 0,
+                            iv_mode: this.currentMission.iv_mode || 'NONE',
+                            safety_factor: this.currentMission.safety_factor || 3,
+                            emt_name: this.currentMission.emt_name || ''
                         };
 
                         // Set initial values
@@ -2056,7 +2131,7 @@
                     }
                 },
 
-                // v3.2.1: Update mission settings and proceed to loadout
+                // v3.2.5: Update mission settings and proceed to loadout
                 async updateMissionAndProceed() {
                     if (!this.currentMission?.mission_id || !this.editMission.destination?.trim()) {
                         alert('請輸入目的地');
@@ -2068,16 +2143,17 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 destination: this.editMission.destination.trim(),
+                                eta_min: this.editMission.eta_min,
                                 estimated_duration_min: this.editMission.estimated_duration_min,
-                                safety_factor: this.editMission.safety_factor
+                                patient_condition: this.editMission.patient_condition,
+                                oxygen_requirement_lpm: this.editMission.o2_lpm,
+                                iv_mode: this.editMission.iv_mode,
+                                safety_factor: this.editMission.safety_factor,
+                                emt_name: this.editMission.emt_name
                             })
                         });
                         if (res.ok) {
-                            // Update local mission data
-                            this.currentMission.destination = this.editMission.destination.trim();
-                            this.currentMission.estimated_duration_min = this.editMission.estimated_duration_min;
-                            this.currentMission.safety_factor = this.editMission.safety_factor;
-                            // Reload mission items (they may be recalculated based on new duration/safety)
+                            // Reload mission to get recalculated items
                             await this.loadMission(this.currentMission.mission_id);
                             this.goToStep(1);
                         } else {

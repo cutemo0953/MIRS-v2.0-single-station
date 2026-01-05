@@ -1147,15 +1147,20 @@ async def get_mission(mission_id: str):
 
 
 class MissionUpdate(BaseModel):
-    """v3.2.1 更新任務設定"""
+    """v3.2.5 更新任務設定 - 完整欄位"""
     destination: Optional[str] = None
+    eta_min: Optional[int] = None
     estimated_duration_min: Optional[int] = None
+    patient_condition: Optional[str] = None
+    oxygen_requirement_lpm: Optional[float] = None
+    iv_mode: Optional[str] = None
     safety_factor: Optional[float] = None
+    emt_name: Optional[str] = None
 
 
 @router.patch("/missions/{mission_id}")
 async def update_mission(mission_id: str, request: MissionUpdate):
-    """v3.2.1 更新任務設定 (destination, duration, safety_factor)"""
+    """v3.2.5 更新任務設定並重新計算物資需求"""
     # Vercel demo mode
     if IS_VERCEL:
         return {"status": "updated", "mission_id": mission_id, "demo_mode": True}
@@ -1164,7 +1169,7 @@ async def update_mission(mission_id: str, request: MissionUpdate):
     cursor = conn.cursor()
 
     try:
-        cursor.execute("SELECT status FROM transfer_missions WHERE mission_id = ?", (mission_id,))
+        cursor.execute("SELECT * FROM transfer_missions WHERE mission_id = ?", (mission_id,))
         row = cursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Mission not found")
@@ -1174,15 +1179,38 @@ async def update_mission(mission_id: str, request: MissionUpdate):
         # Build update query
         updates = []
         params = []
-        if request.destination is not None:
-            updates.append("destination = ?")
-            params.append(request.destination)
-        if request.estimated_duration_min is not None:
-            updates.append("estimated_duration_min = ?")
-            params.append(request.estimated_duration_min)
-        if request.safety_factor is not None:
-            updates.append("safety_factor = ?")
-            params.append(request.safety_factor)
+
+        # Map fields to columns
+        field_map = {
+            'destination': 'destination',
+            'eta_min': 'eta_min',
+            'estimated_duration_min': 'estimated_duration_min',
+            'patient_condition': 'patient_condition',
+            'oxygen_requirement_lpm': 'oxygen_requirement_lpm',
+            'iv_mode': 'iv_mode',
+            'safety_factor': 'safety_factor',
+            'emt_name': 'emt_name'
+        }
+
+        # Calculate iv_rate_mlhr from iv_mode
+        iv_rate = None
+        if request.iv_mode is not None:
+            if request.iv_mode == 'NONE':
+                iv_rate = 0
+            elif request.iv_mode == 'KVO':
+                iv_rate = 30
+            elif request.iv_mode == 'MAINTENANCE':
+                iv_rate = 100
+            elif request.iv_mode == 'BOLUS':
+                iv_rate = 1000  # 500mL/30min = 1000mL/hr
+            updates.append("iv_rate_mlhr = ?")
+            params.append(iv_rate)
+
+        for field, column in field_map.items():
+            value = getattr(request, field, None)
+            if value is not None:
+                updates.append(f"{column} = ?")
+                params.append(value)
 
         if updates:
             params.append(mission_id)
@@ -1193,7 +1221,26 @@ async def update_mission(mission_id: str, request: MissionUpdate):
             """, params)
             conn.commit()
 
-        return {"status": "updated", "mission_id": mission_id}
+            # Recalculate supplies based on new parameters
+            cursor.execute("SELECT * FROM transfer_missions WHERE mission_id = ?", (mission_id,))
+            updated_mission = cursor.fetchone()
+
+            supplies = calculate_supplies(dict(updated_mission))
+
+            # Update items
+            cursor.execute("DELETE FROM transfer_items WHERE mission_id = ?", (mission_id,))
+            for s in supplies:
+                cursor.execute("""
+                    INSERT INTO transfer_items (
+                        mission_id, item_type, item_name, unit, suggested_qty, calculation_explain
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    mission_id, s['item_type'], s['item_name'],
+                    s['unit'], s['suggested_qty'], s['calculation_explain']
+                ))
+            conn.commit()
+
+        return {"status": "updated", "mission_id": mission_id, "recalculated": True}
     finally:
         conn.close()
 
