@@ -744,6 +744,98 @@
         <!-- 內容區 (自然頁面捲動) -->
         <div class="p-4 pb-24">
                 <div class="space-y-4">
+                    <!-- v3.1: Source Type Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">來源類型</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button @click="newMission.source_type = 'CIRS'"
+                                    class="py-2 rounded-lg text-center font-medium text-sm transition"
+                                    :class="newMission.source_type === 'CIRS' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'">
+                                內部轉送 (CIRS)
+                            </button>
+                            <button @click="newMission.source_type = 'EXTERNAL'"
+                                    class="py-2 rounded-lg text-center font-medium text-sm transition"
+                                    :class="newMission.source_type === 'EXTERNAL' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-700'">
+                                外部轉入
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- v3.1: External Source Info -->
+                    <div x-show="newMission.source_type === 'EXTERNAL'" class="bg-teal-50 rounded-xl p-4 space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-teal-800 mb-1">來源單位 *</label>
+                            <input type="text" x-model="newMission.source_org"
+                                   placeholder="如: 台中榮總急診、119 救護車"
+                                   class="w-full border border-teal-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-teal-800 mb-1">病患姓名</label>
+                            <input type="text" x-model="newMission.patient_name"
+                                   placeholder="王大明"
+                                   class="w-full border border-teal-300 rounded-lg px-3 py-2">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-sm font-medium text-teal-800 mb-1">年齡</label>
+                                <input type="text" x-model="newMission.patient_age"
+                                       placeholder="45歲"
+                                       class="w-full border border-teal-300 rounded-lg px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-teal-800 mb-1">檢傷等級</label>
+                                <div class="grid grid-cols-3 gap-1">
+                                    <button @click="newMission.triage = 'RED'"
+                                            class="py-1.5 rounded text-xs font-bold transition"
+                                            :class="newMission.triage === 'RED' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700'">紅</button>
+                                    <button @click="newMission.triage = 'YELLOW'"
+                                            class="py-1.5 rounded text-xs font-bold transition"
+                                            :class="newMission.triage === 'YELLOW' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-700'">黃</button>
+                                    <button @click="newMission.triage = 'GREEN'"
+                                            class="py-1.5 rounded text-xs font-bold transition"
+                                            :class="newMission.triage === 'GREEN' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700'">綠</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-teal-800 mb-1">主訴</label>
+                            <input type="text" x-model="newMission.chief_complaint"
+                                   placeholder="右腿開放性骨折"
+                                   class="w-full border border-teal-300 rounded-lg px-3 py-2">
+                        </div>
+
+                        <!-- MIST Format -->
+                        <div class="border-t border-teal-200 pt-3 mt-3">
+                            <h4 class="text-sm font-bold text-teal-800 mb-2">MIST 交班資訊</h4>
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="text-xs text-teal-700">M - Mechanism (機轉)</label>
+                                    <textarea x-model="newMission.mist_mechanism" rows="2"
+                                              placeholder="車禍、高處墜落、穿刺傷..."
+                                              class="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-teal-700">I - Injuries (傷勢)</label>
+                                    <textarea x-model="newMission.mist_injuries" rows="2"
+                                              placeholder="右脛骨開放性骨折、左手撕裂傷..."
+                                              class="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-teal-700">S - Signs (徵象)</label>
+                                    <textarea x-model="newMission.mist_signs" rows="2"
+                                              placeholder="BP 110/70, HR 95, SpO2 96%, GCS E4V5M6=15..."
+                                              class="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-teal-700">T - Treatment (處置)</label>
+                                    <textarea x-model="newMission.mist_treatment" rows="2"
+                                              placeholder="傷口止血包紮、夾板固定、IV N/S 1000mL..."
+                                              class="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">目的地 *</label>
                         <input type="text" x-model="newMission.destination"
@@ -1462,7 +1554,19 @@
                     iv_mlhr_override: null,
                     ventilator_required: false,
                     safety_factor: 3.0,
-                    emt_name: ''
+                    emt_name: '',
+                    // v3.1: External source handoff support
+                    source_type: 'CIRS',  // CIRS | EXTERNAL
+                    source_org: '',       // External source organization name
+                    patient_name: '',
+                    patient_age: '',
+                    chief_complaint: '',
+                    triage: 'YELLOW',     // RED | YELLOW | GREEN
+                    // MIST format fields
+                    mist_mechanism: '',
+                    mist_injuries: '',
+                    mist_signs: '',
+                    mist_treatment: ''
                 },
 
                 // v2.0: 氧氣鋼瓶追蹤
@@ -1887,11 +1991,38 @@
                 },
 
                 async createMission() {
+                    // v3.1: Validate external source fields
+                    if (this.newMission.source_type === 'EXTERNAL' && !this.newMission.source_org) {
+                        alert('請填寫來源單位');
+                        return;
+                    }
+
                     try {
+                        // v3.1: Build mission payload with external source info
+                        const payload = {
+                            ...this.newMission,
+                            // v3.1: Include MIST report if external
+                            handoff_data: this.newMission.source_type === 'EXTERNAL' ? {
+                                source_type: 'EXTERNAL',
+                                source_org: this.newMission.source_org,
+                                patient_name: this.newMission.patient_name,
+                                patient_age: this.newMission.patient_age,
+                                chief_complaint: this.newMission.chief_complaint,
+                                triage: this.newMission.triage,
+                                format: 'MIST',
+                                report_content: {
+                                    mechanism: this.newMission.mist_mechanism,
+                                    injuries: this.newMission.mist_injuries,
+                                    signs: this.newMission.mist_signs,
+                                    treatment: this.newMission.mist_treatment
+                                }
+                            } : null
+                        };
+
                         const res = await fetch('/api/transfer/missions', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(this.newMission)
+                            body: JSON.stringify(payload)
                         });
                         const data = await res.json();
 
@@ -1902,7 +2033,7 @@
                         // 捲動到頂部，避免內容被 header 遮住
                         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                        // Reset form (v2.0)
+                        // Reset form (v3.1: include new fields)
                         this.newMission = {
                             destination: '',
                             eta_min: 60,
@@ -1913,12 +2044,27 @@
                             iv_mlhr_override: null,
                             ventilator_required: false,
                             safety_factor: 3.0,
-                            emt_name: ''
+                            emt_name: '',
+                            source_type: 'CIRS',
+                            source_org: '',
+                            patient_name: '',
+                            patient_age: '',
+                            chief_complaint: '',
+                            triage: 'YELLOW',
+                            mist_mechanism: '',
+                            mist_injuries: '',
+                            mist_signs: '',
+                            mist_treatment: ''
                         };
                         // 清空 v2.0 追蹤資料
                         this.oxygenCylinders = [];
                         this.equipmentBattery = [];
                         this.customMedications = [];
+
+                        // v3.1: Show success message for external source
+                        if (payload.handoff_data) {
+                            alert(`已建立外部轉送任務\n來源: ${payload.handoff_data.source_org}`);
+                        }
                     } catch (e) {
                         console.error('Failed to create mission:', e);
                         alert('建立任務失敗');

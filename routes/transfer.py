@@ -86,7 +86,7 @@ router = APIRouter(prefix="/api/transfer", tags=["transfer"])
 # =============================================================================
 
 class MissionCreate(BaseModel):
-    """v2.0 任務建立模型"""
+    """v2.0 任務建立模型 (v3.1: 新增 handoff_data)"""
     # 目的地 (v2.0: destination_text 為主, destination 為 alias)
     destination: Optional[str] = None
     destination_text: Optional[str] = None
@@ -113,6 +113,10 @@ class MissionCreate(BaseModel):
     safety_factor: float = Field(default=3.0, ge=1.0, le=15.0)  # v2.0: 1-15
     emt_name: Optional[str] = None
     notes: Optional[str] = None
+
+    # v3.1: External source handoff data
+    source_type: Optional[str] = "CIRS"  # CIRS | EXTERNAL
+    handoff_data: Optional[dict] = None  # External handoff info with MIST report
 
     def get_destination(self) -> str:
         """Get destination, preferring destination_text"""
@@ -1022,22 +1026,45 @@ async def create_mission(mission: MissionCreate):
             origin_id = 'MIRS-LOCAL'
             origin_name = 'MIRS-LOCAL'
 
+        import json as jsonlib
+
         mission_id = generate_mission_id()
 
-        # v2.0: Insert with new fields
+        # v3.1: Ensure new columns exist for handoff data
+        try:
+            cursor.execute("ALTER TABLE transfer_missions ADD COLUMN source_type TEXT DEFAULT 'CIRS'")
+        except:
+            pass
+        try:
+            cursor.execute("ALTER TABLE transfer_missions ADD COLUMN handoff_data TEXT")
+        except:
+            pass
+
+        # v3.1: Serialize handoff data
+        handoff_data_json = jsonlib.dumps(mission.handoff_data) if mission.handoff_data else None
+
+        # v3.1: Build patient summary from handoff data if external
+        patient_summary = mission.patient_summary
+        if mission.handoff_data and mission.source_type == 'EXTERNAL':
+            hd = mission.handoff_data
+            patient_summary = f"[{hd.get('source_org', '外部')}] {hd.get('patient_name', '')} {hd.get('patient_age', '')} - {hd.get('chief_complaint', '')}"
+
+        # v2.0/v3.1: Insert with new fields
         cursor.execute("""
             INSERT INTO transfer_missions (
                 mission_id, origin_station_id, origin_station, destination, destination_text,
                 eta_min, estimated_duration_min, patient_condition, patient_summary,
                 oxygen_requirement_lpm, iv_mode, iv_mlhr_override, iv_rate_mlhr,
-                ventilator_required, safety_factor, emt_name, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ventilator_required, safety_factor, emt_name, notes,
+                source_type, handoff_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             mission_id, origin_id, origin_name, destination, destination,
-            eta_min, duration_min, mission.patient_condition, mission.patient_summary,
+            eta_min, duration_min, mission.patient_condition, patient_summary,
             o2_lpm, mission.iv_mode, mission.iv_mlhr_override, iv_rate,
             1 if mission.ventilator_required else 0,
-            mission.safety_factor, mission.emt_name, mission.notes
+            mission.safety_factor, mission.emt_name, mission.notes,
+            mission.source_type, handoff_data_json
         ))
         conn.commit()
 
