@@ -1854,6 +1854,53 @@
                     this.loadingHandoffs = true;
 
                     try {
+                        // v3.2.6: Vercel demo mode - return mock handoffs
+                        const isVercelDemo = window.location.hostname.includes('vercel.app');
+                        if (isVercelDemo) {
+                            this.pendingHandoffs = [
+                                {
+                                    handoff_id: 'HO-DEMO-001',
+                                    display_id: 'HO-001',
+                                    patient_name: '王大明',
+                                    patient_age: '45歲',
+                                    chief_complaint: '右腿開放性骨折',
+                                    priority: 'URGENT',
+                                    format: 'MIST',
+                                    destination: '台大醫院急診',
+                                    created_at: new Date().toISOString(),
+                                    content: {
+                                        M: { mechanism: '機車車禍，右腿遭撞擊' },
+                                        I: { injuries: '右腿開放性骨折，出血已控制' },
+                                        S: { signs: 'BP 120/80, HR 95, SpO2 98%, GCS E4V5M6', o2_lpm: 3 },
+                                        T: { treatment: '止血包紮、夾板固定、建立 IV' }
+                                    },
+                                    latest_vs: { bp_sys: 120, bp_dia: 80, hr: 95, spo2: 98, o2_lpm: 3 }
+                                },
+                                {
+                                    handoff_id: 'HO-DEMO-002',
+                                    display_id: 'HO-002',
+                                    patient_name: '林小華',
+                                    patient_age: '32歲',
+                                    chief_complaint: '胸痛、呼吸困難',
+                                    priority: 'STAT',
+                                    format: 'ISBAR',
+                                    destination: '榮總心臟科',
+                                    created_at: new Date(Date.now() - 600000).toISOString(),
+                                    content: {
+                                        I: { identify: '林小華，32歲女性' },
+                                        S: { situation: '突發性胸痛2小時，伴隨呼吸困難' },
+                                        B: { background: '無心臟病史，近期無運動' },
+                                        A: { assessment: '疑似心肌梗塞，需緊急心導管' },
+                                        R: { recommendation: '緊急轉送心臟科', destination: '榮總心臟科' }
+                                    },
+                                    latest_vs: { bp_sys: 90, bp_dia: 60, hr: 110, spo2: 94, o2_lpm: 6 }
+                                }
+                            ];
+                            console.log('[EMT] Vercel demo mode - loaded mock handoffs');
+                            this.loadingHandoffs = false;
+                            return;
+                        }
+
                         const res = await fetch(`${this.cirsHubUrl}/api/handoff/pending?target_role=EMT`);
                         if (!res.ok) throw new Error('Failed to fetch handoffs');
                         const data = await res.json();
@@ -1889,30 +1936,53 @@
                     if (!handoffId) return;
 
                     try {
-                        // 1. Send accept to CIRS
-                        const acceptRes = await fetch(`${this.cirsHubUrl}/api/handoff/${handoffId}/accept`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                acceptor_id: this.emtCredentials.id,
-                                acceptor_name: this.emtCredentials.name,
-                                device_id: `MIRS-EMT-${Date.now()}`
-                            })
-                        });
+                        // v3.2.6: Vercel demo mode - skip CIRS API calls
+                        const isVercelDemo = window.location.hostname.includes('vercel.app');
+                        let handoffData;
 
-                        if (!acceptRes.ok) {
-                            const err = await acceptRes.json();
-                            throw new Error(err.detail || '接收失敗');
+                        if (isVercelDemo) {
+                            // Use selected handoff data directly
+                            handoffData = {
+                                ...this.selectedHandoff,
+                                snapshot: {
+                                    patient: {
+                                        name: this.selectedHandoff.patient_name,
+                                        age: this.selectedHandoff.patient_age
+                                    },
+                                    registration: {
+                                        chief_complaint: this.selectedHandoff.chief_complaint,
+                                        priority: this.selectedHandoff.priority
+                                    },
+                                    vital_signs: this.selectedHandoff.latest_vs || {}
+                                }
+                            };
+                            console.log('[EMT] Vercel demo - using mock handoff data');
+                        } else {
+                            // 1. Send accept to CIRS
+                            const acceptRes = await fetch(`${this.cirsHubUrl}/api/handoff/${handoffId}/accept`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    acceptor_id: this.emtCredentials.id,
+                                    acceptor_name: this.emtCredentials.name,
+                                    device_id: `MIRS-EMT-${Date.now()}`
+                                })
+                            });
+
+                            if (!acceptRes.ok) {
+                                const err = await acceptRes.json();
+                                throw new Error(err.detail || '接收失敗');
+                            }
+
+                            // 2. Record arrival vitals if provided
+                            if (this.arrivalVitals.bp_sys || this.arrivalVitals.hr || this.arrivalVitals.spo2) {
+                                await this.recordArrivalVitals(handoffId);
+                            }
+
+                            // 3. Get full handoff details
+                            const detailRes = await fetch(`${this.cirsHubUrl}/api/handoff/${handoffId}`);
+                            handoffData = await detailRes.json();
                         }
-
-                        // 2. Record arrival vitals if provided
-                        if (this.arrivalVitals.bp_sys || this.arrivalVitals.hr || this.arrivalVitals.spo2) {
-                            await this.recordArrivalVitals(handoffId);
-                        }
-
-                        // 3. Get full handoff details
-                        const detailRes = await fetch(`${this.cirsHubUrl}/api/handoff/${handoffId}`);
-                        const handoffData = await detailRes.json();
 
                         // 4. Create local mission from handoff
                         await this.createMissionFromHandoff(handoffData);
