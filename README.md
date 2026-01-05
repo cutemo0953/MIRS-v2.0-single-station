@@ -1,4 +1,4 @@
-# MIRS - 醫療站庫存管理系統 v3.0.0
+# MIRS - 醫療站庫存管理系統 v3.2.2
 
 > 為醫療站、備援手術站(BORP)與物資中心設計的簡易庫存管理系統
 >
@@ -8,7 +8,7 @@
 >
 > **v2.9 術式主檔**：健保手術碼 1,687 筆 + FTS5 全文搜尋 + 點數遞減計算
 >
-> **v3.0 EMT 交班**：CIRS 統一交班 + 手動建立 + ISBAR/MIST 格式 + GCS E/V/M
+> **v3.2 EMT 轉送**：Step 0 可編輯 + PATCH API + 自訂藥物支援 + ISBAR/MIST
 
 ---
 
@@ -57,6 +57,25 @@ export CIRS_HUB_URL=http://localhost:8090
 ```
 
 ---
+
+### v3.2.2 修正 (2026-01-06) - EMT Step 0 可編輯
+
+- **EMT Transfer PWA v3.2.2**：
+  - **Step 0 可編輯**：接受 CIRS 交班後，可修改目的地、預估時間、安全係數
+  - **新增 PATCH API**：`PATCH /api/transfer/missions/{id}` 更新任務設定
+  - **UI 改善**：Step 0 所有欄位改為可編輯輸入框
+
+### v3.2.1 修正 (2026-01-06)
+
+- **支援自訂藥物**：`TransferItemConfirm.item_id` 改為 `Optional[int]`
+  - 允許 EMT 攜帶不在 MIRS 系統的藥物（item_id: null）
+  - 自訂藥物會新增到 `transfer_items` 而非更新現有記錄
+
+### v3.2.0 新功能 (2026-01-05) - 內部轉送支援
+
+- **Station Name 顯示**：內部轉送時顯示「站內」
+- **Tab 式格式選擇器**：ISBAR/MIST 切換更直覺
+- **Service Worker v3.2.0**：快取版本更新
 
 ### v3.0.0 新功能 (2026-01-05) - EMT 交班整合
 
