@@ -1206,12 +1206,19 @@
                     </svg>
                 </button>
                 <h2 class="text-lg font-bold">交班詳情</h2>
-                <!-- v3.0.2: 使用者可選格式 -->
-                <select x-model="handoffFormat"
-                        class="text-sm bg-pink-500 border-0 rounded px-2 py-0.5 text-white">
-                    <option value="ISBAR">ISBAR</option>
-                    <option value="MIST">MIST</option>
-                </select>
+                <!-- v3.2: Tab-style format selector -->
+                <div class="flex gap-1">
+                    <button @click="handoffFormat = 'ISBAR'"
+                            class="px-3 py-1 rounded text-xs font-bold transition"
+                            :class="handoffFormat === 'ISBAR' ? 'bg-white text-pink-600' : 'bg-pink-500 text-white hover:bg-pink-400'">
+                        ISBAR
+                    </button>
+                    <button @click="handoffFormat = 'MIST'"
+                            class="px-3 py-1 rounded text-xs font-bold transition"
+                            :class="handoffFormat === 'MIST' ? 'bg-white text-pink-600' : 'bg-pink-500 text-white hover:bg-pink-400'">
+                        MIST
+                    </button>
+                </div>
             </div>
         </div>
 

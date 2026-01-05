@@ -1,6 +1,6 @@
 /**
  * MIRS EMT Transfer - Service Worker
- * Version: 3.0.0
+ * Version: 3.2.0
  * Offline-first architecture
  *
  * v1.1.0: O2 flow options changed to 無/3/6/10/15
@@ -8,9 +8,10 @@
  * v3.0.2: User-selectable ISBAR/MIST format, GCS E/V/M input, pink color scheme
  * v3.0.3: Format-aware display (ISBAR cards vs MIST trauma cards)
  * v3.0.4: Clickable step indicator for navigation back to previous steps
+ * v3.2.0: Internal transfer ISBAR/MIST support, station name display, tab-style format selector
  */
 
-const CACHE_NAME = 'mirs-emt-v3.0.4';
+const CACHE_NAME = 'mirs-emt-v3.2.0';
 const OFFLINE_URL = '/static/emt/';
 
 const STATIC_ASSETS = [
