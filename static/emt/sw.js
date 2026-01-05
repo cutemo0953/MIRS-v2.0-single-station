@@ -1,10 +1,12 @@
 /**
  * MIRS EMT Transfer - Service Worker
- * Version: 1.0.0
+ * Version: 1.1.0
  * Offline-first architecture
+ *
+ * v1.1.0: O2 flow options changed to 無/3/6/10/15
  */
 
-const CACHE_NAME = 'mirs-emt-v1.0.0';
+const CACHE_NAME = 'mirs-emt-v1.1.0';
 const OFFLINE_URL = '/static/emt/';
 
 const STATIC_ASSETS = [
