@@ -78,21 +78,85 @@
             </div>
         </div>
 
-        <!-- No Mission State -->
-        <div x-show="!currentMission" class="text-center py-12">
-            <div class="bg-white rounded-2xl shadow-lg p-8 max-w-md mx-auto">
-                <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                    </svg>
+        <!-- No Mission State - v3.0: Show Pending Handoffs from CIRS -->
+        <div x-show="!currentMission" class="py-4">
+            <!-- Pending Handoffs Section -->
+            <div class="bg-white rounded-2xl shadow-lg p-4 mb-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-800">待接收交班</h2>
+                    <button @click="fetchPendingHandoffs()"
+                            class="flex items-center gap-1 px-3 py-1.5 text-sm bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200"
+                            :disabled="loadingHandoffs">
+                        <svg class="w-4 h-4" :class="loadingHandoffs ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <span x-text="loadingHandoffs ? '載入中...' : '重新整理'"></span>
+                    </button>
                 </div>
-                <h2 class="text-xl font-bold text-gray-800 mb-2">準備轉送病患</h2>
-                <p class="text-gray-500 mb-6">建立新任務以開始物資規劃</p>
-                <button @click="showNewMission = true"
-                        class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-xl transition">
-                    + 新增轉送任務
-                </button>
+
+                <!-- Handoff List -->
+                <div x-show="pendingHandoffs.length > 0" class="space-y-3">
+                    <template x-for="handoff in pendingHandoffs" :key="handoff.handoff_id">
+                        <div class="border rounded-xl p-4 hover:border-amber-300 transition cursor-pointer"
+                             :class="handoff.priority === 'STAT' ? 'border-red-300 bg-red-50' : handoff.priority === 'URGENT' ? 'border-orange-300 bg-orange-50' : 'border-gray-200'"
+                             @click="viewHandoffDetail(handoff)">
+                            <div class="flex items-start justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 text-xs font-bold rounded"
+                                          :class="handoff.priority === 'STAT' ? 'bg-red-500 text-white' : handoff.priority === 'URGENT' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'"
+                                          x-text="handoff.priority || 'NORMAL'"></span>
+                                    <span class="text-xs text-gray-500" x-text="handoff.format"></span>
+                                </div>
+                                <span class="text-xs text-gray-400" x-text="formatTime(handoff.created_at)"></span>
+                            </div>
+                            <div class="font-bold text-gray-800 mb-1">
+                                <span x-text="handoff.patient_name || '未知'"></span>
+                                <span class="text-gray-500 font-normal" x-text="handoff.patient_age ? ' ' + handoff.patient_age : ''"></span>
+                            </div>
+                            <div class="text-sm text-gray-600 mb-2" x-text="handoff.chief_complaint || '無主訴'"></div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-xs text-gray-500">
+                                    <span x-show="handoff.destination">目的地: <span x-text="handoff.destination"></span></span>
+                                    <span x-show="handoff.latest_vs?.o2_lpm" class="text-blue-600">O2: <span x-text="handoff.latest_vs?.o2_lpm"></span> L/min</span>
+                                </div>
+                                <button @click.stop="viewHandoffDetail(handoff)"
+                                        class="px-3 py-1.5 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600">
+                                    接收此交班
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Empty State -->
+                <div x-show="pendingHandoffs.length === 0 && !loadingHandoffs" class="text-center py-8">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                    </div>
+                    <p class="text-gray-500 mb-2">目前沒有待接收的交班</p>
+                    <p class="text-xs text-gray-400">CIRS Hub: <span x-text="cirsHubUrl"></span></p>
+                </div>
+            </div>
+
+            <!-- Manual Mission Button -->
+            <div class="bg-white rounded-2xl shadow-lg p-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-gray-800">手動新增任務</h3>
+                        <p class="text-sm text-gray-500">無 CIRS 交班時使用</p>
+                    </div>
+                    <button @click="showNewMission = true"
+                            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                        新增
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -954,6 +1018,169 @@
         </div>
     </div>
 
+    <!-- v3.0: Handoff Detail Modal (全螢幕) -->
+    <div x-show="showHandoffDetail" x-cloak
+         class="fixed inset-0 bg-white z-50 overflow-y-auto ios-scroll">
+        <!-- Header -->
+        <div class="sticky top-0 bg-teal-600 text-white px-4 py-3 shadow-lg z-10">
+            <div class="flex items-center justify-between">
+                <button @click="showHandoffDetail = false; selectedHandoff = null" class="p-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+                <h2 class="text-lg font-bold">交班詳情</h2>
+                <span class="text-sm bg-teal-500 px-2 py-0.5 rounded" x-text="selectedHandoff?.format || 'ISBAR'"></span>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-4 pb-32" x-show="selectedHandoff">
+            <!-- Patient Info Card -->
+            <div class="bg-white rounded-xl border shadow-sm p-4 mb-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="px-2 py-0.5 text-xs font-bold rounded"
+                          :class="selectedHandoff?.priority === 'STAT' ? 'bg-red-500 text-white' : selectedHandoff?.priority === 'URGENT' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'"
+                          x-text="selectedHandoff?.priority || 'NORMAL'"></span>
+                    <span class="text-xs text-gray-500" x-text="'交班單: ' + selectedHandoff?.display_id"></span>
+                </div>
+                <div class="text-xl font-bold text-gray-800 mb-1">
+                    <span x-text="selectedHandoff?.patient_name || '未知'"></span>
+                    <span class="text-gray-500 font-normal text-lg" x-text="selectedHandoff?.patient_age ? ' ' + selectedHandoff?.patient_age : ''"></span>
+                </div>
+                <div class="text-gray-600 mb-3" x-text="selectedHandoff?.chief_complaint || '無主訴'"></div>
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <span class="bg-gray-100 px-2 py-1 rounded" x-text="'來源: ' + (selectedHandoff?.source_name || '-')"></span>
+                    <span class="bg-gray-100 px-2 py-1 rounded" x-text="'建立: ' + formatTime(selectedHandoff?.created_at)"></span>
+                </div>
+            </div>
+
+            <!-- Original Vital Signs (if available) -->
+            <div class="bg-blue-50 rounded-xl p-4 mb-4" x-show="selectedHandoff?.latest_vs">
+                <h3 class="font-bold text-blue-800 mb-2">交班時生命徵象</h3>
+                <div class="grid grid-cols-4 gap-2 text-center text-sm">
+                    <div class="bg-white rounded-lg p-2">
+                        <div class="text-gray-500 text-xs">BP</div>
+                        <div class="font-bold" x-text="(selectedHandoff?.latest_vs?.bp_sys || '-') + '/' + (selectedHandoff?.latest_vs?.bp_dia || '-')"></div>
+                    </div>
+                    <div class="bg-white rounded-lg p-2">
+                        <div class="text-gray-500 text-xs">HR</div>
+                        <div class="font-bold" x-text="selectedHandoff?.latest_vs?.hr || '-'"></div>
+                    </div>
+                    <div class="bg-white rounded-lg p-2">
+                        <div class="text-gray-500 text-xs">SpO2</div>
+                        <div class="font-bold" x-text="selectedHandoff?.latest_vs?.spo2 ? selectedHandoff?.latest_vs?.spo2 + '%' : '-'"></div>
+                    </div>
+                    <div class="bg-white rounded-lg p-2">
+                        <div class="text-gray-500 text-xs">O2</div>
+                        <div class="font-bold" x-text="selectedHandoff?.latest_vs?.o2_lpm ? selectedHandoff?.latest_vs?.o2_lpm + 'L' : '-'"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Arrival Vitals Section -->
+            <div class="bg-amber-50 rounded-xl p-4 mb-4 border-2 border-amber-200">
+                <div class="flex items-center gap-2 mb-3">
+                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <h3 class="font-bold text-amber-800">抵達時重測 (建議)</h3>
+                </div>
+                <p class="text-sm text-amber-700 mb-3">重測生命徵象可保護 EMT 責任，記錄接手時病患真實狀態</p>
+
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="text-xs text-gray-600">收縮壓 (mmHg)</label>
+                        <input type="number" x-model="arrivalVitals.bp_sys" placeholder="120"
+                               class="w-full border rounded-lg px-3 py-2 text-center">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-600">舒張壓 (mmHg)</label>
+                        <input type="number" x-model="arrivalVitals.bp_dia" placeholder="80"
+                               class="w-full border rounded-lg px-3 py-2 text-center">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-600">心率 (bpm)</label>
+                        <input type="number" x-model="arrivalVitals.hr" placeholder="72"
+                               class="w-full border rounded-lg px-3 py-2 text-center">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-600">SpO2 (%)</label>
+                        <input type="number" x-model="arrivalVitals.spo2" placeholder="98"
+                               class="w-full border rounded-lg px-3 py-2 text-center">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-xs text-gray-600">GCS</label>
+                    <div class="flex gap-2 mt-1">
+                        <template x-for="gcs in [15, 14, 13, 12, 11, 10, 9, 8]" :key="gcs">
+                            <button @click="arrivalVitals.gcs = gcs"
+                                    class="px-3 py-1 rounded-lg text-sm border"
+                                    :class="arrivalVitals.gcs === gcs ? 'bg-amber-500 text-white border-amber-500' : 'bg-white border-gray-300'">
+                                <span x-text="gcs"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-600">備註</label>
+                    <textarea x-model="arrivalVitals.note" rows="2"
+                              placeholder="病患意識、配合程度等..."
+                              class="w-full border rounded-lg px-3 py-2 text-sm mt-1"></textarea>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex gap-3">
+                <button @click="showRejectModal = true"
+                        class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200">
+                    拒絕交班
+                </button>
+                <button @click="acceptHandoff(selectedHandoff?.handoff_id)"
+                        class="flex-1 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700">
+                    確認接收
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- v3.0: Reject Handoff Modal -->
+    <div x-show="showRejectModal" x-cloak
+         class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+         @click.self="showRejectModal = false">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">拒絕交班</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">拒絕原因</label>
+                    <select x-model="rejectForm.code"
+                            class="w-full border rounded-lg px-3 py-2">
+                        <option value="NO_CAPACITY">人力/設備不足</option>
+                        <option value="PATIENT_UNSTABLE">病患狀態不適合轉送</option>
+                        <option value="DESTINATION_UNAVAILABLE">目的地無法接收</option>
+                        <option value="OTHER">其他原因</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">詳細說明</label>
+                    <textarea x-model="rejectForm.reason" rows="3"
+                              placeholder="請說明拒絕原因..."
+                              class="w-full border rounded-lg px-3 py-2"></textarea>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button @click="showRejectModal = false"
+                        class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium">
+                    取消
+                </button>
+                <button @click="rejectHandoff(selectedHandoff?.handoff_id)"
+                        class="flex-1 py-2 bg-red-600 text-white rounded-lg font-medium">
+                    確認拒絕
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Mission List Sidebar -->
     <div x-show="showMissionList" x-cloak
          class="fixed inset-0 bg-black/50 z-50"
@@ -1008,6 +1235,28 @@
                 currentStep: 0,
                 elapsedTime: 0,
                 elapsedTimer: null,
+
+                // v3.0: CIRS Handoff Integration
+                cirsHubUrl: localStorage.getItem('cirs_hub_url') || 'http://localhost:8090',
+                pendingHandoffs: [],
+                selectedHandoff: null,
+                showHandoffDetail: false,
+                showRejectModal: false,
+                showArrivalVitals: false,
+                loadingHandoffs: false,
+                rejectForm: {
+                    code: 'NO_CAPACITY',
+                    reason: ''
+                },
+                arrivalVitals: {
+                    bp_sys: '',
+                    bp_dia: '',
+                    hr: '',
+                    spo2: '',
+                    gcs: 15,
+                    note: ''
+                },
+                emtCredentials: JSON.parse(localStorage.getItem('emt_credentials') || '{"id":"emt001","name":"EMT"}'),
 
                 // New mission form (v2.0)
                 newMission: {
@@ -1084,7 +1333,10 @@
                 // Methods
                 async init() {
                     // Online/offline detection
-                    window.addEventListener('online', () => this.isOnline = true);
+                    window.addEventListener('online', () => {
+                        this.isOnline = true;
+                        this.fetchPendingHandoffs();  // v3.0: refresh on reconnect
+                    });
                     window.addEventListener('offline', () => this.isOnline = false);
 
                     // Load mission list
@@ -1095,6 +1347,197 @@
                     if (activeMissions.length > 0) {
                         await this.loadMission(activeMissions[0].mission_id);
                     }
+
+                    // v3.0: Fetch pending handoffs from CIRS
+                    if (this.isOnline && !this.currentMission) {
+                        await this.fetchPendingHandoffs();
+                    }
+                },
+
+                // ============================================================
+                // v3.0: CIRS Handoff Integration Methods
+                // ============================================================
+
+                async fetchPendingHandoffs() {
+                    if (this.loadingHandoffs) return;
+                    this.loadingHandoffs = true;
+
+                    try {
+                        const res = await fetch(`${this.cirsHubUrl}/api/handoff/pending?target_role=EMT`);
+                        if (!res.ok) throw new Error('Failed to fetch handoffs');
+                        const data = await res.json();
+                        this.pendingHandoffs = data.handoffs || [];
+                        console.log('[EMT] Loaded pending handoffs:', this.pendingHandoffs.length);
+                    } catch (e) {
+                        console.error('[EMT] Failed to fetch pending handoffs:', e);
+                        // Don't show alert, just log - might be offline or CIRS not configured
+                    } finally {
+                        this.loadingHandoffs = false;
+                    }
+                },
+
+                viewHandoffDetail(handoff) {
+                    this.selectedHandoff = handoff;
+                    this.showHandoffDetail = true;
+                    // Reset arrival vitals form
+                    this.arrivalVitals = {
+                        bp_sys: '',
+                        bp_dia: '',
+                        hr: '',
+                        spo2: '',
+                        gcs: 15,
+                        note: ''
+                    };
+                },
+
+                async acceptHandoff(handoffId) {
+                    if (!handoffId) return;
+
+                    try {
+                        // 1. Send accept to CIRS
+                        const acceptRes = await fetch(`${this.cirsHubUrl}/api/handoff/${handoffId}/accept`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                acceptor_id: this.emtCredentials.id,
+                                acceptor_name: this.emtCredentials.name,
+                                device_id: `MIRS-EMT-${Date.now()}`
+                            })
+                        });
+
+                        if (!acceptRes.ok) {
+                            const err = await acceptRes.json();
+                            throw new Error(err.detail || '接收失敗');
+                        }
+
+                        // 2. Record arrival vitals if provided
+                        if (this.arrivalVitals.bp_sys || this.arrivalVitals.hr || this.arrivalVitals.spo2) {
+                            await this.recordArrivalVitals(handoffId);
+                        }
+
+                        // 3. Get full handoff details
+                        const detailRes = await fetch(`${this.cirsHubUrl}/api/handoff/${handoffId}`);
+                        const handoffData = await detailRes.json();
+
+                        // 4. Create local mission from handoff
+                        await this.createMissionFromHandoff(handoffData);
+
+                        // 5. Close modal and refresh
+                        this.showHandoffDetail = false;
+                        this.selectedHandoff = null;
+                        await this.fetchPendingHandoffs();
+
+                        alert('已接收交班，請繼續物資整備');
+
+                    } catch (e) {
+                        console.error('[EMT] Accept handoff error:', e);
+                        alert('接收交班失敗: ' + e.message);
+                    }
+                },
+
+                async recordArrivalVitals(handoffId) {
+                    const vitals = {};
+                    if (this.arrivalVitals.bp_sys) vitals.bp_sys = parseInt(this.arrivalVitals.bp_sys);
+                    if (this.arrivalVitals.bp_dia) vitals.bp_dia = parseInt(this.arrivalVitals.bp_dia);
+                    if (this.arrivalVitals.hr) vitals.hr = parseInt(this.arrivalVitals.hr);
+                    if (this.arrivalVitals.spo2) vitals.spo2 = parseInt(this.arrivalVitals.spo2);
+                    if (this.arrivalVitals.gcs) vitals.gcs = parseInt(this.arrivalVitals.gcs);
+
+                    await fetch(`${this.cirsHubUrl}/api/handoff/${handoffId}/addendum`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            addendum_type: 'ARRIVAL_VITALS',
+                            source: 'EMT',
+                            recorded_by: this.emtCredentials.id,
+                            content: {
+                                vital_signs: vitals,
+                                note: this.arrivalVitals.note || null
+                            }
+                        })
+                    });
+                    console.log('[EMT] Recorded arrival vitals');
+                },
+
+                async createMissionFromHandoff(handoff) {
+                    // Extract data from handoff snapshot
+                    const snapshot = handoff.snapshot || {};
+                    const patient = snapshot.patient || {};
+                    const registration = snapshot.registration || {};
+                    const content = handoff.content || {};
+
+                    // Determine O2 requirement from content or snapshot
+                    let o2Lpm = 0;
+                    if (content.S?.o2_lpm) o2Lpm = content.S.o2_lpm;
+                    else if (snapshot.vital_signs?.o2_lpm) o2Lpm = snapshot.vital_signs.o2_lpm;
+
+                    // Create mission via API
+                    const missionData = {
+                        destination: content.R?.destination || content.S?.destination || '待確認',
+                        patient_name: patient.name || handoff.patient_name || '未知',
+                        patient_age: patient.age || '',
+                        patient_condition: registration.priority === 'STAT' ? 'CRITICAL' : 'STABLE',
+                        chief_complaint: registration.chief_complaint || '',
+                        o2_lpm: o2Lpm,
+                        estimated_duration_min: 120,
+                        safety_factor: 3.0,
+                        cirs_handoff_id: handoff.handoff_id,
+                        cirs_display_id: handoff.display_id,
+                        handoff_format: handoff.format,
+                        handoff_snapshot: snapshot,
+                        emt_name: this.emtCredentials.name
+                    };
+
+                    const res = await fetch('/api/transfer/missions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(missionData)
+                    });
+
+                    const data = await res.json();
+                    await this.loadMission(data.mission_id);
+                    console.log('[EMT] Mission created from handoff:', data.mission_id);
+                },
+
+                async rejectHandoff(handoffId) {
+                    if (!handoffId) return;
+
+                    try {
+                        const res = await fetch(`${this.cirsHubUrl}/api/handoff/${handoffId}/reject`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                rejector_id: this.emtCredentials.id,
+                                rejector_name: this.emtCredentials.name,
+                                rejection_code: this.rejectForm.code,
+                                rejection_reason: this.rejectForm.reason
+                            })
+                        });
+
+                        if (!res.ok) {
+                            const err = await res.json();
+                            throw new Error(err.detail || '拒絕失敗');
+                        }
+
+                        // Close modals and refresh
+                        this.showRejectModal = false;
+                        this.showHandoffDetail = false;
+                        this.selectedHandoff = null;
+                        this.rejectForm = { code: 'NO_CAPACITY', reason: '' };
+                        await this.fetchPendingHandoffs();
+
+                        alert('已拒絕此交班');
+
+                    } catch (e) {
+                        console.error('[EMT] Reject handoff error:', e);
+                        alert('拒絕交班失敗: ' + e.message);
+                    }
+                },
+
+                formatTime(timestamp) {
+                    if (!timestamp) return '-';
+                    const date = new Date(timestamp);
+                    return date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
                 },
 
                 async loadMissionList() {
