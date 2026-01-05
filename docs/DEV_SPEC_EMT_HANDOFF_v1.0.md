@@ -1,6 +1,6 @@
 # EMT Transfer Handoff 開發規格書
 
-**版本**: 1.0
+**版本**: 2.0
 **日期**: 2026-01-05
 **狀態**: Draft
 **依賴**: DEV_SPEC_EMT_TRANSFER_PWA.md v2.2.4
@@ -27,32 +27,584 @@
 | 需求 | 說明 | 來源 |
 |------|------|------|
 | **O2 流量預設值** | 無/3/6/10/15 L/min 快選按鈕 | EMT 實務回饋 |
-| **快速交班** | Doctor PWA 一鍵發起轉送請求 | EMT 實務回饋 |
-| **手動模式** | 保留非掛號病患的手動輸入 | 現有功能 |
-| **交班備註** | 自由文字欄位記錄交班事項 | EMT 實務回饋 |
+| **結構化交班** | ISBAR (一般) / MIST (外傷) 格式 | EMT 實務回饋 |
+| **病患基本資料** | 身高、體重、過敏史 | EMT 實務回饋 |
+| **Step 重整** | Step 1 改為交班事項，Step 2 為物資整備 | UX 改進 |
+| **Doctor PWA 帶入** | 自動匯入已有病歷資料 | 效率優化 |
 
 ---
 
-## 1. O2 流量預設值更新
+## 1. Step 流程重設計
 
-### 1.1 現有設計
+### 1.1 新版 Step 架構
 
-目前 EMT PWA 的 O2 流量為自由輸入欄位 (`o2_lpm: REAL`)。
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Step 0      │  Step 1        │  Step 2      │  Step 3  │  Step 4  │
+│  任務設定    │  交班事項      │  物資整備    │  轉送中  │  結案    │
+│  (PLANNING)  │  (PLANNING)    │  (READY)     │  (EN_ROUTE) │ (ARRIVED)│
+│              │                │              │          │          │
+│  目的地      │  ISBAR/MIST    │  氧氣鋼瓶    │  即時    │  消耗    │
+│  ETA         │  基本資料      │  設備電量    │  追蹤    │  統計    │
+│  O2/IV       │  過敏史        │  藥物/耗材   │          │          │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### 1.2 更新設計
+### 1.2 Step 變更對照
 
-改為**快選按鈕 + 自訂輸入**：
+| 版本 | Step 0 | Step 1 | Step 2 | Step 3 | Step 4 |
+|------|--------|--------|--------|--------|--------|
+| v1.x | 任務設定 | 物資確認 (多餘) | 物資整備 | 轉送中 | 結案 |
+| v2.0 | 任務設定 | **交班事項** | 物資整備 | 轉送中 | 結案 |
+
+---
+
+## 2. 結構化交班格式
+
+### 2.1 ISBAR 格式 (一般/內科)
+
+| 欄位 | 英文 | 說明 | 範例 |
+|------|------|------|------|
+| **I** | Identify | 身份辨識 | 王小明，45歲，男性 |
+| **S** | Situation | 現況說明 | 胸痛 2 小時，需轉送心導管室 |
+| **B** | Background | 病史背景 | HTN, DM, 過敏: Penicillin |
+| **A** | Assessment | 評估狀況 | BP 150/90, HR 88, SpO2 98% |
+| **R** | Recommendation | 建議事項 | 監測心電圖，準備 NTG |
+
+### 2.2 MIST 格式 (外傷)
+
+| 欄位 | 英文 | 說明 | 範例 |
+|------|------|------|------|
+| **M** | Mechanism | 受傷機轉 | 機車對撞，時速約 60 |
+| **I** | Injuries | 傷勢發現 | 右股骨開放性骨折，右胸挫傷 |
+| **S** | Signs | 生命徵象 | GCS 15, BP 110/70, HR 100 |
+| **T** | Treatment | 已處置 | 止血帶、夾板固定、TXA 1g |
+
+### 2.3 UI 設計：Tab 切換
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 氧氣流量 (L/min)                                            │
+│ 交班格式                                                     │
 ├─────────────────────────────────────────────────────────────┤
-│ [無] [3] [6] [10] [15] [自訂: ___]                          │
-│  ○    ○   ●    ○    ○                                       │
+│  ┌──────────────┐  ┌──────────────┐                         │
+│  │    ISBAR     │  │    MIST      │                         │
+│  │   (一般)     │  │   (外傷)     │                         │
+│  └──────────────┘  └──────────────┘                         │
+│      ●選取                                                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 1.3 O2 流量對照表
+---
+
+## 3. 病患基本資料
+
+### 3.1 資料欄位
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 病患資料                                                     │
+├─────────────────────────────────────────────────────────────┤
+│ 姓名: [王小明        ]  年齡: [45] 歲  性別: ○男 ○女       │
+│                                                             │
+│ 身高: [170] cm    體重: [70] kg    → BMI: 24.2              │
+│                                                             │
+│ 過敏史:                                                      │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Penicillin, Aspirin                                     │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ 病史:                                                        │
+│ [+HTN] [+DM] [+CAD] [ ] CKD [ ] COPD [+其他...]            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 從 Doctor PWA 自動帶入
+
+當 EMT 接收來自 CIRS 的交班請求時，以下欄位自動填入：
+
+| 欄位 | 來源 | 可編輯 |
+|------|------|--------|
+| 姓名、年齡、性別 | `registrations.person` | 否 |
+| 身高、體重 | `persons.height`, `persons.weight` | 是 |
+| 過敏史 | `persons.allergies` | 是 |
+| 病史 | `persons.medical_history` | 是 |
+| 主訴 | `registrations.chief_complaint` | 否 |
+| 處置記錄 | `procedure_orders` | 否 (只讀) |
+
+---
+
+## 4. Step 1: 交班事項 UI
+
+### 4.1 ISBAR 模式
+
+```html
+<!-- Step 1: 交班事項 (ISBAR) -->
+<div x-show="currentMission && currentStep === 1 && handoffFormat === 'ISBAR'" x-cloak>
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
+        <!-- 格式切換 -->
+        <div class="flex border-b mb-4">
+            <button @click="handoffFormat = 'ISBAR'"
+                    :class="handoffFormat === 'ISBAR' ? 'border-b-2 border-amber-500 text-amber-600' : 'text-gray-500'"
+                    class="flex-1 py-2 font-medium">ISBAR (一般)</button>
+            <button @click="handoffFormat = 'MIST'"
+                    :class="handoffFormat === 'MIST' ? 'border-b-2 border-red-500 text-red-600' : 'text-gray-500'"
+                    class="flex-1 py-2 font-medium">MIST (外傷)</button>
+        </div>
+
+        <!-- 病患基本資料 -->
+        <div class="bg-amber-50 rounded-lg p-4 mb-4">
+            <h3 class="font-bold text-amber-700 mb-3">病患資料</h3>
+            <div class="grid grid-cols-3 gap-3 text-sm">
+                <div>
+                    <label class="text-gray-500">姓名</label>
+                    <div class="font-medium" x-text="handoff.patient_name || '未填寫'"></div>
+                </div>
+                <div>
+                    <label class="text-gray-500">年齡</label>
+                    <div class="font-medium" x-text="(handoff.patient_age || '-') + ' 歲'"></div>
+                </div>
+                <div>
+                    <label class="text-gray-500">性別</label>
+                    <div class="font-medium" x-text="handoff.patient_gender === 'M' ? '男' : handoff.patient_gender === 'F' ? '女' : '-'"></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3 text-sm mt-3">
+                <div>
+                    <label class="text-gray-500">身高</label>
+                    <input type="number" x-model.number="handoff.height_cm"
+                           class="w-full border rounded px-2 py-1" placeholder="cm">
+                </div>
+                <div>
+                    <label class="text-gray-500">體重</label>
+                    <input type="number" x-model.number="handoff.weight_kg"
+                           class="w-full border rounded px-2 py-1" placeholder="kg">
+                </div>
+                <div>
+                    <label class="text-gray-500">BMI</label>
+                    <div class="font-medium py-1"
+                         x-text="handoff.height_cm && handoff.weight_kg ? (handoff.weight_kg / Math.pow(handoff.height_cm/100, 2)).toFixed(1) : '-'"></div>
+                </div>
+            </div>
+            <div class="mt-3">
+                <label class="text-gray-500 text-sm">過敏史</label>
+                <input type="text" x-model="handoff.allergies"
+                       class="w-full border rounded px-2 py-1 mt-1" placeholder="如: Penicillin, Aspirin">
+            </div>
+        </div>
+
+        <!-- I: Identify -->
+        <div class="mb-4 p-4 border-l-4 border-blue-400 bg-blue-50">
+            <label class="font-bold text-blue-700">I - Identify (身份確認)</label>
+            <div class="text-sm text-gray-600 mt-1"
+                 x-text="handoff.patient_name + ', ' + handoff.patient_age + '歲, ' + (handoff.patient_gender === 'M' ? '男' : '女')">
+            </div>
+        </div>
+
+        <!-- S: Situation -->
+        <div class="mb-4 p-4 border-l-4 border-green-400 bg-green-50">
+            <label class="font-bold text-green-700">S - Situation (現況說明)</label>
+            <textarea x-model="handoff.situation" rows="2"
+                      class="w-full mt-2 border rounded px-3 py-2"
+                      placeholder="為何需要轉送？目前狀況？"></textarea>
+        </div>
+
+        <!-- B: Background -->
+        <div class="mb-4 p-4 border-l-4 border-yellow-400 bg-yellow-50">
+            <label class="font-bold text-yellow-700">B - Background (病史背景)</label>
+            <div class="flex flex-wrap gap-2 mt-2">
+                <template x-for="h in ['HTN', 'DM', 'CAD', 'CKD', 'COPD', 'Stroke']">
+                    <label class="flex items-center gap-1 px-2 py-1 bg-white rounded border cursor-pointer">
+                        <input type="checkbox" :checked="handoff.medical_history?.includes(h)"
+                               @change="toggleHistory(h)">
+                        <span class="text-sm" x-text="h"></span>
+                    </label>
+                </template>
+            </div>
+            <textarea x-model="handoff.background_notes" rows="2"
+                      class="w-full mt-2 border rounded px-3 py-2"
+                      placeholder="其他病史、用藥..."></textarea>
+        </div>
+
+        <!-- A: Assessment -->
+        <div class="mb-4 p-4 border-l-4 border-orange-400 bg-orange-50">
+            <label class="font-bold text-orange-700">A - Assessment (評估)</label>
+            <div class="grid grid-cols-3 gap-2 mt-2">
+                <div>
+                    <label class="text-xs text-gray-500">BP</label>
+                    <input type="text" x-model="handoff.bp" class="w-full border rounded px-2 py-1" placeholder="120/80">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">HR</label>
+                    <input type="number" x-model.number="handoff.hr" class="w-full border rounded px-2 py-1" placeholder="80">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">SpO2</label>
+                    <input type="number" x-model.number="handoff.spo2" class="w-full border rounded px-2 py-1" placeholder="98">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">RR</label>
+                    <input type="number" x-model.number="handoff.rr" class="w-full border rounded px-2 py-1" placeholder="16">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">Temp</label>
+                    <input type="number" x-model.number="handoff.temp" step="0.1" class="w-full border rounded px-2 py-1" placeholder="36.5">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">GCS</label>
+                    <input type="text" x-model="handoff.gcs" class="w-full border rounded px-2 py-1" placeholder="E4V5M6">
+                </div>
+            </div>
+        </div>
+
+        <!-- R: Recommendation -->
+        <div class="mb-4 p-4 border-l-4 border-red-400 bg-red-50">
+            <label class="font-bold text-red-700">R - Recommendation (建議)</label>
+            <textarea x-model="handoff.recommendation" rows="2"
+                      class="w-full mt-2 border rounded px-3 py-2"
+                      placeholder="轉送途中注意事項、預期處置..."></textarea>
+        </div>
+    </div>
+
+    <div class="flex gap-3">
+        <button @click="goToStep(0)" class="flex-1 bg-gray-200 text-gray-700 font-bold py-4 rounded-xl">
+            返回
+        </button>
+        <button @click="goToStep(2)" class="flex-1 bg-amber-500 text-white font-bold py-4 rounded-xl">
+            下一步：物資整備
+        </button>
+    </div>
+</div>
+```
+
+### 4.2 MIST 模式
+
+```html
+<!-- Step 1: 交班事項 (MIST) -->
+<div x-show="currentMission && currentStep === 1 && handoffFormat === 'MIST'" x-cloak>
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
+        <!-- 格式切換 Tab -->
+        <!-- ... 同上 ... -->
+
+        <!-- 病患基本資料 -->
+        <!-- ... 同上 ... -->
+
+        <!-- M: Mechanism -->
+        <div class="mb-4 p-4 border-l-4 border-red-500 bg-red-50">
+            <label class="font-bold text-red-700">M - Mechanism (受傷機轉)</label>
+            <div class="flex flex-wrap gap-2 mt-2">
+                <template x-for="m in ['車禍', '墜落', '穿刺傷', '鈍傷', '爆炸', '槍傷']">
+                    <button @click="handoff.mechanism_type = m"
+                            :class="handoff.mechanism_type === m ? 'bg-red-500 text-white' : 'bg-white border'"
+                            class="px-3 py-1 rounded-full text-sm" x-text="m"></button>
+                </template>
+            </div>
+            <textarea x-model="handoff.mechanism_detail" rows="2"
+                      class="w-full mt-2 border rounded px-3 py-2"
+                      placeholder="詳細描述：時速、高度、武器類型..."></textarea>
+        </div>
+
+        <!-- I: Injuries -->
+        <div class="mb-4 p-4 border-l-4 border-orange-500 bg-orange-50">
+            <label class="font-bold text-orange-700">I - Injuries (傷勢發現)</label>
+            <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+                <label class="flex items-center gap-2 p-2 bg-white rounded border">
+                    <input type="checkbox" x-model="handoff.injuries.head"> 頭部
+                </label>
+                <label class="flex items-center gap-2 p-2 bg-white rounded border">
+                    <input type="checkbox" x-model="handoff.injuries.chest"> 胸部
+                </label>
+                <label class="flex items-center gap-2 p-2 bg-white rounded border">
+                    <input type="checkbox" x-model="handoff.injuries.abdomen"> 腹部
+                </label>
+                <label class="flex items-center gap-2 p-2 bg-white rounded border">
+                    <input type="checkbox" x-model="handoff.injuries.pelvis"> 骨盆
+                </label>
+                <label class="flex items-center gap-2 p-2 bg-white rounded border">
+                    <input type="checkbox" x-model="handoff.injuries.extremity"> 四肢
+                </label>
+                <label class="flex items-center gap-2 p-2 bg-white rounded border">
+                    <input type="checkbox" x-model="handoff.injuries.spine"> 脊椎
+                </label>
+            </div>
+            <textarea x-model="handoff.injuries_detail" rows="2"
+                      class="w-full mt-2 border rounded px-3 py-2"
+                      placeholder="傷勢描述：開放性/閉鎖性、出血情況..."></textarea>
+        </div>
+
+        <!-- S: Signs -->
+        <div class="mb-4 p-4 border-l-4 border-yellow-500 bg-yellow-50">
+            <label class="font-bold text-yellow-700">S - Signs (生命徵象)</label>
+            <div class="grid grid-cols-3 gap-2 mt-2">
+                <!-- 同 ISBAR Assessment -->
+                <div>
+                    <label class="text-xs text-gray-500">GCS</label>
+                    <input type="text" x-model="handoff.gcs" class="w-full border rounded px-2 py-1" placeholder="E4V5M6">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">BP</label>
+                    <input type="text" x-model="handoff.bp" class="w-full border rounded px-2 py-1" placeholder="120/80">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">HR</label>
+                    <input type="number" x-model.number="handoff.hr" class="w-full border rounded px-2 py-1" placeholder="80">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">RR</label>
+                    <input type="number" x-model.number="handoff.rr" class="w-full border rounded px-2 py-1" placeholder="16">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">SpO2</label>
+                    <input type="number" x-model.number="handoff.spo2" class="w-full border rounded px-2 py-1" placeholder="98">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">Shock Index</label>
+                    <div class="py-1 font-medium"
+                         :class="(handoff.hr / parseInt(handoff.bp?.split('/')[0] || 120)) > 1 ? 'text-red-600' : 'text-green-600'"
+                         x-text="handoff.hr && handoff.bp ? (handoff.hr / parseInt(handoff.bp.split('/')[0])).toFixed(2) : '-'"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- T: Treatment -->
+        <div class="mb-4 p-4 border-l-4 border-green-500 bg-green-50">
+            <label class="font-bold text-green-700">T - Treatment (已處置)</label>
+            <div class="flex flex-wrap gap-2 mt-2">
+                <template x-for="t in ['止血帶', '夾板固定', '頸圈', '胸腔封閉', 'IV access', 'O2', 'TXA', '止痛']">
+                    <label class="flex items-center gap-1 px-2 py-1 bg-white rounded border cursor-pointer">
+                        <input type="checkbox" :checked="handoff.treatments?.includes(t)"
+                               @change="toggleTreatment(t)">
+                        <span class="text-sm" x-text="t"></span>
+                    </label>
+                </template>
+            </div>
+            <textarea x-model="handoff.treatment_notes" rows="2"
+                      class="w-full mt-2 border rounded px-3 py-2"
+                      placeholder="其他處置、用藥劑量..."></textarea>
+        </div>
+    </div>
+
+    <!-- 同樣的導航按鈕 -->
+</div>
+```
+
+---
+
+## 5. 資料模型更新
+
+### 5.1 MIRS transfer_missions 欄位擴充
+
+```sql
+-- v2.0: 交班資料欄位
+ALTER TABLE transfer_missions ADD COLUMN handoff_format TEXT DEFAULT 'ISBAR'; -- ISBAR/MIST
+
+-- 病患基本資料
+ALTER TABLE transfer_missions ADD COLUMN patient_name TEXT;
+ALTER TABLE transfer_missions ADD COLUMN patient_age INTEGER;
+ALTER TABLE transfer_missions ADD COLUMN patient_gender TEXT;
+ALTER TABLE transfer_missions ADD COLUMN height_cm REAL;
+ALTER TABLE transfer_missions ADD COLUMN weight_kg REAL;
+ALTER TABLE transfer_missions ADD COLUMN allergies TEXT;
+
+-- ISBAR 欄位
+ALTER TABLE transfer_missions ADD COLUMN situation TEXT;
+ALTER TABLE transfer_missions ADD COLUMN background_history TEXT;  -- JSON: ["HTN","DM"]
+ALTER TABLE transfer_missions ADD COLUMN background_notes TEXT;
+ALTER TABLE transfer_missions ADD COLUMN assessment_vitals TEXT;   -- JSON: {bp, hr, spo2, rr, temp, gcs}
+ALTER TABLE transfer_missions ADD COLUMN recommendation TEXT;
+
+-- MIST 欄位 (外傷)
+ALTER TABLE transfer_missions ADD COLUMN mechanism_type TEXT;
+ALTER TABLE transfer_missions ADD COLUMN mechanism_detail TEXT;
+ALTER TABLE transfer_missions ADD COLUMN injuries_regions TEXT;    -- JSON: {head, chest, ...}
+ALTER TABLE transfer_missions ADD COLUMN injuries_detail TEXT;
+ALTER TABLE transfer_missions ADD COLUMN treatments_given TEXT;    -- JSON: ["止血帶","TXA"]
+ALTER TABLE transfer_missions ADD COLUMN treatment_notes TEXT;
+
+-- CIRS 連結
+ALTER TABLE transfer_missions ADD COLUMN cirs_request_id TEXT;
+ALTER TABLE transfer_missions ADD COLUMN cirs_person_id TEXT;
+ALTER TABLE transfer_missions ADD COLUMN cirs_registration_id TEXT;
+ALTER TABLE transfer_missions ADD COLUMN requesting_doctor TEXT;
+```
+
+### 5.2 CIRS transfer_requests 表 (完整版)
+
+```sql
+CREATE TABLE transfer_requests (
+    request_id TEXT PRIMARY KEY,          -- 'TREQ-YYYYMMDD-NNN'
+    registration_id TEXT NOT NULL,        -- FK → registrations
+    person_id TEXT NOT NULL,              -- FK → persons
+
+    -- 發起資訊
+    requesting_doctor_id TEXT,
+    requesting_doctor_name TEXT,
+    origin_station_id TEXT,
+
+    -- 目的地
+    destination_type TEXT DEFAULT 'HOSPITAL',
+    destination_text TEXT,
+    eta_min INTEGER,
+
+    -- 初步評估
+    o2_lpm REAL DEFAULT 0,
+    patient_status TEXT DEFAULT 'STABLE',
+
+    -- 結構化交班
+    handoff_format TEXT DEFAULT 'ISBAR',  -- ISBAR/MIST
+
+    -- 病患資料 (從 persons 複製，允許覆寫)
+    patient_height_cm REAL,
+    patient_weight_kg REAL,
+    patient_allergies TEXT,
+
+    -- ISBAR 內容
+    isbar_situation TEXT,
+    isbar_background TEXT,                -- JSON
+    isbar_assessment TEXT,                -- JSON (vitals)
+    isbar_recommendation TEXT,
+
+    -- MIST 內容
+    mist_mechanism TEXT,                  -- JSON
+    mist_injuries TEXT,                   -- JSON
+    mist_signs TEXT,                      -- JSON (vitals)
+    mist_treatment TEXT,                  -- JSON
+
+    -- 狀態
+    status TEXT DEFAULT 'PENDING',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    accepted_at TIMESTAMP,
+    accepted_by TEXT,
+    mirs_mission_id TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+## 6. Alpine.js 資料結構
+
+### 6.1 handoff 物件
+
+```javascript
+// EMT PWA: emtTransfer() 內
+handoff: {
+    format: 'ISBAR',  // 'ISBAR' or 'MIST'
+
+    // 病患基本資料
+    patient_name: '',
+    patient_age: null,
+    patient_gender: '',  // 'M' or 'F'
+    height_cm: null,
+    weight_kg: null,
+    allergies: '',
+    medical_history: [],  // ['HTN', 'DM', ...]
+
+    // ISBAR
+    situation: '',
+    background_notes: '',
+    bp: '',
+    hr: null,
+    spo2: null,
+    rr: null,
+    temp: null,
+    gcs: '',
+    recommendation: '',
+
+    // MIST
+    mechanism_type: '',
+    mechanism_detail: '',
+    injuries: {
+        head: false,
+        chest: false,
+        abdomen: false,
+        pelvis: false,
+        extremity: false,
+        spine: false
+    },
+    injuries_detail: '',
+    treatments: [],  // ['止血帶', 'TXA', ...]
+    treatment_notes: ''
+},
+
+// 方法
+toggleHistory(h) {
+    const idx = this.handoff.medical_history.indexOf(h);
+    if (idx === -1) {
+        this.handoff.medical_history.push(h);
+    } else {
+        this.handoff.medical_history.splice(idx, 1);
+    }
+},
+
+toggleTreatment(t) {
+    const idx = this.handoff.treatments.indexOf(t);
+    if (idx === -1) {
+        this.handoff.treatments.push(t);
+    } else {
+        this.handoff.treatments.splice(idx, 1);
+    }
+},
+```
+
+### 6.2 從 CIRS 匯入時自動填入
+
+```javascript
+async importFromCIRS(request) {
+    // 基本資料
+    this.handoff.patient_name = request.person?.name || '';
+    this.handoff.patient_age = request.person?.age || null;
+    this.handoff.patient_gender = request.person?.gender || '';
+    this.handoff.height_cm = request.person?.height_cm || null;
+    this.handoff.weight_kg = request.person?.weight_kg || null;
+    this.handoff.allergies = request.person?.allergies || '';
+
+    // 交班格式
+    this.handoff.format = request.handoff_format || 'ISBAR';
+
+    // ISBAR
+    if (request.isbar_situation) this.handoff.situation = request.isbar_situation;
+    if (request.isbar_background) this.handoff.medical_history = JSON.parse(request.isbar_background);
+    if (request.isbar_assessment) {
+        const vitals = JSON.parse(request.isbar_assessment);
+        Object.assign(this.handoff, vitals);
+    }
+    if (request.isbar_recommendation) this.handoff.recommendation = request.isbar_recommendation;
+
+    // MIST
+    if (request.mist_mechanism) {
+        const mech = JSON.parse(request.mist_mechanism);
+        this.handoff.mechanism_type = mech.type;
+        this.handoff.mechanism_detail = mech.detail;
+    }
+    if (request.mist_injuries) {
+        const inj = JSON.parse(request.mist_injuries);
+        this.handoff.injuries = inj.regions;
+        this.handoff.injuries_detail = inj.detail;
+    }
+    if (request.mist_treatment) {
+        const tx = JSON.parse(request.mist_treatment);
+        this.handoff.treatments = tx.list || [];
+        this.handoff.treatment_notes = tx.notes || '';
+    }
+
+    // Mission 設定
+    this.newMission.destination = request.destination_text || '';
+    this.newMission.eta_min = request.eta_min || 60;
+    this.newMission.o2_lpm = request.o2_lpm || 0;
+}
+```
+
+---
+
+## 7. O2 流量預設值 (已實作)
+
+### 7.1 按鈕配置
+
+```
+[無] [3] [6] [10] [15]
+```
+
+### 7.2 對照表
 
 | 選項 | L/min | 適用情境 |
 |------|-------|----------|
@@ -61,549 +613,98 @@
 | 6 | 6 | 鼻導管中流量 |
 | 10 | 10 | 面罩 / NRB |
 | 15 | 15 | NRB 高流量 / BVM |
-| 自訂 | N | 特殊需求（如 1, 2, 4, 8 等） |
-
-### 1.4 UI 元件
-
-```html
-<!-- O2 流量快選 -->
-<div class="flex flex-wrap gap-2">
-    <template x-for="opt in [{v:0,l:'無'},{v:3,l:'3'},{v:6,l:'6'},{v:10,l:'10'},{v:15,l:'15'}]">
-        <button @click="setO2Flow(opt.v)"
-                :class="o2_lpm === opt.v ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'"
-                class="px-4 py-2 rounded-full text-sm font-medium">
-            <span x-text="opt.l"></span>
-        </button>
-    </template>
-    <button @click="showO2Custom = !showO2Custom"
-            :class="showO2Custom ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'"
-            class="px-4 py-2 rounded-full text-sm font-medium">
-        自訂
-    </button>
-</div>
-<div x-show="showO2Custom" class="mt-2">
-    <input type="number" x-model.number="o2_lpm"
-           class="w-24 px-3 py-2 border rounded-lg" placeholder="L/min">
-</div>
-```
 
 ---
 
-## 2. CIRS Doctor PWA 轉送按鈕
+## 8. CIRS Doctor PWA 更新
 
-### 2.1 按鈕位置
+### 8.1 完成看診對話框
 
-在醫師完成看診後的動作選單中新增「需要轉送」按鈕：
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 完成看診                                                     │
-├─────────────────────────────────────────────────────────────┤
-│ 此病患需要：                                                 │
-│                                                             │
-│ [✓] 需處置        [開立處置單]                              │
-│ [✓] 需麻醉        [轉介麻醉科]                              │
-│ [✓] 需轉送        [發起轉送]  ← 新增                        │
-│                                                             │
-│ 轉送備註：                                                   │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ 右股骨骨折，已固定，需轉後送醫院手術                       │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                             │
-│                            [取消] [完成看診]                 │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 2.2 按鈕樣式
-
-使用 MIRS/EMT 橘紅色系：
-
-```css
-/* 轉送按鈕配色 (同 MIRS amber) */
-.btn-transfer {
-    background-color: #f59e0b; /* amber-500 */
-    color: white;
-}
-.btn-transfer:hover {
-    background-color: #d97706; /* amber-600 */
-}
-```
-
-### 2.3 勾選「需轉送」後的 UI
+在「需轉送」勾選後顯示交班表單：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ [✓] 需轉送                                                   │
 ├─────────────────────────────────────────────────────────────┤
-│ 目的地：                                                     │
-│ ○ 後送醫院 (預設)                                           │
-│ ○ 其他站點                                                   │
-│ ○ 自訂: [________________]                                   │
+│ 交班格式: [ISBAR] [MIST]                                     │
 │                                                             │
-│ 預估 ETA：                                                   │
-│ [30] [60] [90] [120] 分鐘  或 自訂: [___] 分鐘              │
+│ ─────────── ISBAR ───────────                               │
+│ S - 現況: [                                               ] │
+│ B - 病史: [HTN] [DM] [CAD] [___]                           │
+│ A - 評估: BP [   ] HR [  ] SpO2 [  ]                       │
+│ R - 建議: [                                               ] │
 │                                                             │
-│ 初步 O2 需求：                                               │
-│ [無] [3] [6] [10] [15] L/min                                │
-│                                                             │
-│ 病患狀態：                                                   │
-│ ○ 穩定 (STABLE)                                              │
-│ ● 需監測 (MONITORED)                                         │
-│ ○ 危急 (CRITICAL)                                            │
-│                                                             │
-│ 交班備註：                                                   │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ (醫師填寫重要交班事項)                                    │ │
-│ └─────────────────────────────────────────────────────────┘ │
+│ 目的地: [後送醫院 ▼]  ETA: [60] 分                          │
+│ O2: [無] [3] [6] [10] [15]                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
----
+### 8.2 資料自動填入來源
 
-## 3. 資料模型
-
-### 3.1 CIRS 端：transfer_requests 表
-
-```sql
-CREATE TABLE transfer_requests (
-    request_id TEXT PRIMARY KEY,          -- 'TREQ-YYYYMMDD-NNN'
-    registration_id TEXT NOT NULL,        -- FK → registrations
-    person_id TEXT NOT NULL,              -- FK → persons
-
-    -- 來源資訊
-    requesting_doctor_id TEXT,            -- 發起醫師 ID
-    requesting_doctor_name TEXT,          -- 醫師姓名 (denormalized)
-    origin_station_id TEXT,               -- 出發站點
-
-    -- 目的地
-    destination_type TEXT DEFAULT 'HOSPITAL', -- HOSPITAL/STATION/CUSTOM
-    destination_text TEXT,                -- 目的地描述
-
-    -- 初步評估
-    eta_min INTEGER,                      -- 預估時間 (分鐘)
-    o2_lpm REAL DEFAULT 0,                -- 初步 O2 需求
-    patient_status TEXT DEFAULT 'STABLE', -- STABLE/MONITORED/CRITICAL
-
-    -- 交班備註
-    handoff_notes TEXT,                   -- 自由文字
-
-    -- 狀態
-    status TEXT DEFAULT 'PENDING',        -- PENDING/ACCEPTED/IN_PROGRESS/COMPLETED/CANCELLED
-
-    -- 時間戳
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    accepted_at TIMESTAMP,
-    accepted_by TEXT,                     -- EMT 姓名
-    mirs_mission_id TEXT,                 -- 對應的 MIRS 任務 ID
-
-    -- 審計
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_transfer_requests_status ON transfer_requests(status);
-CREATE INDEX idx_transfer_requests_person ON transfer_requests(person_id);
-```
-
-### 3.2 MIRS 端：transfer_missions 更新
-
-在現有 `transfer_missions` 表新增欄位：
-
-```sql
-ALTER TABLE transfer_missions ADD COLUMN cirs_request_id TEXT;
-ALTER TABLE transfer_missions ADD COLUMN handoff_notes TEXT;
-ALTER TABLE transfer_missions ADD COLUMN requesting_doctor TEXT;
-```
-
-### 3.3 transfer_request 狀態流程
-
-```
-PENDING ──(EMT accept)──> ACCEPTED ──(EMT depart)──> IN_PROGRESS ──(EMT arrive)──> COMPLETED
-    │
-    └──(Doctor cancel / timeout)──> CANCELLED
-```
-
----
-
-## 4. API 設計
-
-### 4.1 CIRS API (新增)
-
-#### 4.1.1 發起轉送請求
-
-```
-POST /api/transfer-requests
-Authorization: Bearer {doctor_token}
-
-{
-    "registration_id": "REG-20260105-001",
-    "destination_type": "HOSPITAL",
-    "destination_text": "台大醫院急診",
-    "eta_min": 60,
-    "o2_lpm": 6,
-    "patient_status": "MONITORED",
-    "handoff_notes": "右股骨骨折已固定，生命徵象穩定，需後送手術"
-}
-
-Response 201:
-{
-    "request_id": "TREQ-20260105-001",
-    "status": "PENDING",
-    "created_at": "2026-01-05T10:30:00Z"
-}
-```
-
-#### 4.1.2 查詢待處理轉送 (EMT PWA 輪詢用)
-
-```
-GET /api/transfer-requests?status=PENDING
-Authorization: Bearer {emt_token}
-
-Response 200:
-{
-    "requests": [
-        {
-            "request_id": "TREQ-20260105-001",
-            "person": {
-                "person_id": "P001",
-                "name": "王小明",
-                "age": 45,
-                "triage_status": "YELLOW"
-            },
-            "registration": {
-                "registration_id": "REG-20260105-001",
-                "chief_complaint": "車禍外傷",
-                "priority": "URGENT"
-            },
-            "requesting_doctor_name": "陳醫師",
-            "destination_text": "台大醫院急診",
-            "eta_min": 60,
-            "o2_lpm": 6,
-            "patient_status": "MONITORED",
-            "handoff_notes": "右股骨骨折已固定...",
-            "created_at": "2026-01-05T10:30:00Z"
-        }
-    ]
-}
-```
-
-#### 4.1.3 EMT 接受轉送
-
-```
-POST /api/transfer-requests/{request_id}/accept
-Authorization: Bearer {emt_token}
-
-{
-    "emt_name": "李技術員",
-    "mirs_mission_id": "TRF-20260105-001"
-}
-
-Response 200:
-{
-    "request_id": "TREQ-20260105-001",
-    "status": "ACCEPTED",
-    "accepted_at": "2026-01-05T10:35:00Z"
-}
-```
-
-### 4.2 MIRS API (更新)
-
-#### 4.2.1 從 CIRS 匯入轉送請求
-
-```
-POST /api/transfer/import-from-cirs
-Authorization: Bearer {emt_token}
-
-{
-    "cirs_request_id": "TREQ-20260105-001",
-    "cirs_hub_url": "http://10.0.0.1:8090"
-}
-
-Response 201:
-{
-    "mission_id": "TRF-20260105-001",
-    "status": "PLANNING",
-    "patient": { ... },
-    "handoff_notes": "右股骨骨折已固定...",
-    "o2_lpm": 6,
-    "eta_min": 60
-}
-```
-
----
-
-## 5. EMT PWA UI 更新
-
-### 5.1 新任務頁面 (v2.3 更新)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 📋 新增轉送任務                                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ 📥 待接收交班 (2)                               [重新整理] │ │
-│ ├─────────────────────────────────────────────────────────┤ │
-│ │ ┌───────────────────────────────────────────────────┐  │ │
-│ │ │ 🟡 王小明 (45歲)              10:30 陳醫師發起    │  │ │
-│ │ │    車禍外傷 - 右股骨骨折                          │  │ │
-│ │ │    → 台大醫院急診 (60min)                        │  │ │
-│ │ │    O2: 6 L/min | 狀態: 需監測                    │  │ │
-│ │ │    備註: 已固定，生命徵象穩定                    │  │ │
-│ │ │                                    [接收此交班]  │  │ │
-│ │ └───────────────────────────────────────────────────┘  │ │
-│ │ ┌───────────────────────────────────────────────────┐  │ │
-│ │ │ 🔴 李大華 (62歲)              10:45 林醫師發起    │  │ │
-│ │ │    胸痛 - 疑似 STEMI                             │  │ │
-│ │ │    → 榮總心導管室 (45min)                        │  │ │
-│ │ │    O2: 10 L/min | 狀態: 危急                     │  │ │
-│ │ │                                    [接收此交班]  │  │ │
-│ │ └───────────────────────────────────────────────────┘  │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                             │
-│ ───────────────── 或 ─────────────────                      │
-│                                                             │
-│ [➕ 手動建立任務 (非掛號病患)]                               │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 5.2 接收交班後的自動填入
-
-當 EMT 點擊「接收此交班」後：
-
-1. 自動填入病患資訊（姓名、年齡、主訴）
-2. 自動填入 ETA、O2 需求、目的地
-3. 自動填入交班備註
-4. EMT 可修改/補充任何欄位
-5. 進入「設定」步驟確認物資
-
-### 5.3 手動建立任務
-
-保留現有功能，讓 EMT 可以：
-- 手動輸入病患資訊（非 CIRS 掛號）
-- 自由輸入交班備註
-- 完整設定所有欄位
-
----
-
-## 6. CIRS Doctor PWA 更新
-
-### 6.1 完成看診對話框更新
-
-在現有 `frontend/doctor/index.html` 的「完成看診」對話框中新增：
-
-```html
-<!-- 需轉送選項 -->
-<div class="p-4 border-b">
-    <label class="flex items-center gap-3">
-        <input type="checkbox" x-model="completeForm.needs_transfer"
-               class="w-5 h-5 text-amber-500 rounded">
-        <span class="font-medium text-amber-700">需轉送</span>
-    </label>
-
-    <!-- 展開轉送詳情 -->
-    <div x-show="completeForm.needs_transfer" class="mt-4 space-y-4">
-        <!-- 目的地 -->
-        <div>
-            <label class="text-sm text-gray-600">目的地</label>
-            <div class="flex gap-2 mt-1">
-                <button @click="completeForm.destination_type = 'HOSPITAL'"
-                        :class="completeForm.destination_type === 'HOSPITAL' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'"
-                        class="px-3 py-1 rounded-full text-sm">後送醫院</button>
-                <button @click="completeForm.destination_type = 'CUSTOM'"
-                        :class="completeForm.destination_type === 'CUSTOM' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'"
-                        class="px-3 py-1 rounded-full text-sm">自訂</button>
-            </div>
-            <input x-show="completeForm.destination_type === 'CUSTOM'"
-                   x-model="completeForm.destination_text"
-                   class="mt-2 w-full px-3 py-2 border rounded-lg"
-                   placeholder="輸入目的地">
-        </div>
-
-        <!-- 預估 ETA -->
-        <div>
-            <label class="text-sm text-gray-600">預估 ETA</label>
-            <div class="flex gap-2 mt-1">
-                <template x-for="eta in [30, 60, 90, 120]">
-                    <button @click="completeForm.eta_min = eta"
-                            :class="completeForm.eta_min === eta ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'"
-                            class="px-3 py-1 rounded-full text-sm" x-text="eta + '分'"></button>
-                </template>
-            </div>
-        </div>
-
-        <!-- O2 需求 -->
-        <div>
-            <label class="text-sm text-gray-600">初步 O2 需求</label>
-            <div class="flex gap-2 mt-1">
-                <template x-for="o2 in [{v:0,l:'無'},{v:3,l:'3'},{v:6,l:'6'},{v:10,l:'10'},{v:15,l:'15'}]">
-                    <button @click="completeForm.o2_lpm = o2.v"
-                            :class="completeForm.o2_lpm === o2.v ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'"
-                            class="px-3 py-1 rounded-full text-sm" x-text="o2.l"></button>
-                </template>
-            </div>
-        </div>
-
-        <!-- 交班備註 -->
-        <div>
-            <label class="text-sm text-gray-600">交班備註</label>
-            <textarea x-model="completeForm.handoff_notes"
-                      class="w-full mt-1 px-3 py-2 border rounded-lg" rows="3"
-                      placeholder="重要交班事項（診斷、已處置、注意事項）"></textarea>
-        </div>
-    </div>
-</div>
-```
-
-### 6.2 Alpine.js 資料
-
-```javascript
-completeForm: {
-    // 既有欄位
-    needs_procedure: false,
-    procedure_notes: '',
-    needs_anesthesia: false,
-    anesthesia_notes: '',
-
-    // 新增：轉送相關
-    needs_transfer: false,
-    destination_type: 'HOSPITAL',
-    destination_text: '',
-    eta_min: 60,
-    o2_lpm: 0,
-    patient_status: 'STABLE',
-    handoff_notes: ''
-}
-```
-
-### 6.3 完成看診 API 呼叫
-
-```javascript
-async completeConsultation() {
-    const payload = {
-        // ... 既有欄位 ...
-    };
-
-    // 如果需要轉送，同時發起轉送請求
-    if (this.completeForm.needs_transfer) {
-        await fetch(`${this.apiUrl}/transfer-requests`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                registration_id: this.currentPatient.registration_id,
-                destination_type: this.completeForm.destination_type,
-                destination_text: this.completeForm.destination_text,
-                eta_min: this.completeForm.eta_min,
-                o2_lpm: this.completeForm.o2_lpm,
-                patient_status: this.completeForm.patient_status,
-                handoff_notes: this.completeForm.handoff_notes
-            })
-        });
-    }
-
-    // ... 完成看診 API ...
-}
-```
-
----
-
-## 7. 實作順序
-
-### Phase 1: O2 流量快選 (MIRS EMT PWA)
-
-| 步驟 | 檔案 | 變更 |
-|------|------|------|
-| 1.1 | `static/emt/index.html` | O2 流量改為快選按鈕 |
-| 1.2 | `docs/DEV_SPEC_EMT_TRANSFER_PWA.md` | 更新 O2 選項文件 |
-
-### Phase 2: CIRS 轉送請求 API
-
-| 步驟 | 檔案 | 變更 |
-|------|------|------|
-| 2.1 | `backend/migrations/` | 新增 transfer_requests 表 |
-| 2.2 | `backend/routes/transfer.py` | 新增 API 端點 |
-| 2.3 | `backend/main.py` | 註冊 router |
-
-### Phase 3: CIRS Doctor PWA 轉送按鈕
-
-| 步驟 | 檔案 | 變更 |
-|------|------|------|
-| 3.1 | `frontend/doctor/index.html` | 完成看診對話框新增轉送選項 |
-| 3.2 | `frontend/doctor/service-worker.js` | 版本更新 |
-
-### Phase 4: MIRS EMT PWA 接收交班
-
-| 步驟 | 檔案 | 變更 |
-|------|------|------|
-| 4.1 | `routes/transfer.py` | 新增 CIRS 匯入 API |
-| 4.2 | `static/emt/index.html` | 新增待接收交班列表 |
-| 4.3 | `database/migrations/` | transfer_missions 新增欄位 |
-
----
-
-## 8. 檔案變更清單
-
-| 系統 | 檔案 | 變更類型 |
-|------|------|----------|
-| MIRS | `static/emt/index.html` | 修改 |
-| MIRS | `routes/transfer.py` | 修改 |
-| MIRS | `database/migrations/transfer_v3_handoff.sql` | 新增 |
-| MIRS | `docs/DEV_SPEC_EMT_TRANSFER_PWA.md` | 修改 |
-| CIRS | `backend/routes/transfer.py` | 新增 |
-| CIRS | `backend/migrations/add_transfer_requests.sql` | 新增 |
-| CIRS | `frontend/doctor/index.html` | 修改 |
-| CIRS | `frontend/doctor/service-worker.js` | 修改 |
-
----
-
-## 9. 測試情境
-
-### 9.1 O2 流量測試
-
-| 測試 | 預期結果 |
+| 欄位 | 資料來源 |
 |------|----------|
-| 點擊「無」 | o2_lpm = 0，按鈕高亮 |
-| 點擊「6」 | o2_lpm = 6，按鈕高亮 |
-| 點擊「自訂」輸入 8 | o2_lpm = 8 |
+| 姓名、年齡、性別 | `registrations.person_id` → `persons` |
+| 身高、體重 | `persons.height`, `persons.weight` |
+| 過敏史 | `persons.allergies` |
+| 病史 | `persons.medical_history` (JSON) |
+| 生命徵象 | 最近一筆 `vital_signs` 記錄 |
+| 已處置 | `procedure_orders` 或 `treatments` 記錄 |
 
-### 9.2 交班流程測試
+---
 
-| 步驟 | 操作 | 預期結果 |
-|------|------|----------|
-| 1 | Doctor 勾選「需轉送」 | 顯示轉送詳情欄位 |
-| 2 | Doctor 填寫並完成看診 | CIRS 建立 transfer_request (PENDING) |
-| 3 | EMT PWA 開啟新任務 | 顯示待接收交班列表 |
-| 4 | EMT 點擊「接收此交班」 | 自動填入資訊，狀態改 ACCEPTED |
-| 5 | EMT 確認出發 | CIRS request 狀態改 IN_PROGRESS |
-| 6 | EMT 抵達結案 | CIRS request 狀態改 COMPLETED |
+## 9. 實作順序
+
+### Phase 1: O2 流量快選 ✓ (已完成)
+
+### Phase 2: EMT PWA Step 重構
+
+| 步驟 | 檔案 | 變更 |
+|------|------|------|
+| 2.1 | `static/emt/index.html` | Step 1 改為交班事項 UI |
+| 2.2 | `static/emt/index.html` | 新增 handoff 資料結構 |
+| 2.3 | `static/emt/index.html` | ISBAR/MIST Tab 切換 |
+| 2.4 | `static/emt/sw.js` | 版本更新 |
+
+### Phase 3: CIRS 轉送請求 API
+
+| 步驟 | 檔案 | 變更 |
+|------|------|------|
+| 3.1 | `backend/migrations/` | 新增 transfer_requests 表 |
+| 3.2 | `backend/routes/transfer.py` | API 端點 |
+| 3.3 | `frontend/doctor/index.html` | 轉送表單 UI |
+
+### Phase 4: MIRS/CIRS 整合
+
+| 步驟 | 檔案 | 變更 |
+|------|------|------|
+| 4.1 | `routes/transfer.py` | 從 CIRS 匯入 API |
+| 4.2 | `static/emt/index.html` | 待接收交班列表 |
+| 4.3 | `database/` | transfer_missions 欄位擴充 |
 
 ---
 
 ## 10. 注意事項
 
-### 10.1 離線處理
+### 10.1 隱私保護
 
-- EMT PWA 應定期輪詢待接收交班（有網路時）
-- 接收交班後，本地建立任務，可離線操作
-- 狀態同步在恢復連線時進行
+- 病患資料只在任務期間保存
+- 結案後保留摘要，清除詳細病歷
+- 符合 HIPAA/GDPR 要求
 
-### 10.2 權限控制
+### 10.2 離線處理
 
-- 只有醫師 (role: doctor) 可發起轉送請求
-- 只有 EMT 可接受轉送請求
-- 一個請求只能被一位 EMT 接受
+- 交班資料本地暫存
+- 恢復連線後同步至 CIRS/MIRS
 
-### 10.3 超時處理
+### 10.3 欄位驗證
 
-- 轉送請求 30 分鐘未接受自動標記為 EXPIRED
-- 醫師可取消未接受的請求
+- 必填：姓名、年齡、目的地
+- 建議填：過敏史、生命徵象
+- 選填：BMI、病史詳情
 
 ---
 
 **De Novo Orthopedics Inc. / 谷盺生物科技股份有限公司**
 
-*文件版本: v1.0 Draft*
+*文件版本: v2.0 Draft*
 *更新日期: 2026-01-05*
