@@ -1852,7 +1852,11 @@
                         this.selectedHandoff = null;
                         await this.fetchPendingHandoffs();
 
-                        alert('已接收交班，請繼續物資整備');
+                        // v3.2.4: Force Step 0 for new handoff missions
+                        this.currentStep = 0;
+                        console.log('[EMT] acceptHandoff complete, forced currentStep:', this.currentStep);
+
+                        alert('已接收交班，請確認任務設定');
 
                     } catch (e) {
                         console.error('[EMT] Accept handoff error:', e);
