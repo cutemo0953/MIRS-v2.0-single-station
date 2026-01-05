@@ -6,9 +6,10 @@
  * v1.1.0: O2 flow options changed to 無/3/6/10/15
  * v3.0.0: CIRS Handoff integration (accept/reject, arrival vitals)
  * v3.0.2: User-selectable ISBAR/MIST format, GCS E/V/M input, pink color scheme
+ * v3.0.3: Format-aware display (ISBAR cards vs MIST trauma cards)
  */
 
-const CACHE_NAME = 'mirs-emt-v3.0.2';
+const CACHE_NAME = 'mirs-emt-v3.0.3';
 const OFFLINE_URL = '/static/emt/';
 
 const STATIC_ASSETS = [
