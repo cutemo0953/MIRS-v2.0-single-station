@@ -1,8 +1,10 @@
-# 🏥 MIRS v2.5.3 Raspberry Pi 5 安裝說明
+# 🏥 MIRS v2.9.1 Raspberry Pi 5 安裝說明
 
 **專為野戰醫療站設計｜讓護理人員 3 分鐘完成安裝**
 
-> **v2.5.3 新功能**：完整資料庫遷移 + 設備狀態修復 + 氧氣韌性計算優化
+> **v2.9.1 功能**：術式代碼 FTS5 搜尋修正 + 健保手術碼 1,687 筆
+>
+> **v2.9.0 功能**：EMT Transfer PWA 病患轉送物資規劃
 >
 > **xIRS Hub-Satellite 架構**：MIRS 作為 CIRS Hub 的 Satellite 運行（CIRS:8090, MIRS:8000）
 
@@ -721,6 +723,33 @@ pip install -r api/requirements.txt --upgrade
 sudo systemctl start mirs
 ```
 
+### 更新健保手術碼（v2.8.0+）
+
+如果你的 MIRS 版本較舊（術式代碼只有 255 筆），執行以下指令更新到 1,687 筆：
+
+```bash
+# 進入系統目錄
+cd ~/MIRS-v2.0-single-station
+
+# 啟動虛擬環境
+source venv/bin/activate
+
+# 執行 NHI 手術碼合併腳本
+python3 scripts/merge_nhi_surgery_codes.py
+
+# 驗證結果（預期: 1687）
+sqlite3 medical_inventory.db "SELECT COUNT(*) FROM surgery_codes"
+
+# 重啟服務
+sudo systemctl restart mirs
+```
+
+**合併腳本功能**：
+- 讀取 `data/packs/nhi_sec7/sec7_surgery_codes_points.csv`（1,681 筆 NHI 手術碼）
+- 與現有 surgery_codes 合併（INSERT 新碼 / UPDATE 點數）
+- 保留骨科常用 `is_common=1` 標記
+- 重建 FTS5 全文搜尋索引
+
 ### 備份資料庫
 
 ```bash
@@ -1091,10 +1120,12 @@ curl http://localhost:8000/api/anesthesia/proxy/cirs/waiting-anesthesia  # MIRS 
 | CIRS Hub | http://10.0.0.1:8090 | 社區管理、檢傷、掛號 |
 | HIRS | http://10.0.0.1:8001 | 家庭物資管理 |
 | MIRS | http://10.0.0.1:8000 | 醫療站物資 |
+| Mobile | http://10.0.0.1:8000/mobile | 行動版巡房助手 |
 | 麻醉模組 | http://10.0.0.1:8000/anesthesia | 麻醉記錄 |
+| EMT Transfer | http://10.0.0.1:8000/emt | 病患轉送物資規劃 |
 
 ---
 
-**🏥 MIRS v2.5.3 - 專為野戰醫療站設計**
+**🏥 MIRS v2.9.1 - 專為野戰醫療站設計**
 
 *De Novo Orthopedics Inc. © 2024-2026*

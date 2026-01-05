@@ -1,8 +1,8 @@
 # MIRS 處置 Tab UI 重組規格書
 
-**Version:** 2.7.4
-**Date:** 2026-01-03
-**Status:** 實作中
+**Version:** 2.9.1
+**Date:** 2026-01-05
+**Status:** 已完成
 
 ---
 
@@ -393,6 +393,53 @@ surgeryForm: {
 1. 術式收藏夾（常用術式快取）
 2. 術式組合包（預設術式+耗材+藥品組合）
 3. 歷史點數查詢（追蹤點數變化）
+
+---
+
+## 9. v2.9.1 修正項目
+
+### 9.1 術式代碼搜尋端點修正
+
+**問題：** `loadSurgeryCodes()` 將 `q` 參數傳給 `/codes` 端點，但該端點不支援搜尋
+
+**原因分析：**
+- `/codes` 端點：分頁列表，**不支援** `q` 參數
+- `/codes/search` 端點：FTS5 搜尋，**支援** `q` 參數
+
+**修正前程式碼：**
+```javascript
+async loadSurgeryCodes() {
+    let url = `${this.apiUrl}/surgery-codes/codes?page=${this.page}&page_size=${this.pageSize}`;
+    if (this.surgeryCodeSearchText) {
+        url += `&q=${encodeURIComponent(this.surgeryCodeSearchText)}`;  // ❌ /codes 不支援 q
+    }
+    // ...
+}
+```
+
+**修正後程式碼：**
+```javascript
+async loadSurgeryCodes() {
+    let url;
+    if (this.surgeryCodeSearchText?.trim()) {
+        // ✅ 有搜尋文字 → 使用 FTS5 搜尋端點
+        url = `${this.apiUrl}/surgery-codes/codes/search?q=${encodeURIComponent(this.surgeryCodeSearchText)}&limit=50`;
+    } else {
+        // ✅ 無搜尋文字 → 使用分頁列表端點
+        url = `${this.apiUrl}/surgery-codes/codes?page=${this.page}&page_size=${this.pageSize}`;
+    }
+    // ...
+}
+```
+
+**對照表：**
+
+| 情境 | 正確端點 | 說明 |
+|------|----------|------|
+| 無搜尋文字 | `/codes?page=1&page_size=20` | 分頁列表 |
+| 有搜尋文字 | `/codes/search?q=骨折&limit=50` | FTS5 全文搜尋 |
+| 無搜尋文字（自費） | `/selfpay?limit=50` | 分頁列表 |
+| 有搜尋文字（自費） | `/selfpay/search?q=骨釘` | FTS5 全文搜尋 |
 
 ---
 

@@ -1,6 +1,8 @@
 # Dev Spec: 手術代碼與自費品項管理模組
 
-**MIRS v1.5.0 - 處置代碼資料庫與自費品項建碼系統**
+**MIRS v2.9.1 - 處置代碼資料庫與自費品項建碼系統**
+
+> **實作狀態**: Phase 1-3 已完成 (v2.7.0 ~ v2.9.1)
 
 ## 1. 背景與需求分析
 
@@ -368,7 +370,59 @@ def calculate_nhi_points(procedures: List[dict]) -> List[dict]:
 
 ## 4. API 設計
 
-### 4.1 處置代碼 API
+### 4.0 實際 API 端點 (v2.9.1 實作)
+
+> **重要**: 以下為實際實作的端點，位於 `routes/surgery_codes.py`
+
+```
+# 術式代碼
+GET  /api/surgery-codes/categories       # 分類列表
+GET  /api/surgery-codes/codes            # 列表（分頁，不支援搜尋）
+GET  /api/surgery-codes/codes/search?q=  # FTS5 全文搜尋 ← 搜尋必須用此端點
+GET  /api/surgery-codes/codes/{code}     # 單筆詳情
+POST /api/surgery-codes/codes            # 新增
+PUT  /api/surgery-codes/codes/{code}     # 更新
+DELETE /api/surgery-codes/codes/{code}   # 刪除
+
+# 自費項目
+GET  /api/surgery-codes/selfpay          # 列表
+GET  /api/surgery-codes/selfpay/search?q=# FTS5 全文搜尋
+GET  /api/surgery-codes/selfpay/{id}     # 單筆詳情
+POST /api/surgery-codes/selfpay          # 新增
+PUT  /api/surgery-codes/selfpay/{id}     # 更新
+DELETE /api/surgery-codes/selfpay/{id}   # 刪除
+
+# 點數計算
+POST /api/surgery-codes/calculate-points # 計算遞減點數
+```
+
+#### 搜尋端點注意事項
+
+| 端點 | 用途 | 支援 `q` 參數 |
+|------|------|---------------|
+| `/codes` | 分頁列表 | **否** |
+| `/codes/search` | FTS5 搜尋 | **是** |
+| `/selfpay` | 分頁列表 | **否** |
+| `/selfpay/search` | FTS5 搜尋 | **是** |
+
+**前端呼叫邏輯** (v2.9.1 修正):
+```javascript
+async loadSurgeryCodes() {
+    let url;
+    if (this.surgeryCodeSearchText?.trim()) {
+        // 有搜尋文字 → FTS5 搜尋端點
+        url = `/api/surgery-codes/codes/search?q=${encodeURIComponent(this.surgeryCodeSearchText)}`;
+    } else {
+        // 無搜尋文字 → 分頁列表端點
+        url = `/api/surgery-codes/codes?page=${this.page}&page_size=${this.pageSize}`;
+    }
+    // ...
+}
+```
+
+---
+
+### 4.1 處置代碼 API (原始設計，供參考)
 
 ```
 # 搜尋（核心功能）
@@ -766,11 +820,14 @@ D10241-1,邦美傑格 迷你縫合錨釘,5-縫合錨釘,35000,組,TRUE,93
 
 **De Novo Orthopedics Inc. / 谷盺生物科技股份有限公司**
 
-*文件版本: Draft 1.1*
-*更新日期: 2026-01-02*
+*文件版本: v2.9.1*
+*更新日期: 2026-01-05*
 
 ### 修訂紀錄
 | 版本 | 日期 | 變更 |
 |------|------|------|
+| 2.9.1 | 2026-01-05 | 新增 4.0 實際 API 端點文件；修正搜尋端點說明 (`/codes` vs `/codes/search`) |
+| 2.8.0 | 2026-01-03 | 整合健保第七節手術碼 1,681 筆；新增 NHI 合併腳本 |
+| 2.7.0 | 2026-01-02 | Phase 1-3 實作完成；FTS5 搜尋；點數遞減計算器 |
 | 1.1 | 2026-01-02 | 移除 use_count/last_used (改由 ops log 統計)；is_taxable → tax_type；「3筆」限制移至 UI 層 |
 | 1.0 | 2025-12-29 | 初版 |
