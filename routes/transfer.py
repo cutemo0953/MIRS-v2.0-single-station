@@ -162,8 +162,12 @@ class MissionUpdate(BaseModel):
 
 class TransferItemConfirm(BaseModel):
     """v1.x 相容的確認模型"""
-    item_id: int
+    item_id: Optional[int] = None  # None for custom items
+    item_type: Optional[str] = None  # MEDICATION, SUPPLY, etc.
+    item_name: Optional[str] = None  # For custom items
     carried_qty: float
+    unit: Optional[str] = None
+    source: Optional[str] = None  # Source station for custom items
     initial_status: Optional[str] = None  # e.g., "PSI: 2100"
 
 
@@ -1272,11 +1276,19 @@ async def confirm_loadout_v2(mission_id: str, payload: ConfirmLoadoutV2):
 
         # Update items with carried quantities
         for item in payload.items:
-            cursor.execute("""
-                UPDATE transfer_items
-                SET carried_qty = ?, initial_status = ?, checked = 1, checked_at = CURRENT_TIMESTAMP
-                WHERE id = ? AND mission_id = ?
-            """, (item.carried_qty, item.initial_status, item.item_id, mission_id))
+            if item.item_id is not None:
+                # Existing item - update
+                cursor.execute("""
+                    UPDATE transfer_items
+                    SET carried_qty = ?, initial_status = ?, checked = 1, checked_at = CURRENT_TIMESTAMP
+                    WHERE id = ? AND mission_id = ?
+                """, (item.carried_qty, item.initial_status, item.item_id, mission_id))
+            else:
+                # Custom item (e.g., medication from external source) - insert
+                cursor.execute("""
+                    INSERT INTO transfer_items (mission_id, item_type, item_name, suggested_qty, carried_qty, unit, source_station, checked, checked_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                """, (mission_id, item.item_type or 'MEDICATION', item.item_name, item.carried_qty, item.carried_qty, item.unit or '支', item.source))
 
         # v2.0: Reserve cylinders with PSI tracking
         reserved_cylinders = []
