@@ -1054,16 +1054,17 @@ async def create_mission(mission: MissionCreate):
             patient_summary = f"[{hd.get('source_org', '外部')}] {hd.get('patient_name', '')} {hd.get('patient_age', '')} - {hd.get('chief_complaint', '')}"
 
         # v2.0/v3.1: Insert with new fields
+        # v3.2.3: Explicitly set status to PLANNING
         cursor.execute("""
             INSERT INTO transfer_missions (
-                mission_id, origin_station_id, origin_station, destination, destination_text,
+                mission_id, status, origin_station_id, origin_station, destination, destination_text,
                 eta_min, estimated_duration_min, patient_condition, patient_summary,
                 oxygen_requirement_lpm, iv_mode, iv_mlhr_override, iv_rate_mlhr,
                 ventilator_required, safety_factor, emt_name, notes,
                 source_type, handoff_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            mission_id, origin_id, origin_name, destination, destination,
+            mission_id, 'PLANNING', origin_id, origin_name, destination, destination,
             eta_min, duration_min, mission.patient_condition, patient_summary,
             o2_lpm, mission.iv_mode, mission.iv_mlhr_override, iv_rate,
             1 if mission.ventilator_required else 0,

@@ -38,11 +38,12 @@
     <header class="bg-amber-500 text-white px-4 py-3 shadow-lg sticky top-0 z-50">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <a href="/" class="text-white hover:text-amber-100">
+                <!-- v3.2.3: Smart back button - returns to previous step or MIRS -->
+                <button @click="handleBackButton()" class="text-white hover:text-amber-100">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
-                </a>
+                </button>
                 <h1 class="text-xl font-bold">EMT Transfer</h1>
             </div>
             <div class="flex items-center gap-2">
@@ -1987,6 +1988,9 @@
                         this.missionItems = data.items || [];
                         this.incomingItems = data.incoming_items || [];
 
+                        // v3.2.3: Debug logging
+                        console.log('[EMT] loadMission:', missionId, 'status:', this.currentMission?.status);
+
                         // v3.2.1: Initialize editMission for Step 0 editing
                         this.editMission = {
                             destination: this.currentMission.destination || '',
@@ -2002,6 +2006,7 @@
 
                         // Determine current step based on status
                         this.updateStepFromStatus();
+                        console.log('[EMT] updateStepFromStatus -> currentStep:', this.currentStep);
 
                         // Start elapsed timer if en route
                         if (this.currentMission.status === 'EN_ROUTE') {
@@ -2025,6 +2030,26 @@
                     this.currentStep = step;
                     // 切換步驟時捲動到頂部
                     window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
+
+                // v3.2.3: Smart back button handler
+                handleBackButton() {
+                    if (!this.currentMission) {
+                        // No mission, go back to MIRS
+                        window.location.href = '/';
+                        return;
+                    }
+
+                    if (this.currentStep > 0) {
+                        // Go to previous step
+                        this.goToStep(this.currentStep - 1);
+                    } else {
+                        // At Step 0, confirm before abandoning mission
+                        if (confirm('離開將放棄此任務，確定要返回嗎？')) {
+                            this.currentMission = null;
+                            this.currentStep = 0;
+                        }
+                    }
                 },
 
                 // v3.2.1: Update mission settings and proceed to loadout
