@@ -1022,7 +1022,7 @@
     <div x-show="showHandoffDetail" x-cloak
          class="fixed inset-0 bg-white z-50 overflow-y-auto ios-scroll">
         <!-- Header -->
-        <div class="sticky top-0 bg-teal-600 text-white px-4 py-3 shadow-lg z-10">
+        <div class="sticky top-0 bg-pink-600 text-white px-4 py-3 shadow-lg z-10">
             <div class="flex items-center justify-between">
                 <button @click="showHandoffDetail = false; selectedHandoff = null" class="p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1030,7 +1030,12 @@
                     </svg>
                 </button>
                 <h2 class="text-lg font-bold">交班詳情</h2>
-                <span class="text-sm bg-teal-500 px-2 py-0.5 rounded" x-text="selectedHandoff?.format || 'ISBAR'"></span>
+                <!-- v3.0.2: 使用者可選格式 -->
+                <select x-model="handoffFormat"
+                        class="text-sm bg-pink-500 border-0 rounded px-2 py-0.5 text-white">
+                    <option value="ISBAR">ISBAR</option>
+                    <option value="MIST">MIST</option>
+                </select>
             </div>
         </div>
 
@@ -1055,9 +1060,9 @@
                 </div>
             </div>
 
-            <!-- Original Vital Signs (if available) -->
-            <div class="bg-blue-50 rounded-xl p-4 mb-4" x-show="selectedHandoff?.latest_vs">
-                <h3 class="font-bold text-blue-800 mb-2">交班時生命徵象</h3>
+            <!-- Original Vital Signs (if available) - Read-only -->
+            <div class="bg-gray-50 rounded-xl p-4 mb-4" x-show="selectedHandoff?.latest_vs">
+                <h3 class="font-bold text-gray-700 mb-2">原交班紀錄 (唯讀)</h3>
                 <div class="grid grid-cols-4 gap-2 text-center text-sm">
                     <div class="bg-white rounded-lg p-2">
                         <div class="text-gray-500 text-xs">BP</div>
@@ -1078,55 +1083,82 @@
                 </div>
             </div>
 
-            <!-- Arrival Vitals Section -->
-            <div class="bg-amber-50 rounded-xl p-4 mb-4 border-2 border-amber-200">
+            <!-- Arrival Vitals Section (交班時重測) -->
+            <div class="bg-pink-50 rounded-xl p-4 mb-4 border-2 border-pink-200">
                 <div class="flex items-center gap-2 mb-3">
-                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    <svg class="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    <h3 class="font-bold text-amber-800">抵達時重測 (建議)</h3>
+                    <h3 class="font-bold text-pink-800">交班時重測 (建議)</h3>
                 </div>
-                <p class="text-sm text-amber-700 mb-3">重測生命徵象可保護 EMT 責任，記錄接手時病患真實狀態</p>
+                <p class="text-sm text-pink-700 mb-3">重測生命徵象可保護 EMT 責任，記錄接手時病患真實狀態</p>
 
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <div>
                         <label class="text-xs text-gray-600">收縮壓 (mmHg)</label>
                         <input type="number" x-model="arrivalVitals.bp_sys" placeholder="120"
-                               class="w-full border rounded-lg px-3 py-2 text-center">
+                               class="w-full border border-pink-200 rounded-lg px-3 py-2 text-center focus:border-pink-400 focus:ring-1 focus:ring-pink-400">
                     </div>
                     <div>
                         <label class="text-xs text-gray-600">舒張壓 (mmHg)</label>
                         <input type="number" x-model="arrivalVitals.bp_dia" placeholder="80"
-                               class="w-full border rounded-lg px-3 py-2 text-center">
+                               class="w-full border border-pink-200 rounded-lg px-3 py-2 text-center focus:border-pink-400 focus:ring-1 focus:ring-pink-400">
                     </div>
                     <div>
                         <label class="text-xs text-gray-600">心率 (bpm)</label>
                         <input type="number" x-model="arrivalVitals.hr" placeholder="72"
-                               class="w-full border rounded-lg px-3 py-2 text-center">
+                               class="w-full border border-pink-200 rounded-lg px-3 py-2 text-center focus:border-pink-400 focus:ring-1 focus:ring-pink-400">
                     </div>
                     <div>
                         <label class="text-xs text-gray-600">SpO2 (%)</label>
                         <input type="number" x-model="arrivalVitals.spo2" placeholder="98"
-                               class="w-full border rounded-lg px-3 py-2 text-center">
+                               class="w-full border border-pink-200 rounded-lg px-3 py-2 text-center focus:border-pink-400 focus:ring-1 focus:ring-pink-400">
                     </div>
                 </div>
+                <!-- GCS E/V/M 分項輸入 -->
                 <div class="mb-3">
-                    <label class="text-xs text-gray-600">GCS</label>
-                    <div class="flex gap-2 mt-1">
-                        <template x-for="gcs in [15, 14, 13, 12, 11, 10, 9, 8]" :key="gcs">
-                            <button @click="arrivalVitals.gcs = gcs"
-                                    class="px-3 py-1 rounded-lg text-sm border"
-                                    :class="arrivalVitals.gcs === gcs ? 'bg-amber-500 text-white border-amber-500' : 'bg-white border-gray-300'">
-                                <span x-text="gcs"></span>
-                            </button>
-                        </template>
+                    <label class="text-xs text-gray-600 mb-1 block">GCS = <span class="font-bold text-pink-600" x-text="(parseInt(arrivalVitals.gcs_e) || 0) + (parseInt(arrivalVitals.gcs_v) || 0) + (parseInt(arrivalVitals.gcs_m) || 0)"></span></label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-xs text-gray-500">E (睜眼)</label>
+                            <select x-model="arrivalVitals.gcs_e"
+                                    class="w-full border border-pink-200 rounded-lg px-2 py-2 text-sm focus:border-pink-400">
+                                <option value="4">4 自發</option>
+                                <option value="3">3 呼喚</option>
+                                <option value="2">2 刺痛</option>
+                                <option value="1">1 無</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500">V (語言)</label>
+                            <select x-model="arrivalVitals.gcs_v"
+                                    class="w-full border border-pink-200 rounded-lg px-2 py-2 text-sm focus:border-pink-400">
+                                <option value="5">5 正常</option>
+                                <option value="4">4 混亂</option>
+                                <option value="3">3 不當</option>
+                                <option value="2">2 發聲</option>
+                                <option value="1">1 無</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500">M (運動)</label>
+                            <select x-model="arrivalVitals.gcs_m"
+                                    class="w-full border border-pink-200 rounded-lg px-2 py-2 text-sm focus:border-pink-400">
+                                <option value="6">6 服從</option>
+                                <option value="5">5 定位</option>
+                                <option value="4">4 退縮</option>
+                                <option value="3">3 屈曲</option>
+                                <option value="2">2 伸展</option>
+                                <option value="1">1 無</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div>
                     <label class="text-xs text-gray-600">備註</label>
                     <textarea x-model="arrivalVitals.note" rows="2"
                               placeholder="病患意識、配合程度等..."
-                              class="w-full border rounded-lg px-3 py-2 text-sm mt-1"></textarea>
+                              class="w-full border border-pink-200 rounded-lg px-3 py-2 text-sm mt-1 focus:border-pink-400 focus:ring-1 focus:ring-pink-400"></textarea>
                 </div>
             </div>
 
@@ -1137,7 +1169,7 @@
                     拒絕交班
                 </button>
                 <button @click="acceptHandoff(selectedHandoff?.handoff_id)"
-                        class="flex-1 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700">
+                        class="flex-1 py-3 bg-pink-600 text-white rounded-xl font-bold hover:bg-pink-700">
                     確認接收
                 </button>
             </div>
@@ -1255,9 +1287,12 @@
                     bp_dia: '',
                     hr: '',
                     spo2: '',
-                    gcs: 15,
+                    gcs_e: '4',
+                    gcs_v: '5',
+                    gcs_m: '6',
                     note: ''
                 },
+                handoffFormat: 'ISBAR',  // v3.0.2: 使用者可選 ISBAR/MIST
                 emtCredentials: JSON.parse(localStorage.getItem('emt_credentials') || '{"id":"emt001","name":"EMT"}'),
 
                 // New mission form (v2.0)
@@ -1381,13 +1416,17 @@
                 viewHandoffDetail(handoff) {
                     this.selectedHandoff = handoff;
                     this.showHandoffDetail = true;
-                    // Reset arrival vitals form
+                    // v3.0.2: 初始化格式為原交班格式，但允許使用者修改
+                    this.handoffFormat = handoff?.format || 'ISBAR';
+                    // Reset arrival vitals form with E/V/M GCS
                     this.arrivalVitals = {
                         bp_sys: '',
                         bp_dia: '',
                         hr: '',
                         spo2: '',
-                        gcs: 15,
+                        gcs_e: '4',
+                        gcs_v: '5',
+                        gcs_m: '6',
                         note: ''
                     };
                 },
@@ -1443,7 +1482,12 @@
                     if (this.arrivalVitals.bp_dia) vitals.bp_dia = parseInt(this.arrivalVitals.bp_dia);
                     if (this.arrivalVitals.hr) vitals.hr = parseInt(this.arrivalVitals.hr);
                     if (this.arrivalVitals.spo2) vitals.spo2 = parseInt(this.arrivalVitals.spo2);
-                    if (this.arrivalVitals.gcs) vitals.gcs = parseInt(this.arrivalVitals.gcs);
+                    // v3.0.2: GCS E/V/M format
+                    const gcsE = parseInt(this.arrivalVitals.gcs_e) || 4;
+                    const gcsV = parseInt(this.arrivalVitals.gcs_v) || 5;
+                    const gcsM = parseInt(this.arrivalVitals.gcs_m) || 6;
+                    vitals.gcs = `E${gcsE}V${gcsV}M${gcsM}`;
+                    vitals.gcs_total = gcsE + gcsV + gcsM;
 
                     await fetch(`${this.cirsHubUrl}/api/handoff/${handoffId}/addendum`, {
                         method: 'POST',

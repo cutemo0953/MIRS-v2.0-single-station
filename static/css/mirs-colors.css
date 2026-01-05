@@ -402,3 +402,31 @@
 .bg-white\/20 { background-color: rgba(255, 255, 255, 0.2) !important; }
 .bg-white\/30 { background-color: rgba(255, 255, 255, 0.3) !important; }
 .opacity-80 { opacity: 0.8 !important; }
+
+/* --- Pink (標準 Tailwind) - Nurse PWA / 交班 Modal 用 --- */
+.bg-pink-50 { background-color: #fdf2f8 !important; }
+.bg-pink-100 { background-color: #fce7f3 !important; }
+.bg-pink-200 { background-color: #fbcfe8 !important; }
+.bg-pink-300 { background-color: #f9a8d4 !important; }
+.bg-pink-400 { background-color: #f472b6 !important; }
+.bg-pink-500 { background-color: #ec4899 !important; }
+.bg-pink-600 { background-color: #db2777 !important; }
+.bg-pink-700 { background-color: #be185d !important; }
+.bg-pink-800 { background-color: #9d174d !important; }
+.text-pink-50 { color: #fdf2f8 !important; }
+.text-pink-100 { color: #fce7f3 !important; }
+.text-pink-200 { color: #fbcfe8 !important; }
+.text-pink-500 { color: #ec4899 !important; }
+.text-pink-600 { color: #db2777 !important; }
+.text-pink-700 { color: #be185d !important; }
+.text-pink-800 { color: #9d174d !important; }
+.border-pink-200 { border-color: #fbcfe8 !important; }
+.border-pink-300 { border-color: #f9a8d4 !important; }
+.border-pink-400 { border-color: #f472b6 !important; }
+.border-pink-500 { border-color: #ec4899 !important; }
+.hover\:bg-pink-600:hover { background-color: #db2777 !important; }
+.hover\:bg-pink-700:hover { background-color: #be185d !important; }
+.hover\:bg-pink-800:hover { background-color: #9d174d !important; }
+.focus\:border-pink-400:focus { border-color: #f472b6 !important; }
+.focus\:ring-pink-400:focus { --tw-ring-color: #f472b6 !important; }
+.focus\:ring-1 { --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color) !important; --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color) !important; box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000) !important; }
