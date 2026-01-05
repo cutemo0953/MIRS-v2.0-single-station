@@ -60,17 +60,25 @@
 
     <!-- Main Content -->
     <main class="p-4 pb-24">
-        <!-- Step Indicator -->
+        <!-- Step Indicator (可點擊返回) -->
         <div class="flex justify-center mb-6" x-show="currentMission">
             <div class="flex items-center gap-2 text-sm">
                 <template x-for="(step, idx) in ['設定', '整備', '轉送', '結案']" :key="idx">
                     <div class="flex items-center">
-                        <div :class="currentStep >= idx ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-500'"
-                             class="w-8 h-8 rounded-full flex items-center justify-center font-bold">
+                        <button @click="idx <= currentStep && goToStep(idx)"
+                             :class="[
+                                 currentStep >= idx ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-500',
+                                 idx < currentStep ? 'hover:bg-amber-600 cursor-pointer ring-2 ring-amber-300' : '',
+                                 idx === currentStep ? 'ring-2 ring-amber-400' : ''
+                             ]"
+                             class="w-8 h-8 rounded-full flex items-center justify-center font-bold transition-all"
+                             :disabled="idx > currentStep">
                             <span x-text="idx + 1"></span>
-                        </div>
+                        </button>
                         <span class="ml-1 hidden sm:inline" x-text="step"
-                              :class="currentStep >= idx ? 'text-amber-700' : 'text-gray-400'"></span>
+                              :class="currentStep >= idx ? 'text-amber-700' : 'text-gray-400'"
+                              @click="idx <= currentStep && goToStep(idx)"
+                              :style="idx < currentStep ? 'cursor: pointer' : ''"></span>
                         <div x-show="idx < 3" class="w-8 h-0.5 mx-2"
                              :class="currentStep > idx ? 'bg-amber-500' : 'bg-gray-200'"></div>
                     </div>
