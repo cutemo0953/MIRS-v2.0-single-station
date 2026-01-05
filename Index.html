@@ -1057,7 +1057,7 @@
                 </div>
 
                 <!-- 術式主檔快查 (treatment 色系) -->
-                <div class="mt-6 border-2 border-treatment-300 rounded-lg p-4 bg-treatment-50" x-init="if(!dataLoaded.surgeryMaster) { loadSurgeryMasterStats(); loadSurgeryCategories(); loadSelfPayCategories(); }">
+                <div class="mt-6 border-2 border-treatment-300 rounded-lg p-4 bg-treatment-50" x-init="$nextTick(() => { if(!dataLoaded.surgeryMaster) { loadSurgeryCategories(); loadSelfPayCategories(); } })">
                     <h4 class="text-lg font-semibold text-treatment-700 flex items-center gap-2 mb-4">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
@@ -5740,6 +5740,8 @@
                 },
 
                 async loadSurgeryCodes() {
+                    // 防止重複請求
+                    if (this.surgeryMasterLoading) return;
                     this.surgeryMasterLoading = true;
                     try {
                         let url = `${this.apiUrl}/surgery-codes/codes?page=${this.surgeryCodesPage}&page_size=${this.surgeryCodesPageSize}`;
@@ -5764,6 +5766,8 @@
 
                 async searchSurgeryCodes() {
                     this.surgeryCodesPage = 1;
+                    // 先清空再載入，避免顯示舊資料
+                    this.surgeryCodes = [];
                     await this.loadSurgeryCodes();
                 },
 
