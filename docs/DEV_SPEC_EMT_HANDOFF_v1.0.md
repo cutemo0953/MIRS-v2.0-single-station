@@ -150,9 +150,85 @@ async acceptHandoff(handoffId) {
     // 4. 進入 Step 1 (物資整備)
     this.goToStep(1);
 }
+
+async rejectHandoff(handoffId, reason, code) {
+    // v1.1: 拒絕交班
+    await fetch(`${CIRS_HUB_URL}/api/handoff/${handoffId}/reject`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.token}`
+        },
+        body: JSON.stringify({
+            rejector_id: this.emtId,
+            rejector_name: this.emtName,
+            rejection_code: code,  // PATIENT_UNSTABLE | NO_CAPACITY | OTHER
+            rejection_reason: reason
+        })
+    });
+    // 重新載入待接收列表
+    await this.loadPendingHandoffs();
+}
 ```
 
-### 2.3 交班詳情顯示 (只讀)
+### 2.4 抵達重測 Vital Signs (v1.1 新增)
+
+EMT 抵達病患處時，應重測 Vital Signs 並記錄為 addendum：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 抵達確認                                                     │
+├─────────────────────────────────────────────────────────────┤
+│ 病患: 王大明 45M                                            │
+│ 交班 VS (10:30): BP 150/90, HR 88, SpO2 96%                │
+│                                                             │
+│ ⚠ 建議重測生命徵象 (保護 EMT 責任)                          │
+│                                                             │
+│ 【抵達時重測】                                               │
+│ BP: [145/85]  HR: [92]  SpO2: [97]  GCS: [E4V5M6]          │
+│                                                             │
+│ 備註: [病患意識清醒，願意配合轉送________________]          │
+│                                                             │
+│ [ ] 跳過重測 (不建議)                                       │
+└─────────────────────────────────────────────────────────────┘
+│                                                             │
+│  [拒絕此交班]                        [確認接收，進入物資]   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+```javascript
+async recordArrivalVitals(vitals, note) {
+    // 1. 記錄到 CIRS handoff_addenda
+    await fetch(`${CIRS_HUB_URL}/api/handoff/${this.currentMission.cirs_handoff_id}/addendum`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.token}`
+        },
+        body: JSON.stringify({
+            addendum_type: 'ARRIVAL_VITALS',
+            source: 'EMT',
+            recorded_by: this.emtId,
+            content: {
+                note: note,
+                vital_signs: vitals
+            }
+        })
+    });
+
+    // 2. 本地也記錄一份 (離線用)
+    await this.appendMissionEvent({
+        event_type: 'ARRIVAL_VITALS',
+        data: { vitals, note },
+        timestamp: new Date().toISOString()
+    });
+}
+```
+
+> **法律保護**: 抵達重測的 VS 記錄在 `handoff_addenda`，證明 EMT 接手時的真實狀態。
+> 與原 snapshot 對比可顯示時間差內的病情變化。
+
+### 2.5 交班詳情顯示 (只讀)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
