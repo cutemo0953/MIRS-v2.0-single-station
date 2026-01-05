@@ -1,4 +1,4 @@
-# MIRS - 醫療站庫存管理系統 v2.9.1
+# MIRS - 醫療站庫存管理系統 v3.0.0
 
 > 為醫療站、備援手術站(BORP)與物資中心設計的簡易庫存管理系統
 >
@@ -7,6 +7,8 @@
 > **v1.1 就診流程**：與 CIRS Hub 完整整合，支援醫師分流 (需處置/需麻醉)
 >
 > **v2.9 術式主檔**：健保手術碼 1,687 筆 + FTS5 全文搜尋 + 點數遞減計算
+>
+> **v3.0 EMT 交班**：CIRS 統一交班 + 手動建立 + ISBAR/MIST 格式 + GCS E/V/M
 
 ---
 
@@ -55,6 +57,23 @@ export CIRS_HUB_URL=http://localhost:8090
 ```
 
 ---
+
+### v3.0.0 新功能 (2026-01-05) - EMT 交班整合
+
+- **EMT Transfer PWA v3.0.4**：
+  - **CIRS 統一交班整合**：讀取 CIRS `handoff_records`，90% 只讀 + 10% 補充
+  - **手動建立交班單**：支援外站轉入病患（不在 CIRS 系統）
+  - **ISBAR/MIST 格式選擇**：EMT 可選擇報告格式
+    - ISBAR: 一般/內科病患 (Situation, Background, Assessment, Recommendation)
+    - MIST: 外傷/創傷病患 (Mechanism, Injuries, Signs, Treatment)
+  - **GCS E/V/M 格式**：分項輸入 Eye(1-4) / Verbal(1-5) / Motor(1-6) + 自動加總
+  - **交班時重測 Vital Signs**：抵達病患處時可記錄 addendum
+  - **格式化顯示**：ISBAR 粉色卡片 / MIST 紅色卡片
+  - **可點擊步驟指示器**：允許返回先前步驟
+  - Pink 配色主題 (#db2777)
+- **開發規格更新**：
+  - DEV_SPEC_EMT_HANDOFF v3.1：新增手動交班單章節
+  - 依賴 xIRS_UNIFIED_HANDOFF_SPEC v1.2
 
 ### v2.9.1 修正 (2026-01-05)
 
@@ -772,16 +791,16 @@ ifconfig | grep inet
 
 ## PWA 入口網址
 
-| PWA | 網址 | 說明 |
-|-----|------|------|
-| 主介面 | `/` | 完整功能（桌面版）|
-| Mobile | `/mobile` | 行動版巡房助手 |
-| EMT Transfer | `/emt` | 病患轉送物資規劃 |
-| Anesthesia | `/anesthesia` | 麻醉評估模組 |
+| PWA | 網址 | 說明 | 色系 |
+|-----|------|------|------|
+| 主介面 | `/` | 完整功能（桌面版）| Teal |
+| Mobile | `/mobile` | 行動版巡房助手 | Teal |
+| EMT Transfer | `/emt` | 病患轉送 + CIRS 交班 (v3.0) | Pink |
+| Anesthesia | `/anesthesia` | 麻醉評估模組 | Teal |
 
 ---
 
-**醫療站庫存管理系統 v2.9.1**
+**醫療站庫存管理系統 v3.0.0**
 *讓醫療物資管理更簡單*
 
 🏥 Powered by De Novo Orthopedics Inc.
