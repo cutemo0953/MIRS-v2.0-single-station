@@ -2660,6 +2660,30 @@
 
                         if (res.ok) {
                             this.currentMission.status = 'COMPLETED';
+
+                            // v3.3: 通知 CIRS Hub 交班完成
+                            if (this.currentMission.cirs_handoff_id && this.cirsHubUrl) {
+                                try {
+                                    const completeRes = await fetch(`${this.cirsHubUrl}/api/handoff/${this.currentMission.cirs_handoff_id}/complete`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            completed_by: this.emtCredentials.id,
+                                            completed_by_name: this.emtCredentials.name,
+                                            arrival_notes: `任務完成於 ${new Date().toLocaleTimeString('zh-TW')}`,
+                                            destination_confirmed: true
+                                        })
+                                    });
+                                    if (completeRes.ok) {
+                                        console.log('[EMT] CIRS handoff completed:', this.currentMission.cirs_handoff_id);
+                                    } else {
+                                        console.warn('[EMT] Failed to notify CIRS:', await completeRes.text());
+                                    }
+                                } catch (e) {
+                                    console.warn('[EMT] CIRS notification error (non-blocking):', e);
+                                }
+                            }
+
                             // 清空追蹤資料
                             this.oxygenCylinders = [];
                             this.equipmentBattery = [];

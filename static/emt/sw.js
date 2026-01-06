@@ -9,9 +9,10 @@
  * v3.0.3: Format-aware display (ISBAR cards vs MIST trauma cards)
  * v3.0.4: Clickable step indicator for navigation back to previous steps
  * v3.2.0: Internal transfer ISBAR/MIST support, station name display, tab-style format selector
+ * v3.3.0: CIRS handoff complete notification on mission finalize
  */
 
-const CACHE_NAME = 'mirs-emt-v3.2.6';
+const CACHE_NAME = 'mirs-emt-v3.3.0';
 const OFFLINE_URL = '/static/emt/';
 
 const STATIC_ASSETS = [
