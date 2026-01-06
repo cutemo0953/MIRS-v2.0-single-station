@@ -426,6 +426,82 @@ class ProblemResponse(BaseModel):
     outcomes: List[Dict[str, Any]] = []
 
 
+# =============================================================================
+# v1.6.1: Quick Scenario Bundle Models
+# =============================================================================
+
+class QuickInterventionItem(BaseModel):
+    """Quick Scenario 中的單一處置"""
+    intervention_type: str                      # "VASOACTIVE_BOLUS", "FLUID_BOLUS", etc.
+    payload: Dict[str, Any]                     # 完整 payload
+
+
+class QuickScenarioRequest(BaseModel):
+    """Quick Scenario Bundle 請求 - 一鍵記錄 Problem + Events + Interventions"""
+    scenario: ProblemType                       # 問題類型
+    severity: int = Field(default=2, ge=1, le=3)
+    detected_value: Optional[Dict[str, Any]] = None  # {"map": 55, "sbp": 75, "dbp": 45}
+    trigger_event_id: Optional[str] = None      # 觸發此 scenario 的 VITAL 事件
+    interventions: List[QuickInterventionItem]  # 選擇的處置列表
+    clinical_time_offset_seconds: Optional[int] = None
+    note: Optional[str] = None
+
+
+# Quick Scenario 建議模板 (UI 可用此資料渲染選項)
+QUICK_SCENARIO_TEMPLATES = {
+    "HYPOTENSION": {
+        "thresholds": {"map": 60, "sbp": 90},
+        "suggested_interventions": [
+            {"type": "VASOACTIVE_BOLUS", "label": "Ephedrine 5mg IV", "payload": {"drug_name": "Ephedrine", "dose": 5, "unit": "mg", "route": "IV"}},
+            {"type": "VASOACTIVE_BOLUS", "label": "Phenylephrine 100mcg IV", "payload": {"drug_name": "Phenylephrine", "dose": 100, "unit": "mcg", "route": "IV"}},
+            {"type": "FLUID_BOLUS", "label": "LR 250ml bolus", "payload": {"fluid_type": "LR", "volume": 250, "unit": "ml", "rate": "bolus"}},
+            {"type": "ANESTHESIA_DEPTH_ADJUST", "label": "加深麻醉", "payload": {"action": "DEEPEN", "method": "VOLATILE", "reason": "Hypotension"}},
+        ]
+    },
+    "HYPERTENSION": {
+        "thresholds": {"map": 100, "sbp": 160},
+        "suggested_interventions": [
+            {"type": "VASOACTIVE_INFUSION", "label": "Nicardipine start", "payload": {"drug_name": "Nicardipine", "action": "START", "rate_to": 5, "unit": "mg/hr", "target": "SBP < 140"}},
+            {"type": "ANESTHESIA_DEPTH_ADJUST", "label": "加深麻醉", "payload": {"action": "DEEPEN", "method": "VOLATILE", "reason": "Hypertension"}},
+            {"type": "MEDICATION_ADMIN", "label": "Fentanyl 50mcg", "payload": {"drug_name": "Fentanyl", "dose": 50, "unit": "mcg", "route": "IV"}},
+        ]
+    },
+    "BRADYCARDIA": {
+        "thresholds": {"hr": 45},
+        "suggested_interventions": [
+            {"type": "VASOACTIVE_BOLUS", "label": "Atropine 0.5mg IV", "payload": {"drug_name": "Atropine", "dose": 0.5, "unit": "mg", "route": "IV"}},
+            {"type": "VASOACTIVE_BOLUS", "label": "Ephedrine 5mg IV", "payload": {"drug_name": "Ephedrine", "dose": 5, "unit": "mg", "route": "IV"}},
+            {"type": "ANESTHESIA_DEPTH_ADJUST", "label": "減淺麻醉", "payload": {"action": "LIGHTEN", "method": "VOLATILE", "reason": "Bradycardia"}},
+        ]
+    },
+    "TACHYCARDIA": {
+        "thresholds": {"hr": 120},
+        "suggested_interventions": [
+            {"type": "VASOACTIVE_BOLUS", "label": "Esmolol 20mg IV", "payload": {"drug_name": "Esmolol", "dose": 20, "unit": "mg", "route": "IV"}},
+            {"type": "ANESTHESIA_DEPTH_ADJUST", "label": "加深麻醉", "payload": {"action": "DEEPEN", "method": "VOLATILE", "reason": "Tachycardia"}},
+            {"type": "MEDICATION_ADMIN", "label": "Fentanyl 50mcg", "payload": {"drug_name": "Fentanyl", "dose": 50, "unit": "mcg", "route": "IV"}},
+        ]
+    },
+    "HYPOXEMIA": {
+        "thresholds": {"spo2": 90},
+        "suggested_interventions": [
+            {"type": "VENT_SETTING_CHANGE", "label": "FiO2 100%", "payload": {"parameter": "FIO2", "from_value": "50%", "to_value": "100%", "reason": "Hypoxemia"}},
+            {"type": "VENT_SETTING_CHANGE", "label": "PEEP +5", "payload": {"parameter": "PEEP", "from_value": "5", "to_value": "10", "reason": "Hypoxemia"}},
+            {"type": "PROCEDURE_NOTE", "label": "Suction", "payload": {"note": "Endotracheal suction performed"}},
+            {"type": "PROCEDURE_NOTE", "label": "Recruitment maneuver", "payload": {"note": "Recruitment maneuver performed"}},
+        ]
+    },
+    "BLEEDING_SUSPECTED": {
+        "thresholds": {},
+        "suggested_interventions": [
+            {"type": "BLOOD_PRODUCT", "label": "PRBC 1U", "payload": {"product_type": "PRBC", "unit_count": 1, "action": "START"}},
+            {"type": "FLUID_BOLUS", "label": "LR 500ml fast", "payload": {"fluid_type": "LR", "volume": 500, "unit": "ml", "rate": "fast"}},
+            {"type": "PROCEDURE_NOTE", "label": "通知外科", "payload": {"note": "Notified surgeon about suspected bleeding"}},
+        ]
+    },
+}
+
+
 class ClaimOxygenRequest(BaseModel):
     cylinder_unit_id: int
     initial_pressure_psi: Optional[int] = None
@@ -3620,3 +3696,277 @@ async def get_pio_timeline(case_id: str):
         "problems": problems,
         "count": len(problems)
     }
+
+
+# =============================================================================
+# v1.6.1: Quick Scenario Bundle API
+# =============================================================================
+
+@router.get("/pio/templates")
+async def get_scenario_templates():
+    """取得 Quick Scenario 建議模板
+
+    UI 可用此資料渲染情境快速卡片的處置選項
+    """
+    return {
+        "templates": QUICK_SCENARIO_TEMPLATES,
+        "available_scenarios": list(QUICK_SCENARIO_TEMPLATES.keys())
+    }
+
+
+@router.post("/cases/{case_id}/pio/quick")
+async def create_quick_scenario(
+    case_id: str,
+    request: QuickScenarioRequest,
+    actor_id: str = Query(...)
+):
+    """Quick Scenario Bundle - 一鍵記錄 Problem + Events + Interventions
+
+    **流程**:
+    1. 建立 PIO Problem
+    2. 為每個選擇的處置建立 anesthesia_event
+    3. 為每個事件建立 PIO Intervention 連結
+
+    **範例請求**:
+    ```json
+    {
+      "scenario": "HYPOTENSION",
+      "severity": 2,
+      "detected_value": {"map": 55, "sbp": 75, "dbp": 45},
+      "trigger_event_id": "evt-vital-123",
+      "interventions": [
+        {"intervention_type": "VASOACTIVE_BOLUS", "payload": {"drug_name": "Ephedrine", "dose": 5, "unit": "mg", "route": "IV"}}
+      ],
+      "clinical_time_offset_seconds": -120
+    }
+    ```
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify case exists and is not closed
+    cursor.execute("SELECT status FROM anesthesia_cases WHERE id = ?", (case_id,))
+    case = cursor.fetchone()
+    if not case:
+        raise HTTPException(status_code=404, detail=f"Case not found: {case_id}")
+    if case['status'] == 'CLOSED':
+        raise HTTPException(status_code=400, detail="Cannot add to closed case")
+
+    # Calculate clinical_time
+    recorded_at = datetime.now()
+    if request.clinical_time_offset_seconds is not None:
+        from datetime import timedelta
+        clinical_time = recorded_at + timedelta(seconds=request.clinical_time_offset_seconds)
+    else:
+        clinical_time = recorded_at
+
+    # Verify trigger_event_id if provided
+    if request.trigger_event_id:
+        cursor.execute("SELECT id FROM anesthesia_events WHERE id = ?", (request.trigger_event_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=400, detail=f"Trigger event not found: {request.trigger_event_id}")
+
+    # Validate interventions
+    if not request.interventions:
+        raise HTTPException(status_code=400, detail="At least one intervention is required")
+
+    try:
+        # Step 1: Create PIO Problem
+        problem_id = generate_problem_id(case_id)
+        cursor.execute("""
+            INSERT INTO pio_problems (
+                problem_id, case_id, problem_type, severity,
+                detected_clinical_time, trigger_event_id, note, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            problem_id,
+            case_id,
+            request.scenario.value,
+            request.severity,
+            clinical_time.isoformat(),
+            request.trigger_event_id,
+            request.note,
+            actor_id
+        ))
+
+        created_events = []
+        created_interventions = []
+
+        # Step 2 & 3: For each intervention, create Event + Intervention link
+        for item in request.interventions:
+            # Create anesthesia_event
+            event_id = generate_event_id()
+            event_type = item.intervention_type
+
+            # Enhance payload with problem link
+            enhanced_payload = dict(item.payload)
+            enhanced_payload['linked_problem_id'] = problem_id
+            enhanced_payload['indication'] = request.scenario.value
+            if request.detected_value:
+                enhanced_payload['trigger_values'] = request.detected_value
+
+            cursor.execute("""
+                INSERT INTO anesthesia_events (
+                    id, case_id, event_type, clinical_time, payload, actor_id
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                event_id,
+                case_id,
+                event_type,
+                clinical_time.isoformat(),
+                json.dumps(enhanced_payload),
+                actor_id
+            ))
+            created_events.append({
+                "event_id": event_id,
+                "event_type": event_type,
+                "payload": enhanced_payload
+            })
+
+            # Create PIO Intervention
+            intervention_id = generate_intervention_id()
+            cursor.execute("""
+                INSERT INTO pio_interventions (
+                    intervention_id, problem_id, case_id,
+                    event_ref_id, action_type, performed_clinical_time,
+                    performed_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                intervention_id,
+                problem_id,
+                case_id,
+                event_id,
+                event_type,
+                clinical_time.isoformat(),
+                actor_id
+            ))
+            created_interventions.append({
+                "intervention_id": intervention_id,
+                "event_ref_id": event_id,
+                "action_type": event_type
+            })
+
+        # Update problem status to WATCHING
+        cursor.execute("""
+            UPDATE pio_problems SET status = 'WATCHING' WHERE problem_id = ?
+        """, (problem_id,))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "problem_id": problem_id,
+            "scenario": request.scenario.value,
+            "clinical_time": clinical_time.isoformat(),
+            "events_created": len(created_events),
+            "interventions_created": len(created_interventions),
+            "details": {
+                "problem": {
+                    "problem_id": problem_id,
+                    "problem_type": request.scenario.value,
+                    "severity": request.severity,
+                    "status": "WATCHING"
+                },
+                "events": created_events,
+                "interventions": created_interventions
+            }
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cases/{case_id}/pio/quick-outcome")
+async def create_quick_outcome(
+    case_id: str,
+    problem_id: str = Query(...),
+    outcome_type: OutcomeType = Query(...),
+    close_problem: bool = Query(default=False),
+    actor_id: str = Query(...)
+):
+    """快速記錄 Outcome (使用最近的 VITAL 事件作為證據)
+
+    **用途**: 護士觀察到改善/惡化後，快速記錄結果
+    - 自動抓取最近 5 分鐘內的 VITAL_SIGN 事件作為證據
+    - 可選擇是否同時關閉 Problem
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify problem exists
+    cursor.execute("""
+        SELECT case_id FROM pio_problems WHERE problem_id = ? AND case_id = ?
+    """, (problem_id, case_id))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail=f"Problem not found: {problem_id}")
+
+    # Find recent VITAL_SIGN events (last 5 minutes)
+    cursor.execute("""
+        SELECT id FROM anesthesia_events
+        WHERE case_id = ? AND event_type = 'VITAL_SIGN'
+        AND clinical_time > datetime('now', '-5 minutes')
+        ORDER BY clinical_time DESC
+        LIMIT 3
+    """, (case_id,))
+    recent_vitals = [row['id'] for row in cursor.fetchall()]
+
+    if not recent_vitals:
+        # Fallback: get the most recent VITAL
+        cursor.execute("""
+            SELECT id FROM anesthesia_events
+            WHERE case_id = ? AND event_type = 'VITAL_SIGN'
+            ORDER BY clinical_time DESC
+            LIMIT 1
+        """, (case_id,))
+        row = cursor.fetchone()
+        if row:
+            recent_vitals = [row['id']]
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="No VITAL_SIGN events found to use as evidence"
+            )
+
+    outcome_id = generate_outcome_id()
+    clinical_time = datetime.now()
+    new_status = ProblemStatus.RESOLVED if close_problem else None
+
+    try:
+        cursor.execute("""
+            INSERT INTO pio_outcomes (
+                outcome_id, problem_id, outcome_type,
+                evidence_event_ids, observed_clinical_time,
+                new_problem_status, recorded_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            outcome_id,
+            problem_id,
+            outcome_type.value,
+            json.dumps(recent_vitals),
+            clinical_time.isoformat(),
+            new_status.value if new_status else None,
+            actor_id
+        ))
+
+        if close_problem:
+            cursor.execute("""
+                UPDATE pio_problems
+                SET status = 'RESOLVED', resolved_clinical_time = ?
+                WHERE problem_id = ?
+            """, (clinical_time.isoformat(), problem_id))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "outcome_id": outcome_id,
+            "problem_id": problem_id,
+            "outcome_type": outcome_type.value,
+            "evidence_event_ids": recent_vitals,
+            "problem_closed": close_problem
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
