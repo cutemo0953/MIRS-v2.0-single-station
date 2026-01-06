@@ -3970,3 +3970,390 @@ async def create_quick_outcome(
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# v1.6.1 Phase 4: Enhanced Timeline + Inventory Linkage
+# =============================================================================
+
+@router.get("/cases/{case_id}/enhanced-timeline")
+async def get_enhanced_timeline(
+    case_id: str,
+    include_pio_groups: bool = Query(default=True),
+    filter_type: Optional[str] = Query(default=None, description="Filter by event type")
+):
+    """增強版時間軸 - 支援 PIO 分組和 collapsible 視圖
+
+    返回格式:
+    - 獨立事件 (非 PIO 相關) 按時間排序
+    - PIO 相關事件分組為 collapsible 區塊
+    - 每個 PIO 區塊包含: problem → interventions → outcomes
+
+    **UI 渲染建議**:
+    - PIO 區塊預設收合，只顯示摘要 (狀態、處置數、持續時間)
+    - 展開後顯示完整事件序列
+    - 補登事件顯示 [補登 HH:MM] 標記
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Get all events
+    query = """
+        SELECT * FROM anesthesia_events
+        WHERE case_id = ? AND is_correction = 0
+    """
+    params = [case_id]
+
+    if filter_type:
+        query += " AND event_type = ?"
+        params.append(filter_type)
+
+    query += " ORDER BY clinical_time ASC"
+    cursor.execute(query, params)
+
+    all_events = []
+    for row in cursor.fetchall():
+        event = dict(row)
+        event['payload'] = json.loads(event['payload']) if event['payload'] else {}
+        all_events.append(event)
+
+    if not include_pio_groups:
+        return {"timeline": all_events, "count": len(all_events)}
+
+    # Get PIO problems
+    cursor.execute("""
+        SELECT * FROM pio_problems WHERE case_id = ?
+        ORDER BY detected_clinical_time ASC
+    """, (case_id,))
+    problems = {row['problem_id']: dict(row) for row in cursor.fetchall()}
+
+    # Get interventions grouped by problem
+    cursor.execute("""
+        SELECT * FROM pio_interventions WHERE case_id = ?
+    """, (case_id,))
+    interventions_by_problem = {}
+    event_to_problem = {}  # Map event_id to problem_id
+    for row in cursor.fetchall():
+        pid = row['problem_id']
+        if pid not in interventions_by_problem:
+            interventions_by_problem[pid] = []
+        interventions_by_problem[pid].append(dict(row))
+        event_to_problem[row['event_ref_id']] = pid
+
+    # Get outcomes grouped by problem
+    cursor.execute("""
+        SELECT * FROM pio_outcomes WHERE problem_id IN (
+            SELECT problem_id FROM pio_problems WHERE case_id = ?
+        )
+    """, (case_id,))
+    outcomes_by_problem = {}
+    for row in cursor.fetchall():
+        pid = row['problem_id']
+        if pid not in outcomes_by_problem:
+            outcomes_by_problem[pid] = []
+        outcome = dict(row)
+        outcome['evidence_event_ids'] = json.loads(outcome['evidence_event_ids']) if outcome['evidence_event_ids'] else []
+        outcomes_by_problem[pid].append(outcome)
+
+    # Build enhanced timeline
+    timeline_items = []
+    pio_event_ids = set(event_to_problem.keys())
+
+    # Collect PIO trigger events
+    for pid, problem in problems.items():
+        if problem.get('trigger_event_id'):
+            pio_event_ids.add(problem['trigger_event_id'])
+
+    # Build PIO groups
+    pio_groups = {}
+    for pid, problem in problems.items():
+        interventions = interventions_by_problem.get(pid, [])
+        outcomes = outcomes_by_problem.get(pid, [])
+
+        # Calculate duration
+        start_time = problem['detected_clinical_time']
+        end_time = problem.get('resolved_clinical_time') or datetime.now().isoformat()
+
+        # Get linked events
+        linked_events = []
+        for event in all_events:
+            if event['id'] in [i['event_ref_id'] for i in interventions]:
+                linked_events.append(event)
+            elif event['id'] == problem.get('trigger_event_id'):
+                linked_events.append(event)
+
+        pio_groups[pid] = {
+            "type": "pio_group",
+            "problem_id": pid,
+            "problem_type": problem['problem_type'],
+            "severity": problem['severity'],
+            "status": problem['status'],
+            "detected_time": start_time,
+            "resolved_time": problem.get('resolved_clinical_time'),
+            "intervention_count": len(interventions),
+            "outcome_count": len(outcomes),
+            "trigger_event_id": problem.get('trigger_event_id'),
+            "summary": f"{problem['problem_type']} - {len(interventions)} interventions",
+            "details": {
+                "problem": problem,
+                "interventions": interventions,
+                "outcomes": outcomes,
+                "linked_events": linked_events
+            }
+        }
+
+    # Build timeline: mix standalone events and PIO groups
+    added_pio_groups = set()
+    for event in all_events:
+        # Check if event is part of a PIO group
+        problem_id = event_to_problem.get(event['id'])
+        if not problem_id:
+            # Check if it's a trigger event
+            for pid, problem in problems.items():
+                if problem.get('trigger_event_id') == event['id']:
+                    problem_id = pid
+                    break
+
+        if problem_id and problem_id not in added_pio_groups:
+            # Insert PIO group at the position of first related event
+            timeline_items.append(pio_groups[problem_id])
+            added_pio_groups.add(problem_id)
+        elif event['id'] not in pio_event_ids:
+            # Standalone event
+            event_item = {
+                "type": "event",
+                "event_id": event['id'],
+                "event_type": event['event_type'],
+                "clinical_time": event['clinical_time'],
+                "payload": event['payload'],
+                "actor_id": event['actor_id'],
+                "is_late_entry": event['payload'].get('_late_entry') is not None,
+                "late_entry_info": event['payload'].get('_late_entry')
+            }
+            timeline_items.append(event_item)
+
+    # Sort by time
+    def get_time(item):
+        if item['type'] == 'pio_group':
+            return item['detected_time']
+        return item['clinical_time']
+
+    timeline_items.sort(key=get_time)
+
+    return {
+        "case_id": case_id,
+        "timeline": timeline_items,
+        "total_events": len(all_events),
+        "pio_groups": len(pio_groups),
+        "standalone_events": len([i for i in timeline_items if i['type'] == 'event'])
+    }
+
+
+@router.get("/cases/{case_id}/open-problems")
+async def get_open_problems(case_id: str):
+    """取得目前 OPEN 或 WATCHING 的問題 (供 UI 連結新事件用)"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT problem_id, problem_type, severity, status, detected_clinical_time
+        FROM pio_problems
+        WHERE case_id = ? AND status IN ('OPEN', 'WATCHING')
+        ORDER BY detected_clinical_time DESC
+    """, (case_id,))
+
+    problems = [dict(row) for row in cursor.fetchall()]
+    return {"problems": problems, "count": len(problems)}
+
+
+# =============================================================================
+# v1.6.1 Phase 4: Inventory Linkage
+# =============================================================================
+
+async def trigger_inventory_deduction(
+    event_type: str,
+    payload: Dict[str, Any],
+    case_id: str,
+    actor_id: str
+):
+    """觸發庫存扣減 (非同步，失敗不影響事件記錄)
+
+    支援的事件類型:
+    - BLOOD_PRODUCT: 扣減血品庫存
+    - VASOACTIVE_BOLUS: 扣減藥品庫存 (非管制)
+    - FLUID_BOLUS: 扣減輸液庫存 (可選)
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if event_type == "BLOOD_PRODUCT" and payload.get('inventory_deduct'):
+            # Blood product deduction
+            product_type = payload.get('product_type')
+            unit_id = payload.get('unit_id')
+            unit_count = payload.get('unit_count', 1)
+
+            # Log the deduction request (actual inventory logic depends on blood bank module)
+            logger.info(f"[Inventory] Blood product deduction: {product_type} x{unit_count}, unit_id={unit_id}, case={case_id}")
+
+            # Try to update blood inventory if table exists
+            try:
+                cursor.execute("""
+                    UPDATE inventory_items
+                    SET current_quantity = current_quantity - ?
+                    WHERE category = 'blood' AND item_code = ?
+                """, (unit_count, product_type))
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"[Inventory] Blood deduction failed (table may not exist): {e}")
+
+        elif event_type == "VASOACTIVE_BOLUS":
+            # Medication deduction (non-controlled)
+            drug_name = payload.get('drug_name')
+            dose = payload.get('dose')
+            unit = payload.get('unit')
+
+            logger.info(f"[Inventory] Vasoactive deduction: {drug_name} {dose}{unit}, case={case_id}")
+
+            # Try to update medication inventory
+            try:
+                cursor.execute("""
+                    UPDATE inventory_items
+                    SET current_quantity = current_quantity - ?
+                    WHERE category = 'medication' AND name LIKE ?
+                """, (1, f"%{drug_name}%"))
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"[Inventory] Medication deduction failed: {e}")
+
+        elif event_type == "FLUID_BOLUS" and payload.get('inventory_deduct'):
+            # Fluid deduction (optional)
+            fluid_type = payload.get('fluid_type')
+            volume = payload.get('volume')
+
+            logger.info(f"[Inventory] Fluid deduction: {fluid_type} {volume}ml, case={case_id}")
+
+    except Exception as e:
+        logger.error(f"[Inventory] Deduction error: {e}")
+        # Don't raise - inventory failure shouldn't block event creation
+
+
+@router.post("/cases/{case_id}/events-with-inventory")
+async def add_event_with_inventory(
+    case_id: str,
+    request: AddEventRequest,
+    actor_id: str = Query(...),
+    trigger_inventory: bool = Query(default=True)
+):
+    """新增事件並觸發庫存連動
+
+    當 trigger_inventory=true 且事件類型支援庫存連動時:
+    - BLOOD_PRODUCT + inventory_deduct=true → 扣減血品
+    - VASOACTIVE_BOLUS → 扣減藥品
+    - FLUID_BOLUS + inventory_deduct=true → 扣減輸液
+    """
+    # First create the event using existing endpoint
+    result = await add_event(case_id, request, actor_id)
+
+    # Then trigger inventory deduction if applicable
+    if trigger_inventory and result.get('success'):
+        await trigger_inventory_deduction(
+            request.event_type.value,
+            request.payload,
+            case_id,
+            actor_id
+        )
+        result['inventory_triggered'] = True
+
+    return result
+
+
+@router.get("/cases/{case_id}/summary")
+async def get_case_summary(case_id: str):
+    """取得案例摘要 (用於儀表板或報告)
+
+    包含:
+    - 基本案例資訊
+    - 事件統計
+    - PIO 統計
+    - 時間軸摘要
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Case info
+    cursor.execute("SELECT * FROM anesthesia_cases WHERE id = ?", (case_id,))
+    case = cursor.fetchone()
+    if not case:
+        raise HTTPException(status_code=404, detail=f"Case not found: {case_id}")
+
+    case_info = dict(case)
+
+    # Event statistics
+    cursor.execute("""
+        SELECT event_type, COUNT(*) as count
+        FROM anesthesia_events
+        WHERE case_id = ? AND is_correction = 0
+        GROUP BY event_type
+    """, (case_id,))
+    event_stats = {row['event_type']: row['count'] for row in cursor.fetchall()}
+
+    # Total events
+    total_events = sum(event_stats.values())
+
+    # PIO statistics
+    cursor.execute("""
+        SELECT status, COUNT(*) as count
+        FROM pio_problems
+        WHERE case_id = ?
+        GROUP BY status
+    """, (case_id,))
+    problem_stats = {row['status']: row['count'] for row in cursor.fetchall()}
+
+    cursor.execute("""
+        SELECT COUNT(*) as count FROM pio_interventions WHERE case_id = ?
+    """, (case_id,))
+    intervention_count = cursor.fetchone()['count']
+
+    # Late entries
+    cursor.execute("""
+        SELECT COUNT(*) as count
+        FROM anesthesia_events
+        WHERE case_id = ? AND payload LIKE '%_late_entry%'
+    """, (case_id,))
+    late_entry_count = cursor.fetchone()['count']
+
+    # Duration calculation
+    duration_minutes = None
+    if case_info.get('anesthesia_start_at') and case_info.get('anesthesia_end_at'):
+        try:
+            start = datetime.fromisoformat(case_info['anesthesia_start_at'])
+            end = datetime.fromisoformat(case_info['anesthesia_end_at'])
+            duration_minutes = int((end - start).total_seconds() / 60)
+        except:
+            pass
+
+    return {
+        "case_id": case_id,
+        "status": case_info['status'],
+        "patient_name": case_info.get('patient_name'),
+        "context_mode": case_info.get('context_mode'),
+        "planned_technique": case_info.get('planned_technique'),
+        "duration_minutes": duration_minutes,
+        "statistics": {
+            "total_events": total_events,
+            "events_by_type": event_stats,
+            "problems": problem_stats,
+            "total_problems": sum(problem_stats.values()),
+            "total_interventions": intervention_count,
+            "late_entries": late_entry_count
+        },
+        "timestamps": {
+            "created_at": case_info.get('created_at'),
+            "preop_completed_at": case_info.get('preop_completed_at'),
+            "anesthesia_start_at": case_info.get('anesthesia_start_at'),
+            "surgery_start_at": case_info.get('surgery_start_at'),
+            "surgery_end_at": case_info.get('surgery_end_at'),
+            "anesthesia_end_at": case_info.get('anesthesia_end_at')
+        }
+    }
