@@ -3,7 +3,7 @@
 **Version:** 1.6.1
 **基於:** v1.6.0 + ChatGPT/Gemini 回饋整合
 **更新日期:** 2026-01-06
-**狀態:** 規格定稿
+**狀態:** ✅ 實作完成
 
 ---
 
@@ -630,16 +630,18 @@ POST /api/anesthesia/cases/{id}/pio/quick
 
 | Phase | 功能 | 工時 | 狀態 |
 |-------|------|------|------|
-| **1** | 事件類型擴充 (VASOACTIVE, BLOOD, VENT) | 4h | |
-| **1** | 相對時間偏移 API | 2h | |
-| **1** | 補登強化 (分級 + 原因) | 3h | |
-| **2** | PIO Schema + CRUD API | 4h | |
-| **2** | PIO 連結層邏輯 (event_ref_id 強制) | 3h | |
-| **3** | Quick Scenario Bundle API | 4h | |
-| **3** | 情境快速卡片 UI | 6h | |
-| **4** | Timeline 整合 (collapsible PIO groups) | 6h | |
-| **4** | 庫存連動 | 4h | |
-| | **總計** | **36h** | |
+| **1** | 事件類型擴充 (VASOACTIVE, BLOOD, VENT) | 4h | ✅ 完成 |
+| **1** | 相對時間偏移 API | 2h | ✅ 完成 |
+| **1** | 補登強化 (分級 + 原因) | 3h | ✅ 完成 |
+| **2** | PIO Schema + CRUD API | 4h | ✅ 完成 |
+| **2** | PIO 連結層邏輯 (event_ref_id 強制) | 3h | ✅ 完成 |
+| **3** | Quick Scenario Bundle API | 4h | ✅ 完成 |
+| **3** | 情境快速卡片資料結構 | 6h | ✅ 完成 |
+| **4** | Timeline 整合 (collapsible PIO groups) | 6h | ✅ 完成 |
+| **4** | 庫存連動 | 4h | ✅ 完成 |
+| | **總計** | **36h** | **100%** |
+
+> **實作完成日期**: 2026-01-06
 
 ---
 
