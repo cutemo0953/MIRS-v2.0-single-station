@@ -99,6 +99,53 @@ class LateEntryReason(str, Enum):
     OTHER = "OTHER"                                 # 其他 (需填文字說明)
 
 
+# =============================================================================
+# v1.6.1: PIO Enums
+# =============================================================================
+
+class ProblemType(str, Enum):
+    # 血行動力學
+    HYPOTENSION = "HYPOTENSION"                     # MAP < 65 or SBP < 90
+    HYPERTENSION = "HYPERTENSION"                   # SBP > 160 or MAP > 100
+    BRADYCARDIA = "BRADYCARDIA"                     # HR < 50
+    TACHYCARDIA = "TACHYCARDIA"                     # HR > 100
+    ARRHYTHMIA = "ARRHYTHMIA"                       # AF, VT, VF, etc.
+
+    # 呼吸
+    HYPOXEMIA = "HYPOXEMIA"                         # SpO2 < 94%
+    HYPERCAPNIA = "HYPERCAPNIA"                     # EtCO2 > 45
+    AIRWAY_DIFFICULTY = "AIRWAY_DIFFICULTY"         # 困難氣道/重新插管
+
+    # 出血
+    BLEEDING_SUSPECTED = "BLEEDING_SUSPECTED"       # 出血量異常
+    MASSIVE_TRANSFUSION = "MASSIVE_TRANSFUSION"     # 啟動大量輸血
+
+    # 麻醉深度
+    ANESTHESIA_TOO_LIGHT = "ANESTHESIA_TOO_LIGHT"   # 體動、awareness 跡象
+    ANESTHESIA_TOO_DEEP = "ANESTHESIA_TOO_DEEP"     # BIS < 40, 血壓過低
+
+    # 其他
+    ALLERGIC_REACTION = "ALLERGIC_REACTION"         # 過敏反應
+    MH_SUSPECTED = "MH_SUSPECTED"                   # 疑似惡性高熱
+    HYPOTHERMIA = "HYPOTHERMIA"                     # Temp < 35°C
+    EQUIPMENT_ISSUE_PIO = "EQUIPMENT_ISSUE_PIO"     # 設備問題
+    OTHER_PIO = "OTHER_PIO"                         # 其他問題
+
+
+class ProblemStatus(str, Enum):
+    OPEN = "OPEN"               # 問題進行中
+    WATCHING = "WATCHING"       # 觀察中 (已處置，等待反應)
+    RESOLVED = "RESOLVED"       # 已解決
+    ABANDONED = "ABANDONED"     # 放棄追蹤
+
+
+class OutcomeType(str, Enum):
+    IMPROVED = "IMPROVED"               # 改善
+    NO_CHANGE = "NO_CHANGE"             # 無變化
+    WORSENED = "WORSENED"               # 惡化
+    ADVERSE_REACTION = "ADVERSE_REACTION"  # 不良反應
+
+
 class OxygenSourceType(str, Enum):
     CENTRAL = "CENTRAL"
     CONCENTRATOR = "CONCENTRATOR"
@@ -318,6 +365,65 @@ class PositionChangePayload(BaseModel):
     from_position: Optional[str] = None         # "SUPINE", "LATERAL", "PRONE"
     to_position: str                            # "SUPINE", "LATERAL", "PRONE", "TRENDELENBURG"
     reason: Optional[str] = None
+
+
+# =============================================================================
+# v1.6.1: PIO Request/Response Models
+# =============================================================================
+
+class CreateProblemRequest(BaseModel):
+    """建立 PIO Problem"""
+    problem_type: ProblemType
+    severity: int = Field(default=2, ge=1, le=3)  # 1=輕, 2=中, 3=重
+    detected_clinical_time: Optional[datetime] = None
+    clinical_time_offset_seconds: Optional[int] = None
+    trigger_event_id: Optional[str] = None
+    note: Optional[str] = None
+
+
+class CreateInterventionRequest(BaseModel):
+    """建立 PIO Intervention - 必須有 event_ref_id"""
+    problem_id: str
+    event_ref_id: str                           # 必填！連結底層事件
+    action_type: str                            # 事件類型 (冗餘)
+    performed_clinical_time: Optional[datetime] = None
+    clinical_time_offset_seconds: Optional[int] = None
+    immediate_response: Optional[str] = None
+
+
+class CreateOutcomeRequest(BaseModel):
+    """建立 PIO Outcome"""
+    problem_id: str
+    outcome_type: OutcomeType
+    evidence_event_ids: List[str]               # 必填！至少一個證據事件
+    observed_clinical_time: Optional[datetime] = None
+    clinical_time_offset_seconds: Optional[int] = None
+    new_problem_status: Optional[ProblemStatus] = None
+    note: Optional[str] = None
+
+
+class UpdateProblemStatusRequest(BaseModel):
+    """更新 Problem 狀態"""
+    status: ProblemStatus
+    resolved_clinical_time: Optional[datetime] = None
+    note: Optional[str] = None
+
+
+class ProblemResponse(BaseModel):
+    """PIO Problem 回應"""
+    problem_id: str
+    case_id: str
+    problem_type: str
+    severity: int
+    detected_clinical_time: str
+    resolved_clinical_time: Optional[str]
+    status: str
+    trigger_event_id: Optional[str]
+    note: Optional[str]
+    created_by: str
+    created_at: str
+    interventions: List[Dict[str, Any]] = []
+    outcomes: List[Dict[str, Any]] = []
 
 
 class ClaimOxygenRequest(BaseModel):
@@ -647,7 +753,116 @@ def init_anesthesia_schema(cursor):
         ON drug_transactions(request_id)
     """)
 
-    logger.info("✓ Anesthesia schema initialized (Phase A + B)")
+    # =========================================================================
+    # Phase C: PIO Schema (v1.6.1)
+    # =========================================================================
+
+    # PIO Problem (問題)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pio_problems (
+            problem_id TEXT PRIMARY KEY,
+            case_id TEXT NOT NULL,
+
+            -- 問題分類
+            problem_type TEXT NOT NULL,
+            severity INTEGER NOT NULL DEFAULT 2 CHECK(severity BETWEEN 1 AND 3),
+
+            -- 時間
+            detected_clinical_time DATETIME NOT NULL,
+            resolved_clinical_time DATETIME,
+
+            -- 狀態: OPEN, WATCHING, RESOLVED, ABANDONED
+            status TEXT NOT NULL DEFAULT 'OPEN',
+
+            -- 觸發事件 (通常是發現問題的那筆 VITAL)
+            trigger_event_id TEXT,
+
+            -- 備註
+            note TEXT,
+
+            -- 稽核
+            created_by TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (case_id) REFERENCES anesthesia_cases(id),
+            FOREIGN KEY (trigger_event_id) REFERENCES anesthesia_events(id),
+            CHECK(status IN ('OPEN', 'WATCHING', 'RESOLVED', 'ABANDONED'))
+        )
+    """)
+
+    # PIO Intervention (處置) - 必須連結 Problem + Event
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pio_interventions (
+            intervention_id TEXT PRIMARY KEY,
+            problem_id TEXT NOT NULL,
+            case_id TEXT NOT NULL,
+
+            -- 底層事件引用 (必填)
+            event_ref_id TEXT NOT NULL,
+
+            -- 處置類型 (冗餘，方便查詢)
+            action_type TEXT NOT NULL,
+
+            -- 時間 (從 event 繼承，冗餘存放)
+            performed_clinical_time DATETIME NOT NULL,
+
+            -- 立即反應 (可選)
+            immediate_response TEXT,
+
+            -- 稽核
+            performed_by TEXT NOT NULL,
+            recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (problem_id) REFERENCES pio_problems(problem_id),
+            FOREIGN KEY (event_ref_id) REFERENCES anesthesia_events(id)
+        )
+    """)
+
+    # PIO Outcome (結果) - 必須連結 Problem + Evidence Events
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pio_outcomes (
+            outcome_id TEXT PRIMARY KEY,
+            problem_id TEXT NOT NULL,
+
+            -- 結果類型: IMPROVED, NO_CHANGE, WORSENED, ADVERSE_REACTION
+            outcome_type TEXT NOT NULL,
+
+            -- 證據事件 (JSON array)
+            evidence_event_ids TEXT NOT NULL,
+
+            -- 時間
+            observed_clinical_time DATETIME NOT NULL,
+
+            -- 狀態變更
+            new_problem_status TEXT,
+
+            -- 備註
+            note TEXT,
+
+            -- 稽核
+            recorded_by TEXT NOT NULL,
+            recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (problem_id) REFERENCES pio_problems(problem_id),
+            CHECK(outcome_type IN ('IMPROVED', 'NO_CHANGE', 'WORSENED', 'ADVERSE_REACTION'))
+        )
+    """)
+
+    # PIO Indexes
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pio_problems_case
+        ON pio_problems(case_id, status)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pio_interventions_problem
+        ON pio_interventions(problem_id)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pio_outcomes_problem
+        ON pio_outcomes(problem_id)
+    """)
+
+    logger.info("✓ Anesthesia schema initialized (Phase A + B + C-PIO)")
 
 
 # =============================================================================
@@ -669,6 +884,22 @@ def generate_event_id() -> str:
 def generate_preop_id() -> str:
     """Generate unique preop ID"""
     return f"PREOP-{uuid.uuid4().hex[:8].upper()}"
+
+
+def generate_problem_id(case_id: str) -> str:
+    """Generate unique PIO problem ID: PIO-{case_id}-XXX"""
+    short_uuid = uuid.uuid4().hex[:4].upper()
+    return f"PIO-{case_id[-6:]}-{short_uuid}"
+
+
+def generate_intervention_id() -> str:
+    """Generate unique PIO intervention ID"""
+    return f"INT-{uuid.uuid4().hex[:8].upper()}"
+
+
+def generate_outcome_id() -> str:
+    """Generate unique PIO outcome ID"""
+    return f"OUT-{uuid.uuid4().hex[:8].upper()}"
 
 
 # =============================================================================
@@ -2926,3 +3157,466 @@ async def get_hub_status():
         "last_sync": None,  # TODO: Track last sync time
         "pending_ops": 0,   # TODO: Count pending operations
     }, hub_revision)
+
+
+# =============================================================================
+# v1.6.1: PIO API Routes
+# =============================================================================
+
+@router.post("/cases/{case_id}/pio/problems")
+async def create_problem(case_id: str, request: CreateProblemRequest, actor_id: str = Query(...)):
+    """建立 PIO Problem (問題識別)"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify case exists
+    cursor.execute("SELECT id FROM anesthesia_cases WHERE id = ?", (case_id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail=f"Case not found: {case_id}")
+
+    # Calculate clinical_time
+    recorded_at = datetime.now()
+    if request.detected_clinical_time:
+        clinical_time = request.detected_clinical_time
+    elif request.clinical_time_offset_seconds is not None:
+        from datetime import timedelta
+        clinical_time = recorded_at + timedelta(seconds=request.clinical_time_offset_seconds)
+    else:
+        clinical_time = recorded_at
+
+    # Verify trigger_event_id exists if provided
+    if request.trigger_event_id:
+        cursor.execute("SELECT id FROM anesthesia_events WHERE id = ?", (request.trigger_event_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=400, detail=f"Trigger event not found: {request.trigger_event_id}")
+
+    problem_id = generate_problem_id(case_id)
+
+    try:
+        cursor.execute("""
+            INSERT INTO pio_problems (
+                problem_id, case_id, problem_type, severity,
+                detected_clinical_time, trigger_event_id, note, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            problem_id,
+            case_id,
+            request.problem_type.value,
+            request.severity,
+            clinical_time.isoformat() if isinstance(clinical_time, datetime) else clinical_time,
+            request.trigger_event_id,
+            request.note,
+            actor_id
+        ))
+        conn.commit()
+
+        return {
+            "success": True,
+            "problem_id": problem_id,
+            "problem_type": request.problem_type.value,
+            "detected_clinical_time": clinical_time.isoformat() if isinstance(clinical_time, datetime) else clinical_time
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cases/{case_id}/pio/problems")
+async def list_problems(
+    case_id: str,
+    status: Optional[str] = None,
+    include_details: bool = Query(default=True)
+):
+    """列出 case 的所有 PIO Problems"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = "SELECT * FROM pio_problems WHERE case_id = ?"
+    params = [case_id]
+
+    if status:
+        query += " AND status = ?"
+        params.append(status)
+
+    query += " ORDER BY detected_clinical_time DESC"
+
+    cursor.execute(query, params)
+    problems = [dict(row) for row in cursor.fetchall()]
+
+    if include_details:
+        for problem in problems:
+            # Get interventions
+            cursor.execute("""
+                SELECT * FROM pio_interventions
+                WHERE problem_id = ?
+                ORDER BY performed_clinical_time ASC
+            """, (problem['problem_id'],))
+            problem['interventions'] = [dict(row) for row in cursor.fetchall()]
+
+            # Get outcomes
+            cursor.execute("""
+                SELECT * FROM pio_outcomes
+                WHERE problem_id = ?
+                ORDER BY observed_clinical_time ASC
+            """, (problem['problem_id'],))
+            outcomes = []
+            for row in cursor.fetchall():
+                outcome = dict(row)
+                outcome['evidence_event_ids'] = json.loads(outcome['evidence_event_ids']) if outcome['evidence_event_ids'] else []
+                outcomes.append(outcome)
+            problem['outcomes'] = outcomes
+
+    return {"problems": problems, "count": len(problems)}
+
+
+@router.get("/cases/{case_id}/pio/problems/{problem_id}")
+async def get_problem(case_id: str, problem_id: str):
+    """取得單一 PIO Problem 完整資訊"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT * FROM pio_problems WHERE problem_id = ? AND case_id = ?
+    """, (problem_id, case_id))
+    row = cursor.fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Problem not found: {problem_id}")
+
+    problem = dict(row)
+
+    # Get interventions with linked events
+    cursor.execute("""
+        SELECT i.*, e.payload as event_payload, e.event_type as event_type
+        FROM pio_interventions i
+        LEFT JOIN anesthesia_events e ON i.event_ref_id = e.id
+        WHERE i.problem_id = ?
+        ORDER BY i.performed_clinical_time ASC
+    """, (problem_id,))
+    interventions = []
+    for row in cursor.fetchall():
+        intervention = dict(row)
+        if intervention.get('event_payload'):
+            intervention['event_payload'] = json.loads(intervention['event_payload'])
+        interventions.append(intervention)
+    problem['interventions'] = interventions
+
+    # Get outcomes
+    cursor.execute("""
+        SELECT * FROM pio_outcomes WHERE problem_id = ?
+        ORDER BY observed_clinical_time ASC
+    """, (problem_id,))
+    outcomes = []
+    for row in cursor.fetchall():
+        outcome = dict(row)
+        outcome['evidence_event_ids'] = json.loads(outcome['evidence_event_ids']) if outcome['evidence_event_ids'] else []
+        outcomes.append(outcome)
+    problem['outcomes'] = outcomes
+
+    # Get trigger event details
+    if problem.get('trigger_event_id'):
+        cursor.execute("SELECT * FROM anesthesia_events WHERE id = ?", (problem['trigger_event_id'],))
+        trigger = cursor.fetchone()
+        if trigger:
+            trigger_dict = dict(trigger)
+            trigger_dict['payload'] = json.loads(trigger_dict['payload']) if trigger_dict['payload'] else {}
+            problem['trigger_event'] = trigger_dict
+
+    return problem
+
+
+@router.patch("/cases/{case_id}/pio/problems/{problem_id}/status")
+async def update_problem_status(
+    case_id: str,
+    problem_id: str,
+    request: UpdateProblemStatusRequest,
+    actor_id: str = Query(...)
+):
+    """更新 Problem 狀態"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify problem exists
+    cursor.execute("""
+        SELECT status FROM pio_problems WHERE problem_id = ? AND case_id = ?
+    """, (problem_id, case_id))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail=f"Problem not found: {problem_id}")
+
+    try:
+        update_fields = ["status = ?"]
+        params = [request.status.value]
+
+        if request.resolved_clinical_time:
+            update_fields.append("resolved_clinical_time = ?")
+            params.append(request.resolved_clinical_time.isoformat())
+        elif request.status == ProblemStatus.RESOLVED:
+            # Auto-set resolved time if not provided
+            update_fields.append("resolved_clinical_time = ?")
+            params.append(datetime.now().isoformat())
+
+        if request.note:
+            update_fields.append("note = COALESCE(note, '') || ? || ?")
+            params.extend(['\n---\n', request.note])
+
+        params.append(problem_id)
+
+        cursor.execute(f"""
+            UPDATE pio_problems SET {', '.join(update_fields)}
+            WHERE problem_id = ?
+        """, params)
+        conn.commit()
+
+        return {"success": True, "problem_id": problem_id, "new_status": request.status.value}
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cases/{case_id}/pio/interventions")
+async def create_intervention(case_id: str, request: CreateInterventionRequest, actor_id: str = Query(...)):
+    """建立 PIO Intervention (處置) - 必須連結底層事件
+
+    **硬規則**: event_ref_id 必填，拒絕沒有底層事件的處置記錄
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify problem exists
+    cursor.execute("""
+        SELECT case_id FROM pio_problems WHERE problem_id = ?
+    """, (request.problem_id,))
+    problem = cursor.fetchone()
+    if not problem:
+        raise HTTPException(status_code=404, detail=f"Problem not found: {request.problem_id}")
+
+    if problem['case_id'] != case_id:
+        raise HTTPException(status_code=400, detail="Problem does not belong to this case")
+
+    # v1.6.1 硬規則: 驗證 event_ref_id 存在
+    cursor.execute("""
+        SELECT id, clinical_time, event_type FROM anesthesia_events WHERE id = ?
+    """, (request.event_ref_id,))
+    event = cursor.fetchone()
+    if not event:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Event not found: {request.event_ref_id}. Intervention MUST reference an existing event."
+        )
+
+    # Calculate clinical_time (default from linked event)
+    if request.performed_clinical_time:
+        clinical_time = request.performed_clinical_time
+    elif request.clinical_time_offset_seconds is not None:
+        from datetime import timedelta
+        clinical_time = datetime.now() + timedelta(seconds=request.clinical_time_offset_seconds)
+    else:
+        clinical_time = event['clinical_time']
+
+    intervention_id = generate_intervention_id()
+
+    try:
+        cursor.execute("""
+            INSERT INTO pio_interventions (
+                intervention_id, problem_id, case_id,
+                event_ref_id, action_type, performed_clinical_time,
+                immediate_response, performed_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            intervention_id,
+            request.problem_id,
+            case_id,
+            request.event_ref_id,
+            request.action_type or event['event_type'],
+            clinical_time.isoformat() if isinstance(clinical_time, datetime) else clinical_time,
+            request.immediate_response,
+            actor_id
+        ))
+
+        # Update problem status to WATCHING if still OPEN
+        cursor.execute("""
+            UPDATE pio_problems SET status = 'WATCHING'
+            WHERE problem_id = ? AND status = 'OPEN'
+        """, (request.problem_id,))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "intervention_id": intervention_id,
+            "problem_id": request.problem_id,
+            "event_ref_id": request.event_ref_id
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cases/{case_id}/pio/outcomes")
+async def create_outcome(case_id: str, request: CreateOutcomeRequest, actor_id: str = Query(...)):
+    """建立 PIO Outcome (結果) - 必須有證據事件"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify problem exists
+    cursor.execute("""
+        SELECT case_id FROM pio_problems WHERE problem_id = ?
+    """, (request.problem_id,))
+    problem = cursor.fetchone()
+    if not problem:
+        raise HTTPException(status_code=404, detail=f"Problem not found: {request.problem_id}")
+
+    if problem['case_id'] != case_id:
+        raise HTTPException(status_code=400, detail="Problem does not belong to this case")
+
+    # Verify evidence events exist
+    if not request.evidence_event_ids:
+        raise HTTPException(status_code=400, detail="At least one evidence event is required")
+
+    for event_id in request.evidence_event_ids:
+        cursor.execute("SELECT id FROM anesthesia_events WHERE id = ?", (event_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=400, detail=f"Evidence event not found: {event_id}")
+
+    # Calculate clinical_time
+    recorded_at = datetime.now()
+    if request.observed_clinical_time:
+        clinical_time = request.observed_clinical_time
+    elif request.clinical_time_offset_seconds is not None:
+        from datetime import timedelta
+        clinical_time = recorded_at + timedelta(seconds=request.clinical_time_offset_seconds)
+    else:
+        clinical_time = recorded_at
+
+    outcome_id = generate_outcome_id()
+
+    try:
+        cursor.execute("""
+            INSERT INTO pio_outcomes (
+                outcome_id, problem_id, outcome_type,
+                evidence_event_ids, observed_clinical_time,
+                new_problem_status, note, recorded_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            outcome_id,
+            request.problem_id,
+            request.outcome_type.value,
+            json.dumps(request.evidence_event_ids),
+            clinical_time.isoformat() if isinstance(clinical_time, datetime) else clinical_time,
+            request.new_problem_status.value if request.new_problem_status else None,
+            request.note,
+            actor_id
+        ))
+
+        # Update problem status if specified
+        if request.new_problem_status:
+            update_fields = ["status = ?"]
+            params = [request.new_problem_status.value]
+
+            if request.new_problem_status == ProblemStatus.RESOLVED:
+                update_fields.append("resolved_clinical_time = ?")
+                params.append(clinical_time.isoformat() if isinstance(clinical_time, datetime) else clinical_time)
+
+            params.append(request.problem_id)
+            cursor.execute(f"""
+                UPDATE pio_problems SET {', '.join(update_fields)}
+                WHERE problem_id = ?
+            """, params)
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "outcome_id": outcome_id,
+            "problem_id": request.problem_id,
+            "outcome_type": request.outcome_type.value,
+            "new_problem_status": request.new_problem_status.value if request.new_problem_status else None
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cases/{case_id}/pio/timeline")
+async def get_pio_timeline(case_id: str):
+    """取得 PIO 因果鏈時間軸視圖
+
+    返回所有 problems 及其關聯的 interventions/outcomes，
+    並包含底層事件資料以便 UI 渲染完整時間軸。
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Get all problems
+    cursor.execute("""
+        SELECT * FROM pio_problems WHERE case_id = ?
+        ORDER BY detected_clinical_time ASC
+    """, (case_id,))
+    problems = []
+
+    for row in cursor.fetchall():
+        problem = dict(row)
+
+        # Get trigger event
+        if problem.get('trigger_event_id'):
+            cursor.execute("SELECT * FROM anesthesia_events WHERE id = ?", (problem['trigger_event_id'],))
+            trigger = cursor.fetchone()
+            if trigger:
+                t = dict(trigger)
+                t['payload'] = json.loads(t['payload']) if t['payload'] else {}
+                problem['trigger_event'] = t
+
+        # Get interventions with linked events
+        cursor.execute("""
+            SELECT i.*, e.payload as event_payload
+            FROM pio_interventions i
+            LEFT JOIN anesthesia_events e ON i.event_ref_id = e.id
+            WHERE i.problem_id = ?
+            ORDER BY i.performed_clinical_time ASC
+        """, (problem['problem_id'],))
+        interventions = []
+        for irow in cursor.fetchall():
+            intervention = dict(irow)
+            if intervention.get('event_payload'):
+                intervention['event_payload'] = json.loads(intervention['event_payload'])
+            interventions.append(intervention)
+        problem['interventions'] = interventions
+
+        # Get outcomes with evidence events
+        cursor.execute("""
+            SELECT * FROM pio_outcomes WHERE problem_id = ?
+            ORDER BY observed_clinical_time ASC
+        """, (problem['problem_id'],))
+        outcomes = []
+        for orow in cursor.fetchall():
+            outcome = dict(orow)
+            evidence_ids = json.loads(outcome['evidence_event_ids']) if outcome['evidence_event_ids'] else []
+            outcome['evidence_event_ids'] = evidence_ids
+
+            # Fetch evidence events
+            if evidence_ids:
+                placeholders = ','.join(['?'] * len(evidence_ids))
+                cursor.execute(f"""
+                    SELECT * FROM anesthesia_events WHERE id IN ({placeholders})
+                """, evidence_ids)
+                evidence_events = []
+                for erow in cursor.fetchall():
+                    e = dict(erow)
+                    e['payload'] = json.loads(e['payload']) if e['payload'] else {}
+                    evidence_events.append(e)
+                outcome['evidence_events'] = evidence_events
+
+            outcomes.append(outcome)
+        problem['outcomes'] = outcomes
+
+        problems.append(problem)
+
+    return {
+        "case_id": case_id,
+        "problems": problems,
+        "count": len(problems)
+    }
