@@ -281,6 +281,11 @@ class QuickVitalRequest(BaseModel):
     temp: Optional[float] = None
     o2_flow_lpm: Optional[float] = None
     device_id: Optional[str] = None
+    # v1.6.1: 時間偏移支援
+    clinical_time: Optional[datetime] = None
+    clinical_time_offset_seconds: Optional[int] = None
+    late_entry_reason: Optional[LateEntryReason] = None
+    late_entry_note: Optional[str] = None
 
 
 class QuickMedicationRequest(BaseModel):
@@ -291,6 +296,12 @@ class QuickMedicationRequest(BaseModel):
     unit: str
     route: str = "IV"
     device_id: Optional[str] = None
+    is_controlled: Optional[bool] = None
+    # v1.6.1: 時間偏移支援
+    clinical_time: Optional[datetime] = None
+    clinical_time_offset_seconds: Optional[int] = None
+    late_entry_reason: Optional[LateEntryReason] = None
+    late_entry_note: Optional[str] = None
 
 
 # =============================================================================
@@ -1402,13 +1413,20 @@ async def get_timeline(case_id: str):
 
 @router.post("/cases/{case_id}/vitals")
 async def add_vital_sign(case_id: str, request: QuickVitalRequest, actor_id: str = Query(...)):
-    """Quick vital sign entry (one-tap)"""
-    payload = {k: v for k, v in request.dict().items() if v is not None and k != 'device_id'}
+    """Quick vital sign entry (one-tap) - v1.6.1 支援時間偏移"""
+    # 排除非 payload 欄位
+    exclude_fields = {'device_id', 'clinical_time', 'clinical_time_offset_seconds', 'late_entry_reason', 'late_entry_note'}
+    payload = {k: v for k, v in request.dict().items() if v is not None and k not in exclude_fields}
 
     event_request = AddEventRequest(
         event_type=EventType.VITAL_SIGN,
         payload=payload,
-        device_id=request.device_id
+        device_id=request.device_id,
+        # v1.6.1: 時間偏移
+        clinical_time=request.clinical_time,
+        clinical_time_offset_seconds=request.clinical_time_offset_seconds,
+        late_entry_reason=request.late_entry_reason,
+        late_entry_note=request.late_entry_note
     )
 
     return await add_event(case_id, event_request, actor_id)
@@ -1416,7 +1434,7 @@ async def add_vital_sign(case_id: str, request: QuickVitalRequest, actor_id: str
 
 @router.post("/cases/{case_id}/medication")
 async def add_medication(case_id: str, request: QuickMedicationRequest, actor_id: str = Query(...)):
-    """Quick medication entry"""
+    """Quick medication entry - v1.6.1 支援時間偏移"""
     payload = {
         "drug_code": request.drug_code,
         "drug_name": request.drug_name,
@@ -1424,11 +1442,18 @@ async def add_medication(case_id: str, request: QuickMedicationRequest, actor_id
         "unit": request.unit,
         "route": request.route
     }
+    if request.is_controlled is not None:
+        payload["is_controlled"] = request.is_controlled
 
     event_request = AddEventRequest(
         event_type=EventType.MEDICATION_ADMIN,
         payload=payload,
-        device_id=request.device_id
+        device_id=request.device_id,
+        # v1.6.1: 時間偏移
+        clinical_time=request.clinical_time,
+        clinical_time_offset_seconds=request.clinical_time_offset_seconds,
+        late_entry_reason=request.late_entry_reason,
+        late_entry_note=request.late_entry_note
     )
 
     return await add_event(case_id, event_request, actor_id)

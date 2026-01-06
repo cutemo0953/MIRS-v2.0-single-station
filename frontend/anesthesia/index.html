@@ -592,6 +592,112 @@
         .hidden {
             display: none !important;
         }
+
+        /* Time Offset Selector v1.6.1 */
+        .time-offset-selector {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .time-offset-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .time-offset-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .time-offset-btn {
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .time-offset-btn:hover {
+            background: var(--bg-hover);
+        }
+
+        .time-offset-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .time-offset-custom {
+            display: none;
+            margin-top: 10px;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .time-offset-custom.show {
+            display: flex;
+        }
+
+        .time-offset-custom input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .late-entry-reason {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 6px;
+        }
+
+        .late-entry-reason.show {
+            display: block;
+        }
+
+        .late-entry-reason label {
+            font-size: 12px;
+            color: #f59e0b;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .late-entry-reason select,
+        .late-entry-reason input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .computed-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            padding: 6px 10px;
+            background: var(--bg-card);
+            border-radius: 4px;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
@@ -830,6 +936,39 @@
                 <button class="modal-close" onclick="closeModal('vitalsModal')">&times;</button>
             </div>
             <form onsubmit="submitVitals(event)">
+                <!-- Time Offset Selector v1.6.1 -->
+                <div class="time-offset-selector" id="vitalsTimeSelector">
+                    <div class="time-offset-label">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                            <path stroke-width="2" d="M12 6v6l4 2"/>
+                        </svg>
+                        事件時間
+                    </div>
+                    <div class="time-offset-buttons">
+                        <button type="button" class="time-offset-btn active" data-offset="0" onclick="selectTimeOffset(this, 'vitals')">現在</button>
+                        <button type="button" class="time-offset-btn" data-offset="-300" onclick="selectTimeOffset(this, 'vitals')">-5分</button>
+                        <button type="button" class="time-offset-btn" data-offset="-600" onclick="selectTimeOffset(this, 'vitals')">-10分</button>
+                        <button type="button" class="time-offset-btn" data-offset="-900" onclick="selectTimeOffset(this, 'vitals')">-15分</button>
+                        <button type="button" class="time-offset-btn" data-offset="custom" onclick="selectTimeOffset(this, 'vitals')">自訂</button>
+                    </div>
+                    <div class="time-offset-custom" id="vitalsTimeCustom">
+                        <input type="datetime-local" id="vitalsCustomTime" onchange="updateComputedTime('vitals')">
+                    </div>
+                    <div class="late-entry-reason" id="vitalsLateEntry">
+                        <label>遲補登錄原因 (超過5分鐘需填寫)</label>
+                        <select id="vitalsLateReason">
+                            <option value="EMERGENCY_HANDLING">緊急處置中</option>
+                            <option value="EQUIPMENT_ISSUE">設備問題</option>
+                            <option value="SHIFT_HANDOFF">交班中</option>
+                            <option value="DOCUMENTATION_CATCH_UP">補登文件</option>
+                            <option value="OTHER">其他</option>
+                        </select>
+                        <input type="text" id="vitalsLateNote" placeholder="備註 (選填)">
+                    </div>
+                    <div class="computed-time" id="vitalsComputedTime">記錄時間: 現在</div>
+                </div>
+
                 <div class="vitals-grid">
                     <div class="vital-input">
                         <div class="vital-label">BP (sys)</div>
@@ -917,6 +1056,40 @@
                     <div class="selected-drug-name" id="selectedDrugName">Propofol</div>
                     <div class="selected-drug-tag" id="selectedDrugTag"></div>
                 </div>
+
+                <!-- Time Offset Selector v1.6.1 -->
+                <div class="time-offset-selector" id="medTimeSelector">
+                    <div class="time-offset-label">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                            <path stroke-width="2" d="M12 6v6l4 2"/>
+                        </svg>
+                        給藥時間
+                    </div>
+                    <div class="time-offset-buttons">
+                        <button type="button" class="time-offset-btn active" data-offset="0" onclick="selectTimeOffset(this, 'med')">現在</button>
+                        <button type="button" class="time-offset-btn" data-offset="-300" onclick="selectTimeOffset(this, 'med')">-5分</button>
+                        <button type="button" class="time-offset-btn" data-offset="-600" onclick="selectTimeOffset(this, 'med')">-10分</button>
+                        <button type="button" class="time-offset-btn" data-offset="-900" onclick="selectTimeOffset(this, 'med')">-15分</button>
+                        <button type="button" class="time-offset-btn" data-offset="custom" onclick="selectTimeOffset(this, 'med')">自訂</button>
+                    </div>
+                    <div class="time-offset-custom" id="medTimeCustom">
+                        <input type="datetime-local" id="medCustomTime" onchange="updateComputedTime('med')">
+                    </div>
+                    <div class="late-entry-reason" id="medLateEntry">
+                        <label>遲補登錄原因 (超過5分鐘需填寫)</label>
+                        <select id="medLateReason">
+                            <option value="EMERGENCY_HANDLING">緊急處置中</option>
+                            <option value="EQUIPMENT_ISSUE">設備問題</option>
+                            <option value="SHIFT_HANDOFF">交班中</option>
+                            <option value="DOCUMENTATION_CATCH_UP">補登文件</option>
+                            <option value="OTHER">其他</option>
+                        </select>
+                        <input type="text" id="medLateNote" placeholder="備註 (選填)">
+                    </div>
+                    <div class="computed-time" id="medComputedTime">記錄時間: 現在</div>
+                </div>
+
                 <div class="dose-adjust-section">
                     <div class="form-group">
                         <label class="form-label">劑量</label>
@@ -1455,6 +1628,123 @@
         let deviceId = localStorage.getItem('deviceId') || generateDeviceId();
 
         const API_BASE = '/api/anesthesia';
+
+        // =================================================================
+        // v1.6.1: Time Offset Helper Functions
+        // =================================================================
+
+        // Track selected time offset per modal (vitals, med, etc.)
+        const timeOffsetState = {
+            vitals: { offset: 0, customTime: null },
+            med: { offset: 0, customTime: null }
+        };
+
+        function selectTimeOffset(btn, modalType) {
+            const container = btn.closest('.time-offset-selector');
+            const buttons = container.querySelectorAll('.time-offset-btn');
+            const customDiv = document.getElementById(`${modalType}TimeCustom`);
+            const lateEntryDiv = document.getElementById(`${modalType}LateEntry`);
+
+            // Update active button
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const offset = btn.dataset.offset;
+
+            if (offset === 'custom') {
+                customDiv.classList.add('show');
+                timeOffsetState[modalType].offset = null;
+                // Set default to now
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                document.getElementById(`${modalType}CustomTime`).value = now.toISOString().slice(0, 16);
+                updateComputedTime(modalType);
+            } else {
+                customDiv.classList.remove('show');
+                timeOffsetState[modalType].offset = parseInt(offset);
+                timeOffsetState[modalType].customTime = null;
+
+                // Show late entry if > 5 min (300 sec)
+                if (Math.abs(parseInt(offset)) > 300) {
+                    lateEntryDiv.classList.add('show');
+                } else {
+                    lateEntryDiv.classList.remove('show');
+                }
+
+                updateComputedTime(modalType);
+            }
+        }
+
+        function updateComputedTime(modalType) {
+            const displayEl = document.getElementById(`${modalType}ComputedTime`);
+            const lateEntryDiv = document.getElementById(`${modalType}LateEntry`);
+            const customInput = document.getElementById(`${modalType}CustomTime`);
+
+            let computedTime;
+            let offsetSeconds = 0;
+
+            if (customInput && customInput.value && timeOffsetState[modalType].offset === null) {
+                computedTime = new Date(customInput.value);
+                timeOffsetState[modalType].customTime = computedTime.toISOString();
+                offsetSeconds = Math.floor((computedTime - new Date()) / 1000);
+            } else {
+                offsetSeconds = timeOffsetState[modalType].offset || 0;
+                computedTime = new Date(Date.now() + offsetSeconds * 1000);
+            }
+
+            const timeStr = computedTime.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+            displayEl.textContent = `記錄時間: ${timeStr}`;
+
+            // Show late entry if > 5 min ago
+            if (Math.abs(offsetSeconds) > 300) {
+                lateEntryDiv.classList.add('show');
+            } else {
+                lateEntryDiv.classList.remove('show');
+            }
+        }
+
+        function getTimeOffsetData(modalType) {
+            const state = timeOffsetState[modalType];
+            const lateEntryDiv = document.getElementById(`${modalType}LateEntry`);
+            const result = {};
+
+            if (state.customTime) {
+                result.clinical_time = state.customTime;
+            } else if (state.offset && state.offset !== 0) {
+                result.clinical_time_offset_seconds = state.offset;
+            }
+
+            // If late entry is shown, include reason
+            if (lateEntryDiv && lateEntryDiv.classList.contains('show')) {
+                const reasonEl = document.getElementById(`${modalType}LateReason`);
+                const noteEl = document.getElementById(`${modalType}LateNote`);
+                if (reasonEl) result.late_entry_reason = reasonEl.value;
+                if (noteEl && noteEl.value) result.late_entry_note = noteEl.value;
+            }
+
+            return result;
+        }
+
+        function resetTimeSelector(modalType) {
+            const container = document.getElementById(`${modalType}TimeSelector`);
+            if (!container) return;
+
+            const buttons = container.querySelectorAll('.time-offset-btn');
+            buttons.forEach(b => {
+                b.classList.toggle('active', b.dataset.offset === '0');
+            });
+
+            const customDiv = document.getElementById(`${modalType}TimeCustom`);
+            const lateEntryDiv = document.getElementById(`${modalType}LateEntry`);
+
+            if (customDiv) customDiv.classList.remove('show');
+            if (lateEntryDiv) lateEntryDiv.classList.remove('show');
+
+            timeOffsetState[modalType] = { offset: 0, customTime: null };
+
+            const displayEl = document.getElementById(`${modalType}ComputedTime`);
+            if (displayEl) displayEl.textContent = '記錄時間: 現在';
+        }
 
         // =================================================================
         // Phase A-6: WAL Offline Queue
@@ -2116,6 +2406,19 @@
                 o2_flow_lpm: parseFloat(document.getElementById('vO2Flow').value) || null
             };
 
+            // v1.6.1: Add time offset support
+            const timeData = getTimeOffsetData('vitals');
+            if (timeData.clinical_time) {
+                body.clinical_time = timeData.clinical_time;
+            }
+            if (timeData.clinical_time_offset_seconds) {
+                body.clinical_time_offset_seconds = timeData.clinical_time_offset_seconds;
+            }
+            if (timeData.late_entry_reason) {
+                body.late_entry_reason = timeData.late_entry_reason;
+                body.late_entry_note = timeData.late_entry_note;
+            }
+
             try {
                 const res = await fetch(`${API_BASE}/cases/${currentCase.id}/vitals?actor_id=${actorId}`, {
                     method: 'POST',
@@ -2136,6 +2439,8 @@
                 ['vBpSys', 'vBpDia', 'vHr', 'vSpo2', 'vEtco2', 'vO2Flow'].forEach(id => {
                     document.getElementById(id).value = '';
                 });
+                // Reset time selector
+                resetTimeSelector('vitals');
             } catch (err) {
                 alert('記錄失敗');
             }
@@ -2211,6 +2516,19 @@
                 is_controlled: selectedMed.isControlled
             };
 
+            // v1.6.1: Add time offset support
+            const timeData = getTimeOffsetData('med');
+            if (timeData.clinical_time) {
+                body.clinical_time = timeData.clinical_time;
+            }
+            if (timeData.clinical_time_offset_seconds) {
+                body.clinical_time_offset_seconds = timeData.clinical_time_offset_seconds;
+            }
+            if (timeData.late_entry_reason) {
+                body.late_entry_reason = timeData.late_entry_reason;
+                body.late_entry_note = timeData.late_entry_note;
+            }
+
             try {
                 const res = await fetch(`${API_BASE}/cases/${currentCase.id}/medication?actor_id=${actorId}`, {
                     method: 'POST',
@@ -2222,6 +2540,7 @@
 
                 closeModal('medModal');
                 backToMedSelect(); // Reset view for next time
+                resetTimeSelector('med'); // Reset time selector
                 loadTimeline(currentCase.id);
             } catch (err) {
                 alert('記錄失敗');
