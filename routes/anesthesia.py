@@ -48,38 +48,55 @@ class AnesthesiaTechnique(str, Enum):
 
 
 class EventType(str, Enum):
-    # Vital Signs
+    # === 生命徵象 ===
     VITAL_SIGN = "VITAL_SIGN"
 
-    # Medications
+    # === 藥物 (v1.6.1 新增 VASOACTIVE) ===
     MEDICATION_ADMIN = "MEDICATION_ADMIN"
+    VASOACTIVE_BOLUS = "VASOACTIVE_BOLUS"          # 昇壓劑/降壓劑 單次給藥
+    VASOACTIVE_INFUSION = "VASOACTIVE_INFUSION"    # 昇壓劑 幫浦調整
 
-    # Fluids & Blood
+    # === 輸液/輸血 (v1.6.1 新增 FLUID_BOLUS) ===
     FLUID_IN = "FLUID_IN"
+    FLUID_BOLUS = "FLUID_BOLUS"                    # 輸液挑戰
     BLOOD_PRODUCT = "BLOOD_PRODUCT"
     FLUID_OUT = "FLUID_OUT"
 
-    # Airway
+    # === 呼吸/氣道 (v1.6.1 新增 VENT_SETTING_CHANGE) ===
     AIRWAY_EVENT = "AIRWAY_EVENT"
+    VENT_SETTING_CHANGE = "VENT_SETTING_CHANGE"    # 呼吸器參數調整
 
-    # Milestones
+    # === 麻醉深度 (v1.6.1 新增) ===
+    ANESTHESIA_DEPTH_ADJUST = "ANESTHESIA_DEPTH_ADJUST"
+
+    # === 里程碑 ===
     MILESTONE = "MILESTONE"
 
-    # Resource
+    # === 資源/設備 ===
     RESOURCE_CHECK = "RESOURCE_CHECK"
-
-    # Equipment
     EQUIPMENT_EVENT = "EQUIPMENT_EVENT"
 
-    # Notes
+    # === 其他記錄 (v1.6.1 新增) ===
+    LAB_RESULT_POINT = "LAB_RESULT_POINT"          # POC 檢驗
+    PROCEDURE_NOTE = "PROCEDURE_NOTE"              # 術中短註記
+    POSITION_CHANGE = "POSITION_CHANGE"            # 姿勢調整
     NOTE = "NOTE"
 
-    # Lifecycle
+    # === 生命週期 ===
     STATUS_CHANGE = "STATUS_CHANGE"
     STAFF_CHANGE = "STAFF_CHANGE"
 
-    # Corrections
+    # === 更正 ===
     CORRECTION = "CORRECTION"
+
+
+# v1.6.1: 補登原因
+class LateEntryReason(str, Enum):
+    EMERGENCY_HANDLING = "EMERGENCY_HANDLING"       # 緊急處理病人中
+    EQUIPMENT_ISSUE = "EQUIPMENT_ISSUE"             # 設備/網路問題
+    SHIFT_HANDOFF = "SHIFT_HANDOFF"                 # 交班補記
+    DOCUMENTATION_CATCH_UP = "DOCUMENTATION_CATCH_UP"  # 文書補齊
+    OTHER = "OTHER"                                 # 其他 (需填文字說明)
 
 
 class OxygenSourceType(str, Enum):
@@ -169,12 +186,16 @@ class CaseResponse(BaseModel):
 class AddEventRequest(BaseModel):
     event_type: EventType
     clinical_time: Optional[datetime] = None  # If None, use current time
+    clinical_time_offset_seconds: Optional[int] = None  # v1.6.1: 相對偏移 (-300 = 5分鐘前)
     payload: Dict[str, Any]
     device_id: Optional[str] = None
     idempotency_key: Optional[str] = None
     is_correction: bool = False
     corrects_event_id: Optional[str] = None
     correction_reason: Optional[str] = None
+    # v1.6.1: 補登相關
+    late_entry_reason: Optional[LateEntryReason] = None
+    late_entry_note: Optional[str] = None  # 當 reason=OTHER 時必填
 
 
 class EventResponse(BaseModel):
@@ -223,6 +244,80 @@ class QuickMedicationRequest(BaseModel):
     unit: str
     route: str = "IV"
     device_id: Optional[str] = None
+
+
+# =============================================================================
+# v1.6.1: 新增事件 Payload Models
+# =============================================================================
+
+class VasoactiveBolusPayload(BaseModel):
+    """VASOACTIVE_BOLUS 事件 payload"""
+    drug_name: str                              # "Ephedrine", "Phenylephrine", "Atropine"
+    dose: float
+    unit: str                                   # "mg", "mcg"
+    route: str = "IV"                           # "IV", "IM"
+    indication: Optional[str] = None            # "Hypotension", "Bradycardia"
+    linked_problem_id: Optional[str] = None     # PIO 連結
+
+
+class VasoactiveInfusionPayload(BaseModel):
+    """VASOACTIVE_INFUSION 事件 payload"""
+    drug_name: str                              # "Norepinephrine", "Dopamine", "Nicardipine"
+    action: str                                 # "START", "TITRATE", "STOP"
+    rate_from: Optional[float] = None           # mcg/kg/min (titrate 時)
+    rate_to: Optional[float] = None
+    unit: str = "mcg/kg/min"
+    target: Optional[str] = None                # "MAP > 65", "SBP < 140"
+    linked_problem_id: Optional[str] = None
+
+
+class BloodProductPayload(BaseModel):
+    """BLOOD_PRODUCT 事件 payload (增強版)"""
+    product_type: str                           # "PRBC", "FFP", "PLATELET", "CRYO", "WHOLE_BLOOD"
+    unit_id: Optional[str] = None               # 血袋編號
+    unit_count: int = 1
+    action: str = "START"                       # "START", "COMPLETE", "REACTION"
+    reaction_type: Optional[str] = None         # "FEBRILE", "ALLERGIC", "HEMOLYTIC", "NONE"
+    linked_problem_id: Optional[str] = None
+    inventory_deduct: bool = False              # 是否觸發 MIRS 庫存扣減
+
+
+class VentSettingChangePayload(BaseModel):
+    """VENT_SETTING_CHANGE 事件 payload"""
+    parameter: str                              # "FIO2", "PEEP", "VT", "RR", "MODE", "PIP_LIMIT"
+    from_value: str
+    to_value: str
+    reason: Optional[str] = None                # "Hypoxia", "Hypercarbia", "Recruitment"
+    linked_problem_id: Optional[str] = None
+
+
+class AnesthesiaDepthAdjustPayload(BaseModel):
+    """ANESTHESIA_DEPTH_ADJUST 事件 payload"""
+    action: str                                 # "DEEPEN", "LIGHTEN"
+    method: str                                 # "VOLATILE", "IV_BOLUS", "IV_INFUSION"
+    agent: Optional[str] = None                 # "Sevoflurane", "Propofol"
+    mac_from: Optional[float] = None            # Volatile MAC
+    mac_to: Optional[float] = None
+    bolus_dose: Optional[str] = None            # "Propofol 30mg"
+    infusion_rate_from: Optional[str] = None
+    infusion_rate_to: Optional[str] = None
+    reason: Optional[str] = None                # "Patient movement", "BP/HR spike"
+    linked_problem_id: Optional[str] = None
+
+
+class LabResultPointPayload(BaseModel):
+    """LAB_RESULT_POINT 事件 payload (POC 檢驗)"""
+    test_type: str                              # "ABG", "HB", "GLUCOSE", "ACT", "LACTATE"
+    results: Dict[str, Any]                     # {"pH": 7.35, "pO2": 95, ...}
+    specimen: Optional[str] = None              # "arterial", "venous"
+    device: Optional[str] = None                # POC device name
+
+
+class PositionChangePayload(BaseModel):
+    """POSITION_CHANGE 事件 payload"""
+    from_position: Optional[str] = None         # "SUPINE", "LATERAL", "PRONE"
+    to_position: str                            # "SUPINE", "LATERAL", "PRONE", "TRENDELENBURG"
+    reason: Optional[str] = None
 
 
 class ClaimOxygenRequest(BaseModel):
@@ -781,7 +876,16 @@ async def update_case_metadata(
 
 @router.post("/cases/{case_id}/events")
 async def add_event(case_id: str, request: AddEventRequest, actor_id: str = Query(...)):
-    """Add event to case timeline (append-only)"""
+    """Add event to case timeline (append-only)
+
+    v1.6.1: 支援相對時間偏移和補登驗證
+    - clinical_time_offset_seconds: 負數表示過去時間 (-300 = 5分鐘前)
+    - 補登規則:
+      - ≤ 5分鐘: 正常記錄
+      - 5-30分鐘: 自動標記補登
+      - 30-60分鐘: 必填 late_entry_reason
+      - > 60分鐘: 必填 late_entry_reason + 標記需 PIN 確認
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -795,7 +899,46 @@ async def add_event(case_id: str, request: AddEventRequest, actor_id: str = Quer
         raise HTTPException(status_code=400, detail="Cannot add events to closed case")
 
     event_id = generate_event_id()
-    clinical_time = request.clinical_time or datetime.now()
+    recorded_at = datetime.now()
+
+    # v1.6.1: 計算 clinical_time
+    if request.clinical_time:
+        clinical_time = request.clinical_time
+    elif request.clinical_time_offset_seconds is not None:
+        # 相對偏移：recorded_at + offset (offset 為負數表示過去)
+        from datetime import timedelta
+        clinical_time = recorded_at + timedelta(seconds=request.clinical_time_offset_seconds)
+    else:
+        clinical_time = recorded_at
+
+    # v1.6.1: 補登驗證
+    delay_seconds = (recorded_at - clinical_time).total_seconds() if isinstance(clinical_time, datetime) else 0
+    is_late_entry = delay_seconds > 300  # > 5 分鐘
+    requires_pin_elevation = delay_seconds > 3600  # > 60 分鐘
+
+    # 驗證補登規則
+    if delay_seconds > 1800:  # > 30 分鐘
+        if not request.late_entry_reason:
+            raise HTTPException(
+                status_code=400,
+                detail=f"補登超過 30 分鐘需提供原因 (late_entry_reason). 延遲: {int(delay_seconds/60)} 分鐘"
+            )
+        if request.late_entry_reason == LateEntryReason.OTHER and not request.late_entry_note:
+            raise HTTPException(
+                status_code=400,
+                detail="late_entry_reason=OTHER 時必須填寫 late_entry_note"
+            )
+
+    # 增強 payload 以包含補登資訊
+    enhanced_payload = dict(request.payload)
+    if is_late_entry:
+        enhanced_payload['_late_entry'] = {
+            'delay_seconds': int(delay_seconds),
+            'reason': request.late_entry_reason.value if request.late_entry_reason else None,
+            'note': request.late_entry_note,
+            'requires_pin': requires_pin_elevation
+        }
+
     idempotency_key = request.idempotency_key or f"{case_id}:{actor_id}:{event_id[:8]}"
 
     try:
@@ -810,7 +953,7 @@ async def add_event(case_id: str, request: AddEventRequest, actor_id: str = Quer
             case_id,
             request.event_type.value,
             clinical_time.isoformat() if isinstance(clinical_time, datetime) else clinical_time,
-            json.dumps(request.payload),
+            json.dumps(enhanced_payload),
             actor_id,
             request.device_id,
             idempotency_key,
@@ -845,11 +988,20 @@ async def add_event(case_id: str, request: AddEventRequest, actor_id: str = Quer
 
         conn.commit()
 
-        return {
+        # v1.6.1: 回傳包含補登資訊
+        response = {
             "success": True,
             "event_id": event_id,
-            "clinical_time": clinical_time.isoformat() if isinstance(clinical_time, datetime) else clinical_time
+            "clinical_time": clinical_time.isoformat() if isinstance(clinical_time, datetime) else clinical_time,
+            "recorded_at": recorded_at.isoformat()
         }
+        if is_late_entry:
+            response["is_late_entry"] = True
+            response["delay_minutes"] = int(delay_seconds / 60)
+            if requires_pin_elevation:
+                response["requires_pin_elevation"] = True
+
+        return response
 
     except Exception as e:
         conn.rollback()
@@ -919,14 +1071,18 @@ async def get_timeline(case_id: str):
     for event in events:
         event['payload'] = json.loads(event['payload']) if event['payload'] else {}
 
-    # Group by type
+    # Group by type (v1.6.1: 擴充分組以支援新事件類型)
     timeline = {
         'vitals': [e for e in events if e['event_type'] == 'VITAL_SIGN'],
         'medications': [e for e in events if e['event_type'] == 'MEDICATION_ADMIN'],
-        'fluids': [e for e in events if e['event_type'] in ('FLUID_IN', 'FLUID_OUT', 'BLOOD_PRODUCT')],
-        'airway': [e for e in events if e['event_type'] == 'AIRWAY_EVENT'],
+        'vasoactive': [e for e in events if e['event_type'] in ('VASOACTIVE_BOLUS', 'VASOACTIVE_INFUSION')],
+        'fluids': [e for e in events if e['event_type'] in ('FLUID_IN', 'FLUID_OUT', 'FLUID_BOLUS', 'BLOOD_PRODUCT')],
+        'airway': [e for e in events if e['event_type'] in ('AIRWAY_EVENT', 'VENT_SETTING_CHANGE')],
+        'anesthesia_depth': [e for e in events if e['event_type'] == 'ANESTHESIA_DEPTH_ADJUST'],
         'milestones': [e for e in events if e['event_type'] == 'MILESTONE'],
-        'notes': [e for e in events if e['event_type'] == 'NOTE'],
+        'labs': [e for e in events if e['event_type'] == 'LAB_RESULT_POINT'],
+        'positioning': [e for e in events if e['event_type'] == 'POSITION_CHANGE'],
+        'notes': [e for e in events if e['event_type'] in ('NOTE', 'PROCEDURE_NOTE')],
         'all': events
     }
 
