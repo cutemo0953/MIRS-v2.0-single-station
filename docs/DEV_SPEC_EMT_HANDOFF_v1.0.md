@@ -1,7 +1,7 @@
 # EMT Transfer Handoff 開發規格書 (MIRS 端)
 
-**版本**: 3.2
-**日期**: 2026-01-05
+**版本**: 3.3
+**日期**: 2026-01-06
 **狀態**: Draft
 **依賴**:
 - DEV_SPEC_EMT_TRANSFER_PWA.md v2.2.4
@@ -16,6 +16,7 @@
 | 3.0 | 2026-01-05 | 重構為 CIRS 統一交班消費端 |
 | 3.1 | 2026-01-05 | 新增手動建立交班單 (外站轉入)、GCS E/V/M 格式、ISBAR/MIST 選擇 |
 | 3.2 | 2026-01-05 | 內部轉送也可填 ISBAR/MIST、站點名稱顯示、source_station/local_station |
+| **3.3** | **2026-01-06** | **交班報告 Modal + 途中事件記錄 + CIRS complete 通知** |
 
 ---
 
@@ -583,6 +584,126 @@ async addTransitEvent(eventType, data) {
 │                               [取消]      [確認調整]         │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### 4.4 交班報告 Modal (v3.3 新增)
+
+EMT 在轉送途中可隨時查看「交班報告」，供外站接收方確認病患資訊。
+
+#### 4.4.1 UI 設計
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 交班報告                                               [X]   │
+├─────────────────────────────────────────────────────────────┤
+│ 【病患基本資料】                                            │
+│ 王大明 45M                                     ● STABLE    │
+│ 右股骨開放性骨折 ORIF                                       │
+│ 目的地: 後送醫院 A                                          │
+├─────────────────────────────────────────────────────────────┤
+│ 【出發時交班】                               [MIST]          │
+│                                                             │
+│ M - 受傷機轉                                                │
+│     機車對撞，時速約 60 km/h                                │
+│                                                             │
+│ I - 傷勢                                                    │
+│     右股骨開放性骨折，約 15cm 傷口                          │
+│                                                             │
+│ S - 徵象                                                    │
+│     ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐                    │
+│     │ BP   │ │ HR   │ │ SpO2 │ │ GCS  │                    │
+│     │110/70│ │ 100  │ │ 98%  │ │ 15   │                    │
+│     └──────┘ └──────┘ └──────┘ └──────┘                    │
+│                                                             │
+│ T - 處置                                                    │
+│     止血帶、夾板固定、TXA 1g、IV access                     │
+├─────────────────────────────────────────────────────────────┤
+│ 【EMT 接收時生命徵象】                                      │
+│     BP: 108/68  HR: 96  SpO2: 99%  GCS: E4V5M6             │
+├─────────────────────────────────────────────────────────────┤
+│ 【轉送途中事件】                               3 筆         │
+│                                                             │
+│ 10:42  [VS]  BP 115/72, HR 92, SpO2 99%                    │
+│ 10:48  [藥]  Morphine 5mg IV (疼痛緩解)                     │
+│ 10:55  [O2]  O2 調整為 3 L/min - 病患穩定                  │
+├─────────────────────────────────────────────────────────────┤
+│ 【轉送摘要】                                                │
+│ 轉送時間: 23 分鐘                                           │
+│ O2 流量: 3 L/min                                           │
+│ EMT: 王小明                                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 4.4.2 資料來源
+
+| 區塊 | 資料來源 |
+|------|----------|
+| 病患基本資料 | `currentMission.patient_name/age/chief_complaint` |
+| 出發時交班 | `currentMission.handoff_snapshot.content` (ISBAR/MIST) |
+| EMT 接收時 VS | `currentMission.arrival_vitals` |
+| 轉送途中事件 | `transitEvents[]` (本地記錄 + CIRS addenda) |
+| 轉送摘要 | `elapsedTime`, `currentMission.oxygen_requirement_lpm` |
+
+### 4.5 途中事件記錄 (v3.3 新增)
+
+#### 4.5.1 事件類型
+
+| 類型 | 代碼 | 顏色 | 說明 |
+|------|------|------|------|
+| 生命徵象 | VITALS | 紅 | BP/HR/SpO2/GCS 變化 |
+| 給藥 | MEDICATION | 藍 | 途中給藥記錄 |
+| O2 調整 | O2_ADJUST | 琥珀 | 氧氣流量調整 |
+| 備註 | NOTE | 灰 | 一般備註 |
+
+#### 4.5.2 同步機制
+
+```javascript
+// 記錄途中事件 + 同步 CIRS
+addTransitEvent() {
+    // 1. 本地記錄
+    this.transitEvents.push({
+        event_type: evt.event_type,
+        timestamp: new Date().toISOString(),
+        description: description,
+        data: { ...evt.data }
+    });
+
+    // 2. 同步到 CIRS (如果有網路)
+    if (navigator.onLine && this.currentMission?.cirs_handoff_id) {
+        fetch(`${this.cirsHubUrl}/api/handoff/${handoffId}/addendum`, {
+            method: 'POST',
+            body: JSON.stringify({
+                addendum_type: 'TRANSIT_EVENT',
+                source: 'EMT',
+                content: { event_type, description, data }
+            })
+        });
+    }
+}
+```
+
+### 4.6 結案通知 CIRS (v3.3 新增)
+
+EMT `finalizeMission()` 成功後，自動通知 CIRS Hub 交班完成：
+
+```javascript
+// finalizeMission() 成功後
+if (this.currentMission.cirs_handoff_id && this.cirsHubUrl) {
+    await fetch(`${this.cirsHubUrl}/api/handoff/${handoffId}/complete`, {
+        method: 'POST',
+        body: JSON.stringify({
+            completed_by: this.emtCredentials.id,
+            completed_by_name: this.emtCredentials.name,
+            arrival_notes: `任務完成於 ${timestamp}`,
+            destination_confirmed: true
+        })
+    });
+}
+```
+
+**CIRS 端更新**:
+- `handoff_records.status` → `COMPLETED`
+- `registrations.status` → `TRANSFERRED`
+- 記錄 `completed_at`, `completed_by`
 
 ---
 

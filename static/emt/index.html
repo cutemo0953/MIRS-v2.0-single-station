@@ -628,6 +628,36 @@
                 </div>
             </div>
 
+            <!-- v3.3: 途中事件記錄 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-gray-700">途中事件</h3>
+                    <button @click="showAddTransitEvent = true"
+                            class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-lg hover:bg-primary-200">
+                        + 記錄事件
+                    </button>
+                </div>
+                <div class="space-y-2" x-show="transitEvents.length > 0">
+                    <template x-for="(evt, idx) in transitEvents" :key="idx">
+                        <div class="flex items-start gap-2 py-2 border-b border-gray-100 text-sm">
+                            <span class="text-gray-400 font-mono" x-text="formatTime(evt.timestamp)"></span>
+                            <span class="px-2 py-0.5 rounded text-xs"
+                                  :class="{
+                                      'bg-red-100 text-red-700': evt.event_type === 'VITALS',
+                                      'bg-blue-100 text-blue-700': evt.event_type === 'MEDICATION',
+                                      'bg-amber-100 text-amber-700': evt.event_type === 'O2_ADJUST',
+                                      'bg-gray-100 text-gray-700': evt.event_type === 'NOTE'
+                                  }"
+                                  x-text="{'VITALS':'VS','MEDICATION':'藥','O2_ADJUST':'O2','NOTE':'備'}[evt.event_type]"></span>
+                            <span class="flex-1" x-text="evt.description"></span>
+                        </div>
+                    </template>
+                </div>
+                <div class="text-gray-400 text-sm text-center py-4" x-show="transitEvents.length === 0">
+                    尚無途中事件記錄
+                </div>
+            </div>
+
             <!-- Supplies Status -->
             <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
                 <h3 class="font-bold text-gray-700 mb-3">物資狀態</h3>
@@ -640,6 +670,12 @@
                     </template>
                 </div>
             </div>
+
+            <!-- v3.3: 交班報告按鈕 -->
+            <button @click="showHandoffReport = true"
+                    class="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-4 rounded-xl transition mb-3">
+                交班報告
+            </button>
 
             <button @click="arriveMission()"
                     class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl transition">
@@ -1628,6 +1664,313 @@
         </div>
     </div>
 
+    <!-- v3.3: 交班報告 Modal (全螢幕) -->
+    <div x-show="showHandoffReport" x-cloak
+         class="fixed inset-0 bg-white z-50 overflow-y-auto ios-scroll">
+        <!-- Header -->
+        <div class="sticky top-0 bg-primary-600 text-white px-4 py-3 shadow-lg z-10">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-bold">交班報告</h2>
+                <button @click="showHandoffReport = false" class="p-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-4 pb-32">
+            <!-- 病患基本資料 -->
+            <div class="bg-gray-50 rounded-xl p-4 mb-4">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <span class="text-xl font-bold text-gray-800" x-text="currentMission?.patient_name || '-'"></span>
+                        <span class="text-gray-500 ml-2" x-text="currentMission?.patient_age || ''"></span>
+                    </div>
+                    <span class="px-2 py-1 text-xs rounded-full"
+                          :class="currentMission?.patient_condition === 'CRITICAL' ? 'bg-red-500 text-white' : 'bg-green-100 text-green-700'"
+                          x-text="currentMission?.patient_condition || 'STABLE'"></span>
+                </div>
+                <div class="text-gray-600" x-text="currentMission?.chief_complaint || '-'"></div>
+                <div class="text-sm text-gray-500 mt-1">目的地: <span class="font-medium" x-text="currentMission?.destination || '-'"></span></div>
+            </div>
+
+            <!-- 原始交班資訊 (來自 handoff_snapshot) -->
+            <div class="bg-white border border-gray-200 rounded-xl p-4 mb-4" x-show="currentMission?.handoff_snapshot">
+                <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                    <span class="px-2 py-0.5 text-xs rounded"
+                          :class="currentMission?.handoff_format === 'MIST' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'"
+                          x-text="currentMission?.handoff_format || 'ISBAR'"></span>
+                    出發時交班
+                </h3>
+
+                <!-- ISBAR 格式 -->
+                <div x-show="currentMission?.handoff_format !== 'MIST'" class="space-y-3">
+                    <div x-show="currentMission?.handoff_snapshot?.content?.S">
+                        <div class="text-xs text-primary-600 font-bold">S - 現況</div>
+                        <div class="text-gray-800" x-text="currentMission?.handoff_snapshot?.content?.S?.situation || '-'"></div>
+                    </div>
+                    <div x-show="currentMission?.handoff_snapshot?.content?.B">
+                        <div class="text-xs text-primary-600 font-bold">B - 背景</div>
+                        <div class="text-sm text-gray-600">
+                            <span x-show="currentMission?.handoff_snapshot?.content?.B?.medical_history">
+                                病史: <span x-text="Array.isArray(currentMission?.handoff_snapshot?.content?.B?.medical_history) ? currentMission?.handoff_snapshot?.content?.B?.medical_history.join(', ') : currentMission?.handoff_snapshot?.content?.B?.medical_history"></span>
+                            </span>
+                        </div>
+                        <div class="text-sm text-red-600" x-show="currentMission?.handoff_snapshot?.content?.B?.allergies">
+                            過敏: <span x-text="Array.isArray(currentMission?.handoff_snapshot?.content?.B?.allergies) ? currentMission?.handoff_snapshot?.content?.B?.allergies.join(', ') : currentMission?.handoff_snapshot?.content?.B?.allergies"></span>
+                        </div>
+                    </div>
+                    <div x-show="currentMission?.handoff_snapshot?.content?.A">
+                        <div class="text-xs text-primary-600 font-bold">A - 評估</div>
+                        <div class="text-gray-800" x-text="currentMission?.handoff_snapshot?.content?.A?.assessment || '-'"></div>
+                    </div>
+                    <div x-show="currentMission?.handoff_snapshot?.content?.R">
+                        <div class="text-xs text-primary-600 font-bold">R - 建議</div>
+                        <div class="text-gray-800" x-text="currentMission?.handoff_snapshot?.content?.R?.recommendation || '-'"></div>
+                    </div>
+                </div>
+
+                <!-- MIST 格式 -->
+                <div x-show="currentMission?.handoff_format === 'MIST'" class="space-y-3">
+                    <div x-show="currentMission?.handoff_snapshot?.content?.M">
+                        <div class="text-xs text-red-600 font-bold">M - 受傷機轉</div>
+                        <div class="text-gray-800" x-text="currentMission?.handoff_snapshot?.content?.M?.mechanism_type || currentMission?.handoff_snapshot?.content?.M?.mechanism_detail || '-'"></div>
+                    </div>
+                    <div x-show="currentMission?.handoff_snapshot?.content?.I">
+                        <div class="text-xs text-red-600 font-bold">I - 傷勢</div>
+                        <div class="text-gray-800" x-text="currentMission?.handoff_snapshot?.content?.I?.injuries_detail || '-'"></div>
+                    </div>
+                    <div x-show="currentMission?.handoff_snapshot?.content?.S || currentMission?.handoff_snapshot?.vital_signs">
+                        <div class="text-xs text-red-600 font-bold">S - 徵象</div>
+                        <div class="grid grid-cols-4 gap-2 mt-1">
+                            <div class="text-center bg-gray-100 rounded p-2">
+                                <div class="text-xs text-gray-500">BP</div>
+                                <div class="font-bold" x-text="(currentMission?.handoff_snapshot?.vital_signs?.bp_sys || '-') + '/' + (currentMission?.handoff_snapshot?.vital_signs?.bp_dia || '-')"></div>
+                            </div>
+                            <div class="text-center bg-gray-100 rounded p-2">
+                                <div class="text-xs text-gray-500">HR</div>
+                                <div class="font-bold" x-text="currentMission?.handoff_snapshot?.vital_signs?.hr || '-'"></div>
+                            </div>
+                            <div class="text-center bg-gray-100 rounded p-2">
+                                <div class="text-xs text-gray-500">SpO2</div>
+                                <div class="font-bold" x-text="(currentMission?.handoff_snapshot?.vital_signs?.spo2 || '-') + '%'"></div>
+                            </div>
+                            <div class="text-center bg-gray-100 rounded p-2">
+                                <div class="text-xs text-gray-500">GCS</div>
+                                <div class="font-bold" x-text="currentMission?.handoff_snapshot?.vital_signs?.gcs || '-'"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div x-show="currentMission?.handoff_snapshot?.content?.T">
+                        <div class="text-xs text-red-600 font-bold">T - 處置</div>
+                        <div class="text-gray-800" x-text="Array.isArray(currentMission?.handoff_snapshot?.content?.T?.treatments) ? currentMission?.handoff_snapshot?.content?.T?.treatments.join(', ') : (currentMission?.handoff_snapshot?.content?.T?.treatments || '-')"></div>
+                    </div>
+                </div>
+
+                <!-- 無 snapshot 時顯示手動輸入的資料 -->
+                <div x-show="!currentMission?.handoff_snapshot && currentMission?.handoff_content" class="text-gray-600">
+                    <div x-text="currentMission?.handoff_content"></div>
+                </div>
+            </div>
+
+            <!-- 接收時 Vital Signs -->
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4" x-show="currentMission?.arrival_vitals">
+                <h3 class="font-bold text-amber-700 mb-2">EMT 接收時生命徵象</h3>
+                <div class="grid grid-cols-4 gap-2">
+                    <div class="text-center bg-white rounded p-2">
+                        <div class="text-xs text-gray-500">BP</div>
+                        <div class="font-bold" x-text="(currentMission?.arrival_vitals?.bp_sys || '-') + '/' + (currentMission?.arrival_vitals?.bp_dia || '-')"></div>
+                    </div>
+                    <div class="text-center bg-white rounded p-2">
+                        <div class="text-xs text-gray-500">HR</div>
+                        <div class="font-bold" x-text="currentMission?.arrival_vitals?.hr || '-'"></div>
+                    </div>
+                    <div class="text-center bg-white rounded p-2">
+                        <div class="text-xs text-gray-500">SpO2</div>
+                        <div class="font-bold" x-text="(currentMission?.arrival_vitals?.spo2 || '-') + '%'"></div>
+                    </div>
+                    <div class="text-center bg-white rounded p-2">
+                        <div class="text-xs text-gray-500">GCS</div>
+                        <div class="font-bold" x-text="'E' + (currentMission?.arrival_vitals?.gcs_e || '-') + 'V' + (currentMission?.arrival_vitals?.gcs_v || '-') + 'M' + (currentMission?.arrival_vitals?.gcs_m || '-')"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 途中事件 -->
+            <div class="bg-white border border-gray-200 rounded-xl p-4 mb-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-gray-700">轉送途中事件</h3>
+                    <span class="text-sm text-gray-500" x-text="transitEvents.length + ' 筆'"></span>
+                </div>
+                <div class="space-y-2" x-show="transitEvents.length > 0">
+                    <template x-for="(evt, idx) in transitEvents" :key="idx">
+                        <div class="flex items-start gap-3 py-2 border-b border-gray-100">
+                            <span class="text-gray-400 font-mono text-sm" x-text="formatTime(evt.timestamp)"></span>
+                            <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap"
+                                  :class="{
+                                      'bg-red-100 text-red-700': evt.event_type === 'VITALS',
+                                      'bg-blue-100 text-blue-700': evt.event_type === 'MEDICATION',
+                                      'bg-amber-100 text-amber-700': evt.event_type === 'O2_ADJUST',
+                                      'bg-gray-100 text-gray-700': evt.event_type === 'NOTE'
+                                  }"
+                                  x-text="{'VITALS':'生命徵象','MEDICATION':'給藥','O2_ADJUST':'O2調整','NOTE':'備註'}[evt.event_type]"></span>
+                            <div class="flex-1">
+                                <div class="text-gray-800" x-text="evt.description"></div>
+                                <div class="text-xs text-gray-500 mt-1" x-show="evt.data" x-text="JSON.stringify(evt.data)"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="text-gray-400 text-center py-6" x-show="transitEvents.length === 0">
+                    轉送途中無特殊事件
+                </div>
+            </div>
+
+            <!-- 轉送摘要 -->
+            <div class="bg-gray-100 rounded-xl p-4">
+                <h3 class="font-bold text-gray-700 mb-2">轉送摘要</h3>
+                <div class="text-sm space-y-1">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">轉送時間</span>
+                        <span class="font-medium" x-text="elapsedTime + ' 分鐘'"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">O2 流量</span>
+                        <span class="font-medium" x-text="(currentMission?.oxygen_requirement_lpm || 0) + ' L/min'"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">EMT</span>
+                        <span class="font-medium" x-text="currentMission?.emt_name || emtCredentials.name"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- v3.3: 新增途中事件 Modal -->
+    <div x-show="showAddTransitEvent" x-cloak
+         class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+         @click.self="showAddTransitEvent = false">
+        <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+            <div class="bg-primary-600 text-white px-4 py-3">
+                <h3 class="font-bold">記錄途中事件</h3>
+            </div>
+            <div class="p-4 space-y-4">
+                <!-- 事件類型選擇 -->
+                <div>
+                    <label class="text-sm text-gray-600 mb-2 block">事件類型</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button @click="newTransitEvent.event_type = 'VITALS'"
+                                class="py-2 rounded-lg text-sm transition"
+                                :class="newTransitEvent.event_type === 'VITALS' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700'">
+                            VS
+                        </button>
+                        <button @click="newTransitEvent.event_type = 'MEDICATION'"
+                                class="py-2 rounded-lg text-sm transition"
+                                :class="newTransitEvent.event_type === 'MEDICATION' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'">
+                            給藥
+                        </button>
+                        <button @click="newTransitEvent.event_type = 'O2_ADJUST'"
+                                class="py-2 rounded-lg text-sm transition"
+                                :class="newTransitEvent.event_type === 'O2_ADJUST' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'">
+                            O2
+                        </button>
+                        <button @click="newTransitEvent.event_type = 'NOTE'"
+                                class="py-2 rounded-lg text-sm transition"
+                                :class="newTransitEvent.event_type === 'NOTE' ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-700'">
+                            備註
+                        </button>
+                    </div>
+                </div>
+
+                <!-- VITALS 輸入 -->
+                <div x-show="newTransitEvent.event_type === 'VITALS'" class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-gray-500">BP (sys/dia)</label>
+                            <div class="flex gap-1">
+                                <input type="number" x-model="newTransitEvent.data.bp_sys"
+                                       class="w-full border rounded px-2 py-1 text-center" placeholder="120">
+                                <span class="text-gray-400">/</span>
+                                <input type="number" x-model="newTransitEvent.data.bp_dia"
+                                       class="w-full border rounded px-2 py-1 text-center" placeholder="80">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500">HR</label>
+                            <input type="number" x-model="newTransitEvent.data.hr"
+                                   class="w-full border rounded px-2 py-1 text-center" placeholder="80">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-gray-500">SpO2 (%)</label>
+                            <input type="number" x-model="newTransitEvent.data.spo2"
+                                   class="w-full border rounded px-2 py-1 text-center" placeholder="98">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500">GCS (E+V+M)</label>
+                            <input type="text" x-model="newTransitEvent.data.gcs"
+                                   class="w-full border rounded px-2 py-1 text-center" placeholder="15">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MEDICATION 輸入 -->
+                <div x-show="newTransitEvent.event_type === 'MEDICATION'" class="space-y-3">
+                    <div>
+                        <label class="text-xs text-gray-500">藥物名稱</label>
+                        <input type="text" x-model="newTransitEvent.data.medication_name"
+                               class="w-full border rounded px-3 py-2" placeholder="例: Morphine 5mg IV">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">備註</label>
+                        <input type="text" x-model="newTransitEvent.data.note"
+                               class="w-full border rounded px-3 py-2" placeholder="給藥原因或反應">
+                    </div>
+                </div>
+
+                <!-- O2_ADJUST 輸入 -->
+                <div x-show="newTransitEvent.event_type === 'O2_ADJUST'" class="space-y-3">
+                    <div>
+                        <label class="text-xs text-gray-500">新 O2 流量 (L/min)</label>
+                        <div class="flex gap-2 flex-wrap">
+                            <template x-for="rate in [0, 3, 6, 10, 15]">
+                                <button @click="newTransitEvent.data.new_o2_lpm = rate"
+                                        class="px-4 py-2 rounded-lg text-sm transition"
+                                        :class="newTransitEvent.data.new_o2_lpm === rate ? 'bg-amber-500 text-white' : 'bg-gray-100'"
+                                        x-text="rate === 0 ? '無' : rate"></button>
+                            </template>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">調整原因</label>
+                        <input type="text" x-model="newTransitEvent.data.reason"
+                               class="w-full border rounded px-3 py-2" placeholder="例: SpO2 下降至 92%">
+                    </div>
+                </div>
+
+                <!-- NOTE 輸入 -->
+                <div x-show="newTransitEvent.event_type === 'NOTE'">
+                    <label class="text-xs text-gray-500">備註內容</label>
+                    <textarea x-model="newTransitEvent.data.note"
+                              class="w-full border rounded px-3 py-2 h-24 resize-none"
+                              placeholder="記錄任何重要事項..."></textarea>
+                </div>
+            </div>
+
+            <div class="flex border-t">
+                <button @click="showAddTransitEvent = false; newTransitEvent = {event_type:'VITALS',data:{}}"
+                        class="flex-1 py-3 text-gray-600 hover:bg-gray-50">取消</button>
+                <button @click="addTransitEvent()"
+                        class="flex-1 py-3 bg-primary-500 text-white font-bold hover:bg-primary-600">
+                    記錄
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Mission List Sidebar -->
     <div x-show="showMissionList" x-cloak
          class="fixed inset-0 bg-black/50 z-50"
@@ -1750,6 +2093,15 @@
                     mist_injuries: '',
                     mist_signs: '',
                     mist_treatment: ''
+                },
+
+                // v3.3: 交班報告 + 途中事件
+                showHandoffReport: false,
+                transitEvents: [],  // 途中事件記錄
+                showAddTransitEvent: false,
+                newTransitEvent: {
+                    event_type: 'VITALS',  // VITALS | MEDICATION | O2_ADJUST | NOTE
+                    data: {}
                 },
 
                 // v2.0: 氧氣鋼瓶追蹤
@@ -2566,6 +2918,63 @@
                         // Cap at reasonable maximum (24 hours = 1440 min)
                         if (this.elapsedTime > 1440) this.elapsedTime = 1440;
                     }, 1000);
+                },
+
+                // v3.3: 新增途中事件
+                addTransitEvent() {
+                    const evt = this.newTransitEvent;
+                    let description = '';
+
+                    switch (evt.event_type) {
+                        case 'VITALS':
+                            const vs = [];
+                            if (evt.data.bp_sys) vs.push(`BP ${evt.data.bp_sys}/${evt.data.bp_dia || '-'}`);
+                            if (evt.data.hr) vs.push(`HR ${evt.data.hr}`);
+                            if (evt.data.spo2) vs.push(`SpO2 ${evt.data.spo2}%`);
+                            if (evt.data.gcs) vs.push(`GCS ${evt.data.gcs}`);
+                            description = vs.join(', ') || '生命徵象記錄';
+                            break;
+                        case 'MEDICATION':
+                            description = evt.data.medication_name || '給藥';
+                            if (evt.data.note) description += ` (${evt.data.note})`;
+                            break;
+                        case 'O2_ADJUST':
+                            description = `O2 調整為 ${evt.data.new_o2_lpm || 0} L/min`;
+                            if (evt.data.reason) description += ` - ${evt.data.reason}`;
+                            break;
+                        case 'NOTE':
+                            description = evt.data.note || '備註';
+                            break;
+                    }
+
+                    this.transitEvents.push({
+                        event_type: evt.event_type,
+                        timestamp: new Date().toISOString(),
+                        description: description,
+                        data: { ...evt.data }
+                    });
+
+                    // 同步到 CIRS (如果有網路且有 handoff_id)
+                    if (navigator.onLine && this.currentMission?.cirs_handoff_id && this.cirsHubUrl) {
+                        fetch(`${this.cirsHubUrl}/api/handoff/${this.currentMission.cirs_handoff_id}/addendum`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                addendum_type: 'TRANSIT_EVENT',
+                                source: 'EMT',
+                                recorded_by: this.emtCredentials.id,
+                                content: {
+                                    event_type: evt.event_type,
+                                    description: description,
+                                    data: evt.data
+                                }
+                            })
+                        }).catch(e => console.warn('[EMT] CIRS addendum sync failed:', e));
+                    }
+
+                    // 重置表單
+                    this.showAddTransitEvent = false;
+                    this.newTransitEvent = { event_type: 'VITALS', data: {} };
                 },
 
                 async arriveMission() {
