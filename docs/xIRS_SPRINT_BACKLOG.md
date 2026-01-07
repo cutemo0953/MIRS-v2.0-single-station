@@ -1,7 +1,7 @@
 # xIRS v3.0 Sprint Backlog
 
 **建立日期**: 2026-01-07
-**更新日期**: 2026-01-07
+**更新日期**: 2026-01-07 (v1.3)
 **架構依據**: `xIRS_ARCHITECTURE_FINAL.md`
 **整合來源**: Claude + ChatGPT + Gemini 任務分解
 
@@ -11,9 +11,9 @@
 
 | Sprint | 狀態 | 完成項目 |
 |--------|------|----------|
-| Sprint 1 | 🟡 進行中 | D-01~D-05 ✓, A-01~A-05 ✓, M-01~M-04 ✓, S-01 ✓ |
-| Sprint 2 | ⬜ 待開始 | - |
-| Sprint 3 | ⬜ 待開始 | - |
+| Sprint 1 | ✅ 完成 | D-01~D-05 ✓, A-01~A-05 ✓, M-01~M-04 ✓, S-01~S-02 ✓, Identity ✓ |
+| Sprint 2 | ✅ 完成 | N-01~N-05 ✓, W-01~W-04 ✓, MAR-01~MAR-05 ✓, O-01~O-04 ✓ |
+| Sprint 3 | 🟡 進行中 | T-01~T-05 ✓, I-01~I-04 ✓, E2E 待測 |
 | Sprint 4 | ⬜ 待開始 | - |
 
 ---
@@ -412,21 +412,22 @@ const INCOMPLETE_TYPES = {
 ## 驗收準則 (Definition of Done)
 
 ### Sprint 1 完成標準
-- [ ] `executions` 表存在且可 CRUD
-- [ ] `resource_intents` 表存在且可 CRUD
-- [ ] MIRS `/api/inventory/consume` 可呼叫並扣庫
-- [ ] Station Token 驗證通過
+- [x] `executions` 表存在且可 CRUD
+- [x] `resource_intents` 表存在且可 CRUD
+- [x] MIRS `/api/inventory/consume` 可呼叫並扣庫
+- [x] Station Token 驗證通過
+- [x] Identity & Role Management (PIN, Session, Audit)
 
 ### Sprint 2 完成標準
-- [ ] Nursing PWA 可離線開啟
-- [ ] Ward Mode 可顯示我的病患
-- [ ] MAR 可完成給藥確認
-- [ ] 離線執行 + 上線同步正常
+- [x] Nursing PWA 可離線開啟
+- [x] Ward Mode 可顯示我的病患
+- [x] MAR 可完成給藥確認
+- [x] 離線執行 + 上線同步正常
 
 ### Sprint 3 完成標準
-- [ ] MIRS 處置 Tab 無輸入功能
-- [ ] Incomplete Queue 可補登
-- [ ] E2E 測試通過
+- [x] MIRS 處置 Tab 無輸入功能 (T-01~T-05)
+- [x] Incomplete Queue 可補登 (I-01~I-04)
+- [ ] E2E 測試通過 (E2E-01~E2E-05)
 
 ### Sprint 4 完成標準
 - [ ] 舊輸入功能已移除
@@ -451,3 +452,6 @@ const INCOMPLETE_TYPES = {
 | 版本 | 日期 | 變更 |
 |------|------|------|
 | v1.0 | 2026-01-07 | 初版 - 整合 Claude/ChatGPT/Gemini 任務分解 |
+| v1.1 | 2026-01-07 | Sprint 1 完成 - executions/resource_intents API, Identity Management |
+| v1.2 | 2026-01-07 | Sprint 2 完成 - Nursing PWA, Ward Mode, MAR, Offline Sync |
+| v1.3 | 2026-01-07 | Sprint 3 進行中 - T-01~T-05 處置 Tab 改版, I-01~I-04 Incomplete Queue |
