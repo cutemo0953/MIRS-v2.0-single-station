@@ -229,8 +229,8 @@
                                         <span class="text-gray-700">設備檢查</span>
                                     </div>
                                     <div class="relative">
-                                        <input type="checkbox" x-model="pairingConfig.scopes.equipment" class="sr-only peer">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                                        <input type="checkbox" x-model="pairingConfig.scopes.equipment" class="sr-only">
+                                        <div class="toggle-switch toggle-teal" :class="pairingConfig.scopes.equipment ? 'active' : ''"></div>
                                     </div>
                                 </label>
                                 <!-- 庫存盤點 -->
@@ -244,8 +244,8 @@
                                         <span class="text-gray-700">庫存盤點</span>
                                     </div>
                                     <div class="relative">
-                                        <input type="checkbox" x-model="pairingConfig.scopes.inventory" class="sr-only peer">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                                        <input type="checkbox" x-model="pairingConfig.scopes.inventory" class="sr-only">
+                                        <div class="toggle-switch toggle-cyan" :class="pairingConfig.scopes.inventory ? 'active' : ''"></div>
                                     </div>
                                 </label>
                                 <!-- 血袋入庫 -->
@@ -259,8 +259,8 @@
                                         <span class="text-gray-700">血袋入庫</span>
                                     </div>
                                     <div class="relative">
-                                        <input type="checkbox" x-model="pairingConfig.scopes.bloodReceive" class="sr-only peer">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D96754]"></div>
+                                        <input type="checkbox" x-model="pairingConfig.scopes.bloodReceive" class="sr-only">
+                                        <div class="toggle-switch toggle-blood" :class="pairingConfig.scopes.bloodReceive ? 'active' : ''"></div>
                                     </div>
                                 </label>
                                 <!-- 耗材入庫 -->
@@ -274,8 +274,8 @@
                                         <span class="text-gray-700">耗材入庫</span>
                                     </div>
                                     <div class="relative">
-                                        <input type="checkbox" x-model="pairingConfig.scopes.supplyReceive" class="sr-only peer">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                                        <input type="checkbox" x-model="pairingConfig.scopes.supplyReceive" class="sr-only">
+                                        <div class="toggle-switch toggle-sky" :class="pairingConfig.scopes.supplyReceive ? 'active' : ''"></div>
                                     </div>
                                 </label>
                             </div>
