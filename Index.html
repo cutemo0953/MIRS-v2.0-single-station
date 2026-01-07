@@ -5100,17 +5100,7 @@
                     remarks: '',
                     stationId: 'HC-000000'
                 },
-                consumeForm: {
-                    itemCode: '',
-                    quantity: 1,
-                    purpose: '',
-                    stationId: 'HC-000000'
-                },
-                batchConsumeForm: {
-                    purpose: '',
-                    items: [],
-                    stationId: 'HC-000000'
-                },
+                // v3.0: consumeForm 和 batchConsumeForm 已移除 (遷移至 Nursing PWA)
                 bloodReceiveForm: {
                     bloodType: '',
                     quantity: 1,
@@ -5503,8 +5493,7 @@
                 // 同步所有表單的 stationId 與當前站點
                 syncFormStationIds() {
                     this.receiveForm.stationId = this.stationId;
-                    this.consumeForm.stationId = this.stationId;
-                    this.batchConsumeForm.stationId = this.stationId;
+                    // v3.0: consumeForm/batchConsumeForm 已移除
                     this.bloodReceiveForm.stationId = this.stationId;
                     this.bloodConsumeForm.stationId = this.stationId;
                 },
@@ -6703,153 +6692,13 @@
                     this.toast('進貨記錄匯出成功', 'success');
                 },
 
-                // 消耗
-                async submitConsume() {
-                    try {
-                        const response = await fetch(`${this.apiUrl}/consume`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(this.consumeForm)
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (response.ok) {
-                            this.toast(data.message || '消耗記錄成功', 'success');
-                            this.resetConsumeForm();
-                            await this.loadItems();
-                            await this.loadStats();
-                        } else {
-                            this.toast(data.detail || '消耗失敗', 'error');
-                        }
-                    } catch (error) {
-                        console.error('消耗失敗:', error);
-                        this.toast('消耗失敗', 'error');
-                    }
-                },
+                // v3.0: 消耗輸入方法已移除 (遷移至 Nursing PWA)
+                // - submitConsume, resetConsumeForm
+                // - addBatchConsumeItem, removeBatchConsumeItem
+                // - filterBatchConsumeItems, selectBatchConsumeItem
+                // - submitBatchConsume, resetBatchConsumeForm
 
-                resetConsumeForm() {
-                    this.consumeForm = {
-                        itemCode: '',
-                        quantity: 1,
-                        purpose: '',
-                        stationId: this.stationId
-                    };
-                },
-
-                // 批次消耗功能
-                addBatchConsumeItem() {
-                    this.batchConsumeForm.items.push({
-                        itemCode: '',
-                        itemName: '',
-                        quantity: 1,
-                        searchText: '',
-                        showDropdown: false,
-                        filteredItems: []
-                    });
-                },
-
-                removeBatchConsumeItem(index) {
-                    this.batchConsumeForm.items.splice(index, 1);
-                },
-
-                filterBatchConsumeItems(index) {
-                    const item = this.batchConsumeForm.items[index];
-                    if (!item) return;
-
-                    const searchText = (item.searchText || '').toLowerCase();
-
-                    // 確保 items 已載入且有資料
-                    if (!this.items || this.items.length === 0) {
-                        item.filteredItems = [];
-                        return;
-                    }
-
-                    // 排除藥品 (medicines) - 藥品應該透過藥品領用流程
-                    // 加入檢查確保每個元素都有必要的屬性
-                    const nonMedicineItems = this.items.filter(i =>
-                        i && i.category && i.category !== '藥品'
-                    );
-
-                    if (!searchText) {
-                        item.filteredItems = nonMedicineItems;
-                    } else {
-                        item.filteredItems = nonMedicineItems.filter(i =>
-                            i && i.code && i.name &&
-                            (i.code.toLowerCase().includes(searchText) ||
-                             i.name.toLowerCase().includes(searchText))
-                        );
-                    }
-                },
-
-                selectBatchConsumeItem(index, selectedItem) {
-                    const item = this.batchConsumeForm.items[index];
-                    item.itemCode = selectedItem.code;
-                    item.itemName = selectedItem.name;
-                    item.searchText = `${selectedItem.code} - ${selectedItem.name}`;
-                    item.showDropdown = false;
-                },
-
-                async submitBatchConsume() {
-                    try {
-                        if (this.batchConsumeForm.items.length === 0) {
-                            this.toast('請至少新增一個消耗品項', 'error');
-                            return;
-                        }
-
-                        // 批次提交每個消耗品項
-                        let successCount = 0;
-                        let failCount = 0;
-
-                        for (const item of this.batchConsumeForm.items) {
-                            try {
-                                const response = await fetch(`${this.apiUrl}/consume`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        itemCode: item.itemCode,
-                                        quantity: item.quantity,
-                                        purpose: this.batchConsumeForm.purpose,
-                                        stationId: this.batchConsumeForm.stationId
-                                    })
-                                });
-
-                                if (response.ok) {
-                                    successCount++;
-                                } else {
-                                    failCount++;
-                                }
-                            } catch (error) {
-                                failCount++;
-                            }
-                        }
-
-                        // 顯示結果
-                        if (failCount === 0) {
-                            this.toast(`成功消耗 ${successCount} 項物品`, 'success');
-                            this.resetBatchConsumeForm();
-                            await this.loadItems();
-                            await this.loadStats();
-                        } else {
-                            this.toast(`成功 ${successCount} 項，失敗 ${failCount} 項`, 'warning');
-                            await this.loadItems();
-                            await this.loadStats();
-                        }
-                    } catch (error) {
-                        console.error('批次消耗失敗:', error);
-                        this.toast('批次消耗失敗', 'error');
-                    }
-                },
-
-                resetBatchConsumeForm() {
-                    this.batchConsumeForm = {
-                        purpose: '',
-                        items: [],
-                        stationId: this.stationId
-                    };
-                },
-
-                // 載入消耗記錄
+                // 載入消耗記錄 (唯讀)
                 async loadConsumeHistory() {
                     try {
                         let url = `${this.apiUrl}/inventory/events?event_type=CONSUME&limit=100`;
