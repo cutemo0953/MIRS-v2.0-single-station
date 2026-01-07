@@ -81,6 +81,14 @@ except ImportError as e:
     transfer_router = None
     init_transfer_schema = None
 
+# v3.0 Sprint 1: Inventory Engine (MIRS 資源引擎)
+try:
+    from routes.inventory_engine import router as inventory_engine_router
+    INVENTORY_ENGINE_AVAILABLE = True
+except ImportError as e:
+    INVENTORY_ENGINE_AVAILABLE = False
+    inventory_engine_router = None
+
 
 # ============================================================================
 # 日誌配置
@@ -1267,6 +1275,27 @@ class DatabaseManager:
                 ON hospital_daily_reports(hospital_id)
             """)
             # ========== 聯邦式架構結束 ==========
+
+            # ========== v3.0 Sprint 1: 配對站點表 ==========
+            # 記錄 CIRS Hub ↔ MIRS Satellite 配對關係
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS paired_stations (
+                    station_id TEXT PRIMARY KEY,
+                    station_name TEXT NOT NULL,
+                    station_type TEXT NOT NULL DEFAULT 'CIRS_HUB',
+                    station_secret TEXT NOT NULL,
+                    paired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_seen TIMESTAMP,
+                    status TEXT DEFAULT 'ACTIVE',
+                    metadata_json TEXT,
+                    CHECK(station_type IN ('CIRS_HUB', 'MIRS_SATELLITE', 'OTHER')),
+                    CHECK(status IN ('ACTIVE', 'REVOKED', 'PENDING'))
+                )
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_paired_stations_status
+                ON paired_stations(status)
+            """)
 
             # v2.0: 載入站點資訊到資料庫
             self._init_hospitals_and_stations(cursor)
@@ -8578,6 +8607,13 @@ if TRANSFER_MODULE_AVAILABLE and transfer_router:
     logger.info("✓ MIRS Transfer Module v1.0 已啟用 (/api/transfer)")
 else:
     logger.warning("EMT Transfer 模組未啟用")
+
+# v3.0 Sprint 1: Inventory Engine (MIRS 資源引擎)
+if INVENTORY_ENGINE_AVAILABLE and inventory_engine_router:
+    app.include_router(inventory_engine_router)
+    logger.info("✓ MIRS Inventory Engine v1.0 已啟用 (/api/inventory/consume, /api/inventory/engine)")
+else:
+    logger.warning("Inventory Engine 模組未啟用")
 
 
 class ResilienceConfigUpdate(BaseModel):
