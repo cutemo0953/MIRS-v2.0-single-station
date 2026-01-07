@@ -1217,108 +1217,76 @@
                 </div>
             </div>
 
-            <!-- 一般消耗模式 -->
+            <!-- 一般消耗模式 (v3.0: 已遷移至 Nursing PWA) -->
             <div x-show="treatmentMode === 'consume'">
-                <div class="mb-4 flex justify-between items-center">
-                    <button @click.prevent.stop="showConsumeHistoryModal = true; loadConsumeHistory()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        <span>查看消耗記錄</span>
-                    </button>
+                <!-- 遷移通知 -->
+                <div class="mb-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0">
+                            <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold text-blue-800 mb-2">功能已遷移</h3>
+                            <p class="text-blue-700 mb-4">一般消耗功能已整合至 <strong>Nursing PWA</strong>，提供更完整的給藥確認、掃碼核對、離線支援等功能。</p>
+                            <a href="/nurse/" target="_blank"
+                               class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                </svg>
+                                開啟 Nursing PWA
+                            </a>
+                        </div>
+                    </div>
                 </div>
 
-                <form @submit.prevent="submitBatchConsume()" class="space-y-4">
-                    <!-- 消耗原因（整批共用） -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">消耗原因 *</label>
-                        <textarea x-model="batchConsumeForm.purpose" required rows="2"
-                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500 focus:border-transparent"></textarea>
+                <!-- 消耗記錄 (唯讀) -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-treatment-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            消耗記錄 (唯讀)
+                        </h3>
+                        <button @click.prevent.stop="showConsumeHistoryModal = true; loadConsumeHistory()" class="text-sm text-blue-600 hover:underline">
+                            查看完整記錄
+                        </button>
                     </div>
 
-                    <!-- 耗材清單 -->
-                    <div class="border-2 border-gray-200 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <h4 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                                <svg class="w-5 h-5 text-treatment-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
-                                </svg>
-                                消耗品項
-                            </h4>
-                            <button type="button" @click="ensureItemsLoaded(); addBatchConsumeItem()"
-                                    class="bg-treatment-500 text-white px-3 py-1 rounded-lg hover:bg-[#3d4270] text-sm flex items-center gap-1">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                </svg>
-                                新增品項
-                            </button>
+                    <!-- 資源對帳狀態 (v3.0) -->
+                    <div x-data="{ resourceIntents: [], loading: true }" x-init="
+                        fetch('/api/resource-intents?limit=10')
+                          .then(r => r.ok ? r.json() : { intents: [] })
+                          .then(d => { resourceIntents = d.intents || []; loading = false; })
+                          .catch(() => { loading = false; })
+                    ">
+                        <div x-show="loading" class="text-center py-4 text-gray-400">
+                            載入中...
                         </div>
-
-                        <div class="space-y-3">
-                            <template x-for="(item, index) in batchConsumeForm.items" :key="index">
-                                <div class="flex gap-2 items-start border border-gray-200 rounded-lg p-3">
-                                    <div class="flex-1 grid grid-cols-3 gap-2">
-                                        <!-- 搜尋輸入框（使用 relative div） -->
-                                        <div class="relative col-span-2">
-                                            <input
-                                                type="text"
-                                                x-model="item.searchText"
-                                                @input="filterBatchConsumeItems(index)"
-                                                @focus="filterBatchConsumeItems(index); item.showDropdown = true"
-                                                @blur="setTimeout(() => item.showDropdown = false, 200)"
-                                                placeholder="搜尋物品..."
-                                                required
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500"
-                                            >
-                                            <div x-show="item.showDropdown && Array.isArray(item.filteredItems) && item.filteredItems.length > 0"
-                                                 class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                                <template x-for="(availableItem, itemIdx) in (item.filteredItems || []).slice(0, 8)" :key="`${index}-${itemIdx}-${availableItem.code || ''}`">
-                                                    <div @click.stop="selectBatchConsumeItem(index, availableItem)"
-                                                         class="px-3 py-2 hover:bg-treatment-50 cursor-pointer text-sm">
-                                                        <span class="font-mono" x-text="availableItem.code"></span> -
-                                                        <span x-text="availableItem.name"></span>
-                                                        <span class="text-xs text-gray-500" x-text="`(庫存: ${availableItem.current_stock || 0})`"></span>
-                                                    </div>
-                                                </template>
-                                            </div>
-                                        </div>
-
-                                        <!-- 數量輸入框 -->
-                                        <input type="number" x-model="item.quantity" required min="1" placeholder="數量"
-                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-treatment-500">
+                        <div x-show="!loading && resourceIntents.length === 0" class="text-center py-8 text-gray-400">
+                            <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p>目前無待同步記錄</p>
+                        </div>
+                        <div x-show="!loading && resourceIntents.length > 0" class="space-y-2">
+                            <template x-for="intent in resourceIntents" :key="intent.id">
+                                <div class="flex items-center justify-between bg-white rounded-lg p-3 border"
+                                     :class="intent.status === 'CONFIRMED' ? 'border-green-200' : intent.status === 'FAILED' ? 'border-red-200' : 'border-yellow-200'">
+                                    <div class="flex-1">
+                                        <span class="font-mono text-sm" x-text="intent.item_code"></span>
+                                        <span class="text-gray-500 text-sm ml-2" x-text="'x' + intent.quantity"></span>
                                     </div>
-
-                                    <!-- 刪除按鈕 -->
-                                    <button type="button" @click="removeBatchConsumeItem(index)" class="text-red-600 hover:text-red-800 p-2">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                    </button>
+                                    <span class="px-2 py-1 rounded text-xs font-semibold"
+                                          :class="intent.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' : intent.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'"
+                                          x-text="intent.status === 'CONFIRMED' ? '已同步' : intent.status === 'FAILED' ? '同步失敗' : '待同步'"></span>
                                 </div>
                             </template>
                         </div>
-
-                        <div x-show="batchConsumeForm.items.length === 0" class="text-center text-gray-400 py-4">
-                            尚未新增消耗品項
-                        </div>
                     </div>
-
-                    <!-- 提交按鈕 -->
-                    <div class="flex gap-4">
-                        <button type="submit" class="bg-treatment-500 text-white px-6 py-2 rounded-lg hover:bg-[#3d4270] transition-colors flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                            </svg>
-                            <span>確認消耗</span>
-                        </button>
-                        <button type="button" @click="resetBatchConsumeForm()" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                            </svg>
-                            <span>重置</span>
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
 
             <!-- 藥品領用模式 (MIRS v2.3 - Emergency Dispense) -->
@@ -1354,131 +1322,47 @@
                 </div>
                 </div>
 
-                <!-- 藥品領用表單 (批次) -->
-                <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-dispense-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                    領用登記
-                </h3>
-                <form @submit.prevent="submitBatchDispense()" class="space-y-4">
-                    <!-- 基本資訊（整批共用） -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- 領藥人 -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                <span class="text-red-500">*</span> 領藥人
-                            </label>
-                            <input type="text" x-model="batchDispenseForm.dispensedBy" required placeholder="護理師-王小美" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dispense-purple-700">
-                        </div>
-
-                        <!-- 病患編號 (選填) -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                病患編號 (選填)
-                            </label>
-                            <input type="text" x-model="batchDispenseForm.patientRefId" placeholder="Triage Tag ID" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dispense-purple-700">
-                        </div>
-
-                        <!-- 病患姓名 (選填) -->
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                病患姓名 (選填)
-                            </label>
-                            <input type="text" x-model="batchDispenseForm.patientName" placeholder="張三" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dispense-purple-700">
-                        </div>
-                    </div>
-
-                    <!-- 藥品清單 -->
-                    <div class="border-2 border-dispense-purple-200 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <h4 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                                <svg class="w-5 h-5 text-dispense-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
-                                </svg>
-                                藥品清單
-                            </h4>
-                            <button type="button" @click="addBatchDispenseItem()"
-                                    class="bg-dispense-purple-700 text-white px-3 py-1 rounded-lg hover:bg-dispense-purple-900 text-sm flex items-center gap-1">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                </svg>
-                                新增藥品
-                            </button>
-                        </div>
-
-                        <div class="space-y-3">
-                            <template x-for="(item, index) in batchDispenseForm.items" :key="index">
-                                <div class="flex gap-2 items-start border border-gray-200 rounded-lg p-3 bg-white">
-                                    <div class="flex-1 grid grid-cols-3 gap-2">
-                                        <!-- 搜尋輸入框 -->
-                                        <div class="relative col-span-2">
-                                            <input
-                                                type="text"
-                                                x-model="item.searchText"
-                                                @input="filterBatchDispenseItems(index)"
-                                                @focus="item.showDropdown = true"
-                                                @blur="setTimeout(() => item.showDropdown = false, 200)"
-                                                placeholder="搜尋藥品..."
-                                                required
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dispense-purple-700"
-                                            >
-                                            <div x-show="item.showDropdown && item.filteredItems && item.filteredItems.length > 0"
-                                                 class="absolute z-10 w-full mt-1 bg-white border border-dispense-purple-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                                <template x-for="availableItem in item.filteredItems.slice(0, 8)" :key="availableItem.code">
-                                                    <div @click.stop="selectBatchDispenseItem(index, availableItem)"
-                                                         class="px-3 py-2 hover:bg-dispense-purple-50 cursor-pointer text-sm">
-                                                        <span class="font-mono" x-text="availableItem.code"></span> -
-                                                        <span x-text="availableItem.name"></span>
-                                                        <span class="text-xs text-gray-500" x-text="`(庫存: ${availableItem.current_stock})`"></span>
-                                                    </div>
-                                                </template>
-                                            </div>
-                                        </div>
-
-                                        <!-- 數量輸入框 -->
-                                        <input type="number" x-model="item.quantity" required min="1" placeholder="數量"
-                                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dispense-purple-700">
-                                    </div>
-
-                                    <!-- 刪除按鈕 -->
-                                    <button type="button" @click="removeBatchDispenseItem(index)" class="text-red-600 hover:text-red-800 p-2">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </template>
-                        </div>
-
-                        <div x-show="batchDispenseForm.items.length === 0" class="text-center text-gray-400 py-4">
-                            尚未新增藥品
-                        </div>
-                    </div>
-
-                    <!-- 按鈕組 -->
-                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
-                        <!-- 正常領用 (灰色) -->
-                        <button type="button" @click="batchDispenseForm.isEmergency = false; submitBatchDispense()"
-                                class="flex-1 bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                <!-- 藥品領用表單 (v3.0: 已遷移至 Nursing PWA，僅保留緊急領用審核) -->
+                <div class="bg-purple-50 border-2 border-purple-200 rounded-xl p-6 mb-6">
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0">
+                            <svg class="w-10 h-10 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                            <span>送出審核 (正常流程)</span>
-                        </button>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold text-purple-800 mb-2">領用登記已遷移</h3>
+                            <p class="text-purple-700 mb-4">藥品領用功能已整合至 <strong>Nursing PWA</strong>，提供病患手圈掃碼、藥品條碼核對、離線給藥等功能。本頁僅保留<strong>藥師審核</strong>功能。</p>
+                            <a href="/nurse/" target="_blank"
+                               class="inline-flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-semibold">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                </svg>
+                                開啟 Nursing PWA
+                            </a>
+                        </div>
+                    </div>
+                </div>
 
-                        <!-- 緊急領用 (紫色) -->
+                <!-- 舊版緊急領用入口 (保留給尚未遷移的情境) -->
+                <details class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <summary class="cursor-pointer text-gray-600 font-medium flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        緊急領用 (舊版入口，即將移除)
+                    </summary>
+                    <div class="mt-4 p-4 border border-gray-200 rounded-lg bg-white">
+                        <p class="text-sm text-gray-500 mb-4">此功能將於下一版本移除，請使用 Nursing PWA 進行藥品領用。</p>
                         <button type="button" @click="showEmergencyReasonModal = true"
-                                class="flex-1 bg-dispense-purple-700 text-white px-6 py-3 rounded-lg hover:bg-dispense-purple-900 transition-colors flex items-center justify-center gap-2 font-semibold shadow-md">
+                                class="bg-dispense-purple-700 text-white px-4 py-2 rounded-lg hover:bg-dispense-purple-900 transition-colors flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                             </svg>
-                            <span>緊急領用 (Break-the-Glass)</span>
+                            緊急領用 (Break-the-Glass)
                         </button>
                     </div>
-                </form>
-            </div>
+                </details>
 
             <!-- 待處理領用清單 (藥師審核區) -->
             <div class="bg-gray-50 rounded-lg p-4">
