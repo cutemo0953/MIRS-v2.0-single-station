@@ -456,6 +456,78 @@ sudo timedatectl set-timezone Asia/Taipei
 date
 ```
 
+### 問題 5：設備檢查顯示「請選擇單位」/ 韌性估算電力氧氣為 0
+
+**根因**：`equipment` 表為空（只有類型定義沒有實際設備）
+
+**診斷**：
+```bash
+cd ~/MIRS-v2.0-single-station
+sqlite3 medical_inventory.db "SELECT COUNT(*) FROM equipment WHERE type_code LIKE '%O2%' OR type_code LIKE '%POWER%';"
+# 如果回傳 0，就是這個問題
+```
+
+**解決方法**：
+```bash
+sqlite3 medical_inventory.db "
+-- 新增設備 (equipment)
+INSERT OR IGNORE INTO equipment (id, name, category, type_code, quantity) VALUES
+('EQ-O2-E', 'E型氧氣瓶', '呼吸設備', 'O2_CYLINDER_E', 5),
+('EQ-O2-H', 'H型氧氣瓶', '呼吸設備', 'O2_CYLINDER_H', 3),
+('EQ-O2-CONC', '氧氣濃縮機', '呼吸設備', 'O2_CONCENTRATOR', 2),
+('EQ-PWR-STA', '行動電源站', '電力設備', 'POWER_STATION', 3),
+('EQ-GEN', '發電機', '電力設備', 'GENERATOR', 1);
+
+-- 清除錯誤的 equipment_units（如果有）
+DELETE FROM equipment_units WHERE equipment_id NOT IN (SELECT id FROM equipment);
+
+-- 新增設備單位 (equipment_units)
+INSERT INTO equipment_units (equipment_id, unit_serial, unit_label, level_percent, status, is_active) VALUES
+('EQ-O2-E', 1, 'E型1號', 100, 'UNCHECKED', 1),
+('EQ-O2-E', 2, 'E型2號', 100, 'UNCHECKED', 1),
+('EQ-O2-E', 3, 'E型3號', 100, 'UNCHECKED', 1),
+('EQ-O2-E', 4, 'E型4號', 100, 'UNCHECKED', 1),
+('EQ-O2-E', 5, 'E型5號', 100, 'UNCHECKED', 1),
+('EQ-O2-H', 1, 'H型1號', 100, 'UNCHECKED', 1),
+('EQ-O2-H', 2, 'H型2號', 100, 'UNCHECKED', 1),
+('EQ-O2-H', 3, 'H型3號', 100, 'UNCHECKED', 1),
+('EQ-O2-CONC', 1, '濃縮機1號', 100, 'UNCHECKED', 1),
+('EQ-O2-CONC', 2, '濃縮機2號', 100, 'UNCHECKED', 1),
+('EQ-PWR-STA', 1, '電源站1號', 100, 'UNCHECKED', 1),
+('EQ-PWR-STA', 2, '電源站2號', 100, 'UNCHECKED', 1),
+('EQ-PWR-STA', 3, '電源站3號', 100, 'UNCHECKED', 1),
+('EQ-GEN', 1, '發電機1號', 100, 'UNCHECKED', 1);
+"
+```
+
+重新整理網頁即可看到設備。
+
+### 問題 6：血庫入庫失敗 (pytz module 缺失)
+
+**解決方法**：
+```bash
+# 確認 mirs.service 使用的 Python 路徑
+sudo systemctl cat mirs | grep ExecStart
+
+# 在該 venv 安裝 pytz
+/path/to/venv/bin/pip install pytz
+
+# 重啟服務
+sudo systemctl restart mirs
+```
+
+### 問題 7：配對模態窗滑動開關不顯示
+
+**原因**：RPi 的 tailwind.min.css 不包含 `peer-checked` 類別
+
+**解決方法**：
+```bash
+cd ~/MIRS-v2.0-single-station
+git pull origin main
+```
+
+然後重新整理網頁（v2.9.2+ 已使用純 CSS 實作）
+
 ---
 
 ## 站點設定

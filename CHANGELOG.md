@@ -6,6 +6,35 @@
 
 ---
 
+## [2.9.2] - 2026-01-07
+
+### 新增 (Added)
+- **EMT 交班報告功能** (`static/emt/index.html` v3.3.1)
+  - 轉送中可開啟「交班報告」模態窗
+  - 顯示出發時 ISBAR/MIST 交班資訊
+  - 可記錄途中事件（Vitals/用藥/O2調整/備註）
+  - 途中事件自動同步至 CIRS Handoff addendum
+- **DEV SPEC 文件**
+  - `DEV_SPEC_MIRS_ADMIN_PORTAL.md` - 管理入口規格
+  - `DEV_SPEC_ANESTHESIA_TIMELINE_UI.md` - 麻醉時間軸 UI 規格
+  - `DEV_SPEC_xIRS_PAIRING_SECURITY.md` - 統一配對與安全機制規格
+
+### 修復 (Fixed)
+- **血袋入庫列表不刷新**：入庫成功後新增 `loadBloodBags()` 呼叫
+- **配對模態窗滑動開關不顯示**：新增 `.toggle-switch` CSS 類別取代 Tailwind peer modifier
+  - RPi 的 tailwind.min.css 不包含 peer-checked 類別
+  - 改用 Alpine `:class` 綁定 + 純 CSS 實作
+- **血庫 pytz 模組缺失**：新增 `pytz>=2024.1` 至 `api/requirements.txt`
+- **設備檢查「請選擇單位」問題**
+  - 根因：`equipment` 表為空（只有 `equipment_types` 類型定義）
+  - `equipment_units.equipment_id` 應對應 `equipment.id`，非 `equipment_types.type_code`
+  - 文件化正確的資料庫初始化順序：先建 equipment → 再建 equipment_units
+
+### 文件 (Documentation)
+- 更新 `DEV_SPEC_EMT_HANDOFF_v1.0.md` 至 v3.3（交班報告 + 途中事件）
+
+---
+
 ## [2.9.1] - 2026-01-05
 
 ### 修正 (Fixed)
