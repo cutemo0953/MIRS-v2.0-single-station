@@ -6,6 +6,24 @@
 
 ---
 
+## [2.9.3] - 2026-01-07
+
+### 新增 (Added)
+- **xIRS v3.0 架構定案文件**
+  - `xIRS_USER_JOURNEY_JTBD.md` - 5 情境使用者旅程（輕傷/手術/轉送/補給/衛星站）
+  - `xIRS_ARCHITECTURE_CONSOLIDATION.md` - 護理為核心串聯架構
+  - `xIRS_FUNCTION_CONSOLIDATION.md` - Tab vs PWA 決策矩陣
+  - `xIRS_ARCHITECTURE_FINAL.md` - 架構定案（三大不可逆決策）
+  - `xIRS_SPRINT_BACKLOG.md` - v3.0 Sprint 任務分解
+
+### 架構決策 (Architecture Decisions)
+- **MIRS 退居引擎**：Tab 只做管理/報表，不做臨床執行
+- **Nursing PWA 工作站化**：護理師是執行樞紐，串聯一切
+- **執行才扣庫**：開醫囑 ≠ 真相，執行確認才扣庫存
+- **HIRS 獨立產品線**：個人/家庭使用，不屬於 xIRS 臨床系統
+
+---
+
 ## [2.9.2] - 2026-01-07
 
 ### 新增 (Added)
