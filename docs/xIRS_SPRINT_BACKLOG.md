@@ -14,7 +14,7 @@
 | Sprint 1 | ✅ 完成 | D-01~D-05 ✓, A-01~A-05 ✓, M-01~M-04 ✓, S-01~S-02 ✓, Identity ✓ |
 | Sprint 2 | ✅ 完成 | N-01~N-05 ✓, W-01~W-04 ✓, MAR-01~MAR-05 ✓, O-01~O-04 ✓ |
 | Sprint 3 | ✅ 完成 | T-01~T-05 ✓, I-01~I-04 ✓, E2E-01~E2E-05 ✓ |
-| Sprint 4 | ⬜ 待開始 | - |
+| Sprint 4 | ✅ 完成 | C-01 ✓, DB-01~DB-04 ✓, DOC-01 ✓ |
 
 ---
 
@@ -430,9 +430,9 @@ const INCOMPLETE_TYPES = {
 - [x] E2E 測試腳本 (E2E-01~E2E-05) - scripts/e2e_sprint3_tests.py
 
 ### Sprint 4 完成標準
-- [ ] 舊輸入功能已移除
-- [ ] 文件已更新
-- [ ] Dashboard 可顯示總覽
+- [x] 舊輸入功能已移除 (C-01: consumeForm/batchConsumeForm)
+- [x] 文件已更新 (DOC-01: README v3.2)
+- [x] Dashboard 可顯示總覽 (DB-01~DB-04)
 
 ---
 
@@ -455,3 +455,4 @@ const INCOMPLETE_TYPES = {
 | v1.1 | 2026-01-07 | Sprint 1 完成 - executions/resource_intents API, Identity Management |
 | v1.2 | 2026-01-07 | Sprint 2 完成 - Nursing PWA, Ward Mode, MAR, Offline Sync |
 | v1.3 | 2026-01-07 | Sprint 3 完成 - 處置 Tab 改版, Incomplete Queue, E2E 測試腳本 |
+| v1.4 | 2026-01-07 | Sprint 4 完成 - Dashboard PWA, 死碼清理, README 更新 |
