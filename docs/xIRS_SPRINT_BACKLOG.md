@@ -1,8 +1,20 @@
 # xIRS v3.0 Sprint Backlog
 
 **建立日期**: 2026-01-07
+**更新日期**: 2026-01-07
 **架構依據**: `xIRS_ARCHITECTURE_FINAL.md`
 **整合來源**: Claude + ChatGPT + Gemini 任務分解
+
+---
+
+## 進度摘要
+
+| Sprint | 狀態 | 完成項目 |
+|--------|------|----------|
+| Sprint 1 | 🟡 進行中 | D-01~D-05 ✓, A-01~A-05 ✓, M-01~M-04 ✓, S-01 ✓ |
+| Sprint 2 | ⬜ 待開始 | - |
+| Sprint 3 | ⬜ 待開始 | - |
+| Sprint 4 | ⬜ 待開始 | - |
 
 ---
 
