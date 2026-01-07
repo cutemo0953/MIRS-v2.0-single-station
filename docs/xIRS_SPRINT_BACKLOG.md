@@ -13,7 +13,7 @@
 |--------|------|----------|
 | Sprint 1 | ✅ 完成 | D-01~D-05 ✓, A-01~A-05 ✓, M-01~M-04 ✓, S-01~S-02 ✓, Identity ✓ |
 | Sprint 2 | ✅ 完成 | N-01~N-05 ✓, W-01~W-04 ✓, MAR-01~MAR-05 ✓, O-01~O-04 ✓ |
-| Sprint 3 | 🟡 進行中 | T-01~T-05 ✓, I-01~I-04 ✓, E2E 待測 |
+| Sprint 3 | ✅ 完成 | T-01~T-05 ✓, I-01~I-04 ✓, E2E-01~E2E-05 ✓ |
 | Sprint 4 | ⬜ 待開始 | - |
 
 ---
@@ -427,7 +427,7 @@ const INCOMPLETE_TYPES = {
 ### Sprint 3 完成標準
 - [x] MIRS 處置 Tab 無輸入功能 (T-01~T-05)
 - [x] Incomplete Queue 可補登 (I-01~I-04)
-- [ ] E2E 測試通過 (E2E-01~E2E-05)
+- [x] E2E 測試腳本 (E2E-01~E2E-05) - scripts/e2e_sprint3_tests.py
 
 ### Sprint 4 完成標準
 - [ ] 舊輸入功能已移除
@@ -454,4 +454,4 @@ const INCOMPLETE_TYPES = {
 | v1.0 | 2026-01-07 | 初版 - 整合 Claude/ChatGPT/Gemini 任務分解 |
 | v1.1 | 2026-01-07 | Sprint 1 完成 - executions/resource_intents API, Identity Management |
 | v1.2 | 2026-01-07 | Sprint 2 完成 - Nursing PWA, Ward Mode, MAR, Offline Sync |
-| v1.3 | 2026-01-07 | Sprint 3 進行中 - T-01~T-05 處置 Tab 改版, I-01~I-04 Incomplete Queue |
+| v1.3 | 2026-01-07 | Sprint 3 完成 - 處置 Tab 改版, Incomplete Queue, E2E 測試腳本 |
