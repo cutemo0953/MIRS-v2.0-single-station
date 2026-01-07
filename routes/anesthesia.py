@@ -72,8 +72,11 @@ class EventType(str, Enum):
     # === 里程碑 ===
     MILESTONE = "MILESTONE"
 
-    # === 資源/設備 ===
-    RESOURCE_CHECK = "RESOURCE_CHECK"
+    # === 資源/設備 (v2.0 PSI Event Sourcing) ===
+    RESOURCE_CLAIM = "RESOURCE_CLAIM"           # 認領資源 (O2, 設備)
+    RESOURCE_CHECK = "RESOURCE_CHECK"           # 檢查 (PSI 讀數)
+    RESOURCE_SWITCH = "RESOURCE_SWITCH"         # 換瓶 (原子操作)
+    RESOURCE_RELEASE = "RESOURCE_RELEASE"       # 釋放資源
     EQUIPMENT_EVENT = "EQUIPMENT_EVENT"
 
     # === 其他記錄 (v1.6.1 新增) ===
@@ -516,6 +519,49 @@ QUICK_SCENARIO_TEMPLATES = {
 class ClaimOxygenRequest(BaseModel):
     cylinder_unit_id: int
     initial_pressure_psi: Optional[int] = None
+
+
+# =============================================================================
+# v2.0 PSI Event Sourcing Models
+# =============================================================================
+
+class ResourceClaimRequest(BaseModel):
+    """認領資源 (O2 筒, 設備)"""
+    resource_type: str = Field(default="O2_CYLINDER", description="O2_CYLINDER | MONITOR | PUMP")
+    resource_id: str = Field(..., description="裝置序號 (E-001, M-002)")
+    unit_id: Optional[int] = Field(None, description="equipment_units.id (內部關聯)")
+    initial_psi: Optional[int] = Field(None, ge=0, le=3000, description="初始 PSI")
+    capacity_liters: Optional[float] = Field(None, description="容量 (L)")
+    flow_rate_lpm: Optional[float] = Field(None, ge=0, le=30, description="流量 (L/min)")
+    note: Optional[str] = None
+
+
+class ResourceCheckRequest(BaseModel):
+    """記錄 PSI 讀數"""
+    resource_id: str = Field(..., description="裝置序號")
+    psi: int = Field(..., ge=0, le=3000, description="目前 PSI")
+    flow_rate_lpm: Optional[float] = Field(None, ge=0, le=30, description="流量 (L/min)")
+    note: Optional[str] = None
+
+
+class ResourceSwitchRequest(BaseModel):
+    """換瓶 (原子操作)"""
+    old_resource_id: str = Field(..., description="舊筒序號")
+    old_final_psi: int = Field(..., ge=0, description="舊筒最終 PSI")
+    new_resource_id: str = Field(..., description="新筒序號")
+    new_unit_id: Optional[int] = Field(None, description="新筒 equipment_units.id")
+    new_initial_psi: int = Field(..., ge=0, le=3000, description="新筒初始 PSI")
+    new_capacity_liters: Optional[float] = Field(None, description="新筒容量 (L)")
+    flow_rate_lpm: Optional[float] = Field(None, ge=0, le=30, description="流量 (L/min)")
+    note: Optional[str] = None
+
+
+class ResourceReleaseRequest(BaseModel):
+    """釋放資源"""
+    resource_id: str = Field(..., description="裝置序號")
+    final_psi: Optional[int] = Field(None, ge=0, description="最終 PSI")
+    total_consumed_liters: Optional[float] = Field(None, description="總消耗量 (L)")
+    note: Optional[str] = None
 
 
 # PreOp Models
@@ -1849,6 +1895,410 @@ async def get_oxygen_status(case_id: str):
         "est_minutes_remaining": est_minutes,
         "est_hours_remaining": round(est_minutes / 60, 1)
     }
+
+
+# =============================================================================
+# API Routes - PSI Event Sourcing (v2.0)
+# =============================================================================
+
+def rebuild_resource_status(cursor, case_id: str) -> dict:
+    """
+    從 RESOURCE_* 事件重建資源狀態 (Event Sourcing)
+
+    Returns:
+        {
+            "current": { id, initial_psi, current_psi, claimed_at, last_check, flow_rate_lpm },
+            "history": [ { id, initial_psi, final_psi, ... }, ... ],
+            "total_cylinders": int,
+            "total_consumed_liters": float
+        }
+    """
+    cursor.execute("""
+        SELECT event_type, payload, clinical_time
+        FROM anesthesia_events
+        WHERE case_id = ? AND event_type LIKE 'RESOURCE_%'
+        ORDER BY clinical_time ASC
+    """, (case_id,))
+
+    events = cursor.fetchall()
+
+    current_resource = None
+    resources_used = []
+    total_consumed = 0.0
+
+    for event in events:
+        event_type = event['event_type']
+        payload = json.loads(event['payload'])
+        clinical_time = event['clinical_time']
+
+        if event_type == 'RESOURCE_CLAIM':
+            current_resource = {
+                'resource_id': payload.get('resource_id'),
+                'resource_type': payload.get('resource_type', 'O2_CYLINDER'),
+                'initial_psi': payload.get('initial_psi'),
+                'current_psi': payload.get('initial_psi'),
+                'capacity_liters': payload.get('capacity_liters'),
+                'flow_rate_lpm': payload.get('flow_rate_lpm', 2.0),
+                'claimed_at': clinical_time,
+                'last_check': clinical_time
+            }
+
+        elif event_type == 'RESOURCE_CHECK':
+            if current_resource and payload.get('resource_id') == current_resource['resource_id']:
+                current_resource['current_psi'] = payload.get('psi')
+                current_resource['last_check'] = clinical_time
+                if payload.get('flow_rate_lpm'):
+                    current_resource['flow_rate_lpm'] = payload['flow_rate_lpm']
+
+        elif event_type == 'RESOURCE_SWITCH':
+            # Finalize old resource
+            if current_resource:
+                current_resource['final_psi'] = payload.get('old_final_psi')
+                current_resource['released_at'] = clinical_time
+                # Calculate consumed liters if we have capacity info
+                if current_resource.get('initial_psi') and current_resource.get('final_psi'):
+                    psi_diff = current_resource['initial_psi'] - current_resource['final_psi']
+                    # Rough estimate: 660L / 2200 PSI ≈ 0.3 L/PSI
+                    consumed = psi_diff * 0.3
+                    current_resource['consumed_liters'] = consumed
+                    total_consumed += consumed
+                resources_used.append(current_resource)
+
+            # Start new resource
+            current_resource = {
+                'resource_id': payload.get('new_resource_id'),
+                'resource_type': 'O2_CYLINDER',
+                'initial_psi': payload.get('new_initial_psi'),
+                'current_psi': payload.get('new_initial_psi'),
+                'capacity_liters': payload.get('new_capacity_liters'),
+                'flow_rate_lpm': payload.get('flow_rate_lpm', 2.0),
+                'claimed_at': clinical_time,
+                'last_check': clinical_time
+            }
+
+        elif event_type == 'RESOURCE_RELEASE':
+            if current_resource and payload.get('resource_id') == current_resource['resource_id']:
+                current_resource['final_psi'] = payload.get('final_psi')
+                current_resource['released_at'] = clinical_time
+                if payload.get('total_consumed_liters'):
+                    current_resource['consumed_liters'] = payload['total_consumed_liters']
+                    total_consumed += payload['total_consumed_liters']
+                elif current_resource.get('initial_psi') and current_resource.get('final_psi'):
+                    psi_diff = current_resource['initial_psi'] - current_resource['final_psi']
+                    consumed = psi_diff * 0.3
+                    current_resource['consumed_liters'] = consumed
+                    total_consumed += consumed
+                resources_used.append(current_resource)
+                current_resource = None
+
+    return {
+        'current': current_resource,
+        'history': resources_used,
+        'total_cylinders': len(resources_used) + (1 if current_resource else 0),
+        'total_consumed_liters': round(total_consumed, 1)
+    }
+
+
+@router.post("/cases/{case_id}/resource/claim")
+async def resource_claim(case_id: str, request: ResourceClaimRequest, actor_id: str = Query(...)):
+    """
+    認領資源 (O2 筒, 設備) - Event Sourcing
+
+    產生 RESOURCE_CLAIM 事件
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify case exists
+    cursor.execute("SELECT id, status FROM anesthesia_cases WHERE id = ?", (case_id,))
+    case = cursor.fetchone()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    # Check if already has an active resource
+    status = rebuild_resource_status(cursor, case_id)
+    if status['current']:
+        raise HTTPException(
+            status_code=409,
+            detail=f"已有使用中的資源: {status['current']['resource_id']}，請先釋放或使用換瓶"
+        )
+
+    try:
+        event_id = generate_event_id()
+        payload = {
+            "resource_type": request.resource_type,
+            "resource_id": request.resource_id,
+            "unit_id": request.unit_id,
+            "initial_psi": request.initial_psi,
+            "capacity_liters": request.capacity_liters,
+            "flow_rate_lpm": request.flow_rate_lpm,
+            "note": request.note
+        }
+
+        cursor.execute("""
+            INSERT INTO anesthesia_events (
+                id, case_id, event_type, clinical_time, payload, actor_id
+            ) VALUES (?, ?, 'RESOURCE_CLAIM', datetime('now'), ?, ?)
+        """, (event_id, case_id, json.dumps(payload), actor_id))
+
+        # Update case tracking (for backwards compatibility)
+        if request.resource_type == 'O2_CYLINDER' and request.unit_id:
+            cursor.execute("""
+                UPDATE anesthesia_cases
+                SET oxygen_source_type = 'CYLINDER', oxygen_source_id = ?, updated_at = datetime('now')
+                WHERE id = ?
+            """, (str(request.unit_id), case_id))
+
+            # Claim the equipment unit
+            cursor.execute("""
+                UPDATE equipment_units
+                SET claimed_by_case_id = ?, claimed_at = datetime('now'), claimed_by_user_id = ?
+                WHERE id = ?
+            """, (case_id, actor_id, request.unit_id))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "event_id": event_id,
+            "resource_id": request.resource_id,
+            "initial_psi": request.initial_psi
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cases/{case_id}/resource/check")
+async def resource_check(case_id: str, request: ResourceCheckRequest, actor_id: str = Query(...)):
+    """
+    記錄 PSI 讀數 - Event Sourcing
+
+    產生 RESOURCE_CHECK 事件
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify current resource
+    status = rebuild_resource_status(cursor, case_id)
+    if not status['current']:
+        raise HTTPException(status_code=400, detail="沒有使用中的資源")
+
+    if status['current']['resource_id'] != request.resource_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"資源 ID 不符: 目前使用 {status['current']['resource_id']}"
+        )
+
+    try:
+        event_id = generate_event_id()
+        payload = {
+            "resource_id": request.resource_id,
+            "psi": request.psi,
+            "flow_rate_lpm": request.flow_rate_lpm,
+            "note": request.note
+        }
+
+        cursor.execute("""
+            INSERT INTO anesthesia_events (
+                id, case_id, event_type, clinical_time, payload, actor_id
+            ) VALUES (?, ?, 'RESOURCE_CHECK', datetime('now'), ?, ?)
+        """, (event_id, case_id, json.dumps(payload), actor_id))
+
+        conn.commit()
+
+        # Calculate estimate
+        current_psi = request.psi
+        flow_rate = request.flow_rate_lpm or status['current'].get('flow_rate_lpm', 2.0)
+        # 660L at 2200 PSI, 0.3 L/PSI
+        remaining_liters = current_psi * 0.3
+        est_minutes = int(remaining_liters / flow_rate) if flow_rate > 0 else None
+
+        return {
+            "success": True,
+            "event_id": event_id,
+            "resource_id": request.resource_id,
+            "current_psi": current_psi,
+            "est_minutes_remaining": est_minutes
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cases/{case_id}/resource/switch")
+async def resource_switch(case_id: str, request: ResourceSwitchRequest, actor_id: str = Query(...)):
+    """
+    換瓶 (原子操作) - Event Sourcing
+
+    產生 RESOURCE_SWITCH 事件
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify current resource
+    status = rebuild_resource_status(cursor, case_id)
+    if not status['current']:
+        raise HTTPException(status_code=400, detail="沒有使用中的資源")
+
+    if status['current']['resource_id'] != request.old_resource_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"資源 ID 不符: 目前使用 {status['current']['resource_id']}"
+        )
+
+    try:
+        event_id = generate_event_id()
+        payload = {
+            "old_resource_id": request.old_resource_id,
+            "old_final_psi": request.old_final_psi,
+            "new_resource_id": request.new_resource_id,
+            "new_unit_id": request.new_unit_id,
+            "new_initial_psi": request.new_initial_psi,
+            "new_capacity_liters": request.new_capacity_liters,
+            "flow_rate_lpm": request.flow_rate_lpm,
+            "note": request.note
+        }
+
+        cursor.execute("""
+            INSERT INTO anesthesia_events (
+                id, case_id, event_type, clinical_time, payload, actor_id
+            ) VALUES (?, ?, 'RESOURCE_SWITCH', datetime('now'), ?, ?)
+        """, (event_id, case_id, json.dumps(payload), actor_id))
+
+        # Update equipment tracking
+        if request.new_unit_id:
+            # Release old cylinder
+            cursor.execute("""
+                UPDATE equipment_units
+                SET claimed_by_case_id = NULL, claimed_at = NULL, claimed_by_user_id = NULL
+                WHERE claimed_by_case_id = ?
+            """, (case_id,))
+
+            # Claim new cylinder
+            cursor.execute("""
+                UPDATE equipment_units
+                SET claimed_by_case_id = ?, claimed_at = datetime('now'), claimed_by_user_id = ?
+                WHERE id = ?
+            """, (case_id, actor_id, request.new_unit_id))
+
+            cursor.execute("""
+                UPDATE anesthesia_cases
+                SET oxygen_source_id = ?, updated_at = datetime('now')
+                WHERE id = ?
+            """, (str(request.new_unit_id), case_id))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "event_id": event_id,
+            "old_resource_id": request.old_resource_id,
+            "old_final_psi": request.old_final_psi,
+            "new_resource_id": request.new_resource_id,
+            "new_initial_psi": request.new_initial_psi
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cases/{case_id}/resource/release")
+async def resource_release(case_id: str, request: ResourceReleaseRequest, actor_id: str = Query(...)):
+    """
+    釋放資源 - Event Sourcing
+
+    產生 RESOURCE_RELEASE 事件
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify current resource
+    status = rebuild_resource_status(cursor, case_id)
+    if not status['current']:
+        raise HTTPException(status_code=400, detail="沒有使用中的資源")
+
+    if status['current']['resource_id'] != request.resource_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"資源 ID 不符: 目前使用 {status['current']['resource_id']}"
+        )
+
+    try:
+        event_id = generate_event_id()
+        payload = {
+            "resource_id": request.resource_id,
+            "final_psi": request.final_psi,
+            "total_consumed_liters": request.total_consumed_liters,
+            "note": request.note
+        }
+
+        cursor.execute("""
+            INSERT INTO anesthesia_events (
+                id, case_id, event_type, clinical_time, payload, actor_id
+            ) VALUES (?, ?, 'RESOURCE_RELEASE', datetime('now'), ?, ?)
+        """, (event_id, case_id, json.dumps(payload), actor_id))
+
+        # Clear equipment tracking
+        cursor.execute("""
+            UPDATE equipment_units
+            SET claimed_by_case_id = NULL, claimed_at = NULL, claimed_by_user_id = NULL
+            WHERE claimed_by_case_id = ?
+        """, (case_id,))
+
+        cursor.execute("""
+            UPDATE anesthesia_cases
+            SET oxygen_source_type = NULL, oxygen_source_id = NULL, updated_at = datetime('now')
+            WHERE id = ?
+        """, (case_id,))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "event_id": event_id,
+            "resource_id": request.resource_id,
+            "final_psi": request.final_psi
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cases/{case_id}/resource/status")
+async def get_resource_status(case_id: str):
+    """
+    取得資源狀態 - Event Sourcing 重建
+
+    從 RESOURCE_* 事件重建目前狀態
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify case exists
+    cursor.execute("SELECT id FROM anesthesia_cases WHERE id = ?", (case_id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    status = rebuild_resource_status(cursor, case_id)
+
+    # Add estimate for current resource
+    if status['current']:
+        current = status['current']
+        current_psi = current.get('current_psi') or current.get('initial_psi')
+        flow_rate = current.get('flow_rate_lpm', 2.0)
+
+        if current_psi and flow_rate > 0:
+            remaining_liters = current_psi * 0.3
+            est_minutes = int(remaining_liters / flow_rate)
+            status['current']['est_minutes_remaining'] = est_minutes
+            status['current']['est_hours_remaining'] = round(est_minutes / 60, 1)
+
+    return status
 
 
 # =============================================================================
