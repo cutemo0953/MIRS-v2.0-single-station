@@ -7295,6 +7295,7 @@
                                 stationId: this.stationId
                             };
                             await this.loadBloodInventory();
+                            await this.loadBloodBags();  // 刷新個別血袋列表
                             await this.loadStats();
                         } else {
                             this.toast(data.detail || '入庫失敗', 'error');
