@@ -3265,6 +3265,15 @@ if IS_VERCEL and not USE_POSTGRES:
     from seeder_demo import seed_mirs_demo
     _conn = db.get_connection()
     seed_mirs_demo(_conn)
+    # v2.6: 初始化術式主檔 (surgery_codes, selfpay_items) at import time
+    if SURGERY_CODES_MODULE_AVAILABLE and init_surgery_codes_schema:
+        try:
+            _cursor = _conn.cursor()
+            init_surgery_codes_schema(_cursor)
+            _conn.commit()
+            logger.info("✓ [MIRS] Surgery codes schema initialized (module load)")
+        except Exception as e:
+            logger.warning(f"[MIRS] Surgery codes init warning: {e}")
     logger.info("✓ [MIRS] Demo mode initialized with SQLite (module load)")
 elif IS_VERCEL and USE_POSTGRES:
     logger.info("✓ [MIRS] Using Neon PostgreSQL - data persisted")
