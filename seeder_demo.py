@@ -159,6 +159,8 @@ def seed_mirs_demo(conn: sqlite3.Connection):
             """)
         # v1.4.6: 確保韌性關鍵設備存在
         _ensure_resilience_equipment(cursor, now)
+        # v2.5.7: 確保手術包存在
+        _ensure_surgical_packs(cursor, now)
         # 確保 equipment_units 有資料
         cursor.execute("SELECT COUNT(*) FROM equipment_units")
         if cursor.fetchone()[0] == 0:
@@ -307,6 +309,33 @@ def seed_mirs_demo(conn: sqlite3.Connection):
         ("EQ-XR-001", "移動式X光", "放射科", "operational", "Siemens Mobilett", "GENERAL"),
     ]
 
+    # ========== BORP 手術包 (v2.5.7) ==========
+    surgical_packs = [
+        ("BORP-SURG-001", "共同基本包 (一)", "手術器械", 8, "可重複使用", "GENERAL"),
+        ("BORP-SURG-002", "共同基本包 (二)", "手術器械", 8, "可重複使用", "GENERAL"),
+        ("BORP-SURG-003", "骨科包", "手術器械", 8, "可重複使用", "GENERAL"),
+        ("BORP-SURG-004", "開腹輔助包", "手術器械", 8, "腹部手術專用", "GENERAL"),
+        ("BORP-SURG-005", "腹部開創器", "手術器械", 8, "腹部手術專用", "GENERAL"),
+        ("BORP-SURG-006", "開胸基本包", "手術器械", 1, "胸腔手術專用", "GENERAL"),
+        ("BORP-SURG-007", "血管包", "手術器械", 3, "血管手術專用", "GENERAL"),
+        ("BORP-SURG-008", "心外基本包", "手術器械", 4, "心臟手術專用", "GENERAL"),
+        ("BORP-SURG-009", "ASSET包", "手術器械", 8, "緊急手術包", "GENERAL"),
+        ("BORP-SURG-010", "皮膚縫合包", "手術器械", 2, "傷口縫合專用", "GENERAL"),
+        ("BORP-SURG-011", "氣切輔助包", "手術器械", 8, "緊急氣道管理", "GENERAL"),
+        ("BORP-SURG-012", "Bull dog血管夾", "手術器械", 4, "血管手術專用", "GENERAL"),
+        ("BORP-SURG-013", "顱骨手搖鑽", "手術器械", 1, "神經外科專用", "GENERAL"),
+        ("BORP-SURG-014", "鑽/切骨電動工具組", "手術器械", 1, "骨科專用", "GENERAL"),
+        ("BORP-SURG-015", "電池式電動骨鑽", "手術器械", 1, "骨科專用", "GENERAL"),
+        ("BORP-SURG-016", "電池式電動骨鋸", "手術器械", 3, "骨科專用", "GENERAL"),
+    ]
+    for pack in surgical_packs:
+        pack_id, name, category, qty, remarks, type_code = pack
+        cursor.execute("""
+            INSERT INTO equipment
+            (id, name, category, quantity, status, remarks, type_code, last_check, created_at)
+            VALUES (?, ?, ?, ?, 'READY', ?, ?, ?, ?)
+        """, (pack_id, name, category, qty, remarks, type_code, now.isoformat(), now.isoformat()))
+
     for eq in equipment:
         eq_id, name, category, status, remarks, type_code = eq
         # Map status to schema values: UNCHECKED, READY, NEEDS_REPAIR
@@ -430,7 +459,7 @@ def seed_mirs_demo(conn: sqlite3.Connection):
     print(f"[MIRS Seeder] Demo data seeded successfully!")
     print(f"  - 15 pharmaceuticals")
     print(f"  - {bag_id-1} blood bags")
-    print(f"  - 15 equipment items")
+    print(f"  - 31 equipment items (including 16 surgical packs)")
     print(f"  - 20 supply items")
     print(f"  - 3 surgery records")
     print(f"  - Resilience tables (v1.2.8)")
@@ -660,6 +689,42 @@ def _update_power_equipment(cursor):
         cursor.execute("""
             UPDATE equipment SET power_watts = ? WHERE id = ?
         """, (watts, eq_id))
+
+
+def _ensure_surgical_packs(cursor, now):
+    """Helper: Ensure BORP surgical packs exist (v2.5.7)"""
+    from datetime import datetime
+    if now is None:
+        now = datetime.now()
+
+    surgical_packs = [
+        ("BORP-SURG-001", "共同基本包 (一)", "手術器械", 8, "可重複使用", "GENERAL"),
+        ("BORP-SURG-002", "共同基本包 (二)", "手術器械", 8, "可重複使用", "GENERAL"),
+        ("BORP-SURG-003", "骨科包", "手術器械", 8, "可重複使用", "GENERAL"),
+        ("BORP-SURG-004", "開腹輔助包", "手術器械", 8, "腹部手術專用", "GENERAL"),
+        ("BORP-SURG-005", "腹部開創器", "手術器械", 8, "腹部手術專用", "GENERAL"),
+        ("BORP-SURG-006", "開胸基本包", "手術器械", 1, "胸腔手術專用", "GENERAL"),
+        ("BORP-SURG-007", "血管包", "手術器械", 3, "血管手術專用", "GENERAL"),
+        ("BORP-SURG-008", "心外基本包", "手術器械", 4, "心臟手術專用", "GENERAL"),
+        ("BORP-SURG-009", "ASSET包", "手術器械", 8, "緊急手術包", "GENERAL"),
+        ("BORP-SURG-010", "皮膚縫合包", "手術器械", 2, "傷口縫合專用", "GENERAL"),
+        ("BORP-SURG-011", "氣切輔助包", "手術器械", 8, "緊急氣道管理", "GENERAL"),
+        ("BORP-SURG-012", "Bull dog血管夾", "手術器械", 4, "血管手術專用", "GENERAL"),
+        ("BORP-SURG-013", "顱骨手搖鑽", "手術器械", 1, "神經外科專用", "GENERAL"),
+        ("BORP-SURG-014", "鑽/切骨電動工具組", "手術器械", 1, "骨科專用", "GENERAL"),
+        ("BORP-SURG-015", "電池式電動骨鑽", "手術器械", 1, "骨科專用", "GENERAL"),
+        ("BORP-SURG-016", "電池式電動骨鋸", "手術器械", 3, "骨科專用", "GENERAL"),
+    ]
+
+    for pack in surgical_packs:
+        pack_id, name, category, qty, remarks, type_code = pack
+        cursor.execute("SELECT id FROM equipment WHERE id = ?", (pack_id,))
+        if cursor.fetchone() is None:
+            cursor.execute("""
+                INSERT INTO equipment
+                (id, name, category, quantity, status, remarks, type_code, last_check, created_at)
+                VALUES (?, ?, ?, ?, 'READY', ?, ?, ?, ?)
+            """, (pack_id, name, category, qty, remarks, type_code, now.isoformat(), now.isoformat()))
 
 
 def clear_mirs_demo(conn: sqlite3.Connection):
