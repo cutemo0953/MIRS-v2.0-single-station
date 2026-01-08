@@ -7,11 +7,12 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>醫療站庫存管理系統 v1.5.0</title>
-    <!-- v1.5.0: 本地化依賴，支援離線運作 -->
+    <!-- v2.0.0: 本地化依賴，支援離線運作 + Active Role Badge -->
     <link rel="stylesheet" href="/static/css/tailwind.min.css">
     <link rel="stylesheet" href="/static/css/mirs-colors.css">
     <script defer src="/static/js/alpine.min.js"></script>
     <script src="/static/js/qrcode.min.js"></script>
+    <script src="/static/js/mirs-role-badge.js"></script>
     <script>
         // 驗證 QRCode 載入
         document.addEventListener('DOMContentLoaded', function() {
@@ -68,8 +69,11 @@
         }
     </style>
 </head>
-<body class="min-h-screen">
-    <div x-data="medicalInventory()" x-init="init()" x-cloak class="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+<body class="min-h-screen" x-data="{...medicalInventory(), ...mirsRoleBadge({enableQuickLock: true})}" x-init="init(); initRoleBadge(); _roleBadge.setRole('LOGISTICS', '庫存管理員', 'mirs-admin')">
+    <!-- Active Role Badge & Quick Lock -->
+    <div x-html="roleBadgeHTML"></div>
+
+    <div x-cloak class="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
 
         <!-- Demo Mode Banner -->
         <div x-show="demoMode" class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 shadow-sm">

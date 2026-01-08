@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="/static/css/tailwind.min.css">
     <link rel="stylesheet" href="/static/css/mirs-colors.css">
     <script defer src="/static/js/alpine.min.js"></script>
+    <script src="/static/js/mirs-role-badge.js"></script>
     <style>
         [x-cloak] { display: none !important; }
         /* 解決 sticky header 遮住內容的問題 */
@@ -33,7 +34,10 @@
         .status-aborted { background-color: #ef4444; }
     </style>
 </head>
-<body class="bg-amber-50 min-h-screen" x-data="emtTransfer()" x-init="init()">
+<body class="bg-amber-50 min-h-screen" x-data="{...emtTransfer(), ...mirsRoleBadge({enableQuickLock: true})}" x-init="init(); initRoleBadge(); _roleBadge.setRole('EMT', '救護員', 'emt-001')">
+    <!-- Active Role Badge & Quick Lock -->
+    <div x-html="roleBadgeHTML"></div>
+
     <!-- Header -->
     <header class="bg-amber-500 text-white px-4 py-3 shadow-lg sticky top-0 z-50">
         <div class="flex items-center justify-between">
