@@ -89,6 +89,15 @@ except ImportError as e:
     INVENTORY_ENGINE_AVAILABLE = False
     inventory_engine_router = None
 
+# v2.8 新增: Local Auth 本地離線驗證 (Policy Snapshot)
+try:
+    from routes.local_auth import router as local_auth_router, init_local_auth
+    LOCAL_AUTH_AVAILABLE = True
+except ImportError as e:
+    LOCAL_AUTH_AVAILABLE = False
+    local_auth_router = None
+    init_local_auth = None
+
 
 # ============================================================================
 # 日誌配置
@@ -8623,6 +8632,17 @@ if INVENTORY_ENGINE_AVAILABLE and inventory_engine_router:
     logger.info("✓ MIRS Inventory Engine v1.0 已啟用 (/api/inventory/consume, /api/inventory/engine)")
 else:
     logger.warning("Inventory Engine 模組未啟用")
+
+# v2.8: Local Auth 本地離線驗證 (Policy Snapshot)
+if LOCAL_AUTH_AVAILABLE and local_auth_router:
+    try:
+        init_local_auth()
+    except Exception as e:
+        logger.warning(f"Local Auth 初始化警告: {e}")
+    app.include_router(local_auth_router)
+    logger.info("✓ MIRS Local Auth v2.8 已啟用 (/api/local-auth)")
+else:
+    logger.warning("Local Auth 模組未啟用")
 
 
 class ResilienceConfigUpdate(BaseModel):
