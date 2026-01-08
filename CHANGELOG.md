@@ -6,6 +6,35 @@
 
 ---
 
+## [2.8.0-local-auth] - 2026-01-08
+
+### 新增 (Added)
+- **本地離線驗證模組** (`routes/local_auth.py`)
+  - 從 CIRS Hub 同步 Policy Snapshot（權限快照）
+  - 支援離線模式下的 PIN 驗證（bcrypt / SHA256 格式）
+  - 簽發短效本地 Token（4 小時有效期）
+  - Hub 連線狀態監控
+  - 本地認證日誌追蹤
+
+### API 端點
+- `POST /api/local-auth/login` - 本地離線登入
+- `POST /api/local-auth/sync-snapshot` - 同步 Policy Snapshot
+- `GET /api/local-auth/snapshot-status` - 快照狀態查詢
+- `GET /api/local-auth/verify-token` - 驗證本地 Token
+- `GET /api/local-auth/hub-status` - CIRS Hub 連線狀態
+- `GET /api/local-auth/auth-log` - 認證日誌
+
+### 離線認證流程
+1. 線上時：呼叫 `/sync-snapshot` 同步權限快照（24 小時有效）
+2. 離線時：呼叫 `/login` 使用本地快照驗證 PIN
+3. 本地 Token 4 小時內有效，用於 API 認證
+4. 恢復連線後重新同步最新快照
+
+### 修復 (Fixed)
+- 修正 `datetime.utcnow().timestamp()` 時區 bug，改用 `time.time()`
+
+---
+
 ## [2.9.3] - 2026-01-07
 
 ### 新增 (Added)
