@@ -306,11 +306,42 @@
 .border-orange-400 { border-color: #fb923c !important; }
 .hover\:bg-orange-700:hover { background-color: #c2410c !important; }
 
+/* --- Blue (標準 Tailwind) - Toast 通知用 --- */
+.bg-blue-50 { background-color: #eff6ff !important; }
+.bg-blue-100 { background-color: #dbeafe !important; }
+.bg-blue-200 { background-color: #bfdbfe !important; }
+.bg-blue-300 { background-color: #93c5fd !important; }
+.bg-blue-400 { background-color: #60a5fa !important; }
+.bg-blue-500 { background-color: #3b82f6 !important; }
+.bg-blue-600 { background-color: #2563eb !important; }
+.bg-blue-700 { background-color: #1d4ed8 !important; }
+.bg-blue-800 { background-color: #1e40af !important; }
+.bg-blue-900 { background-color: #1e3a8a !important; }
+.text-blue-50 { color: #eff6ff !important; }
+.text-blue-100 { color: #dbeafe !important; }
+.text-blue-200 { color: #bfdbfe !important; }
+.text-blue-500 { color: #3b82f6 !important; }
+.text-blue-600 { color: #2563eb !important; }
+.text-blue-700 { color: #1d4ed8 !important; }
+.text-blue-800 { color: #1e40af !important; }
+.border-blue-200 { border-color: #bfdbfe !important; }
+.border-blue-300 { border-color: #93c5fd !important; }
+.border-blue-500 { border-color: #3b82f6 !important; }
+.hover\:bg-blue-600:hover { background-color: #2563eb !important; }
+.hover\:bg-blue-700:hover { background-color: #1d4ed8 !important; }
+.hover\:text-blue-800:hover { color: #1e40af !important; }
+.focus\:ring-blue-500:focus { --tw-ring-color: #3b82f6 !important; }
+.ring-blue-500 { --tw-ring-color: #3b82f6 !important; }
+
 /* --- Indigo (標準 Tailwind) --- */
+.bg-indigo-50 { background-color: #eef2ff !important; }
+.bg-indigo-100 { background-color: #e0e7ff !important; }
 .bg-indigo-500 { background-color: #6366f1 !important; }
 .bg-indigo-600 { background-color: #4f46e5 !important; }
 .bg-indigo-700 { background-color: #4338ca !important; }
+.text-indigo-600 { color: #4f46e5 !important; }
 .hover\:bg-indigo-700:hover { background-color: #4338ca !important; }
+.hover\:text-indigo-800:hover { color: #3730a3 !important; }
 
 /* --- Violet (標準 Tailwind) - 術式主檔用 --- */
 .bg-violet-50 { background-color: #f5f3ff !important; }
