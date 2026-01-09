@@ -6,13 +6,24 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>醫療站庫存管理系統 v1.5.0</title>
+    <title>醫療站庫存管理系統 v2.8.0</title>
     <!-- v2.0.0: 本地化依賴，支援離線運作 + Active Role Badge -->
+    <!-- v2.8.0: xirs-ui 元件庫整合 (DEV SPEC v2.1) -->
     <link rel="stylesheet" href="/static/css/tailwind.min.css">
     <link rel="stylesheet" href="/static/css/mirs-colors.css">
+    <!-- xIRS UI: 統一色彩系統 -->
+    <link rel="stylesheet" href="/static/xirs-ui/core/xirs-colors.css">
     <script defer src="/static/js/alpine.min.js"></script>
     <script src="/static/js/qrcode.min.js"></script>
     <script src="/static/js/mirs-role-badge.js"></script>
+    <!-- xIRS UI: Toast 通知 -->
+    <script src="/static/xirs-ui/components/xirs-toast.js"></script>
+    <!-- xIRS UI: 離線狀態指示器 -->
+    <script src="/static/xirs-ui/components/xirs-offline-banner.js"></script>
+    <!-- xIRS UI: 403 錯誤處理 -->
+    <script src="/static/xirs-ui/utils/xirs-403-handler.js"></script>
+    <!-- xIRS UI: 表單草稿恢復 -->
+    <script src="/static/xirs-ui/utils/xirs-draft-recovery.js"></script>
     <script>
         // 驗證 QRCode 載入
         document.addEventListener('DOMContentLoaded', function() {
@@ -69,9 +80,12 @@
         }
     </style>
 </head>
-<body class="min-h-screen" x-data="{...medicalInventory(), ...mirsRoleBadge({enableQuickLock: true})}" x-init="init(); initRoleBadge(); _roleBadge.setRole('LOGISTICS', '庫存管理員', 'mirs-admin')">
+<body class="min-h-screen" x-data="{...medicalInventory(), ...mirsRoleBadge({enableQuickLock: true})}" x-init="init(); initRoleBadge(); _roleBadge.setRole('LOGISTICS', '庫存管理員', 'mirs-admin'); initXirsUI();">
     <!-- Active Role Badge & Quick Lock -->
     <div x-html="roleBadgeHTML"></div>
+
+    <!-- xIRS Offline Banner (插入點) -->
+    <div id="xirs-offline-slot"></div>
 
     <div x-cloak class="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
 
@@ -5342,6 +5356,44 @@
                     // 初始化同步通知輪詢 (每 30 秒檢查一次 PWA 同步)
                     await this.initSyncNotifications();
                     setInterval(() => this.checkForNewSyncs(), 30000);
+                },
+
+                // v2.8.0: Initialize xIRS UI Components
+                initXirsUI() {
+                    // Initialize Offline Banner
+                    if (typeof XIRS_OFFLINE !== 'undefined') {
+                        XIRS_OFFLINE.init({
+                            // MIRS 可能沒有 offline_exp，離線時顯示綠色狀態
+                        });
+                    }
+
+                    // Initialize Toast
+                    if (typeof XIRS_TOAST !== 'undefined') {
+                        XIRS_TOAST.init();
+                    }
+
+                    // Initialize 403 Handler (Break-Glass disabled for MIRS)
+                    if (typeof XIRS_403 !== 'undefined') {
+                        XIRS_403.init({
+                            allowBreakGlass: false,  // MIRS 暫不啟用 Break-Glass
+                        });
+                    }
+
+                    // Initialize Draft Recovery
+                    if (typeof XIRS_DRAFT !== 'undefined') {
+                        XIRS_DRAFT.init();
+                    }
+
+                    console.log('[MIRS] xIRS UI Components initialized');
+                },
+
+                // Helper: 顯示 Toast 通知
+                showToast(message, type = 'info') {
+                    if (typeof XIRS_TOAST !== 'undefined') {
+                        XIRS_TOAST[type](message);
+                    } else {
+                        console.log(`[Toast ${type}] ${message}`);
+                    }
                 },
 
                 // Reset demo data (Vercel demo mode only)

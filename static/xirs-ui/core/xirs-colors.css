@@ -1,0 +1,166 @@
+/**
+ * xIRS Unified Color System v1.0
+ *
+ * 統一 CIRS/MIRS/HIRS 三系統色彩
+ */
+
+:root {
+  /* ========================================
+   * 系統主色
+   * ======================================== */
+  --xirs-cirs-primary: #0891b2;    /* cyan-600 - 社區掛號 */
+  --xirs-mirs-primary: #4f46e5;    /* indigo-600 - 醫療庫存 */
+  --xirs-hirs-primary: #0d9488;    /* teal-600 - 家庭物資 */
+
+  /* ========================================
+   * 狀態色
+   * ======================================== */
+  --xirs-success: #10b981;         /* green-500 */
+  --xirs-success-light: #d1fae5;   /* green-100 */
+  --xirs-warning: #f59e0b;         /* amber-500 */
+  --xirs-warning-light: #fef3c7;   /* amber-100 */
+  --xirs-error: #ef4444;           /* red-500 */
+  --xirs-error-light: #fee2e2;     /* red-100 */
+  --xirs-info: #3b82f6;            /* blue-500 */
+  --xirs-info-light: #dbeafe;      /* blue-100 */
+
+  /* ========================================
+   * 緊急模式
+   * ======================================== */
+  --xirs-emergency: #dc2626;       /* red-600 */
+  --xirs-emergency-bg: #fef2f2;    /* red-50 */
+  --xirs-emergency-border: #f87171; /* red-400 */
+
+  /* ========================================
+   * 離線狀態顏色 (顏色心理學)
+   * ======================================== */
+  --xirs-offline-safe: #10b981;    /* green-500: > 4h */
+  --xirs-offline-caution: #f59e0b; /* amber-500: < 1h */
+  --xirs-offline-warning: #f97316; /* orange-500: < 15m */
+  --xirs-offline-expired: #dc2626; /* red-600: expired */
+
+  /* ========================================
+   * 角色色
+   * ======================================== */
+  --xirs-role-admin: #7c3aed;      /* violet-600 */
+  --xirs-role-doctor: #2563eb;     /* blue-600 */
+  --xirs-role-nurse: #db2777;      /* pink-600 */
+  --xirs-role-pharmacy: #059669;   /* emerald-600 */
+  --xirs-role-cashdesk: #d97706;   /* amber-600 */
+  --xirs-role-runner: #0891b2;     /* cyan-600 */
+  --xirs-role-emt: #dc2626;        /* red-600 */
+  --xirs-role-anesthesia: #7c3aed; /* violet-600 */
+  --xirs-role-volunteer: #10b981;  /* green-500 */
+  --xirs-role-logistics: #ea580c;  /* orange-600 */
+
+  /* ========================================
+   * 優先級
+   * ======================================== */
+  --xirs-priority-urgent: #dc2626; /* red-600 */
+  --xirs-priority-high: #f59e0b;   /* amber-500 */
+  --xirs-priority-normal: #10b981; /* green-500 */
+  --xirs-priority-low: #6b7280;    /* gray-500 */
+
+  /* ========================================
+   * 交班狀態
+   * ======================================== */
+  --xirs-handoff-active: #3b82f6;     /* blue-500 - 本班負責 */
+  --xirs-handoff-pending: #f59e0b;    /* amber-500 - 等待接收 */
+  --xirs-handoff-transferred: #10b981; /* green-500 - 已交接 */
+  --xirs-handoff-unassigned: #9ca3af; /* gray-400 - 未分配 */
+
+  /* ========================================
+   * 中性色
+   * ======================================== */
+  --xirs-gray-50: #f9fafb;
+  --xirs-gray-100: #f3f4f6;
+  --xirs-gray-200: #e5e7eb;
+  --xirs-gray-300: #d1d5db;
+  --xirs-gray-400: #9ca3af;
+  --xirs-gray-500: #6b7280;
+  --xirs-gray-600: #4b5563;
+  --xirs-gray-700: #374151;
+  --xirs-gray-800: #1f2937;
+  --xirs-gray-900: #111827;
+
+  /* ========================================
+   * 動畫
+   * ======================================== */
+  --xirs-transition-fast: 150ms;
+  --xirs-transition-normal: 300ms;
+  --xirs-transition-slow: 500ms;
+}
+
+/* ========================================
+ * 動畫 Keyframes
+ * ======================================== */
+@keyframes xirs-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes xirs-pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes xirs-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes xirs-slide-down {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes xirs-slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes xirs-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ========================================
+ * Utility Classes
+ * ======================================== */
+.xirs-animate-pulse {
+  animation: xirs-pulse 1s ease-in-out infinite;
+}
+
+.xirs-animate-pulse-slow {
+  animation: xirs-pulse-slow 2s ease-in-out infinite;
+}
+
+.xirs-animate-shake {
+  animation: xirs-shake 0.5s ease-in-out;
+}
+
+.xirs-animate-slide-down {
+  animation: xirs-slide-down 0.3s ease-out;
+}
+
+.xirs-animate-slide-up {
+  animation: xirs-slide-up 0.3s ease-out;
+}
+
+.xirs-animate-fade-in {
+  animation: xirs-fade-in 0.2s ease-out;
+}
+
+/* ========================================
+ * Emergency Border
+ * ======================================== */
+.xirs-emergency-border {
+  border: 4px solid var(--xirs-emergency-border) !important;
+  box-shadow: 0 0 0 4px var(--xirs-emergency-bg);
+}
+
+.xirs-emergency-header {
+  background: linear-gradient(90deg, var(--xirs-emergency) 0%, #b91c1c 100%) !important;
+  color: white !important;
+}
