@@ -150,7 +150,7 @@
                             BORP備援手術站（單站版）
                         </h1>
                         <p class="text-xs sm:text-sm text-gray-500">
-                            BORP-DNO-01 - v2.9.1
+                            BORP-DNO-01 - v2.9.2
                         </p>
                         <div class="hidden sm:flex items-center gap-2 mt-1 text-xs text-gray-400">
                             <span class="font-medium">Designed in Taiwan</span>
@@ -192,6 +192,14 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                         </svg>
                         <span class="hidden sm:inline">配對記錄</span>
+                    </button>
+                    <!-- v2.9: Hub 連線狀態指示器 -->
+                    <button @click="showHubSettingsModal = true; checkHubConnection(); checkSnapshotStatus()"
+                            class="flex items-center gap-1.5 px-2 py-2 rounded-lg text-sm font-medium transition-colors"
+                            :class="hubStatus.connected ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200'"
+                            title="Hub 連線狀態">
+                        <span class="w-2 h-2 rounded-full" :class="getHubStatusColor()"></span>
+                        <span class="hidden sm:inline" x-text="getHubStatusText()"></span>
                     </button>
                     <div class="text-right">
                         <p class="text-xs text-gray-400">
@@ -479,6 +487,117 @@
                         重新整理
                     </button>
                     <button @click="showPairedDevices = false"
+                            class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
+                        關閉
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- v2.9: Hub 設定 Modal (Phase 9 - Policy Snapshot) -->
+        <div x-show="showHubSettingsModal" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             @click.self="showHubSettingsModal = false">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-4">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                        </svg>
+                        CIRS Hub 連線設定
+                    </h3>
+                    <p class="text-teal-100 text-sm mt-1">管理 Hub 連線與權限快照</p>
+                </div>
+
+                <div class="p-6 space-y-5">
+                    <!-- Hub 連線狀態 -->
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-gray-600">Hub 連線狀態</span>
+                            <button @click="checkHubConnection()"
+                                    class="text-teal-600 hover:text-teal-700 text-sm flex items-center gap-1"
+                                    :disabled="hubStatus.checking">
+                                <svg class="w-4 h-4" :class="hubStatus.checking ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                重新檢查
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center"
+                                 :class="hubStatus.connected ? 'bg-green-100' : 'bg-red-100'">
+                                <svg x-show="hubStatus.connected" class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <svg x-show="!hubStatus.connected" class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-medium" :class="hubStatus.connected ? 'text-green-800' : 'text-red-800'" x-text="getHubStatusText()"></p>
+                                <p class="text-xs text-gray-500" x-show="hubStatus.hubUrl" x-text="hubStatus.hubUrl"></p>
+                                <p class="text-xs text-red-500" x-show="hubStatus.error" x-text="hubStatus.error"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Policy Snapshot 狀態 -->
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-gray-600">離線權限快照</span>
+                            <span class="text-xs px-2 py-1 rounded-full"
+                                  :class="snapshotStatus.hasSnapshot && !snapshotStatus.isExpired ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'"
+                                  x-text="snapshotStatus.hasSnapshot ? (snapshotStatus.isExpired ? '已過期' : '有效') : '無快照'"></span>
+                        </div>
+
+                        <template x-if="snapshotStatus.hasSnapshot">
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">版本</span>
+                                    <span class="font-mono text-gray-800" x-text="'v' + snapshotStatus.version"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">使用者數</span>
+                                    <span class="text-gray-800" x-text="snapshotStatus.userCount + ' 人'"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">過期時間</span>
+                                    <span class="text-gray-800" :class="snapshotStatus.isExpired ? 'text-red-600' : ''"
+                                          x-text="snapshotStatus.expiresAt ? new Date(snapshotStatus.expiresAt).toLocaleString('zh-TW') : '-'"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="!snapshotStatus.hasSnapshot">
+                            <div class="text-center py-3">
+                                <p class="text-gray-500 text-sm">尚無快照，請同步以啟用離線驗證</p>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- 同步按鈕 -->
+                    <button @click="syncPolicySnapshot()"
+                            class="w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
+                            :class="hubStatus.connected ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+                            :disabled="!hubStatus.connected || snapshotStatus.syncing">
+                        <svg x-show="snapshotStatus.syncing" class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        <svg x-show="!snapshotStatus.syncing" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                        </svg>
+                        <span x-text="snapshotStatus.syncing ? '同步中...' : '從 Hub 同步快照'"></span>
+                    </button>
+
+                    <p class="text-xs text-gray-400 text-center" x-show="!hubStatus.connected">
+                        Hub 離線時無法同步，但可使用現有快照進行離線驗證
+                    </p>
+                </div>
+
+                <!-- Footer -->
+                <div class="bg-gray-50 px-6 py-3 flex justify-end border-t">
+                    <button @click="showHubSettingsModal = false"
                             class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
                         關閉
                     </button>
@@ -4788,7 +4907,7 @@
 
                 <!-- Footer Text -->
                 <div class="text-center text-xs text-gray-400 space-y-1">
-                    <p>醫療站庫存管理系統 v2.9.1</p>
+                    <p>醫療站庫存管理系統 v2.9.2</p>
                     <p class="flex items-center justify-center gap-2">
                         <span>Powered by</span>
                         <a href="https://denovortho-site.vercel.app/zh-TW/resilience" target="_blank"
@@ -5001,6 +5120,24 @@
                 showPairedDevices: false,
                 pairedDevices: [],
                 pairedDevicesLoading: false,
+
+                // v2.9: CIRS Hub 連線狀態 (Phase 9)
+                hubStatus: {
+                    connected: false,
+                    checking: false,
+                    lastCheck: null,
+                    hubUrl: null,
+                    error: null
+                },
+                snapshotStatus: {
+                    hasSnapshot: false,
+                    version: null,
+                    expiresAt: null,
+                    isExpired: false,
+                    userCount: 0,
+                    syncing: false
+                },
+                showHubSettingsModal: false,
 
                 // 搜尋與篩選
                 itemSearchText: '',
@@ -5356,6 +5493,12 @@
                     // 初始化同步通知輪詢 (每 30 秒檢查一次 PWA 同步)
                     await this.initSyncNotifications();
                     setInterval(() => this.checkForNewSyncs(), 30000);
+
+                    // v2.9: CIRS Hub 連線檢查 (Phase 9)
+                    await this.checkHubConnection();
+                    await this.checkSnapshotStatus();
+                    // 每 5 分鐘檢查一次 Hub 連線
+                    setInterval(() => this.checkHubConnection(), 5 * 60 * 1000);
                 },
 
                 // v2.8.0: Initialize xIRS UI Components
@@ -5545,6 +5688,83 @@
                         this.toast('撤銷失敗: ' + e.message, 'error');
                     }
                 },
+
+                // ============================================================
+                // v2.9: CIRS Hub 連線管理 (Phase 9)
+                // ============================================================
+
+                async checkHubConnection() {
+                    this.hubStatus.checking = true;
+                    try {
+                        const response = await fetch(`${this.apiUrl}/local-auth/hub-status`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.hubStatus.connected = data.connected;
+                            this.hubStatus.hubUrl = data.hub_url;
+                            this.hubStatus.error = data.error || null;
+                            this.hubStatus.lastCheck = new Date().toISOString();
+                            console.log('[Hub] Status:', data.connected ? 'Connected' : 'Disconnected');
+                        }
+                    } catch (e) {
+                        this.hubStatus.connected = false;
+                        this.hubStatus.error = e.message;
+                        console.warn('[Hub] Check failed:', e.message);
+                    } finally {
+                        this.hubStatus.checking = false;
+                    }
+                },
+
+                async checkSnapshotStatus() {
+                    try {
+                        const response = await fetch(`${this.apiUrl}/local-auth/snapshot-status`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.snapshotStatus.hasSnapshot = data.has_snapshot;
+                            this.snapshotStatus.version = data.snapshot_version;
+                            this.snapshotStatus.expiresAt = data.expires_at;
+                            this.snapshotStatus.isExpired = data.is_expired;
+                            this.snapshotStatus.userCount = data.user_count || 0;
+                            console.log('[Snapshot] Status:', data.has_snapshot ? `v${data.snapshot_version}` : 'None');
+                        }
+                    } catch (e) {
+                        console.warn('[Snapshot] Check failed:', e.message);
+                    }
+                },
+
+                async syncPolicySnapshot() {
+                    this.snapshotStatus.syncing = true;
+                    try {
+                        const response = await fetch(`${this.apiUrl}/local-auth/sync-snapshot`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.toast(`快照同步成功 (v${data.snapshot_version}, ${data.user_count} 使用者)`, 'success');
+                            await this.checkSnapshotStatus();
+                        } else {
+                            this.toast(`同步失敗: ${data.error}`, 'error');
+                        }
+                    } catch (e) {
+                        this.toast(`同步失敗: ${e.message}`, 'error');
+                    } finally {
+                        this.snapshotStatus.syncing = false;
+                    }
+                },
+
+                getHubStatusColor() {
+                    if (this.hubStatus.checking) return 'bg-gray-400';
+                    if (this.hubStatus.connected) return 'bg-green-500';
+                    return 'bg-red-500';
+                },
+
+                getHubStatusText() {
+                    if (this.hubStatus.checking) return '檢查中...';
+                    if (this.hubStatus.connected) return 'Hub 已連線';
+                    return 'Hub 離線';
+                },
+
+                // ============================================================
 
                 // 同步所有表單的 stationId 與當前站點
                 syncFormStationIds() {
