@@ -5704,18 +5704,19 @@
                             this.hubStatus.hubUrl = data.hub_url;
                             this.hubStatus.error = data.error || null;
                             this.hubStatus.lastCheck = new Date().toISOString();
-                            console.log('[Hub] Status:', data.connected ? 'Connected' : 'Disconnected');
+                            // v2.8.6: 只在連線狀態變更時輸出日誌
                         }
                     } catch (e) {
                         this.hubStatus.connected = false;
                         this.hubStatus.error = e.message;
-                        console.warn('[Hub] Check failed:', e.message);
+                        // v2.8.6: 靜默失敗 - CIRS Hub 是選配
                     } finally {
                         this.hubStatus.checking = false;
                     }
                 },
 
                 async checkSnapshotStatus() {
+                    // v2.8.6: 靜默檢查，減少 console 噪音
                     try {
                         const response = await fetch(`${this.apiUrl}/local-auth/snapshot-status`);
                         if (response.ok) {
@@ -5725,10 +5726,9 @@
                             this.snapshotStatus.expiresAt = data.expires_at;
                             this.snapshotStatus.isExpired = data.is_expired;
                             this.snapshotStatus.userCount = data.user_count || 0;
-                            console.log('[Snapshot] Status:', data.has_snapshot ? `v${data.snapshot_version}` : 'None');
                         }
                     } catch (e) {
-                        console.warn('[Snapshot] Check failed:', e.message);
+                        // 靜默失敗 - Snapshot 是選配功能
                     }
                 },
 
