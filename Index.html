@@ -81,7 +81,7 @@
         }
     </style>
 </head>
-<body class="min-h-screen" x-data="{...medicalInventory(), ...mirsRoleBadge({enableQuickLock: true})}" x-init="init(); initRoleBadge(); if (!localStorage.getItem('mirs_active_role')) { _roleBadge.setRole('LOGISTICS', '庫存管理員', 'mirs-admin'); } initXirsUI();">
+<body class="min-h-screen" x-data="{...medicalInventory(), ...mirsRoleBadge({enableQuickLock: true})}" x-init="init(); initRoleBadge(); console.log('[x-init] localStorage role:', localStorage.getItem('mirs_active_role'), '| _roleBadge.activeRole:', _roleBadge.activeRole); if (!localStorage.getItem('mirs_active_role')) { console.log('[x-init] No role in localStorage, setting LOGISTICS'); _roleBadge.setRole('LOGISTICS', '庫存管理員', 'mirs-admin'); } initXirsUI();">
     <!-- Active Role Badge & Quick Lock -->
     <div x-html="roleBadgeHTML"></div>
 
