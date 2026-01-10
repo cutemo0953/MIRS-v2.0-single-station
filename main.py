@@ -8943,12 +8943,21 @@ async def get_equipment_diagnostic():
         except Exception as ve:
             view_count = f"Error: {ve}"
 
+        # 6. 列出 equipment_units 詳情
+        cursor.execute("""
+            SELECT equipment_id, unit_label, level_percent, status, last_check, is_active
+            FROM equipment_units
+            ORDER BY equipment_id, unit_label
+        """)
+        all_units = [dict(row) for row in cursor.fetchall()]
+
         return {
             "total_equipment": total_equipment,
             "surgical_packs": surgical_packs,
             "total_units": total_units,
             "view_count": view_count,
             "equipment_list": all_equipment,
+            "units_list": all_units,
             "hint": "如果 surgical_packs=0，請重啟服務讓 seeder 執行"
         }
     except Exception as e:
@@ -8997,12 +9006,12 @@ async def get_equipment_detail_v2(equipment_id: str):
             "remarks": row[8]
         }
 
-        # Get units
+        # Get units (only active ones)
         cursor.execute("""
             SELECT id, unit_serial, unit_label, level_percent, status,
                    last_check, checked_by, remarks
             FROM equipment_units
-            WHERE equipment_id = ?
+            WHERE equipment_id = ? AND (is_active = 1 OR is_active IS NULL)
             ORDER BY unit_serial
         """, (equipment_id,))
 
