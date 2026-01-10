@@ -4779,7 +4779,12 @@ async def get_equipment(station_id: str = None):
             {"id": "SURG-002", "name": "清創包", "category": "手術器械", "quantity": 5, "status": "NORMAL", "power_level": None, "last_check": "2026-01-10T08:00:00Z"},
         ]
         return demo_equipment
-    return await get_equipment_status(station_id)
+    # 本地模式：直接返回設備陣列 (與 demo 格式一致)
+    try:
+        status = db.get_equipment_status(station_id)
+        return status  # 返回陣列，不是 {"equipment": [...]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/equipment/check/{equipment_id}")
