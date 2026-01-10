@@ -3,7 +3,37 @@
 > 記錄待解決問題、設計討論、與未來規劃
 
 **更新日期**: 2026-01-10
-**版本**: v0.5 (RPi 部署強化 + 角色切換修復)
+**版本**: v0.6 (Gemini + ChatGPT 建議整合)
+
+---
+
+## 🎯 架構原則 (Gemini + ChatGPT 審核)
+
+### 三大硬約束
+
+| 約束 | 說明 | 來源 |
+|------|------|------|
+| **No DB Merge** | 併站不做 SQLite 合併，用「批量調撥 (Liquidation)」 | Gemini #2, ChatGPT #3 |
+| **Idempotent Ensure** | Hotfix 必須轉成可重複執行的 ensure 函數 | Gemini #1, ChatGPT #1 |
+| **Logic Lock > UI Hide** | 藥局站禁用角色切換是邏輯層鎖定，非隱藏按鈕 | Gemini #3, ChatGPT P0#3 |
+
+### 系統邊界 (ChatGPT)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Gateway Lobby (唯一入口)                                 │
+│    └── 配對閘門是權威來源，PWA 不再有第二套配對            │
+│                                                             │
+│ 2. Admin PWA (控制面)                                       │
+│    └── 站點管理、人員名冊、韌性儀表板                      │
+│    └── 不是存取閘門                                        │
+│                                                             │
+│ 3. 業務 PWA (執行面)                                        │
+│    └── CIRS/MIRS/Pharmacy/Station                          │
+│    └── 不維持第二套配對流程                                │
+│    └── 只留 fallback guard (書籤/深連結)                   │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -301,34 +331,68 @@ sudo journalctl -u mirs -n 50 | grep -i "mobile\|jwt"
 - 站點可能需要轉移、併站
 - 資料如何遷移？設備如何重新分配？
 
+**🚨 硬約束：No DB Merge (Gemini 建議)**
+
+> **千萬不要碰 DB Merge**，請用「批量調撥」的業務邏輯來解決撤站問題。
+>
+> 試圖將 A 站的 SQLite 檔案 merge 進 B 站，會遇到：
+> - Primary Key Collision (主鍵衝突)
+> - WAL 序列錯亂
+> - Audit Log 語意崩壞
+
+**✅ 替代方案：Liquidation Pattern (清算模式)**
+
+```
+併站流程 (A站 → B站)：
+
+1. 清算 (Liquidation)
+   └── A 站執行「撤站程序」
+   └── 系統自動產生「全庫存調撥單 (Transfer All)」
+   └── 目標設為 B 站（或 Hub）
+
+2. 關閉 (Shutdown)
+   └── A 站上傳調撥單後
+   └── Token 失效
+   └── 資料庫鎖定為唯讀
+
+3. 接收 (Reception)
+   └── B 站收到調撥單
+   └── 執行「入庫 (Stock In)」
+   └── 歷史紀錄留在 Hub 查詢
+```
+
+**優點**：
+- 完全復用現有的「調撥 (Stock Transfer)」邏輯
+- 不需要寫任何一行危險的 DB Merge 程式碼
+- Audit Log 保持完整，可從 Hub 查詢
+
 **建議文件結構**：
 
 ```
 STATION_LIFECYCLE_SPEC.md
 ├── 1. 建站流程
 │   ├── 1.1 硬體準備（Pi、網路、電源）
-│   ├── 1.2 軟體初始化（MIRS 啟動、資料庫初始化）
-│   ├── 1.3 與 CIRS Hub 連線（如適用）
+│   ├── 1.2 軟體初始化（Idempotent Migrations）
+│   ├── 1.3 與 CIRS Hub 連線（配對閘門）
 │   ├── 1.4 區域定義導入（從 CIRS 或手動）
 │   └── 1.5 設備登記與初始庫存
 │
-├── 2. 關站流程
-│   ├── 2.1 資料備份（離線包產生）
-│   ├── 2.2 設備歸還/轉移
-│   ├── 2.3 庫存清點與處理
+├── 2. 關站流程 (Liquidation)
+│   ├── 2.1 自動產生「全庫存調撥單」
+│   ├── 2.2 上傳至 Hub 或目標站點
+│   ├── 2.3 Token 失效 + DB 唯讀鎖定
 │   └── 2.4 站點標記為「已關閉」
 │
 ├── 3. 轉移流程（A站 → B站）
-│   ├── 3.1 資料匯出（A站）
-│   ├── 3.2 設備實體移動
-│   ├── 3.3 資料匯入（B站）
-│   └── 3.4 原站點處理
+│   ├── 3.1 執行 Liquidation 流程
+│   ├── 3.2 B 站接收調撥單
+│   ├── 3.3 B 站執行 Stock In
+│   └── 3.4 歷史紀錄保留在 Hub
 │
-├── 4. 併站流程（A站 + B站 → C站）
-│   ├── 4.1 資料合併策略
-│   ├── 4.2 設備整併
-│   ├── 4.3 庫存合計
-│   └── 4.4 人員名冊合併
+├── 4. 硬約束
+│   └── ⚠️ 禁止 SQLite 檔案合併
+│   └── ⚠️ 禁止跨站點 PK 重複使用
+│   └── ⚠️ WAL 序列由 Hub 統一管理
 │
 └── 5. CIRS 整合考量
     ├── 5.1 區域資料共享
@@ -380,17 +444,42 @@ STATION_LIFECYCLE_SPEC.md
 - [x] Hub 配對記錄查詢功能
 - [x] Hub 庫存盤點記錄顏色簡化
 
-### Phase 2.2
+### Phase 2.5 (P0 - Gemini/ChatGPT 建議) 🔥 新增
+> **先做配對穩定化，再做任何 UI overhaul**
+
+- [ ] **Idempotent Migrations** (取代 single-gate seeding)
+  - [ ] 建立 `migrations/` 目錄結構
+  - [ ] `_ensure_resilience_equipment()` 升格為正式 ensure
+  - [ ] `_ensure_surgical_packs()` 升格為正式 ensure
+  - [ ] `_seed_equipment_units()` 升格為正式 ensure
+  - [ ] 引入 `schema_version` + `seed_version` 追蹤表
+  - [ ] `main.py` 啟動時自動執行 migrations
+
+- [ ] **Service Worker Scope 隔離** (ChatGPT P1#5)
+  - [ ] 確保各 PWA 的 SW scope 不互相污染
+  - [ ] 檢查 `/app/*` 路由是否有快取衝突
+
+- [ ] **藥局站邏輯鎖定** ✅ 已完成 (CIRS Phase 3)
+  - [x] `station_type === 'PHARMACY'` 時禁用角色切換
+  - [x] 保留 Factory Reset 後門
+
+### Phase 2.6
 - [ ] Hub 設備編輯加入電量欄位
 - [ ] Hub 設備管理加入「預設位置」欄位
 - [ ] PWA 位置欄位改為下拉選單（從 Hub 設定讀取）
 - [x] Hub 同步通知功能
 
-### Phase 2.3
+### Phase 2.7 (Station Lifecycle)
 - [ ] 撰寫 STATION_LIFECYCLE_SPEC.md
-- [ ] 規劃 CIRS-MIRS 資料整合架構
+  - [ ] 建站流程 (Idempotent Init)
+  - [ ] 關站流程 (Liquidation Pattern)
+  - [ ] 轉移流程 (Bulk Transfer)
+  - [ ] **硬約束：No DB Merge**
+- [ ] 實作「撤站」API + UI
 
-### Phase 3（未來）
+### Phase 3（未來 - 配對穩定後才做）
+> ⚠️ 在配對與 reference data 穩定前啟動整合，會把所有錯誤混成同一團
+
 - [ ] CIRS 區域資料共享
 - [ ] 病患資料查詢整合
 - [ ] 多站點資料同步
