@@ -8790,11 +8790,56 @@ class ReagentOpenRequest(BaseModel):
 @app.get("/api/resilience/status")
 async def get_resilience_status(station_id: Optional[str] = Query(None)):
     """
-    取得站點韌性狀態
+    取得站點韌性狀態 (v2.7.2: Vercel demo 模式支援 BioMed PWA)
 
     計算氧氣、電力、試劑的維持時數/天數，
     並與孤立天數目標比較，回傳警戒狀態。
     """
+    # Vercel demo 模式：返回模擬韌性資料
+    if IS_VERCEL:
+        return {
+            "summary": {
+                "overall_status": "WARNING",
+                "calculated_at": "2026-01-10T10:00:00Z",
+                "station_id": "DEMO-STATION"
+            },
+            "lifelines": [
+                {
+                    "type": "OXYGEN",
+                    "name": "氧氣供應",
+                    "endurance": {
+                        "effective_hours": 36.5,
+                        "hours": 36.5,
+                        "days": 1.52,
+                        "status": "WARNING"
+                    },
+                    "resources": [
+                        {"name": "H型氧氣鋼瓶", "quantity": 5, "capacity_L": 6800, "fill_pct": 80},
+                        {"name": "E型氧氣瓶", "quantity": 4, "capacity_L": 680, "fill_pct": 65}
+                    ]
+                },
+                {
+                    "type": "POWER",
+                    "name": "電力供應",
+                    "endurance": {
+                        "effective_hours": 48.0,
+                        "hours": 48.0,
+                        "days": 2.0,
+                        "status": "SAFE"
+                    },
+                    "resources": [
+                        {"name": "發電機", "fuel_L": 50, "fuel_pct": 70, "consumption_L_hr": 3.0},
+                        {"name": "行動電源站", "quantity": 2, "capacity_Wh": 2000, "charge_pct": 85}
+                    ]
+                }
+            ],
+            "config": {
+                "isolation_target_days": 3,
+                "population_count": 2,
+                "safety_factor": 1.2
+            }
+        }
+
     try:
         sid = station_id or config.get_station_id()
         result = resilience_service.calculate_resilience_status(sid)
