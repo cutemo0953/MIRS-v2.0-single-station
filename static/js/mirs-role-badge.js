@@ -1,5 +1,9 @@
 /**
- * MIRS Role Badge & Quick Lock Component v1.0
+ * MIRS Role Badge & Quick Lock Component v1.1
+ *
+ * v1.1: 修復角色切換後重整頁面不持久的問題
+ *       - 增加 debug 日誌
+ *       - 修復 init() 沒有重讀 localStorage 的問題
  *
  * 用途：
  * - Active Role Badge: 永久顯示目前角色
@@ -186,6 +190,25 @@ function mirsRoleBadge(options = {}) {
 
       // Initialize
       init() {
+        // v1.1: 重讀 localStorage 確保狀態正確
+        const savedRole = localStorage.getItem('mirs_active_role');
+        const savedName = localStorage.getItem('mirs_user_name');
+        const savedId = localStorage.getItem('mirs_user_id');
+
+        console.log('[MIRS Role Badge] init() - localStorage:', {
+          mirs_active_role: savedRole,
+          mirs_user_name: savedName,
+          mirs_user_id: savedId
+        });
+
+        // 如果 localStorage 有值，更新狀態
+        if (savedRole) {
+          this.activeRole = savedRole;
+          console.log('[MIRS Role Badge] Restored role from localStorage:', savedRole);
+        }
+        if (savedName) this.userName = savedName;
+        if (savedId) this.userId = savedId;
+
         // Load available roles
         this.loadAvailableRoles();
 
@@ -288,9 +311,18 @@ function mirsRoleBadge(options = {}) {
         const oldRole = this.activeRole;
         const newRole = this.pendingRoleSwitch;
 
+        console.log('[MIRS Role Badge] Switching role:', oldRole, '->', newRole);
+
         // Update role
         this.activeRole = newRole;
         localStorage.setItem('mirs_active_role', newRole);
+
+        // v1.1: 驗證 localStorage 是否成功寫入
+        const savedRole = localStorage.getItem('mirs_active_role');
+        console.log('[MIRS Role Badge] Saved to localStorage:', savedRole);
+        if (savedRole !== newRole) {
+          console.error('[MIRS Role Badge] localStorage write FAILED!');
+        }
 
         // Log role switch event
         this.logRoleSwitch(oldRole, newRole);

@@ -3,7 +3,7 @@
 > 記錄待解決問題、設計討論、與未來規劃
 
 **更新日期**: 2026-01-10
-**版本**: v0.4 (RPi 部署強化 + 手術包修復)
+**版本**: v0.5 (RPi 部署強化 + 角色切換修復)
 
 ---
 
@@ -55,6 +55,40 @@ python3 -c "import sqlite3; conn = sqlite3.connect('medical_inventory.db'); c = 
 // 選擇單位時，UNCHECKED 自動改為 AVAILABLE
 this.checkEquipmentForm.status = (unit.status === 'UNCHECKED' || !unit.status)
     ? 'AVAILABLE' : unit.status;
+```
+
+---
+
+### 0.2 角色切換不持久 🔧 調查中 (v2.8.6)
+
+**問題描述**：
+- 切換角色後（如 EMT → NURSE）
+- 重整頁面後仍顯示「後勤」
+
+**可能原因**：
+1. `init()` 沒有重讀 localStorage 中的角色
+2. 瀏覽器快取舊版 JS 檔案
+3. localStorage 被其他程式碼清除
+
+**修復內容** (mirs-role-badge.js v1.1)：
+1. `init()` 新增重讀 localStorage 邏輯
+2. 增加 console.log 除錯輸出
+3. `confirmRoleSwitch()` 新增寫入驗證
+
+**除錯方式**：
+```javascript
+// 在 RPi 瀏覽器 Console 執行：
+console.log('mirs_active_role:', localStorage.getItem('mirs_active_role'));
+console.log('mirs_user_name:', localStorage.getItem('mirs_user_name'));
+
+// 切換角色後再次檢查
+// 重整頁面前後對比
+```
+
+**臨時解決方案**：
+```bash
+# 強制清除瀏覽器快取 (Chromium on RPi)
+rm -rf ~/.cache/chromium
 ```
 
 ---
