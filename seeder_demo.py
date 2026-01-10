@@ -280,6 +280,9 @@ def seed_mirs_demo(conn: sqlite3.Connection):
         ("EMER-EQ-007", "抽吸機", "急救設備", "READY", 1, "AGGREGATE", 80, None, None, None, None, "GENERAL"),
         ("RESP-004", "呼吸器 (Transport)", "呼吸設備", "READY", 1, "AGGREGATE", 60, None, None, None, None, "VENTILATOR"),
         ("DIAG-002", "血氧機", "診斷設備", "READY", 2, "AGGREGATE", 5, None, None, None, None, "MONITOR"),
+        # v2.8.5: BORP 環境設備
+        ("UTIL-003", "光觸媒空氣清淨機", "環境設備", "READY", 1, "AGGREGATE", 10, None, None, None, None, "GENERAL"),  # USB-C 供電
+        ("UTIL-004", "淨水器", "環境設備", "READY", 1, "AGGREGATE", None, None, None, None, None, "GENERAL"),  # 非耗電
     ]
 
     # 確保 equipment 表有 type_code 欄位
@@ -589,6 +592,26 @@ def _seed_equipment_units(cursor):
         UPDATE equipment SET tracking_mode = 'PER_UNIT'
         WHERE id IN ('RESP-001', 'EMER-EQ-006', 'UTIL-001', 'UTIL-002')
     """)
+
+    # v2.8.5: 為所有缺少 units 的設備建立預設 unit
+    cursor.execute("""
+        SELECT e.id, e.name, e.quantity
+        FROM equipment e
+        LEFT JOIN equipment_units u ON e.id = u.equipment_id
+        GROUP BY e.id
+        HAVING COUNT(u.id) = 0
+    """)
+    missing_units = cursor.fetchall()
+    for eq_id, name, qty in missing_units:
+        qty = qty if qty and qty > 0 else 1
+        for i in range(qty):
+            unit_serial = f'{eq_id}-{i+1:02d}'
+            unit_label = f'{name} #{i+1}' if qty > 1 else name
+            cursor.execute("""
+                INSERT OR IGNORE INTO equipment_units
+                (equipment_id, unit_serial, unit_label, level_percent, status, is_active)
+                VALUES (?, ?, ?, 100, 'UNCHECKED', 1)
+            """, (eq_id, unit_serial, unit_label))
 
 
 def _seed_resilience_profiles(cursor):

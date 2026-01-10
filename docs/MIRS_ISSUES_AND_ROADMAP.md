@@ -2,12 +2,64 @@
 
 > 記錄待解決問題、設計討論、與未來規劃
 
-**更新日期**: 2025-12-20
-**版本**: v0.3 (樹莓派部署修復)
+**更新日期**: 2026-01-10
+**版本**: v0.4 (RPi 部署強化 + 手術包修復)
 
 ---
 
-## 0. 2025-12-20 樹莓派部署修復日誌
+## 0. 2026-01-10 RPi 部署強化
+
+### 0.0 手術包與韌性設備未顯示 ✅ 已解決
+
+**問題描述**：
+- 手術包 Tab 顯示 0 筆
+- 韌性估算的電力/氧氣設備也未正確顯示
+- 部分設備檢查時出現「請選擇要檢查的單位」
+
+**根本原因**：
+1. RPi 資料庫是用 SQL schema 手動建立，不是用 seeder
+2. Seeder 檢查 `items` 表有資料就跳過完整 seeding
+3. 手動建立的設備 ID（power-1, fridge-1 等）與 seeder 格式（UTIL-001, OTH-001）不同
+4. 部分設備沒有對應的 `equipment_units` 記錄
+
+**修復方法（現有 RPi）**：
+```bash
+# 補齊手術包和韌性設備
+python3 -c "from seeder_demo import _ensure_surgical_packs, _ensure_resilience_equipment, _seed_equipment_units; import sqlite3; from datetime import datetime; conn = sqlite3.connect('medical_inventory.db'); cursor = conn.cursor(); now = datetime.now(); _ensure_resilience_equipment(cursor, now); _ensure_surgical_packs(cursor, now); _seed_equipment_units(cursor); conn.commit(); print('Done')"
+```
+
+**修復方法（新 RPi 部署）**：
+- v2.8.5 新增自動 seed 功能：當 `equipment` 表為空時自動執行 seeder
+- 新 RPi 只需 `git clone` + `python3 main.py` 即可
+
+**清理重複設備**：
+```bash
+# 刪除舊格式設備 (power-1, fridge-1, photocatalyst-1, water-1)
+python3 -c "import sqlite3; conn = sqlite3.connect('medical_inventory.db'); c = conn.cursor(); c.execute(\"DELETE FROM equipment WHERE id IN ('power-1', 'fridge-1', 'photocatalyst-1', 'water-1')\"); conn.commit(); print('Deleted:', c.rowcount)"
+```
+
+---
+
+### 0.1 設備檢查狀態不更新 ✅ 已解決 (v2.8.4)
+
+**問題描述**：
+- 設備已檢查過（有 `last_check` 時間戳）
+- 但 `status` 仍顯示 `UNCHECKED`
+
+**根本原因**：
+- 檢查 Modal 表單預填現有狀態
+- 如果狀態是 `UNCHECKED`，使用者未手動更改就會提交 `UNCHECKED`
+
+**修復內容** (Index.html:8165)：
+```javascript
+// 選擇單位時，UNCHECKED 自動改為 AVAILABLE
+this.checkEquipmentForm.status = (unit.status === 'UNCHECKED' || !unit.status)
+    ? 'AVAILABLE' : unit.status;
+```
+
+---
+
+## 1. 2025-12-20 樹莓派部署修復日誌
 
 ### 0.1 SQLite Schema 問題 ✅ 已解決
 
