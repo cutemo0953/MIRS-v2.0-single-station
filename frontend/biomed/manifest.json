@@ -1,0 +1,24 @@
+{
+  "name": "MIRS BioMed - 設備維護",
+  "short_name": "BioMed",
+  "description": "醫療設備維護 | 氧氣監測 | 韌性評估",
+  "start_url": "/biomed/",
+  "scope": "/biomed/",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#6C7362",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["medical", "utilities"]
+}

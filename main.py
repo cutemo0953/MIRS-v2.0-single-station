@@ -3243,6 +3243,63 @@ async def serve_anesthesia_icon(filename: str):
     raise HTTPException(status_code=404)
 
 
+# ============================================================================
+# v2.7.0: BioMed PWA Routes (設備維護站)
+# ============================================================================
+
+@app.get("/biomed")
+@app.get("/biomed/")
+async def serve_biomed_pwa():
+    """
+    Serve MIRS BioMed PWA (設備維護站)
+    """
+    biomed_file = PROJECT_ROOT / "frontend" / "biomed" / "index.html"
+    if biomed_file.exists():
+        return FileResponse(
+            biomed_file,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    else:
+        raise HTTPException(status_code=404, detail="BioMed PWA not found")
+
+
+@app.get("/biomed/manifest.json")
+async def serve_biomed_manifest():
+    """Serve BioMed PWA manifest"""
+    manifest_file = PROJECT_ROOT / "frontend" / "biomed" / "manifest.json"
+    if manifest_file.exists():
+        return FileResponse(manifest_file, media_type="application/manifest+json")
+    raise HTTPException(status_code=404)
+
+
+@app.get("/biomed/service-worker.js")
+async def serve_biomed_service_worker():
+    """Serve BioMed Service Worker"""
+    sw_file = PROJECT_ROOT / "frontend" / "biomed" / "service-worker.js"
+    if sw_file.exists():
+        return FileResponse(sw_file, media_type="application/javascript")
+    raise HTTPException(status_code=404)
+
+
+@app.get("/biomed/icons/{filename}")
+async def serve_biomed_icon(filename: str):
+    """Serve BioMed PWA icons"""
+    icon_file = PROJECT_ROOT / "frontend" / "biomed" / "icons" / filename
+    if icon_file.exists() and icon_file.suffix in ['.png', '.svg', '.ico']:
+        media_type = "image/png" if filename.endswith('.png') else "image/svg+xml"
+        return FileResponse(icon_file, media_type=media_type)
+    # Fallback to mobile icons if biomed-specific ones don't exist
+    fallback = PROJECT_ROOT / "static" / "mobile" / "icons" / filename
+    if fallback.exists() and fallback.suffix in ['.png', '.svg', '.ico']:
+        media_type = "image/png" if filename.endswith('.png') else "image/svg+xml"
+        return FileResponse(fallback, media_type=media_type)
+    raise HTTPException(status_code=404)
+
+
 # 掛載靜態文件(Logo圖片等)
 # Mount static files with pathlib for cross-platform path safety
 _static_dir = PROJECT_ROOT / "static"
