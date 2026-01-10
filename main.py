@@ -8805,6 +8805,22 @@ async def get_resilience_summary(station_id: Optional[str] = Query(None)):
 
 
 # ============================================================================
+# Resource Intents API (v3.0 Stub - 待實作)
+# ============================================================================
+
+@app.get("/api/resource-intents")
+async def get_resource_intents(
+    limit: int = Query(10, description="返回筆數上限"),
+    status: Optional[str] = Query(None, description="狀態過濾")
+):
+    """
+    取得資源意圖列表 (Stub - 未來用於離線同步對帳)
+    目前返回空列表，避免 404 錯誤
+    """
+    return {"intents": [], "total": 0, "message": "Resource intents API stub - not implemented yet"}
+
+
+# ============================================================================
 # API v2: 設備架構重構 (Equipment Architecture v2)
 # Based on: EQUIPMENT_ARCHITECTURE_REDESIGN.md
 # ============================================================================
