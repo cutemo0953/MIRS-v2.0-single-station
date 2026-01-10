@@ -161,10 +161,9 @@ def seed_mirs_demo(conn: sqlite3.Connection):
         _ensure_resilience_equipment(cursor, now)
         # v2.5.7: 確保手術包存在
         _ensure_surgical_packs(cursor, now)
-        # 確保 equipment_units 有資料
-        cursor.execute("SELECT COUNT(*) FROM equipment_units")
-        if cursor.fetchone()[0] == 0:
-            _seed_equipment_units(cursor)
+        # v2.8: 確保 equipment_units 有完整資料 (不只是空表，而是所有必要單位)
+        # 使用 INSERT OR IGNORE，即使已有部分資料也會補齊缺失的單位
+        _seed_equipment_units(cursor)
         # v1.4.2: 確保 resilience_profiles 有預設資料
         cursor.execute("SELECT COUNT(*) FROM resilience_profiles")
         if cursor.fetchone()[0] == 0:
