@@ -3287,6 +3287,30 @@ if IS_VERCEL and not USE_POSTGRES:
 elif IS_VERCEL and USE_POSTGRES:
     logger.info("✓ [MIRS] Using Neon PostgreSQL - data persisted")
 
+# v2.8.5: RPi 自動 seed - 如果資料庫是空的（新部署）
+if not IS_VERCEL:
+    try:
+        _conn = db.get_connection()
+        _cursor = _conn.cursor()
+        _cursor.execute("SELECT COUNT(*) FROM equipment")
+        _eq_count = _cursor.fetchone()[0]
+        if _eq_count == 0:
+            logger.info("[MIRS] 偵測到空資料庫，自動執行 seeder...")
+            from seeder_demo import seed_mirs_demo
+            seed_mirs_demo(_conn)
+            # 初始化術式主檔
+            if SURGERY_CODES_MODULE_AVAILABLE and init_surgery_codes_schema:
+                try:
+                    init_surgery_codes_schema(_cursor)
+                    _conn.commit()
+                    logger.info("✓ [MIRS] Surgery codes schema initialized")
+                except Exception as e:
+                    logger.warning(f"[MIRS] Surgery codes init warning: {e}")
+            logger.info("✓ [MIRS] RPi 自動 seed 完成")
+        else:
+            logger.info(f"[MIRS] 資料庫已有 {_eq_count} 筆設備，跳過 seed")
+    except Exception as e:
+        logger.warning(f"[MIRS] Auto-seed check failed: {e}")
 
 # ========== 背景任務：每日設備重置 (v1.4.5) ==========
 
