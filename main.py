@@ -8911,6 +8911,51 @@ async def get_equipment_v2():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/v2/equipment-diagnostic")
+async def get_equipment_diagnostic():
+    """
+    診斷設備資料庫狀態 (Debug用)
+    """
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+
+        # 1. 檢查 equipment 表總數
+        cursor.execute("SELECT COUNT(*) FROM equipment")
+        total_equipment = cursor.fetchone()[0]
+
+        # 2. 檢查手術包數量
+        cursor.execute("SELECT COUNT(*) FROM equipment WHERE id LIKE '%SURG%'")
+        surgical_packs = cursor.fetchone()[0]
+
+        # 3. 檢查 equipment_units 數量
+        cursor.execute("SELECT COUNT(*) FROM equipment_units")
+        total_units = cursor.fetchone()[0]
+
+        # 4. 列出所有設備 ID
+        cursor.execute("SELECT id, name, category, quantity FROM equipment ORDER BY id")
+        all_equipment = [dict(row) for row in cursor.fetchall()]
+
+        # 5. 檢查 v_equipment_status view
+        try:
+            cursor.execute("SELECT COUNT(*) FROM v_equipment_status")
+            view_count = cursor.fetchone()[0]
+        except Exception as ve:
+            view_count = f"Error: {ve}"
+
+        return {
+            "total_equipment": total_equipment,
+            "surgical_packs": surgical_packs,
+            "total_units": total_units,
+            "view_count": view_count,
+            "equipment_list": all_equipment,
+            "hint": "如果 surgical_packs=0，請重啟服務讓 seeder 執行"
+        }
+    except Exception as e:
+        logger.error(f"診斷失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/v2/equipment/{equipment_id}")
 async def get_equipment_detail_v2(equipment_id: str):
     """
