@@ -447,17 +447,19 @@ STATION_LIFECYCLE_SPEC.md
 ### Phase 2.5 (P0 - Gemini/ChatGPT 建議) 🔥 新增
 > **先做配對穩定化，再做任何 UI overhaul**
 
-- [ ] **Idempotent Migrations** (取代 single-gate seeding)
-  - [ ] 建立 `migrations/` 目錄結構
-  - [ ] `_ensure_resilience_equipment()` 升格為正式 ensure
-  - [ ] `_ensure_surgical_packs()` 升格為正式 ensure
-  - [ ] `_seed_equipment_units()` 升格為正式 ensure
-  - [ ] 引入 `schema_version` + `seed_version` 追蹤表
-  - [ ] `main.py` 啟動時自動執行 migrations
+- [x] **Idempotent Migrations** ✅ 已完成 (v2.8.6)
+  - [x] 建立 `database/migrations/` 目錄結構
+  - [x] `_ensure_resilience_equipment()` 升格為 m003
+  - [x] `_ensure_surgical_packs()` 升格為 m004
+  - [x] `_seed_equipment_units()` 升格為 m005
+  - [x] `_seed_resilience_profiles()` 升格為 m006
+  - [x] 引入 `_mirs_migrations` 版本追蹤表
+  - [x] `main.py` 啟動時自動執行 migrations
 
-- [ ] **Service Worker Scope 隔離** (ChatGPT P1#5)
-  - [ ] 確保各 PWA 的 SW scope 不互相污染
-  - [ ] 檢查 `/app/*` 路由是否有快取衝突
+- [x] **Service Worker Scope 隔離** ✅ 已完成
+  - [x] 各 PWA 使用獨立 CACHE_NAME (xirs-pharmacy-*, xirs-station-*, etc.)
+  - [x] SW 位於各自目錄下，瀏覽器自動限制 scope
+  - [x] 無快取衝突風險
 
 - [ ] **藥局站邏輯鎖定** ✅ 已完成 (CIRS Phase 3)
   - [x] `station_type === 'PHARMACY'` 時禁用角色切換
