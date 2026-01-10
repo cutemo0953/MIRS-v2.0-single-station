@@ -8161,7 +8161,8 @@
                 selectUnit(unit) {
                     this.checkEquipmentForm.selectedUnitId = unit.id;
                     this.checkEquipmentForm.powerLevel = unit.level_percent;
-                    this.checkEquipmentForm.status = unit.status || 'AVAILABLE';
+                    // v2.8.4: UNCHECKED 狀態應自動變為 AVAILABLE（已檢查 = 可用）
+                    this.checkEquipmentForm.status = (unit.status === 'UNCHECKED' || !unit.status) ? 'AVAILABLE' : unit.status;
                 },
 
                 // v2: 提交設備單位檢查
