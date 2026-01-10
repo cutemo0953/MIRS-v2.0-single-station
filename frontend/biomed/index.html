@@ -496,9 +496,24 @@
 
                 async loadResilienceStatus() {
                     try {
-                        const res = await fetch('/api/resilience');
+                        const res = await fetch('/api/resilience/status');
                         if (res.ok) {
-                            this.resilienceStatus = await res.json();
+                            const data = await res.json();
+                            // 轉換 API 回應格式
+                            const weakestLifeline = data.lifelines?.reduce((min, ll) =>
+                                (!min || (ll.endurance?.effective_hours || 0) < (min.endurance?.effective_hours || 0)) ? ll : min, null);
+
+                            this.resilienceStatus = {
+                                summary: {
+                                    overall_status: data.summary?.overall_status || 'UNKNOWN',
+                                    weakest_link: weakestLifeline ? {
+                                        hours: weakestLifeline.endurance?.effective_hours || 0,
+                                        resource: weakestLifeline.name
+                                    } : null
+                                },
+                                oxygen: data.lifelines?.find(l => l.type === 'OXYGEN')?.endurance || {},
+                                power: data.lifelines?.find(l => l.type === 'POWER')?.endurance || {}
+                            };
                         }
                     } catch (err) {
                         console.error('[BioMed] Failed to load resilience:', err);

@@ -4763,7 +4763,22 @@ async def get_equipment_status(station_id: str = None):
 
 @app.get("/api/equipment")
 async def get_equipment(station_id: str = None):
-    """取得所有設備"""
+    """取得所有設備 (v2.7.0: Vercel demo 模式支援 BioMed PWA)"""
+    # Vercel demo 模式：返回模擬設備資料
+    if IS_VERCEL:
+        demo_equipment = [
+            {"id": "RESP-001", "name": "H型氧氣鋼瓶", "category": "呼吸設備", "quantity": 5, "status": "NORMAL", "power_level": 80, "last_check": "2026-01-10T08:00:00Z"},
+            {"id": "EMER-EQ-006", "name": "E型氧氣瓶", "category": "急救設備", "quantity": 4, "status": "NORMAL", "power_level": 65, "last_check": "2026-01-10T08:00:00Z"},
+            {"id": "RESP-002", "name": "氧氣濃縮機 5L", "category": "呼吸設備", "quantity": 1, "status": "NORMAL", "power_level": None, "power_consumption": 350, "last_check": "2026-01-10T08:00:00Z"},
+            {"id": "UTIL-001", "name": "行動電源站", "category": "電力設備", "quantity": 2, "status": "NORMAL", "power_level": 85, "last_check": "2026-01-10T08:00:00Z"},
+            {"id": "UTIL-002", "name": "發電機 (備用)", "category": "電力設備", "quantity": 1, "status": "PENDING", "power_level": 70, "last_check": None},
+            {"id": "RESP-003", "name": "呼吸器", "category": "呼吸設備", "quantity": 2, "status": "NORMAL", "power_level": None, "power_consumption": 100, "last_check": "2026-01-10T08:00:00Z"},
+            {"id": "DIAG-001", "name": "生理監視器", "category": "診斷設備", "quantity": 2, "status": "NORMAL", "power_level": None, "power_consumption": 50, "last_check": "2026-01-10T08:00:00Z"},
+            {"id": "EMER-EQ-007", "name": "抽吸機", "category": "急救設備", "quantity": 1, "status": "WARNING", "power_level": None, "power_consumption": 80, "last_check": "2026-01-09T12:00:00Z"},
+            {"id": "SURG-001", "name": "骨科手術包 (大)", "category": "手術器械", "quantity": 3, "status": "NORMAL", "power_level": None, "last_check": "2026-01-10T08:00:00Z"},
+            {"id": "SURG-002", "name": "清創包", "category": "手術器械", "quantity": 5, "status": "NORMAL", "power_level": None, "last_check": "2026-01-10T08:00:00Z"},
+        ]
+        return demo_equipment
     return await get_equipment_status(station_id)
 
 
