@@ -3850,8 +3850,24 @@ def run_migrations():
 @app.on_event("startup")
 async def startup_event():
     """應用啟動時執行"""
-    # 執行資料庫遷移
+    # 執行資料庫遷移 (舊系統 - 保留相容性)
     run_migrations()
+
+    # v2.8.6: 執行 Idempotent Migrations (新系統)
+    try:
+        from database.migrations import run_migrations as run_idempotent_migrations, get_current_version
+        conn = db.get_connection()
+        applied = run_idempotent_migrations(conn)
+        version = get_current_version(conn)
+        conn.close()
+        if applied > 0:
+            logger.info(f"✓ [MIRS] Idempotent migrations applied: {applied}, current version: {version}")
+        else:
+            logger.info(f"✓ [MIRS] Migration version: {version} (up to date)")
+    except ImportError:
+        logger.warning("⚠ [MIRS] Idempotent migrations module not found")
+    except Exception as e:
+        logger.error(f"⚠ [MIRS] Migration error: {e}")
 
     # Seed demo data if running on Vercel
     if IS_VERCEL:
