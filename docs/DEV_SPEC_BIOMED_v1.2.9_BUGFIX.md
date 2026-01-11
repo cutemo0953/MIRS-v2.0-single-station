@@ -1,7 +1,7 @@
-# BioMed PWA v1.2.6 ~ v1.2.17 Bug 修復記錄
+# BioMed PWA v1.2.6 ~ v1.2.18 Bug 修復記錄
 
 **日期**: 2026-01-11
-**版本**: v1.2.6 → v1.2.17
+**版本**: v1.2.6 → v1.2.18
 **問題來源**: RPi 實機測試 + Gemini 程式碼審查 + ChatGPT 架構分析
 
 ---
@@ -22,7 +22,8 @@
 | **v1.2.14** | **v1.2.13 仍無效** | **checkEquipment() 用舊 API，不更新 equipment_units.last_check** | **改用 v2 unit-level API** |
 | v1.2.15 | Unit 建立失敗 | API 回傳 `{ unit: { id: ... } }`，程式讀 `newUnit.unit_id` | 改為 `newUnit.unit?.id` |
 | v1.2.16 | 樂觀更新被覆蓋 | `loadEquipment()` 立即呼叫覆蓋本地更新 | State Aggregation + 延遲載入 |
-| **v1.2.17** | **狀態文字仍顯示「未檢」** | **灰階用 check_status，文字用 status，兩欄位未同步** | **新增 status 欄位映射** |
+| v1.2.17 | 狀態文字仍顯示「未檢」 | 灰階用 check_status，文字用 status，兩欄位未同步 | 新增 status 欄位映射 |
+| **v1.2.18** | **v1.2.17 仍無效** | **UI 同時依賴 check_status 和 status，欄位契約混亂** | **ChatGPT Fix A: UI 只讀 check_status** |
 
 ---
 
@@ -189,7 +190,8 @@ return isOxygen && !isConcentrator && !isVentilator;
 | **v1.2.14** | **改用 v2 unit-level API (根因修復)** | index.html, service-worker.js |
 | v1.2.15 | Unit ID 解析修復 | index.html, service-worker.js |
 | v1.2.16 | State Aggregation (Gemini 建議) | index.html, service-worker.js |
-| **v1.2.17** | **status 欄位映射 (UI 文字顯示)** | index.html, service-worker.js |
+| v1.2.17 | status 欄位映射 (UI 文字顯示) | index.html, service-worker.js |
+| **v1.2.18** | **ChatGPT Fix A: UI 只讀 check_status** | index.html, service-worker.js |
 
 ---
 
@@ -967,6 +969,108 @@ NO_UNITS                →  UNCHECKED (未檢)
 
 ---
 
+## 問題十二：欄位契約混亂 (v1.2.18) 🎯 根治修復
+
+### 症狀
+- v1.2.17 修復後問題依舊
+- 灰階效果正確 (check_status)
+- 但狀態文字仍顯示「未檢」(status)
+
+### ChatGPT 根因分析
+
+> **欄位契約問題 (Field Contract Problem)**:
+> UI 同時依賴兩個不同來源的欄位，造成狀態不一致。
+>
+> - `check_status`: 由 `v_equipment_status` 視圖計算，基於 `equipment_units.last_check`
+> - `status`: 存在 `equipment` 表，由舊 API 更新
+>
+> **問題**: v1.2.17 試圖在 checkEquipment() 中同步這兩個欄位，但如果 loadEquipment() 重新載入後覆蓋，或者其他地方讀取時沒有做 mapping，問題就會重現。
+>
+> **解決方案 (Fix A)**: UI 只讀 `check_status`，徹底消除對 `status` 欄位的依賴。
+
+### 修復 (v1.2.18)
+
+**1. 狀態 Badge 改用 check_status**
+
+```html
+<!-- 修復前: 用 status -->
+<span :class="{ 'bg-green-100': eq.status === 'NORMAL', ... }"
+      x-text="getStatusText(eq.status)"></span>
+
+<!-- 修復後: 用 check_status -->
+<span :class="{ 'bg-green-100': eq.check_status === 'CHECKED',
+                'bg-yellow-100': eq.check_status === 'PARTIAL',
+                'bg-gray-100': eq.check_status === 'UNCHECKED' || !eq.check_status }"
+      x-text="getStatusText(eq.check_status)"></span>
+```
+
+**2. 統計欄改用 check_status**
+
+```javascript
+// 修復前
+equipment.filter(e => e.status === 'NORMAL').length
+
+// 修復後
+equipment.filter(e => e.check_status === 'CHECKED').length
+```
+
+**3. getPendingCount() 只用 check_status**
+
+```javascript
+// 修復前
+getPendingCount() {
+    return this.equipment.filter(e =>
+        (e.check_status === 'UNCHECKED' || e.check_status === 'NO_UNITS')
+        && e.status !== 'NORMAL'  // ← 還依賴 status
+    ).length;
+}
+
+// 修復後
+getPendingCount() {
+    return this.equipment.filter(e =>
+        e.check_status === 'UNCHECKED' || e.check_status === 'NO_UNITS' || !e.check_status
+    ).length;
+}
+```
+
+### 欄位對應表 (v1.2.18 定義)
+
+| check_status | 顏色 | 文字 |
+|-------------|------|------|
+| CHECKED | 綠色 | 已確認 |
+| PARTIAL | 黃色 | 部分確認 |
+| UNCHECKED | 灰色 | 未檢 |
+| NO_UNITS | 灰色 | 無單位 |
+| (未定義) | 灰色 | 未檢 |
+
+### 架構改善
+
+```
+修復前 (欄位契約混亂):
+┌─────────────────┐    ┌─────────────────┐
+│ equipment.status │    │ v_equipment_    │
+│ (舊 API 更新)    │    │ status.check_   │
+│                  │    │ status (View)   │
+└────────┬────────┘    └────────┬────────┘
+         │                      │
+    UI 文字綁定           UI 灰階綁定
+         │                      │
+         └──── 不同步！ ────────┘
+
+修復後 (單一真相來源):
+┌─────────────────────────────────────┐
+│ v_equipment_status.check_status     │
+│ (由 equipment_units.last_check 計算) │
+└──────────────┬──────────────────────┘
+               │
+    UI 文字 + 灰階 + 統計 全部綁定
+               │
+               ▼
+        ✅ 永遠一致
+```
+
+---
+
 ## 架構說明：MIRS / BioMed PWA 設備狀態連動
 
 ### 狀態同步架構
@@ -1026,18 +1130,20 @@ MIRS 設備、BioMed PWA 設備、韌性估算的設備確認狀態**完全連�
 
 ## 修復完成確認清單
 
-| 項目 | v1.2.17 狀態 |
+| 項目 | v1.2.18 狀態 |
 |------|-------------|
 | checkEquipment() 使用 v2 API | ✅ (v1.2.14) |
 | Unit ID 正確解析 | ✅ (v1.2.15) |
 | State Aggregation 前端計算 | ✅ (v1.2.16) |
-| status 欄位映射 | ✅ (v1.2.17) |
+| ~~status 欄位映射~~ | ⚠️ 改為 Fix A |
+| **UI 只讀 check_status (Fix A)** | ✅ (v1.2.18) |
 | 灰階正確顯示 | ✅ |
-| 狀態文字正確顯示 | ✅ |
+| 狀態文字正確顯示 | ✅ (待 RPi 驗證) |
 | MIRS/BioMed 連動 | ✅ 已確認 |
+| 欄位契約單一真相 | ✅ (v1.2.18) |
 
 ---
 
-**文件版本**: v1.6
+**文件版本**: v1.7
 **撰寫者**: Claude Code + Gemini (程式碼審查) + ChatGPT (架構分析)
 **日期**: 2026-01-11
