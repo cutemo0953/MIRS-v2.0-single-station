@@ -1376,22 +1376,30 @@
                             })
                         });
                         if (res.ok) {
-                            // v1.2.10: 樂觀更新 - 找到並更新對應的 unit
-                            const updateUnit = (units) => {
-                                const unit = units?.find(u => u.id === this.unitEditForm.id);
-                                if (unit) {
-                                    unit.level_percent = this.unitEditForm.level_percent;
-                                    unit.status = this.unitEditForm.status;
-                                    unit.last_check = new Date().toISOString();
-                                    unit.psi = Math.round(this.unitEditForm.level_percent / 100 * 2200);
-                                }
+                            // v1.2.12: 用 .map() 創建新陣列觸發 Alpine 響應式更新
+                            // (直接修改物件屬性不會觸發 Alpine 重新渲染)
+                            const updateUnitInArray = (units) => {
+                                if (!units) return units;
+                                return units.map(u => {
+                                    if (u.id === this.unitEditForm.id) {
+                                        console.log('[BioMed] v1.2.12: Updating unit', u.id, 'level:', this.unitEditForm.level_percent);
+                                        return {
+                                            ...u,
+                                            level_percent: this.unitEditForm.level_percent,
+                                            status: this.unitEditForm.status,
+                                            last_check: new Date().toISOString(),
+                                            psi: Math.round(this.unitEditForm.level_percent / 100 * 2200)
+                                        };
+                                    }
+                                    return u;
+                                });
                             };
-                            updateUnit(this.resilienceStatus.oxygenUnits);
-                            updateUnit(this.resilienceStatus.powerUnits);
+                            this.resilienceStatus.oxygenUnits = updateUnitInArray(this.resilienceStatus.oxygenUnits);
+                            this.resilienceStatus.powerUnits = updateUnitInArray(this.resilienceStatus.powerUnits);
 
                             this.showToast(`${this.unitEditForm.equipment_name} ${this.unitEditForm.unit_label} 已更新`, 'success');
                             this.showUnitEditModal = false;
-                            // v1.2.11: 移除 loadResilienceStatus()，只用 resilienceRefreshKey 觸發重新渲染
+                            // v1.2.12: 創建新陣列 + resilienceRefreshKey 雙重確保更新
                             this.resilienceRefreshKey++;
                         } else {
                             try {
@@ -1423,13 +1431,20 @@
                             })
                         });
                         if (res.ok) {
-                            // v1.2.11: 樂觀更新 - 只更新本地狀態，不呼叫 loadResilienceStatus()
-                            // 因為 loadResilienceStatus() 會創建新陣列覆蓋掉我們的更新
-                            unit.last_check = new Date().toISOString();
-                            unit.status = 'AVAILABLE';
+                            // v1.2.12: 用 .map() 創建新陣列觸發 Alpine 響應式更新
+                            const unitId = unit.id;
+                            const newLastCheck = new Date().toISOString();
+                            console.log('[BioMed] v1.2.12: Confirming unit', unitId);
+
+                            this.resilienceStatus.oxygenUnits = (this.resilienceStatus.oxygenUnits || []).map(u => {
+                                if (u.id === unitId) {
+                                    return { ...u, last_check: newLastCheck, status: 'AVAILABLE' };
+                                }
+                                return u;
+                            });
 
                             this.showToast(`${unit.equipment_name} #${unit.unit_label || unit.unit_serial || ''} 已確認`, 'success');
-                            // v1.2.11: 移除 loadResilienceStatus()，只用 resilienceRefreshKey 觸發重新渲染
+                            // v1.2.12: 創建新陣列 + resilienceRefreshKey 雙重確保更新
                             this.resilienceRefreshKey++;
                         } else {
                             // 修復 [object Object] 錯誤訊息

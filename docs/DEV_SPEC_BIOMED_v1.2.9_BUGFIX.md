@@ -1,7 +1,7 @@
-# BioMed PWA v1.2.6 ~ v1.2.11 Bug 修復記錄
+# BioMed PWA v1.2.6 ~ v1.2.12 Bug 修復記錄
 
 **日期**: 2026-01-11
-**版本**: v1.2.6 → v1.2.11
+**版本**: v1.2.6 → v1.2.12
 **問題來源**: RPi 實機測試 + Gemini 程式碼審查
 
 ---
@@ -17,6 +17,7 @@
 | v1.2.9 | v1.2.8 修復無效 | $nextTick 前的 reset 清空陣列 | reset 時也保留空陣列 |
 | v1.2.10 | 確認後 UI 仍不更新 | API 成功但本地狀態未同步 | 樂觀更新 (Optimistic UI) |
 | v1.2.11 | v1.2.10 樂觀更新無效 | loadResilienceStatus() 創建新陣列覆蓋更新 | 移除 loadResilienceStatus() 呼叫 |
+| v1.2.12 | v1.2.11 仍無效 | Alpine.js 不偵測巢狀物件屬性變更 | 用 .map() 創建新陣列 |
 
 ---
 
@@ -178,6 +179,7 @@ return isOxygen && !isConcentrator && !isVentilator;
 | v1.2.9 | $nextTick 修復 | index.html |
 | v1.2.10 | 樂觀更新 (Gemini 建議) | index.html |
 | v1.2.11 | 移除 loadResilienceStatus() 呼叫 | index.html |
+| v1.2.12 | 用 .map() 創建新陣列觸發響應式 | index.html |
 
 ---
 
@@ -311,6 +313,89 @@ async confirmOxygenUnit(unit) {
 
 ---
 
+## 問題六：Alpine.js 響應式不偵測巢狀屬性變更 (v1.2.12)
+
+### 症狀
+- v1.2.11 修復後 RPi 和 Vercel 仍然無效
+- 編輯電量、確認狀態後，系統顯示成功訊息
+- 但回到前端 UI 完全沒更新，連電量都沒改變
+- 清除瀏覽器快取、強制刷新仍無效
+
+### 根因分析
+
+**Alpine.js 響應式限制：**
+
+Alpine.js (和 Vue.js) 的響應式系統無法偵測到**巢狀物件屬性**的變更：
+
+```javascript
+// 這樣 Alpine 不會偵測到變更！
+unit.level_percent = 50;
+unit.status = 'AVAILABLE';
+unit.last_check = new Date().toISOString();
+```
+
+雖然我們修改了物件的屬性，但物件的**參照 (reference)** 沒有改變，Alpine 認為「這還是同一個物件」所以不重新渲染。
+
+### v1.2.11 的問題
+
+```javascript
+// v1.2.11: 直接修改物件屬性
+const updateUnit = (units) => {
+    const unit = units?.find(u => u.id === this.unitEditForm.id);
+    if (unit) {
+        unit.level_percent = this.unitEditForm.level_percent;  // ← Alpine 不偵測
+        unit.status = this.unitEditForm.status;                 // ← Alpine 不偵測
+        unit.last_check = new Date().toISOString();             // ← Alpine 不偵測
+    }
+};
+```
+
+### 修復 (v1.2.12)
+
+**用 `.map()` 創建新陣列，強制 Alpine 偵測變更：**
+
+```javascript
+// v1.2.12: 創建新陣列觸發 Alpine 響應式
+const updateUnitInArray = (units) => {
+    if (!units) return units;
+    return units.map(u => {
+        if (u.id === this.unitEditForm.id) {
+            // 返回全新的物件 → Alpine 偵測到變更！
+            return {
+                ...u,
+                level_percent: this.unitEditForm.level_percent,
+                status: this.unitEditForm.status,
+                last_check: new Date().toISOString(),
+                psi: Math.round(this.unitEditForm.level_percent / 100 * 2200)
+            };
+        }
+        return u;
+    });
+};
+
+// 用新陣列取代舊陣列 → 觸發重新渲染
+this.resilienceStatus.oxygenUnits = updateUnitInArray(this.resilienceStatus.oxygenUnits);
+this.resilienceStatus.powerUnits = updateUnitInArray(this.resilienceStatus.powerUnits);
+```
+
+### 關鍵差異
+
+| 版本 | 做法 | 結果 |
+|------|------|------|
+| v1.2.11 | `unit.prop = value` (修改屬性) | Alpine 不偵測 |
+| v1.2.12 | `array.map()` (創建新陣列) | Alpine 偵測到 |
+
+### 驗證方式
+
+Console 會顯示：
+```
+[BioMed] v1.2.12: Updating unit xxx level: 50
+```
+
+如果看到這行 log 且 UI 沒更新，表示還有其他問題需調查。
+
+---
+
 ## 教訓與最佳實踐
 
 ### 1. Alpine.js 響應式陣列初始化
@@ -393,8 +478,24 @@ async confirm(item) {
 }
 ```
 
+### 6. Alpine.js 響應式更新巢狀物件
+
+Alpine.js 不會偵測巢狀物件屬性變更，必須創建新物件：
+
+```javascript
+// 錯誤：直接修改屬性
+item.value = newValue;  // Alpine 不偵測
+
+// 正確：用 .map() 創建新陣列
+this.items = this.items.map(i =>
+    i.id === targetId
+        ? { ...i, value: newValue }  // 新物件
+        : i
+);
+```
+
 ---
 
-**文件版本**: v1.2
+**文件版本**: v1.3
 **撰寫者**: Claude Code + Gemini (程式碼審查)
 **日期**: 2026-01-11

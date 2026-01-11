@@ -56,9 +56,13 @@
  *          + Remove loadResilienceStatus() after optimistic update
  *          + Only use resilienceRefreshKey++ to trigger re-render
  *          + Root cause: loadResilienceStatus() creates NEW array, overwrites updated unit
+ * v1.2.12: Fix Alpine.js reactivity issue
+ *          + Use .map() to create NEW array (Alpine doesn't detect nested property changes)
+ *          + Add console.log for debugging
+ *          + Root cause: modifying object properties doesn't trigger Alpine re-render
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.11';
+const CACHE_NAME = 'mirs-biomed-v1.2.12';
 
 const CORE_ASSETS = [
     '/biomed/',
