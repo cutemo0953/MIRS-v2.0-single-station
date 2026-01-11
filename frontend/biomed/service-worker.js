@@ -1,5 +1,5 @@
 /**
- * MIRS BioMed PWA Service Worker v1.2.5
+ * MIRS BioMed PWA Service Worker v1.2.6
  *
  * Provides offline caching for BioMed PWA.
  * Key features:
@@ -34,9 +34,14 @@
  *         + Unit edit modal (change level_percent + status)
  *         + loadPowerUnits() method
  *         + openUnitEditModal() + saveUnitEdit() methods
+ * v1.2.6: Fix equipment confirm UI update issue (RPi)
+ *         + Use check_status instead of status for grayscale
+ *         + Exclude 呼吸器 from oxygen section filter
+ *         + Add EMPTY status to unit edit modal (5 options)
+ *         + Sync status options between equipment and resilience
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.5';
+const CACHE_NAME = 'mirs-biomed-v1.2.6';
 
 const CORE_ASSETS = [
     '/biomed/',

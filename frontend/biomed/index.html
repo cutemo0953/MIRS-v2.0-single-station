@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.5</p>
+                    <p class="text-xs opacity-80">v1.2.6</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -162,7 +162,7 @@
                                     'bg-amber-50': eq.status === 'NORMAL',
                                     'bg-yellow-50': eq.status === 'WARNING',
                                     'bg-red-50': eq.status === 'ERROR',
-                                    'opacity-50 grayscale': eq.status === 'UNCHECKED' || eq.status === 'PENDING' || !eq.status
+                                    'opacity-50 grayscale': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS'
                                 }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
@@ -220,7 +220,7 @@
                                     'bg-amber-50': eq.status === 'NORMAL',
                                     'bg-yellow-50': eq.status === 'WARNING',
                                     'bg-red-50': eq.status === 'ERROR',
-                                    'opacity-50 grayscale': eq.status === 'UNCHECKED' || eq.status === 'PENDING' || !eq.status
+                                    'opacity-50 grayscale': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS'
                                 }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
@@ -272,7 +272,7 @@
                                     'bg-amber-50': eq.status === 'NORMAL',
                                     'bg-yellow-50': eq.status === 'WARNING',
                                     'bg-red-50': eq.status === 'ERROR',
-                                    'opacity-50 grayscale': eq.status === 'UNCHECKED' || eq.status === 'PENDING' || !eq.status
+                                    'opacity-50 grayscale': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS'
                                 }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
@@ -1051,6 +1051,7 @@
                         <option value="IN_USE">使用中</option>
                         <option value="CHARGING" x-show="unitEditForm.type === 'POWER'">充電中</option>
                         <option value="MAINTENANCE">維護中</option>
+                        <option value="EMPTY">已用完</option>
                     </select>
                 </div>
                 <!-- Actions -->
@@ -1265,18 +1266,22 @@
                     }
                 },
 
-                // v1.2.3: 載入所有氧氣鋼瓶的個別單位 (每瓶獨立，不含濃縮機)
+                // v1.2.6: 載入所有氧氣鋼瓶的個別單位 (每瓶獨立，不含濃縮機和呼吸器)
                 async loadOxygenUnits() {
                     try {
-                        // 找出氧氣鋼瓶設備 (排除濃縮機)
-                        const oxygenEquipment = this.equipment.filter(eq =>
-                            (eq.category?.includes('氧') ||
-                             eq.category?.includes('呼吸') ||
-                             eq.name?.includes('氧氣') ||
-                             eq.name?.includes('O2')) &&
-                            !eq.name?.includes('濃縮機') &&
-                            !eq.name?.includes('concentrator')
-                        );
+                        // 找出氧氣鋼瓶設備 (必須包含「氧氣」或「鋼瓶」，排除濃縮機和呼吸器)
+                        const oxygenEquipment = this.equipment.filter(eq => {
+                            const name = eq.name || '';
+                            const category = eq.category || '';
+                            // 必須是氧氣相關設備
+                            const isOxygen = name.includes('氧氣') || name.includes('O2') ||
+                                            name.includes('鋼瓶') || name.includes('氧瓶');
+                            // 排除濃縮機
+                            const isConcentrator = name.includes('濃縮機') || name.includes('concentrator');
+                            // 排除呼吸器 (ventilator)
+                            const isVentilator = name.includes('呼吸器') || name.includes('ventilator');
+                            return isOxygen && !isConcentrator && !isVentilator;
+                        });
 
                         const allUnits = [];
                         for (const eq of oxygenEquipment) {
@@ -1580,8 +1585,9 @@
                 },
 
                 getPendingCount() {
+                    // v1.2.6: 使用 check_status 判斷待確認設備
                     return this.equipment.filter(e =>
-                        e.status === 'UNCHECKED' || e.status === 'PENDING' || e.check_status === 'NO_UNITS'
+                        e.check_status === 'UNCHECKED' || e.check_status === 'NO_UNITS'
                     ).length;
                 },
 
@@ -1592,7 +1598,9 @@
                         'ERROR': '異常',
                         'UNCHECKED': '未檢',
                         'PENDING': '待確認',
-                        'NO_UNITS': '無單位'
+                        'NO_UNITS': '無單位',
+                        'CHECKED': '已確認',
+                        'PARTIAL': '部分確認'
                     };
                     return map[status] || status || '未知';
                 },
