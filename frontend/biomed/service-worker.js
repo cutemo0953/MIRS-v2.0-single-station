@@ -1,5 +1,5 @@
 /**
- * MIRS BioMed PWA Service Worker v1.2.4
+ * MIRS BioMed PWA Service Worker v1.2.5
  *
  * Provides offline caching for BioMed PWA.
  * Key features:
@@ -30,9 +30,13 @@
  *         + Remove x-collapse (use x-transition instead)
  *         + Check icon (✓ green / clock gray)
  *         + n/n 已檢查 counter
+ * v1.2.5: Power units individual display (like oxygen)
+ *         + Unit edit modal (change level_percent + status)
+ *         + loadPowerUnits() method
+ *         + openUnitEditModal() + saveUnitEdit() methods
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.4';
+const CACHE_NAME = 'mirs-biomed-v1.2.5';
 
 const CORE_ASSETS = [
     '/biomed/',

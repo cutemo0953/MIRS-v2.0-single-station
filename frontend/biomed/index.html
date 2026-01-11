@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.4</p>
+                    <p class="text-xs opacity-80">v1.2.5</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -543,7 +543,7 @@
                                     </div>
                                     <div class="flex items-center justify-between">
                                         <span class="text-xs" :class="unit.last_check ? 'text-orange-600' : 'text-gray-400'" x-text="unit.status === 'IN_USE' ? '使用中' : '備用'"></span>
-                                        <button @click="confirmOxygenUnit(unit)"
+                                        <button @click="openUnitEditModal(unit, 'OXYGEN')"
                                                 class="text-xs px-2 py-0.5 rounded transition-colors"
                                                 :class="unit.last_check ? 'bg-gray-200 text-gray-600 hover:bg-gray-300' : 'bg-orange-500 hover:bg-orange-600 text-white'">
                                             <span x-text="unit.last_check ? '編輯' : '確認'"></span>
@@ -622,26 +622,60 @@
                             <span> W</span>
                             <span class="text-gray-400 ml-1">(基礎100 + 呼吸器<span x-text="ventilatorCount"></span>x50)</span>
                         </div>
-                        <!-- v1.2.1: Power Resources List with Individual Bars + Confirmation -->
-                        <div class="space-y-2 border-t border-gray-100 pt-2" x-show="resilienceStatus.powerResources && resilienceStatus.powerResources.length > 0">
+                        <!-- v1.2.5: 電力設備 (每台獨立顯示, 未確認用灰色 bar) -->
+                        <div class="space-y-2 border-t border-gray-100 pt-2" x-show="resilienceStatus.powerUnits && resilienceStatus.powerUnits.length > 0">
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs text-yellow-700 font-medium">電力設備</p>
+                                <span class="text-xs text-yellow-600" x-text="resilienceStatus.powerUnits.filter(u => u.last_check).length + '/' + resilienceStatus.powerUnits.length + ' 已檢查'"></span>
+                            </div>
+                            <template x-for="(unit, idx) in (resilienceStatus.powerUnits || [])" :key="unit.id + '-power-' + resilienceRefreshKey">
+                                <div class="rounded-lg p-2 border transition-all" :class="unit.last_check ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <!-- Check icon -->
+                                        <template x-if="unit.last_check">
+                                            <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                            </svg>
+                                        </template>
+                                        <template x-if="!unit.last_check">
+                                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </template>
+                                        <span class="text-xs font-medium flex-1" :class="unit.last_check ? 'text-gray-800' : 'text-gray-500'" x-text="unit.unit_label || (unit.equipment_name + ' #' + (idx + 1))"></span>
+                                        <span class="text-xs font-bold" :class="unit.last_check ? (unit.level_percent >= 60 ? 'text-amber-600' : unit.level_percent >= 30 ? 'text-orange-600' : 'text-red-600') : 'text-gray-400'" x-text="unit.level_percent + '%'"></span>
+                                    </div>
+                                    <!-- Progress Bar: gray if unchecked, amber/orange/red if checked -->
+                                    <div class="relative h-2 bg-gray-200 rounded-full overflow-hidden mb-1">
+                                        <div class="h-full transition-all duration-300"
+                                             :class="unit.last_check ? (unit.level_percent >= 60 ? 'bg-amber-500' : unit.level_percent >= 30 ? 'bg-orange-400' : 'bg-red-500') : 'bg-gray-400'"
+                                             :style="'width: ' + (unit.level_percent || 0) + '%'"></div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs" :class="unit.last_check ? 'text-yellow-600' : 'text-gray-400'" x-text="unit.status === 'CHARGING' ? '充電中' : (unit.status === 'IN_USE' ? '使用中' : '備用')"></span>
+                                        <div class="flex gap-1">
+                                            <button @click="openUnitEditModal(unit, 'POWER')"
+                                                    class="text-xs px-2 py-0.5 rounded transition-colors"
+                                                    :class="unit.last_check ? 'bg-gray-200 text-gray-600 hover:bg-gray-300' : 'bg-yellow-500 hover:bg-yellow-600 text-white'">
+                                                <span x-text="unit.last_check ? '編輯' : '確認'"></span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <!-- Fallback: 舊版聚合顯示 -->
+                        <div class="space-y-2 border-t border-gray-100 pt-2" x-show="(!resilienceStatus.powerUnits || resilienceStatus.powerUnits.length === 0) && resilienceStatus.powerResources && resilienceStatus.powerResources.length > 0">
                             <template x-for="(res, idx) in (resilienceStatus.powerResources || [])" :key="res.name + idx + '-' + resilienceRefreshKey">
                                 <div class="bg-yellow-50 rounded-lg p-2 border border-yellow-100">
                                     <div class="flex items-center justify-between mb-1">
                                         <span class="text-xs font-medium text-yellow-800" x-text="res.name + (res.quantity > 1 ? ' x' + res.quantity : '')"></span>
                                         <span class="text-xs font-bold" :class="(res.charge_pct || res.fuel_pct) >= 60 ? 'text-amber-600' : (res.charge_pct || res.fuel_pct) >= 30 ? 'text-orange-600' : 'text-red-600'" x-text="res.charge_pct ? res.charge_pct + '%' : (res.fuel_pct ? res.fuel_pct + '%' : '-')"></span>
                                     </div>
-                                    <!-- Individual Progress Bar (v1.2.2: amber/orange/red only) -->
                                     <div class="relative h-2 bg-gray-200 rounded-full overflow-hidden mb-1">
                                         <div class="h-full transition-all duration-300"
                                              :class="(res.charge_pct || res.fuel_pct) >= 60 ? 'bg-amber-500' : (res.charge_pct || res.fuel_pct) >= 30 ? 'bg-orange-400' : 'bg-red-500'"
                                              :style="'width: ' + (res.charge_pct || res.fuel_pct || 0) + '%'"></div>
-                                    </div>
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-xs text-gray-400" x-text="res.charge_pct ? '電池' : (res.fuel_pct ? '燃油' : '')"></span>
-                                        <button @click="confirmResourceFromResilience(res, 'POWER')"
-                                                class="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-0.5 rounded transition-colors">
-                                            確認
-                                        </button>
                                     </div>
                                 </div>
                             </template>
@@ -979,6 +1013,62 @@
         </div>
     </div>
 
+    <!-- v1.2.5: Unit Edit Modal (氧氣瓶/電站 編輯百分比) -->
+    <div x-show="showUnitEditModal" x-cloak
+         class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+         @click.self="showUnitEditModal = false">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+            <div class="px-4 py-3 rounded-t-2xl flex items-center justify-between"
+                 :class="unitEditForm.type === 'OXYGEN' ? 'bg-orange-500 text-white' : 'bg-yellow-500 text-white'">
+                <h3 class="font-semibold" x-text="unitEditForm.unit_label || unitEditForm.equipment_name"></h3>
+                <button @click="showUnitEditModal = false" class="text-white hover:text-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <!-- Level Percent -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">剩餘量 (%)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="range" x-model.number="unitEditForm.level_percent" min="0" max="100" step="5"
+                               class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        <input type="number" x-model.number="unitEditForm.level_percent" min="0" max="100"
+                               class="w-20 px-2 py-1 border border-gray-300 rounded-lg text-center">
+                        <span class="text-gray-500">%</span>
+                    </div>
+                    <!-- PSI 顯示 (僅氧氣瓶) -->
+                    <p class="text-xs text-gray-500 mt-1" x-show="unitEditForm.type === 'OXYGEN'"
+                       x-text="'≈ ' + Math.round(unitEditForm.level_percent / 100 * 2200) + ' PSI'"></p>
+                </div>
+                <!-- Status -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">狀態</label>
+                    <select x-model="unitEditForm.status"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500">
+                        <option value="AVAILABLE">備用</option>
+                        <option value="IN_USE">使用中</option>
+                        <option value="CHARGING" x-show="unitEditForm.type === 'POWER'">充電中</option>
+                        <option value="MAINTENANCE">維護中</option>
+                    </select>
+                </div>
+                <!-- Actions -->
+                <div class="flex gap-3 pt-2">
+                    <button @click="showUnitEditModal = false"
+                            class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition-colors">
+                        取消
+                    </button>
+                    <button @click="saveUnitEdit()"
+                            class="flex-1 py-2 rounded-lg text-white transition-colors"
+                            :class="unitEditForm.type === 'OXYGEN' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-yellow-500 hover:bg-yellow-600'">
+                        確認
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div x-show="toast.show" x-transition
          class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg z-50"
@@ -1005,6 +1095,7 @@
                 showAddModal: false,
                 showEditModal: false,
                 showUnitManageModal: false,
+                showUnitEditModal: false,  // v1.2.5: 單位編輯 Modal
                 showFormulaHint: false,
                 equipmentForm: {
                     id: '',
@@ -1012,6 +1103,16 @@
                     category: '',
                     quantity: 1,
                     power_level: null
+                },
+                // v1.2.5: 單位編輯表單
+                unitEditForm: {
+                    id: null,
+                    equipment_id: '',
+                    equipment_name: '',
+                    unit_label: '',
+                    level_percent: 100,
+                    status: 'AVAILABLE',
+                    type: 'OXYGEN'  // OXYGEN or POWER
                 },
 
                 // v1.2.1: Scenario inputs for survival calculator (Medical-grade O2 formulas)
@@ -1114,6 +1215,9 @@
                             // v1.2.3: 獲取個別氧氣瓶單位 (每瓶獨立顯示)
                             const oxygenUnits = await this.loadOxygenUnits();
 
+                            // v1.2.5: 獲取個別電力設備單位 (每台獨立顯示)
+                            const powerUnits = await this.loadPowerUnits();
+
                             const powerResources = powerLifelines.flatMap(l =>
                                 (l.inventory?.items || []).map(item => ({
                                     name: item.name,
@@ -1147,7 +1251,8 @@
                                 power: { hours: powerHours },
                                 oxygenResources: oxygenResources,
                                 oxygenUnits: oxygenUnits,  // v1.2.3: 個別氧氣瓶單位
-                                powerResources: powerResources
+                                powerResources: powerResources,
+                                powerUnits: powerUnits      // v1.2.5: 個別電力設備單位
                             };
 
                             console.log('[BioMed] Parsed resilience:', {
@@ -1198,6 +1303,88 @@
                     } catch (err) {
                         console.error('[BioMed] Failed to load oxygen units:', err);
                         return [];
+                    }
+                },
+
+                // v1.2.5: 載入所有電力設備的個別單位 (每台獨立顯示)
+                async loadPowerUnits() {
+                    try {
+                        // 找出電力設備
+                        const powerEquipment = this.equipment.filter(eq =>
+                            eq.category?.includes('電力') ||
+                            eq.name?.includes('電源') ||
+                            eq.name?.includes('發電') ||
+                            eq.name?.includes('UPS')
+                        );
+
+                        const allUnits = [];
+                        for (const eq of powerEquipment) {
+                            try {
+                                const res = await fetch(`/api/v2/equipment/${eq.id}/units`);
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    const units = (data.units || []).map(u => ({
+                                        ...u,
+                                        equipment_id: eq.id,
+                                        equipment_name: eq.name
+                                    }));
+                                    allUnits.push(...units);
+                                }
+                            } catch (e) {
+                                console.warn(`[BioMed] Failed to load power units for ${eq.id}:`, e);
+                            }
+                        }
+                        console.log('[BioMed] Loaded power units:', allUnits);
+                        return allUnits;
+                    } catch (err) {
+                        console.error('[BioMed] Failed to load power units:', err);
+                        return [];
+                    }
+                },
+
+                // v1.2.5: 開啟單位編輯 Modal
+                openUnitEditModal(unit, type) {
+                    this.unitEditForm = {
+                        id: unit.id,
+                        equipment_id: unit.equipment_id,
+                        equipment_name: unit.equipment_name,
+                        unit_label: unit.unit_label || unit.unit_serial || '',
+                        level_percent: unit.level_percent || Math.round((unit.psi || 0) / 2200 * 100),
+                        status: unit.status || 'AVAILABLE',
+                        type: type
+                    };
+                    this.showUnitEditModal = true;
+                },
+
+                // v1.2.5: 儲存單位編輯
+                async saveUnitEdit() {
+                    try {
+                        const res = await fetch(`/api/v2/equipment/units/${this.unitEditForm.id}/check`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                level_percent: this.unitEditForm.level_percent,
+                                status: this.unitEditForm.status,
+                                remarks: `編輯更新: ${this.unitEditForm.level_percent}%`
+                            })
+                        });
+                        if (res.ok) {
+                            this.showToast(`${this.unitEditForm.equipment_name} ${this.unitEditForm.unit_label} 已更新`, 'success');
+                            this.showUnitEditModal = false;
+                            await this.loadResilienceStatus();
+                            this.resilienceRefreshKey++;
+                        } else {
+                            try {
+                                const err = await res.json();
+                                const msg = typeof err === 'string' ? err : (err.detail || err.message || JSON.stringify(err));
+                                this.showToast(msg, 'error');
+                            } catch {
+                                this.showToast(`更新失敗 (HTTP ${res.status})`, 'error');
+                            }
+                        }
+                    } catch (err) {
+                        console.error('[BioMed] Failed to save unit edit:', err);
+                        this.showToast('更新失敗: 網路錯誤', 'error');
                     }
                 },
 
