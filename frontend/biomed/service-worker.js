@@ -1,5 +1,5 @@
 /**
- * MIRS BioMed PWA Service Worker v1.2.3
+ * MIRS BioMed PWA Service Worker v1.2.4
  *
  * Provides offline caching for BioMed PWA.
  * Key features:
@@ -24,9 +24,15 @@
  * v1.2.3: Unchecked equipment grayscale display
  *         + Individual oxygen bottle bars with PSI
  *         + Separate concentrator display (not using PSI)
+ * v1.2.4: Fix oxygen unit confirm API (422 error)
+ *         + Gray progress bar for unchecked items
+ *         + Amber/orange/red bar for checked items
+ *         + Remove x-collapse (use x-transition instead)
+ *         + Check icon (✓ green / clock gray)
+ *         + n/n 已檢查 counter
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.3';
+const CACHE_NAME = 'mirs-biomed-v1.2.4';
 
 const CORE_ASSETS = [
     '/biomed/',

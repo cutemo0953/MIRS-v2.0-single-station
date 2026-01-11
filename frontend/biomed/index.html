@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.3</p>
+                    <p class="text-xs opacity-80">v1.2.4</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -511,26 +511,42 @@
                             </template>
                         </div>
 
-                        <!-- v1.2.3: 氧氣鋼瓶 (每瓶獨立顯示 PSI) -->
+                        <!-- v1.2.4: 氧氣鋼瓶 (每瓶獨立顯示 PSI, 未確認用灰色 bar) -->
                         <div class="space-y-2 border-t border-gray-100 pt-2" x-show="resilienceStatus.oxygenUnits && resilienceStatus.oxygenUnits.length > 0">
-                            <p class="text-xs text-orange-700 font-medium">氧氣鋼瓶</p>
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs text-orange-700 font-medium">氧氣鋼瓶</p>
+                                <span class="text-xs text-orange-600" x-text="resilienceStatus.oxygenUnits.filter(u => u.last_check).length + '/' + resilienceStatus.oxygenUnits.length + ' 已檢查'"></span>
+                            </div>
                             <template x-for="(unit, idx) in (resilienceStatus.oxygenUnits || [])" :key="unit.id + '-' + resilienceRefreshKey">
-                                <div class="rounded-lg p-2 border transition-all" :class="unit.last_check ? 'bg-orange-50 border-orange-100' : 'bg-gray-100 border-gray-200 opacity-60'">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="text-xs font-medium" :class="unit.last_check ? 'text-orange-800' : 'text-gray-500'" x-text="unit.equipment_name + ' #' + (unit.unit_label || unit.unit_serial || (idx + 1))"></span>
-                                        <span class="text-xs font-bold" :class="unit.psi >= 1320 ? 'text-amber-600' : unit.psi >= 660 ? 'text-orange-600' : 'text-red-600'" x-text="unit.psi ? unit.psi + ' PSI' : '-'"></span>
+                                <div class="rounded-lg p-2 border transition-all" :class="unit.last_check ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <!-- Check icon: ✓ for checked, clock for unchecked -->
+                                        <template x-if="unit.last_check">
+                                            <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                            </svg>
+                                        </template>
+                                        <template x-if="!unit.last_check">
+                                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </template>
+                                        <span class="text-xs font-medium flex-1" :class="unit.last_check ? 'text-gray-800' : 'text-gray-500'" x-text="unit.unit_label || (unit.equipment_name?.includes('E') ? 'E型' : 'H型') + (idx + 1) + '號'"></span>
+                                        <span class="text-xs font-bold" :class="unit.last_check ? (unit.psi >= 1320 ? 'text-amber-600' : unit.psi >= 660 ? 'text-orange-600' : 'text-red-600') : 'text-gray-400'" x-text="(unit.level_percent || Math.round((unit.psi || 0) / 2200 * 100)) + '%'"></span>
+                                        <span class="text-xs text-gray-400" x-text="unit.capacity_L ? unit.capacity_L + 'L' : (unit.equipment_name?.includes('H型') ? '6,900L' : '680L')"></span>
                                     </div>
-                                    <!-- Progress Bar (calculated from PSI, H cylinder max = 2200 PSI) -->
+                                    <!-- Progress Bar: gray if unchecked, amber/orange/red if checked -->
                                     <div class="relative h-2 bg-gray-200 rounded-full overflow-hidden mb-1">
                                         <div class="h-full transition-all duration-300"
-                                             :class="(unit.psi / 2200 * 100) >= 60 ? 'bg-amber-500' : (unit.psi / 2200 * 100) >= 30 ? 'bg-orange-400' : 'bg-red-500'"
-                                             :style="'width: ' + Math.min((unit.psi || 0) / 2200 * 100, 100) + '%'"></div>
+                                             :class="unit.last_check ? ((unit.level_percent || unit.psi / 2200 * 100) >= 60 ? 'bg-amber-500' : (unit.level_percent || unit.psi / 2200 * 100) >= 30 ? 'bg-orange-400' : 'bg-red-500') : 'bg-gray-400'"
+                                             :style="'width: ' + Math.min(unit.level_percent || (unit.psi || 0) / 2200 * 100, 100) + '%'"></div>
                                     </div>
                                     <div class="flex items-center justify-between">
-                                        <span class="text-xs text-gray-400" x-text="unit.capacity_L ? unit.capacity_L + 'L' : (unit.equipment_name?.includes('H型') ? '6900L' : '680L')"></span>
+                                        <span class="text-xs" :class="unit.last_check ? 'text-orange-600' : 'text-gray-400'" x-text="unit.status === 'IN_USE' ? '使用中' : '備用'"></span>
                                         <button @click="confirmOxygenUnit(unit)"
-                                                class="text-xs bg-orange-500 hover:bg-orange-600 text-white px-2 py-0.5 rounded transition-colors">
-                                            確認
+                                                class="text-xs px-2 py-0.5 rounded transition-colors"
+                                                :class="unit.last_check ? 'bg-gray-200 text-gray-600 hover:bg-gray-300' : 'bg-orange-500 hover:bg-orange-600 text-white'">
+                                            <span x-text="unit.last_check ? '編輯' : '確認'"></span>
                                         </button>
                                     </div>
                                 </div>
@@ -646,7 +662,7 @@
                     </svg>
                     計算公式說明
                 </button>
-                <div x-show="showFormula" x-collapse class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                <div x-show="showFormula" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
                     <div class="space-y-2 text-gray-700">
                         <p class="font-medium text-amber-700 mb-1">▎鋼瓶氧氣供應</p>
                         <p><strong>氧氣時數</strong> = Σ(每瓶容量 × 充填%) ÷ (10 L/min × 等效人數 × 60)</p>
@@ -1185,28 +1201,37 @@
                     }
                 },
 
-                // v1.2.3: 確認單一氧氣瓶單位
+                // v1.2.4: 確認單一氧氣瓶單位 (修復 422 錯誤)
                 async confirmOxygenUnit(unit) {
                     try {
+                        // API 需要 level_percent (必填), status, remarks
+                        const levelPercent = unit.level_percent || Math.round((unit.psi || 0) / 2200 * 100);
                         const res = await fetch(`/api/v2/equipment/units/${unit.id}/check`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
+                                level_percent: levelPercent,
                                 status: 'AVAILABLE',
-                                notes: `確認 PSI: ${unit.psi}`
+                                remarks: `確認 PSI: ${unit.psi || '-'}`
                             })
                         });
                         if (res.ok) {
-                            this.showToast(`${unit.equipment_name} #${unit.unit_label || unit.unit_serial} 已確認`, 'success');
+                            this.showToast(`${unit.equipment_name} #${unit.unit_label || unit.unit_serial || ''} 已確認`, 'success');
                             await this.loadResilienceStatus();
                             this.resilienceRefreshKey++;
                         } else {
-                            const err = await res.json();
-                            this.showToast(err.detail || '確認失敗', 'error');
+                            // 修復 [object Object] 錯誤訊息
+                            try {
+                                const err = await res.json();
+                                const msg = typeof err === 'string' ? err : (err.detail || err.message || JSON.stringify(err));
+                                this.showToast(msg, 'error');
+                            } catch {
+                                this.showToast(`確認失敗 (HTTP ${res.status})`, 'error');
+                            }
                         }
                     } catch (err) {
                         console.error('[BioMed] Failed to confirm oxygen unit:', err);
-                        this.showToast('確認失敗', 'error');
+                        this.showToast('確認失敗: 網路錯誤', 'error');
                     }
                 },
 
