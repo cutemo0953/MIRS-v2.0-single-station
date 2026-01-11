@@ -1,5 +1,5 @@
 /**
- * MIRS BioMed PWA Service Worker v1.2.11
+ * MIRS BioMed PWA Service Worker v1.2.18
  *
  * Provides offline caching for BioMed PWA.
  * Key features:
@@ -83,9 +83,15 @@
  *          + check_status (view): UNCHECKED/PARTIAL/CHECKED
  *          + status (UI text): UNCHECKED/WARNING/NORMAL
  *          + Simplified logic: default to NORMAL on successful check
+ * v1.2.18: ChatGPT Fix A - UI 只讀 check_status (根治欄位契約問題)
+ *          + 所有狀態 badge 改用 check_status (不再用 status)
+ *          + 統計欄「已確認」改用 check_status === 'CHECKED'
+ *          + getPendingCount() 只用 check_status 判斷
+ *          + 氧氣濃縮機狀態改用 check_status
+ *          + 移除對 status 欄位的依賴，徹底解決欄位契約問題
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.17';
+const CACHE_NAME = 'mirs-biomed-v1.2.18';
 
 const CORE_ASSETS = [
     '/biomed/',

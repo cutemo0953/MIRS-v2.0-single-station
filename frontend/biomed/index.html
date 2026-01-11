@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.17</p>
+                    <p class="text-xs opacity-80">v1.2.18</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -115,7 +115,8 @@
                     <p class="text-xs text-gray-500">總設備數</p>
                 </div>
                 <div class="bg-white rounded-lg p-3 shadow text-center">
-                    <p class="text-2xl font-bold text-green-500" x-text="equipment.filter(e => e.status === 'NORMAL').length"></p>
+                    <!-- v1.2.18: 改用 check_status -->
+                    <p class="text-2xl font-bold text-green-500" x-text="equipment.filter(e => e.check_status === 'CHECKED').length"></p>
                     <p class="text-xs text-gray-500">已確認</p>
                 </div>
                 <div class="bg-white rounded-lg p-3 shadow text-center">
@@ -159,10 +160,10 @@
                         <tbody class="divide-y divide-gray-100">
                             <template x-for="eq in getPowerSupplyEquipment()" :key="eq.id + '-' + equipmentRefreshKey">
                                 <tr class="hover:bg-gray-50 transition-all" :class="{
-                                    'bg-amber-50': eq.status === 'NORMAL',
-                                    'bg-yellow-50': eq.status === 'WARNING',
+                                    'bg-amber-50': eq.check_status === 'CHECKED',
+                                    'bg-yellow-50': eq.check_status === 'PARTIAL',
                                     'bg-red-50': eq.status === 'ERROR',
-                                    'opacity-50 grayscale': (eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS') && eq.status !== 'NORMAL'
+                                    'opacity-50 grayscale': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS' || !eq.check_status
                                 }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
@@ -174,7 +175,8 @@
                                         <span x-show="eq.power_level === null || eq.power_level === undefined" class="text-gray-400">-</span>
                                     </td>
                                     <td class="px-3 py-2 text-center">
-                                        <span :class="{ 'bg-green-100 text-green-800': eq.status === 'NORMAL', 'bg-yellow-100 text-yellow-800': eq.status === 'WARNING', 'bg-red-100 text-red-800': eq.status === 'ERROR', 'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING' }" class="px-2 py-0.5 text-xs font-medium rounded-full" x-text="getStatusText(eq.status)"></span>
+                                        <!-- v1.2.18: ChatGPT Fix A - UI 直接讀 check_status -->
+                                        <span :class="{ 'bg-green-100 text-green-800': eq.check_status === 'CHECKED', 'bg-yellow-100 text-yellow-800': eq.check_status === 'PARTIAL', 'bg-gray-100 text-gray-800': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS' || !eq.check_status }" class="px-2 py-0.5 text-xs font-medium rounded-full" x-text="getStatusText(eq.check_status)"></span>
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
@@ -217,17 +219,18 @@
                         <tbody class="divide-y divide-gray-100">
                             <template x-for="eq in getPowerConsumingEquipment()" :key="eq.id + '-' + equipmentRefreshKey">
                                 <tr class="hover:bg-gray-50 transition-all" :class="{
-                                    'bg-amber-50': eq.status === 'NORMAL',
-                                    'bg-yellow-50': eq.status === 'WARNING',
+                                    'bg-amber-50': eq.check_status === 'CHECKED',
+                                    'bg-yellow-50': eq.check_status === 'PARTIAL',
                                     'bg-red-50': eq.status === 'ERROR',
-                                    'opacity-50 grayscale': (eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS') && eq.status !== 'NORMAL'
+                                    'opacity-50 grayscale': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS' || !eq.check_status
                                 }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
                                     <td class="px-3 py-2 text-gray-600 hidden sm:table-cell" x-text="eq.category || '-'"></td>
                                     <td class="px-3 py-2 text-center font-semibold" x-text="eq.quantity || eq.unit_count || 1"></td>
                                     <td class="px-3 py-2 text-center">
-                                        <span :class="{ 'bg-green-100 text-green-800': eq.status === 'NORMAL', 'bg-yellow-100 text-yellow-800': eq.status === 'WARNING', 'bg-red-100 text-red-800': eq.status === 'ERROR', 'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING' }" class="px-2 py-0.5 text-xs font-medium rounded-full" x-text="getStatusText(eq.status)"></span>
+                                        <!-- v1.2.18: ChatGPT Fix A - UI 直接讀 check_status -->
+                                        <span :class="{ 'bg-green-100 text-green-800': eq.check_status === 'CHECKED', 'bg-yellow-100 text-yellow-800': eq.check_status === 'PARTIAL', 'bg-gray-100 text-gray-800': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS' || !eq.check_status }" class="px-2 py-0.5 text-xs font-medium rounded-full" x-text="getStatusText(eq.check_status)"></span>
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
@@ -269,16 +272,17 @@
                         <tbody class="divide-y divide-gray-100">
                             <template x-for="eq in getNonElectricEquipment()" :key="eq.id + '-' + equipmentRefreshKey">
                                 <tr class="hover:bg-gray-50 transition-all" :class="{
-                                    'bg-amber-50': eq.status === 'NORMAL',
-                                    'bg-yellow-50': eq.status === 'WARNING',
+                                    'bg-amber-50': eq.check_status === 'CHECKED',
+                                    'bg-yellow-50': eq.check_status === 'PARTIAL',
                                     'bg-red-50': eq.status === 'ERROR',
-                                    'opacity-50 grayscale': (eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS') && eq.status !== 'NORMAL'
+                                    'opacity-50 grayscale': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS' || !eq.check_status
                                 }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
                                     <td class="px-3 py-2 text-center font-semibold" x-text="eq.quantity || eq.unit_count || 1"></td>
                                     <td class="px-3 py-2 text-center">
-                                        <span :class="{ 'bg-green-100 text-green-800': eq.status === 'NORMAL', 'bg-yellow-100 text-yellow-800': eq.status === 'WARNING', 'bg-red-100 text-red-800': eq.status === 'ERROR', 'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING' }" class="px-2 py-0.5 text-xs font-medium rounded-full" x-text="getStatusText(eq.status)"></span>
+                                        <!-- v1.2.18: ChatGPT Fix A - UI 直接讀 check_status -->
+                                        <span :class="{ 'bg-green-100 text-green-800': eq.check_status === 'CHECKED', 'bg-yellow-100 text-yellow-800': eq.check_status === 'PARTIAL', 'bg-gray-100 text-gray-800': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS' || !eq.check_status }" class="px-2 py-0.5 text-xs font-medium rounded-full" x-text="getStatusText(eq.check_status)"></span>
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
@@ -495,11 +499,12 @@
                         <div class="space-y-2 border-t border-gray-100 pt-2" x-show="getConcentrators().length > 0">
                             <p class="text-xs text-amber-700 font-medium">氧氣濃縮機</p>
                             <template x-for="(eq, idx) in getConcentrators()" :key="eq.id + '-concentrator-' + resilienceRefreshKey">
-                                <div class="rounded-lg p-2 border transition-all" :class="eq.status === 'NORMAL' ? 'bg-amber-50 border-amber-200' : 'bg-gray-100 border-gray-200 opacity-60'">
+                                <!-- v1.2.18: 改用 check_status 判斷 -->
+                                <div class="rounded-lg p-2 border transition-all" :class="eq.check_status === 'CHECKED' ? 'bg-amber-50 border-amber-200' : 'bg-gray-100 border-gray-200 opacity-60'">
                                     <div class="flex items-center justify-between">
-                                        <span class="text-xs font-medium" :class="eq.status === 'NORMAL' ? 'text-amber-800' : 'text-gray-500'" x-text="eq.name"></span>
+                                        <span class="text-xs font-medium" :class="eq.check_status === 'CHECKED' ? 'text-amber-800' : 'text-gray-500'" x-text="eq.name"></span>
                                         <div class="flex items-center gap-2">
-                                            <span class="text-xs" :class="eq.status === 'NORMAL' ? 'text-amber-600 font-bold' : 'text-gray-400'" x-text="eq.status === 'NORMAL' ? '運轉中' : '待確認'"></span>
+                                            <span class="text-xs" :class="eq.check_status === 'CHECKED' ? 'text-amber-600 font-bold' : 'text-gray-400'" x-text="eq.check_status === 'CHECKED' ? '運轉中' : '待確認'"></span>
                                             <button @click="checkEquipment(eq)"
                                                     class="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2 py-0.5 rounded transition-colors">
                                                 確認
@@ -1718,9 +1723,9 @@
                 },
 
                 getPendingCount() {
-                    // v1.2.7: 同時考慮 check_status 和 status (設備確認後 status=NORMAL)
+                    // v1.2.18: 只用 check_status 判斷 (ChatGPT Fix A)
                     return this.equipment.filter(e =>
-                        (e.check_status === 'UNCHECKED' || e.check_status === 'NO_UNITS') && e.status !== 'NORMAL'
+                        e.check_status === 'UNCHECKED' || e.check_status === 'NO_UNITS' || !e.check_status
                     ).length;
                 },
 
