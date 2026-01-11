@@ -1,5 +1,5 @@
 /**
- * MIRS BioMed PWA Service Worker v1.2.1
+ * MIRS BioMed PWA Service Worker v1.2.2
  *
  * Provides offline caching for BioMed PWA.
  * Key features:
@@ -17,9 +17,13 @@
  * v1.2.1: Medical-grade O2 formulas (cannula=0.3, mask=0.6, ventilator=1.0)
  *         + Oxygen color changed from blue to orange
  *         + Oxygen concentrator support (reduces bottle consumption)
+ * v1.2.2: Vercel serverless demo warning
+ *         + Simplified scenario input UI (2-column layout)
+ *         + amber/orange/red only color scheme (no blue/green)
+ *         + MIRS-style formula explanation with ▎ headers
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.1';
+const CACHE_NAME = 'mirs-biomed-v1.2.2';
 
 const CORE_ASSETS = [
     '/biomed/',
