@@ -173,7 +173,7 @@
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
-                                            <button @click="openUnitManageModal(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認/管理">✓⊞</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認/管理">✓</button>
                                             <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
                                             <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
                                         </div>
@@ -221,7 +221,7 @@
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
-                                            <button @click="openUnitManageModal(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認/管理">✓⊞</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認/管理">✓</button>
                                             <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
                                             <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
                                         </div>
@@ -267,7 +267,7 @@
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
-                                            <button @click="openUnitManageModal(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認/管理">✓⊞</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認/管理">✓</button>
                                             <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
                                             <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
                                         </div>
@@ -782,10 +782,47 @@
                             const data = await res.json();
                             console.log('[BioMed] Resilience API response:', data);
 
-                            const oxygenLifeline = data.lifelines?.find(l => l.type === 'OXYGEN');
-                            const powerLifeline = data.lifelines?.find(l => l.type === 'POWER');
-                            const weakestLifeline = data.lifelines?.reduce((min, ll) =>
-                                (!min || (ll.endurance?.effective_hours || 0) < (min.endurance?.effective_hours || 0)) ? ll : min, null);
+                            // v1.1.5: 正確解析 API 回傳結構
+                            // API 回傳 lifelines 陣列，每個 lifeline 有 inventory.items
+                            const oxygenLifelines = (data.lifelines || []).filter(l => l.type === 'OXYGEN');
+                            const powerLifelines = (data.lifelines || []).filter(l => l.type === 'POWER');
+
+                            // 計算總時數 (取最大值，因為有多種來源)
+                            const oxygenHours = oxygenLifelines.reduce((max, l) => {
+                                const h = l.endurance?.effective_hours;
+                                return (typeof h === 'number' && h > max) ? h : max;
+                            }, 0);
+                            const powerHours = powerLifelines.reduce((max, l) => {
+                                const h = l.endurance?.effective_hours;
+                                return (typeof h === 'number' && h > max) ? h : max;
+                            }, 0);
+
+                            // 展平所有 lifelines 的 inventory.items 並映射欄位
+                            const oxygenResources = oxygenLifelines.flatMap(l =>
+                                (l.inventory?.items || []).map(item => ({
+                                    name: item.name,
+                                    quantity: item.qty,
+                                    fill_pct: item.avg_level,
+                                    capacity_L: item.capacity_each
+                                }))
+                            );
+
+                            const powerResources = powerLifelines.flatMap(l =>
+                                (l.inventory?.items || []).map(item => ({
+                                    name: item.name,
+                                    quantity: item.qty,
+                                    // 電源站用 charge_pct，發電機用 fuel_pct
+                                    charge_pct: item.device_type === 'POWER_STATION' ? item.avg_level : null,
+                                    fuel_pct: item.device_type === 'GENERATOR' ? item.avg_level : null
+                                }))
+                            );
+
+                            const weakestLifeline = (data.lifelines || []).reduce((min, ll) => {
+                                const h = ll.endurance?.effective_hours;
+                                if (typeof h !== 'number') return min;
+                                if (!min || h < (min.endurance?.effective_hours || Infinity)) return ll;
+                                return min;
+                            }, null);
 
                             // v1.1.4: 使用 $nextTick 確保 Alpine 響應式更新
                             this.resilienceStatus = {};
@@ -795,14 +832,14 @@
                                 summary: {
                                     overall_status: data.summary?.overall_status || 'UNKNOWN',
                                     weakest_link: weakestLifeline ? {
-                                        hours: weakestLifeline.endurance?.effective_hours || weakestLifeline.endurance?.hours || 0,
+                                        hours: weakestLifeline.endurance?.effective_hours || 0,
                                         resource: weakestLifeline.name
                                     } : null
                                 },
-                                oxygen: oxygenLifeline?.endurance || { hours: 0 },
-                                power: powerLifeline?.endurance || { hours: 0 },
-                                oxygenResources: oxygenLifeline?.resources || [],
-                                powerResources: powerLifeline?.resources || []
+                                oxygen: { hours: oxygenHours },
+                                power: { hours: powerHours },
+                                oxygenResources: oxygenResources,
+                                powerResources: powerResources
                             };
 
                             console.log('[BioMed] Parsed resilience:', {

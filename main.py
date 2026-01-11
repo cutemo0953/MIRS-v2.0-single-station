@@ -8801,47 +8801,61 @@ async def get_resilience_status(station_id: Optional[str] = Query(None)):
     並與孤立天數目標比較，回傳警戒狀態。
     """
     # Vercel demo 模式：返回模擬韌性資料
+    # v1.1.5: 修正結構以符合真實 API (inventory.items 而非 resources)
     if IS_VERCEL:
         return {
             "summary": {
                 "overall_status": "WARNING",
                 "calculated_at": "2026-01-10T10:00:00Z",
-                "station_id": "DEMO-STATION"
+                "station_id": "DEMO-STATION",
+                "weakest_link": {"hours": 36.5, "type": "OXYGEN", "item": "氧氣供應"}
             },
             "lifelines": [
                 {
                     "type": "OXYGEN",
-                    "name": "氧氣供應",
+                    "item_code": "O2-SUPPLY",
+                    "name": "氧氣供應(鋼瓶)",
                     "endurance": {
                         "effective_hours": 36.5,
-                        "hours": 36.5,
-                        "days": 1.52,
-                        "status": "WARNING"
+                        "raw_hours": 36.5,
+                        "effective_days": 1.52
                     },
-                    "resources": [
-                        {"name": "H型氧氣鋼瓶", "quantity": 5, "capacity_L": 6800, "fill_pct": 80},
-                        {"name": "E型氧氣瓶", "quantity": 4, "capacity_L": 680, "fill_pct": 65}
-                    ]
+                    "status": "WARNING",
+                    "inventory": {
+                        "items": [
+                            {"name": "H型氧氣鋼瓶", "qty": 5, "capacity_each": 6800, "avg_level": 80, "tracking_mode": "PER_UNIT"},
+                            {"name": "E型氧氣瓶", "qty": 4, "capacity_each": 680, "avg_level": 65, "tracking_mode": "AGGREGATE"}
+                        ],
+                        "total_capacity": 36720,
+                        "capacity_unit": "liters"
+                    }
                 },
                 {
                     "type": "POWER",
+                    "item_code": "POWER-TOTAL",
                     "name": "電力供應",
                     "endurance": {
                         "effective_hours": 48.0,
-                        "hours": 48.0,
-                        "days": 2.0,
-                        "status": "SAFE"
+                        "battery_hours": 24.0,
+                        "generator_hours": 24.0,
+                        "raw_hours": 48.0,
+                        "effective_days": 2.0
                     },
-                    "resources": [
-                        {"name": "發電機", "fuel_L": 50, "fuel_pct": 70, "consumption_L_hr": 3.0},
-                        {"name": "行動電源站", "quantity": 2, "capacity_Wh": 2000, "charge_pct": 85}
-                    ]
+                    "status": "SAFE",
+                    "inventory": {
+                        "items": [
+                            {"name": "Bluetti AC180", "qty": 2, "capacity_each": 1152, "avg_level": 85, "device_type": "POWER_STATION", "tracking_mode": "PER_UNIT"},
+                            {"name": "發電機", "qty": 1, "capacity_each": 50, "avg_level": 70, "device_type": "GENERATOR", "tracking_mode": "AGGREGATE"}
+                        ],
+                        "total_battery_wh": 1958,
+                        "total_fuel_liters": 35
+                    }
                 }
             ],
-            "config": {
+            "context": {
                 "isolation_target_days": 3,
-                "population_count": 2,
-                "safety_factor": 1.2
+                "isolation_target_hours": 72,
+                "population": {"count": 2, "label": "人數"}
             }
         }
 
