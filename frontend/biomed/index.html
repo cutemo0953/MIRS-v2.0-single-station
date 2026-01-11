@@ -1391,7 +1391,7 @@
 
                             this.showToast(`${this.unitEditForm.equipment_name} ${this.unitEditForm.unit_label} 已更新`, 'success');
                             this.showUnitEditModal = false;
-                            await this.loadResilienceStatus();
+                            // v1.2.11: 移除 loadResilienceStatus()，只用 resilienceRefreshKey 觸發重新渲染
                             this.resilienceRefreshKey++;
                         } else {
                             try {
@@ -1423,13 +1423,13 @@
                             })
                         });
                         if (res.ok) {
-                            // v1.2.10: 樂觀更新 - 立即更新本地狀態，不等重新載入
+                            // v1.2.11: 樂觀更新 - 只更新本地狀態，不呼叫 loadResilienceStatus()
+                            // 因為 loadResilienceStatus() 會創建新陣列覆蓋掉我們的更新
                             unit.last_check = new Date().toISOString();
                             unit.status = 'AVAILABLE';
 
                             this.showToast(`${unit.equipment_name} #${unit.unit_label || unit.unit_serial || ''} 已確認`, 'success');
-                            // 仍然重新載入以確保同步，但 UI 已經先更新了
-                            await this.loadResilienceStatus();
+                            // v1.2.11: 移除 loadResilienceStatus()，只用 resilienceRefreshKey 觸發重新渲染
                             this.resilienceRefreshKey++;
                         } else {
                             // 修復 [object Object] 錯誤訊息

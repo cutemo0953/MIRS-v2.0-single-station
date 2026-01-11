@@ -1,5 +1,5 @@
 /**
- * MIRS BioMed PWA Service Worker v1.2.6
+ * MIRS BioMed PWA Service Worker v1.2.11
  *
  * Provides offline caching for BioMed PWA.
  * Key features:
@@ -52,9 +52,13 @@
  *          + confirmOxygenUnit() now updates unit.last_check immediately
  *          + saveUnitEdit() now updates local state before reload
  *          + UI updates instantly, then syncs with server
+ * v1.2.11: Fix optimistic update being overwritten
+ *          + Remove loadResilienceStatus() after optimistic update
+ *          + Only use resilienceRefreshKey++ to trigger re-render
+ *          + Root cause: loadResilienceStatus() creates NEW array, overwrites updated unit
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.10';
+const CACHE_NAME = 'mirs-biomed-v1.2.11';
 
 const CORE_ASSETS = [
     '/biomed/',

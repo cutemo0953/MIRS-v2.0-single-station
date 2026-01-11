@@ -1,7 +1,7 @@
-# BioMed PWA v1.2.6 ~ v1.2.10 Bug 修復記錄
+# BioMed PWA v1.2.6 ~ v1.2.11 Bug 修復記錄
 
 **日期**: 2026-01-11
-**版本**: v1.2.6 → v1.2.10
+**版本**: v1.2.6 → v1.2.11
 **問題來源**: RPi 實機測試 + Gemini 程式碼審查
 
 ---
@@ -16,6 +16,7 @@
 | v1.2.8 | Alpine undefined 錯誤 | resilienceStatus 初始為空物件 | 初始化包含空陣列 |
 | v1.2.9 | v1.2.8 修復無效 | $nextTick 前的 reset 清空陣列 | reset 時也保留空陣列 |
 | v1.2.10 | 確認後 UI 仍不更新 | API 成功但本地狀態未同步 | 樂觀更新 (Optimistic UI) |
+| v1.2.11 | v1.2.10 樂觀更新無效 | loadResilienceStatus() 創建新陣列覆蓋更新 | 移除 loadResilienceStatus() 呼叫 |
 
 ---
 
@@ -176,6 +177,7 @@ return isOxygen && !isConcentrator && !isVentilator;
 | v1.2.8 | Alpine 初始化修復 | index.html |
 | v1.2.9 | $nextTick 修復 | index.html |
 | v1.2.10 | 樂觀更新 (Gemini 建議) | index.html |
+| v1.2.11 | 移除 loadResilienceStatus() 呼叫 | index.html |
 
 ---
 
@@ -233,6 +235,79 @@ async confirmOxygenUnit(unit) {
 5. API 失敗 → 回滾 UI 狀態 + 顯示錯誤
 
 這樣使用者體驗更好，不需要等待網路延遲。
+
+---
+
+## 問題五：樂觀更新被 loadResilienceStatus() 覆蓋 (v1.2.11)
+
+### 症狀
+- v1.2.10 的樂觀更新仍然無效
+- 確認後 API 成功，unit.last_check 有設定，但 UI 仍顯示「未檢」
+- console log 顯示 loadResilienceStatus() 完成後 oxygenUnits 陣列被重置
+
+### 根因分析
+
+**問題在於 JavaScript 陣列參照：**
+
+```javascript
+// v1.2.10 的錯誤寫法
+async confirmOxygenUnit(unit) {
+    const res = await fetch('/api/...');
+    if (res.ok) {
+        // 樂觀更新 - 修改了 this.resilienceStatus.oxygenUnits[n]
+        unit.last_check = new Date().toISOString();
+        unit.status = 'AVAILABLE';
+
+        this.showToast('已確認', 'success');
+        // 問題！loadResilienceStatus() 創建全新陣列
+        await this.loadResilienceStatus();  // ← 這行會覆蓋我們的更新！
+        this.resilienceRefreshKey++;
+    }
+}
+```
+
+**為什麼 loadResilienceStatus() 會覆蓋更新？**
+
+```javascript
+async loadResilienceStatus() {
+    // ...
+    // 這裡創建了全新的 oxygenUnits 陣列
+    this.resilienceStatus = {
+        oxygenUnits: oxygenUnits,    // ← 新陣列，覆蓋舊的
+        powerUnits: powerUnits,       // ← 新陣列，覆蓋舊的
+        oxygenResources: [...],
+        powerResources: [...]
+    };
+}
+```
+
+當我們修改 `unit` 物件時，我們修改的是舊陣列中的元素。
+但 `loadResilienceStatus()` 創建了**全新的陣列**，舊陣列（包含我們的更新）被丟棄了。
+
+### 修復 (v1.2.11)
+
+```javascript
+// v1.2.11: 移除 loadResilienceStatus() 呼叫
+async confirmOxygenUnit(unit) {
+    const res = await fetch('/api/...');
+    if (res.ok) {
+        // 樂觀更新
+        unit.last_check = new Date().toISOString();
+        unit.status = 'AVAILABLE';
+
+        this.showToast('已確認', 'success');
+        // v1.2.11: 不呼叫 loadResilienceStatus()，只觸發重新渲染
+        this.resilienceRefreshKey++;
+    }
+}
+```
+
+### 關鍵差異
+
+| 版本 | 做法 | 結果 |
+|------|------|------|
+| v1.2.10 | 樂觀更新 + loadResilienceStatus() | 更新被覆蓋 |
+| v1.2.11 | 樂觀更新 + resilienceRefreshKey++ | 更新保留 |
 
 ---
 
@@ -294,8 +369,32 @@ async confirmItem(item) {
 }
 ```
 
+### 5. 樂觀更新後不要立即重新載入
+
+樂觀更新的關鍵是**相信本地狀態**，不要立即重新載入覆蓋它：
+
+```javascript
+// 錯誤：樂觀更新 + 立即重新載入
+async confirm(item) {
+    const res = await api.post('/check');
+    if (res.ok) {
+        item.status = 'CHECKED';           // 樂觀更新
+        await this.loadAllItems();          // ← 這會覆蓋！
+    }
+}
+
+// 正確：樂觀更新 + 觸發重新渲染
+async confirm(item) {
+    const res = await api.post('/check');
+    if (res.ok) {
+        item.status = 'CHECKED';           // 樂觀更新
+        this.refreshKey++;                  // 觸發 Alpine 重新渲染
+    }
+}
+```
+
 ---
 
-**文件版本**: v1.1
+**文件版本**: v1.2
 **撰寫者**: Claude Code + Gemini (程式碼審查)
 **日期**: 2026-01-11
