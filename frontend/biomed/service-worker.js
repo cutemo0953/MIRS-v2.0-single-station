@@ -1,5 +1,5 @@
 /**
- * MIRS BioMed PWA Service Worker v1.1.5
+ * MIRS BioMed PWA Service Worker v1.1.6
  *
  * Provides offline caching for BioMed PWA.
  * Key features:
@@ -12,9 +12,10 @@
  * v1.1.3: Unit management + API path fix + equipment color scheme
  * v1.1.4: Per-unit check + level editing + resilience $nextTick fix
  * v1.1.5: Fix resilience resources - use inventory.items, fix Vercel mock
+ * v1.1.6: Status dropdown + Vercel mock Chinese names
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.1.5';
+const CACHE_NAME = 'mirs-biomed-v1.1.6';
 
 const CORE_ASSETS = [
     '/biomed/',

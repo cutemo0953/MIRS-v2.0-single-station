@@ -8844,8 +8844,8 @@ async def get_resilience_status(station_id: Optional[str] = Query(None)):
                     "status": "SAFE",
                     "inventory": {
                         "items": [
-                            {"name": "Bluetti AC180", "qty": 2, "capacity_each": 1152, "avg_level": 85, "device_type": "POWER_STATION", "tracking_mode": "PER_UNIT"},
-                            {"name": "發電機", "qty": 1, "capacity_each": 50, "avg_level": 70, "device_type": "GENERATOR", "tracking_mode": "AGGREGATE"}
+                            {"name": "行動電源站", "qty": 2, "capacity_each": 1152, "avg_level": 85, "device_type": "POWER_STATION", "tracking_mode": "PER_UNIT"},
+                            {"name": "發電機 (備用)", "qty": 1, "capacity_each": 50, "avg_level": 70, "device_type": "GENERATOR", "tracking_mode": "AGGREGATE"}
                         ],
                         "total_battery_wh": 1958,
                         "total_fuel_liters": 35

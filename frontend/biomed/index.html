@@ -584,8 +584,16 @@
                                                 </button>
                                             </div>
                                         </template>
-                                        <!-- 狀態 -->
-                                        <span class="text-xs px-2 py-1 rounded-full" :class="getUnitStatusClass(unit.status)" x-text="unit.status"></span>
+                                        <!-- 狀態 (v1.1.5: 可編輯下拉選單) -->
+                                        <select x-model="unit.status" @change="updateUnitStatus(unit)"
+                                                class="text-xs px-2 py-1 rounded-full border-0 cursor-pointer"
+                                                :class="getUnitStatusClass(unit.status)">
+                                            <option value="AVAILABLE">備用</option>
+                                            <option value="IN_USE">使用中</option>
+                                            <option value="CHARGING">充電中</option>
+                                            <option value="MAINTENANCE">維修中</option>
+                                            <option value="EMPTY">已用完</option>
+                                        </select>
                                         <!-- 確認按鈕 -->
                                         <button type="button" @click="checkUnit(unit)"
                                                 :class="unit.last_check ? 'text-gray-400 bg-gray-100' : 'text-equipment-600 bg-equipment-100 hover:bg-equipment-200'"
@@ -1266,6 +1274,33 @@
                     } catch (error) {
                         console.error('[BioMed] 確認單位失敗:', error);
                         this.showToast('確認失敗', 'error');
+                    }
+                },
+
+                // v1.1.5: 更新單位狀態
+                async updateUnitStatus(unit) {
+                    try {
+                        const response = await fetch(`/api/v2/equipment/units/${unit.id}/check`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                level_percent: unit.level_percent || 100,
+                                status: unit.status
+                            })
+                        });
+
+                        if (response.ok) {
+                            unit.last_check = new Date().toISOString();
+                            this.showToast(`狀態已更新為 ${unit.status}`, 'success');
+                            await this.loadEquipment();
+                            await this.loadResilienceStatus();
+                        } else {
+                            const err = await response.json();
+                            this.showToast(err.detail || '更新失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('[BioMed] 更新單位狀態失敗:', error);
+                        this.showToast('更新失敗', 'error');
                     }
                 }
             };
