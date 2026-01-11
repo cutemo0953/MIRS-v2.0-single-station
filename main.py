@@ -9771,6 +9771,83 @@ async def get_equipment_units_v2(
     Returns:
         設備單位列表及摘要
     """
+    # Vercel demo 模式：返回模擬單位資料
+    if IS_VERCEL:
+        # 根據設備 ID 返回不同的模擬資料
+        demo_units = {
+            "UTIL-001": {
+                "equipment_id": "UTIL-001",
+                "equipment_name": "行動電源站",
+                "type_code": "PWR_STATION",
+                "unit_prefix": "PWR",
+                "active_count": 2,
+                "units": [
+                    {"id": "PWR-001-01", "unit_serial": "01", "unit_label": "行動電源站 #1", "level_percent": 85, "status": "AVAILABLE"},
+                    {"id": "PWR-001-02", "unit_serial": "02", "unit_label": "行動電源站 #2", "level_percent": 60, "status": "CHARGING"}
+                ],
+                "inactive_units": [
+                    {"id": "PWR-001-03", "unit_serial": "03", "unit_label": "行動電源站 #3", "level_percent": 0, "status": "EMPTY", "removal_reason": "電池故障送修"}
+                ] if include_inactive else []
+            },
+            "UTIL-002": {
+                "equipment_id": "UTIL-002",
+                "equipment_name": "柴油發電機",
+                "type_code": "GENERATOR",
+                "unit_prefix": "GEN",
+                "active_count": 1,
+                "units": [
+                    {"id": "GEN-002-01", "unit_serial": "01", "unit_label": "發電機 #1", "level_percent": 70, "status": "AVAILABLE"}
+                ],
+                "inactive_units": [] if include_inactive else []
+            },
+            "RESP-001": {
+                "equipment_id": "RESP-001",
+                "equipment_name": "H型氧氣鋼瓶",
+                "type_code": "O2_CYLINDER_H",
+                "unit_prefix": "O2H",
+                "active_count": 5,
+                "units": [
+                    {"id": "O2H-001-01", "unit_serial": "01", "unit_label": "H瓶 #1", "level_percent": 95, "status": "AVAILABLE"},
+                    {"id": "O2H-001-02", "unit_serial": "02", "unit_label": "H瓶 #2", "level_percent": 80, "status": "AVAILABLE"},
+                    {"id": "O2H-001-03", "unit_serial": "03", "unit_label": "H瓶 #3", "level_percent": 65, "status": "IN_USE"},
+                    {"id": "O2H-001-04", "unit_serial": "04", "unit_label": "H瓶 #4", "level_percent": 50, "status": "AVAILABLE"},
+                    {"id": "O2H-001-05", "unit_serial": "05", "unit_label": "H瓶 #5", "level_percent": 30, "status": "AVAILABLE"}
+                ],
+                "inactive_units": [] if include_inactive else []
+            },
+            "EMER-EQ-006": {
+                "equipment_id": "EMER-EQ-006",
+                "equipment_name": "E型氧氣瓶",
+                "type_code": "O2_CYLINDER_E",
+                "unit_prefix": "O2E",
+                "active_count": 4,
+                "units": [
+                    {"id": "O2E-006-01", "unit_serial": "01", "unit_label": "E瓶 #1", "level_percent": 90, "status": "AVAILABLE"},
+                    {"id": "O2E-006-02", "unit_serial": "02", "unit_label": "E瓶 #2", "level_percent": 75, "status": "AVAILABLE"},
+                    {"id": "O2E-006-03", "unit_serial": "03", "unit_label": "E瓶 #3", "level_percent": 55, "status": "IN_USE"},
+                    {"id": "O2E-006-04", "unit_serial": "04", "unit_label": "E瓶 #4", "level_percent": 40, "status": "AVAILABLE"}
+                ],
+                "inactive_units": [] if include_inactive else []
+            }
+        }
+        # 返回對應設備的資料，如果沒有則返回預設
+        if equipment_id in demo_units:
+            result = demo_units[equipment_id]
+            result["inactive_count"] = len(result.get("inactive_units", [])) if include_inactive else None
+            return result
+        else:
+            # 預設返回空單位
+            return {
+                "equipment_id": equipment_id,
+                "equipment_name": f"設備 {equipment_id}",
+                "type_code": None,
+                "unit_prefix": "UNIT",
+                "active_count": 0,
+                "inactive_count": 0 if include_inactive else None,
+                "units": [],
+                "inactive_units": [] if include_inactive else None
+            }
+
     try:
         conn = db.get_connection()
         cursor = conn.cursor()

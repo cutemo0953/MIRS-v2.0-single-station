@@ -9,9 +9,10 @@
  *
  * v1.0.0: Initial release - equipment management + resilience
  * v1.1.2: Fix resilience resources display issue
+ * v1.1.3: Unit management + API path fix + equipment color scheme
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.1.2';
+const CACHE_NAME = 'mirs-biomed-v1.1.3';
 
 const CORE_ASSETS = [
     '/biomed/',
