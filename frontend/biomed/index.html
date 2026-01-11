@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.0</p>
+                    <p class="text-xs opacity-80">v1.2.1</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -157,7 +157,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            <template x-for="eq in getPowerSupplyEquipment()" :key="eq.id">
+                            <template x-for="eq in getPowerSupplyEquipment()" :key="eq.id + '-' + equipmentRefreshKey">
                                 <tr class="hover:bg-gray-50" :class="{ 'bg-green-50': eq.status === 'NORMAL', 'bg-yellow-50': eq.status === 'WARNING', 'bg-red-50': eq.status === 'ERROR' }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
@@ -210,7 +210,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            <template x-for="eq in getPowerConsumingEquipment()" :key="eq.id">
+                            <template x-for="eq in getPowerConsumingEquipment()" :key="eq.id + '-' + equipmentRefreshKey">
                                 <tr class="hover:bg-gray-50" :class="{ 'bg-green-50': eq.status === 'NORMAL', 'bg-yellow-50': eq.status === 'WARNING', 'bg-red-50': eq.status === 'ERROR' }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
@@ -257,7 +257,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            <template x-for="eq in getNonElectricEquipment()" :key="eq.id">
+                            <template x-for="eq in getNonElectricEquipment()" :key="eq.id + '-' + equipmentRefreshKey">
                                 <tr class="hover:bg-gray-50" :class="{ 'bg-green-50': eq.status === 'NORMAL', 'bg-yellow-50': eq.status === 'WARNING', 'bg-red-50': eq.status === 'ERROR' }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
@@ -291,7 +291,7 @@
                     韌性估算 - 生存計算器
                 </h2>
 
-                <!-- v1.2.0: Scenario Input Control Panel -->
+                <!-- v1.2.1: Scenario Input Control Panel (Medical-grade O2 formulas) -->
                 <div class="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
                     <h3 class="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -299,7 +299,8 @@
                         </svg>
                         情境設定
                     </h3>
-                    <div class="grid grid-cols-3 gap-3">
+                    <!-- Row 1: Target + Power -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
                         <div>
                             <label class="block text-xs text-gray-500 mb-1">預計孤立天數</label>
                             <div class="flex items-center gap-2">
@@ -313,19 +314,7 @@
                             <p class="text-xs text-gray-400 mt-1">目標: <span x-text="isolationDays * 24"></span>h</p>
                         </div>
                         <div>
-                            <label class="block text-xs text-gray-500 mb-1">插管人數</label>
-                            <div class="flex items-center gap-2">
-                                <button @click="intubatedCount = Math.max(0, intubatedCount - 1)"
-                                        class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg font-bold">−</button>
-                                <input type="number" x-model.number="intubatedCount" min="0" max="50"
-                                       class="w-12 text-center text-lg font-bold border border-gray-300 rounded py-1">
-                                <button @click="intubatedCount++"
-                                        class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg font-bold">+</button>
-                            </div>
-                            <p class="text-xs text-gray-400 mt-1">氧氣消耗↑</p>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-500 mb-1">呼吸器運轉</label>
+                            <label class="block text-xs text-gray-500 mb-1">呼吸器運轉 (電力)</label>
                             <div class="flex items-center gap-2">
                                 <button @click="ventilatorCount = Math.max(0, ventilatorCount - 1)"
                                         class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg font-bold">−</button>
@@ -334,8 +323,71 @@
                                 <button @click="ventilatorCount++"
                                         class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg font-bold">+</button>
                             </div>
-                            <p class="text-xs text-gray-400 mt-1">電力負載↑</p>
+                            <p class="text-xs text-gray-400 mt-1">+50W/台</p>
                         </div>
+                    </div>
+                    <!-- Row 2: O2 Equivalent Person (醫療級公式) -->
+                    <div class="bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg p-3 border border-orange-200">
+                        <p class="text-xs font-semibold text-orange-700 mb-2 flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                            氧氣消耗 (等效人數公式)
+                        </p>
+                        <div class="grid grid-cols-4 gap-2">
+                            <div>
+                                <label class="block text-xs text-orange-600 mb-1">鼻導管</label>
+                                <div class="flex items-center gap-1">
+                                    <button @click="cannulaCount = Math.max(0, cannulaCount - 1)"
+                                            class="w-6 h-6 rounded bg-orange-200 hover:bg-orange-300 flex items-center justify-center text-sm font-bold">−</button>
+                                    <input type="number" x-model.number="cannulaCount" min="0" max="50"
+                                           class="w-10 text-center text-sm font-bold border border-orange-300 rounded py-1">
+                                    <button @click="cannulaCount++"
+                                            class="w-6 h-6 rounded bg-orange-200 hover:bg-orange-300 flex items-center justify-center text-sm font-bold">+</button>
+                                </div>
+                                <p class="text-xs text-orange-500 mt-0.5 text-center">0.3人</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-orange-600 mb-1">面罩</label>
+                                <div class="flex items-center gap-1">
+                                    <button @click="maskCount = Math.max(0, maskCount - 1)"
+                                            class="w-6 h-6 rounded bg-orange-200 hover:bg-orange-300 flex items-center justify-center text-sm font-bold">−</button>
+                                    <input type="number" x-model.number="maskCount" min="0" max="50"
+                                           class="w-10 text-center text-sm font-bold border border-orange-300 rounded py-1">
+                                    <button @click="maskCount++"
+                                            class="w-6 h-6 rounded bg-orange-200 hover:bg-orange-300 flex items-center justify-center text-sm font-bold">+</button>
+                                </div>
+                                <p class="text-xs text-orange-500 mt-0.5 text-center">0.6人</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-orange-600 mb-1">插管</label>
+                                <div class="flex items-center gap-1">
+                                    <button @click="ventilatorO2Count = Math.max(0, ventilatorO2Count - 1)"
+                                            class="w-6 h-6 rounded bg-orange-200 hover:bg-orange-300 flex items-center justify-center text-sm font-bold">−</button>
+                                    <input type="number" x-model.number="ventilatorO2Count" min="0" max="50"
+                                           class="w-10 text-center text-sm font-bold border border-orange-300 rounded py-1">
+                                    <button @click="ventilatorO2Count++"
+                                            class="w-6 h-6 rounded bg-orange-200 hover:bg-orange-300 flex items-center justify-center text-sm font-bold">+</button>
+                                </div>
+                                <p class="text-xs text-orange-500 mt-0.5 text-center">1.0人</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-green-600 mb-1">濃縮機</label>
+                                <div class="flex items-center gap-1">
+                                    <button @click="concentratorCount = Math.max(0, concentratorCount - 1)"
+                                            class="w-6 h-6 rounded bg-green-200 hover:bg-green-300 flex items-center justify-center text-sm font-bold">−</button>
+                                    <input type="number" x-model.number="concentratorCount" min="0" max="10"
+                                           class="w-10 text-center text-sm font-bold border border-green-300 rounded py-1">
+                                    <button @click="concentratorCount++"
+                                            class="w-6 h-6 rounded bg-green-200 hover:bg-green-300 flex items-center justify-center text-sm font-bold">+</button>
+                                </div>
+                                <p class="text-xs text-green-500 mt-0.5 text-center">-5L/min</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-orange-600 mt-2 text-center">
+                            等效人數: <strong x-text="getO2EquivalentPersons().toFixed(1)"></strong> 人 =
+                            <span x-text="getOxygenConsumptionLPM().toFixed(1)"></span> L/min
+                        </p>
                     </div>
                 </div>
 
@@ -391,11 +443,11 @@
 
                 <!-- Resource Breakdown -->
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <!-- Oxygen -->
+                    <!-- Oxygen (Orange color scheme v1.2.1) -->
                     <div class="bg-white border border-gray-200 rounded-xl p-4">
                         <div class="flex items-center justify-between mb-2">
                             <span class="font-medium text-gray-700 flex items-center gap-2">
-                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                 </svg>
                                 氧氣供應
@@ -425,19 +477,34 @@
                             <span x-text="Math.round(getOxygenHours() / (isolationDays * 24) * 100) + '% 達標'"></span>
                             <span x-text="(isolationDays * 24) + 'h 目標'"></span>
                         </div>
-                        <!-- Consumption info -->
-                        <div class="text-xs text-blue-600 bg-blue-50 rounded p-2 mb-2" x-show="useLocalCalculation">
+                        <!-- Consumption info (v1.2.1: Medical-grade formula) -->
+                        <div class="text-xs text-orange-600 bg-orange-50 rounded p-2 mb-2" x-show="useLocalCalculation">
                             <span>消耗: </span>
                             <span x-text="getOxygenConsumptionLPM().toFixed(1)"></span>
                             <span> L/min</span>
-                            <span class="text-gray-400 ml-1">(基礎10 + 插管<span x-text="intubatedCount"></span>x8)</span>
+                            <span class="text-gray-400 ml-1">(等效<span x-text="getO2EquivalentPersons().toFixed(1)"></span>人 - 濃縮機<span x-text="concentratorCount"></span>x5)</span>
                         </div>
-                        <!-- Oxygen Resources List -->
-                        <div class="text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-2" x-show="resilienceStatus.oxygenResources && resilienceStatus.oxygenResources.length > 0">
-                            <template x-for="res in (resilienceStatus.oxygenResources || [])" :key="res.name">
-                                <div class="flex justify-between">
-                                    <span x-text="res.name + (res.quantity ? ' x' + res.quantity : '')"></span>
-                                    <span class="text-gray-600" x-text="res.fill_pct ? res.fill_pct + '%' : (res.capacity_L ? res.capacity_L + 'L' : '')"></span>
+                        <!-- v1.2.1: Oxygen Resources List with Individual Bars + Confirmation -->
+                        <div class="space-y-2 border-t border-gray-100 pt-2" x-show="resilienceStatus.oxygenResources && resilienceStatus.oxygenResources.length > 0">
+                            <template x-for="(res, idx) in (resilienceStatus.oxygenResources || [])" :key="res.name + idx + '-' + resilienceRefreshKey">
+                                <div class="bg-orange-50 rounded-lg p-2 border border-orange-100">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-xs font-medium text-orange-800" x-text="res.name + (res.quantity > 1 ? ' x' + res.quantity : '')"></span>
+                                        <span class="text-xs font-bold" :class="res.fill_pct >= 60 ? 'text-green-600' : res.fill_pct >= 30 ? 'text-amber-600' : 'text-red-600'" x-text="res.fill_pct ? res.fill_pct + '%' : '-'"></span>
+                                    </div>
+                                    <!-- Individual Progress Bar -->
+                                    <div class="relative h-2 bg-gray-200 rounded-full overflow-hidden mb-1">
+                                        <div class="h-full transition-all duration-300"
+                                             :class="res.fill_pct >= 60 ? 'bg-green-500' : res.fill_pct >= 30 ? 'bg-amber-500' : 'bg-red-500'"
+                                             :style="'width: ' + (res.fill_pct || 0) + '%'"></div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs text-gray-400" x-text="res.capacity_L ? res.capacity_L + 'L' : ''"></span>
+                                        <button @click="confirmResourceFromResilience(res, 'OXYGEN')"
+                                                class="text-xs bg-orange-500 hover:bg-orange-600 text-white px-2 py-0.5 rounded transition-colors">
+                                            確認
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -487,12 +554,27 @@
                             <span> W</span>
                             <span class="text-gray-400 ml-1">(基礎100 + 呼吸器<span x-text="ventilatorCount"></span>x50)</span>
                         </div>
-                        <!-- Power Resources List -->
-                        <div class="text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-2" x-show="resilienceStatus.powerResources && resilienceStatus.powerResources.length > 0">
-                            <template x-for="res in (resilienceStatus.powerResources || [])" :key="res.name">
-                                <div class="flex justify-between">
-                                    <span x-text="res.name + (res.quantity ? ' x' + res.quantity : '')"></span>
-                                    <span class="text-gray-600" x-text="res.fuel_pct ? res.fuel_pct + '%' : (res.charge_pct ? res.charge_pct + '%' : '')"></span>
+                        <!-- v1.2.1: Power Resources List with Individual Bars + Confirmation -->
+                        <div class="space-y-2 border-t border-gray-100 pt-2" x-show="resilienceStatus.powerResources && resilienceStatus.powerResources.length > 0">
+                            <template x-for="(res, idx) in (resilienceStatus.powerResources || [])" :key="res.name + idx + '-' + resilienceRefreshKey">
+                                <div class="bg-yellow-50 rounded-lg p-2 border border-yellow-100">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-xs font-medium text-yellow-800" x-text="res.name + (res.quantity > 1 ? ' x' + res.quantity : '')"></span>
+                                        <span class="text-xs font-bold" :class="(res.charge_pct || res.fuel_pct) >= 60 ? 'text-green-600' : (res.charge_pct || res.fuel_pct) >= 30 ? 'text-amber-600' : 'text-red-600'" x-text="res.charge_pct ? res.charge_pct + '%' : (res.fuel_pct ? res.fuel_pct + '%' : '-')"></span>
+                                    </div>
+                                    <!-- Individual Progress Bar -->
+                                    <div class="relative h-2 bg-gray-200 rounded-full overflow-hidden mb-1">
+                                        <div class="h-full transition-all duration-300"
+                                             :class="(res.charge_pct || res.fuel_pct) >= 60 ? 'bg-green-500' : (res.charge_pct || res.fuel_pct) >= 30 ? 'bg-amber-500' : 'bg-red-500'"
+                                             :style="'width: ' + (res.charge_pct || res.fuel_pct || 0) + '%'"></div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs text-gray-400" x-text="res.charge_pct ? '電池' : (res.fuel_pct ? '燃油' : '')"></span>
+                                        <button @click="confirmResourceFromResilience(res, 'POWER')"
+                                                class="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-0.5 rounded transition-colors">
+                                            確認
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -518,8 +600,12 @@
                 </button>
                 <ul x-show="showFormulaHint" x-transition class="space-y-2 text-xs mt-3 pt-3 border-t border-gray-200">
                     <li class="bg-white p-2 rounded">
-                        <strong class="text-blue-600">氧氣時數</strong> = 總容量(L) x 充填% / (消耗率 L/min x 60)
-                        <br><span class="text-gray-400">消耗率 = 10 + (插管人數 x 8) L/min</span>
+                        <strong class="text-orange-600">氧氣時數</strong> = 總容量(L) x 充填% / (消耗率 L/min x 60)
+                    </li>
+                    <li class="bg-orange-50 p-2 rounded border border-orange-200">
+                        <strong class="text-orange-700">等效人數公式 (醫療級)</strong>
+                        <br><span class="text-orange-600">鼻導管 x 0.3 + 面罩 x 0.6 + 插管 x 1.0 = 等效人數</span>
+                        <br><span class="text-gray-500">消耗率 = 等效人數 x 10 - 濃縮機數 x 5 L/min</span>
                     </li>
                     <li class="bg-white p-2 rounded">
                         <strong class="text-yellow-600">電力時數</strong> = 總電量(Wh) / 負載(W)
@@ -838,6 +924,8 @@
                 isOnline: navigator.onLine,
                 equipment: [],
                 resilienceStatus: {},
+                resilienceRefreshKey: 0,  // v1.2.1: refreshKey for forcing DOM update
+                equipmentRefreshKey: 0,   // v1.2.1: refreshKey for equipment tab
                 toast: { show: false, message: '', type: 'success' },
                 showAddModal: false,
                 showEditModal: false,
@@ -851,9 +939,13 @@
                     power_level: null
                 },
 
-                // v1.2.0: Scenario inputs for survival calculator
+                // v1.2.1: Scenario inputs for survival calculator (Medical-grade O2 formulas)
                 isolationDays: 3,          // 預計孤立天數 (目標)
-                intubatedCount: 0,         // 插管人數 (影響氧氣消耗)
+                // v1.2.1: 醫療級氧氣等效人數公式 (O2 Equivalent Person)
+                cannulaCount: 0,           // 鼻導管人數 (0.3人 = 3 L/min)
+                maskCount: 0,              // 面罩人數 (0.6人 = 6 L/min)
+                ventilatorO2Count: 0,      // 插管/呼吸器人數 (1.0人 = 10 L/min)
+                concentratorCount: 0,      // 氧氣濃縮機運轉數 (減少瓶裝氧消耗)
                 ventilatorCount: 0,        // 呼吸器運轉數 (影響電力負載)
                 useLocalCalculation: false, // 是否使用本地計算模式
                 powerLoadBase: 100,        // 基礎電力負載 (W)
@@ -1002,14 +1094,18 @@
                             })
                         });
                         if (res.ok) {
-                            // 更新本地狀態
+                            // v1.2.1: 使用 refreshKey 強制 DOM 更新
                             const idx = this.equipment.findIndex(e => e.id === eq.id);
                             if (idx !== -1) {
                                 this.equipment[idx].status = 'NORMAL';
                                 this.equipment[idx].last_checked = new Date().toISOString();
                             }
                             this.showToast(`${eq.name} 已確認`, 'success');
+                            // 重新載入並遞增 refreshKey
+                            await this.loadEquipment();
                             await this.loadResilienceStatus();
+                            this.equipmentRefreshKey++;
+                            this.resilienceRefreshKey++;
                         } else {
                             const err = await res.json();
                             this.showToast(err.detail || '確認失敗', 'error');
@@ -1349,10 +1445,22 @@
                     return classes[status] || 'bg-gray-100 text-gray-800';
                 },
 
-                // v1.2.0: Survival Calculator Methods
+                // v1.2.1: Survival Calculator Methods (Medical-grade O2 formulas)
+                getO2EquivalentPersons() {
+                    // 醫療級氧氣等效人數公式
+                    // Cannula (鼻導管): 0.3人 = 3 L/min
+                    // Mask (面罩): 0.6人 = 6 L/min
+                    // Ventilator (插管): 1.0人 = 10 L/min
+                    return (this.cannulaCount * 0.3) + (this.maskCount * 0.6) + (this.ventilatorO2Count * 1.0);
+                },
+
                 getOxygenConsumptionLPM() {
-                    // 基礎消耗 10 L/min + 每位插管病患 8 L/min
-                    return 10 + (this.intubatedCount * 8);
+                    // 等效人數 x 10 L/min/人 - 濃縮機節省量
+                    // 濃縮機每台可產出 5 L/min，減少瓶裝氧消耗
+                    const equivalentPersons = this.getO2EquivalentPersons();
+                    const baseConsumption = equivalentPersons * 10; // 10 L/min per person
+                    const concentratorSaving = this.concentratorCount * 5; // 5 L/min per concentrator
+                    return Math.max(0, baseConsumption - concentratorSaving);
                 },
 
                 getPowerLoadWatts() {
@@ -1424,6 +1532,27 @@
                         return '氧氣供應';
                     } else {
                         return '電力供應';
+                    }
+                },
+
+                // v1.2.1: 從韌性估算 Tab 直接確認資源
+                async confirmResourceFromResilience(res, type) {
+                    // 在 equipment 陣列中找到對應的設備
+                    const eq = this.equipment.find(e =>
+                        e.name === res.name ||
+                        e.name.includes(res.name) ||
+                        res.name.includes(e.name)
+                    );
+
+                    if (eq) {
+                        await this.checkEquipment(eq);
+                        // 使用 refreshKey 模式強制 DOM 更新
+                        this.resilienceRefreshKey++;
+                    } else {
+                        // 如果找不到對應設備，仍然刷新資料
+                        this.showToast(`${res.name} 已確認`, 'success');
+                        await this.loadResilienceStatus();
+                        this.resilienceRefreshKey++;
                     }
                 },
 

@@ -1,6 +1,6 @@
 # BioMed PWA 開發規格書 v1.2
 
-**版本**: 1.2.0
+**版本**: 1.2.1
 **日期**: 2026-01-11
 **狀態**: Production Ready
 
@@ -25,6 +25,7 @@ BioMed PWA 是 MIRS 系統的設備維護模組，提供輕量級的設備管理
 | v1.1.5 | 2026-01-11 | 韌性資源修復 (inventory.items) + datetime bug 修復 + CIRS BIOMED 站點 |
 | v1.1.6 | 2026-01-11 | 狀態下拉選單 + Vercel mock 中文化 |
 | v1.2.0 | 2026-01-11 | **互動式生存計算器** - 情境輸入 + 本地計算 + 目標達成率 |
+| v1.2.1 | 2026-01-11 | **醫療級 O2 公式** - 等效人數 + 氧氣濃縮機 + 設備直接確認 + refreshKey 修復 |
 
 ---
 
@@ -170,42 +171,64 @@ const resources = (lifeline.inventory?.items || []).map(item => ({
 }));
 ```
 
-### 4. 互動式生存計算器 (v1.2.0)
+### 4. 互動式生存計算器 (v1.2.0 + v1.2.1)
 
 基於 Gemini 回饋，韌性 Tab 從「靜態清單」升級為「互動式生存計算器」。
 
 #### 情境輸入控制面板
 
 ```
-┌─────────────────────────────────────────────────┐
-│ 情境設定                                         │
-├─────────────────────────────────────────────────┤
-│ 預計孤立天數      插管人數        呼吸器運轉       │
-│ [−] [ 3 ] [+]    [−] [ 0 ] [+]   [−] [ 0 ] [+]  │
-│ 目標: 72h        氧氣消耗↑        電力負載↑       │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ 情境設定                                                 │
+├─────────────────────────────────────────────────────────┤
+│ 預計孤立天數        呼吸器運轉 (電力)                       │
+│ [−] [ 3 ] [+]      [−] [ 0 ] [+]                        │
+│ 目標: 72h           +50W/台                              │
+├─────────────────────────────────────────────────────────┤
+│ 氧氣消耗 (等效人數公式)                    [v1.2.1 新增]   │
+│ 鼻導管    面罩      插管      濃縮機                       │
+│ [−][0][+] [−][0][+] [−][0][+] [−][0][+]                  │
+│  0.3人     0.6人     1.0人    -5L/min                    │
+│                                                          │
+│ 等效人數: 0.0 人 = 0.0 L/min                             │
+└─────────────────────────────────────────────────────────┘
 ```
 
 #### Alpine.js 狀態變數
 
 ```javascript
-// v1.2.0 新增
+// v1.2.1 新增 (醫療級氧氣等效人數公式)
 isolationDays: 3,          // 預計孤立天數 (目標: 1-14 天)
-intubatedCount: 0,         // 插管人數 (影響氧氣消耗)
+cannulaCount: 0,           // 鼻導管人數 (0.3人 = 3 L/min)
+maskCount: 0,              // 面罩人數 (0.6人 = 6 L/min)
+ventilatorO2Count: 0,      // 插管/呼吸器人數 (1.0人 = 10 L/min)
+concentratorCount: 0,      // 氧氣濃縮機運轉數 (減少瓶裝氧消耗)
 ventilatorCount: 0,        // 呼吸器運轉數 (影響電力負載)
 useLocalCalculation: false, // 本地計算模式開關
 powerLoadBase: 100,        // 基礎電力負載 (W)
+resilienceRefreshKey: 0,   // refreshKey for forcing DOM update
+equipmentRefreshKey: 0,    // refreshKey for equipment tab
 ```
 
-#### 計算公式
+#### 計算公式 (v1.2.1 醫療級)
 
 | 項目 | 公式 | 說明 |
 |------|------|------|
-| 氧氣消耗率 | `10 + (intubatedCount × 8)` L/min | 基礎 10 L/min + 每位插管 8 L/min |
+| **等效人數** | `cannula × 0.3 + mask × 0.6 + ventilator × 1.0` | 醫療級 O2 消耗公式 |
+| **氧氣消耗率** | `等效人數 × 10 - concentrator × 5` L/min | 濃縮機每台節省 5 L/min |
 | 電力負載 | `100 + (ventilatorCount × 50)` W | 基礎 100W + 每台呼吸器 50W |
 | 氧氣時數 | `totalLiters / consumptionLPM / 60` | 總公升 / 消耗率 / 60分 |
 | 電力時數 | `totalWh / loadWatts` | 總瓦時 / 負載瓦數 |
 | 生存時數 | `MIN(氧氣時數, 電力時數)` | 取最弱一環 |
+
+#### O2 等效人數參考表
+
+| 供氧方式 | 流量 | 等效人數 |
+|----------|------|----------|
+| 鼻導管 (Nasal Cannula) | ~3 L/min | 0.3 |
+| 面罩 (Mask) | ~6 L/min | 0.6 |
+| 插管/呼吸器 (Ventilator) | ~10 L/min | 1.0 |
+| 氧氣濃縮機 | 產出 5 L/min | 減少瓶裝氧消耗 |
 
 #### 進度條色碼
 
@@ -242,6 +265,56 @@ getOxygenHours() {
 - **整體韌性時數**: 顯示最弱生命線
 - **氧氣卡片**: 時數 + 進度條 + 資源清單
 - **電力卡片**: 時數 + 進度條 + 資源清單
+
+#### 韌性 Tab 設備直接確認 (v1.2.1)
+
+在韌性估算 Tab 中可直接確認資源設備，無需切換到設備管理 Tab：
+
+```
+┌─────────────────────────────────────────────────┐
+│ 氧氣供應                                  48.0h │
+│ ████████████████░░░░░░░░░░░░░░░░░░░░░░  65% 達標│
+├─────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────┐ │
+│ │ H型氧氣鋼瓶 x5              80%   [確認]    │ │
+│ │ ██████████████████░░░░░░░░░░░░░░            │ │
+│ │ 6800L                                        │ │
+│ ├─────────────────────────────────────────────┤ │
+│ │ E型氧氣瓶 x4                65%   [確認]    │ │
+│ │ ███████████████░░░░░░░░░░░░░░░              │ │
+│ │ 680L                                         │ │
+│ └─────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────┘
+```
+
+#### 顏色配色 (v1.2.1)
+
+| 資源類型 | 原顏色 | 新顏色 | 說明 |
+|----------|--------|--------|------|
+| 氧氣 | 藍色 (`text-blue-500`) | 橘色 (`text-orange-500`) | 避免與水混淆 |
+| 電力 | 黃色 (`text-yellow-500`) | 黃色 | 維持 |
+
+氧氣資源卡片使用橘色漸層背景 (`bg-orange-50`, `border-orange-100`)。
+
+#### refreshKey 模式 (v1.2.1)
+
+解決 Vercel 環境確認設備後狀態未即時更新的問題：
+
+```javascript
+// State
+resilienceRefreshKey: 0,
+equipmentRefreshKey: 0,
+
+// 確認設備後遞增 refreshKey
+await this.loadEquipment();
+await this.loadResilienceStatus();
+this.equipmentRefreshKey++;
+this.resilienceRefreshKey++;
+
+// Template 使用 refreshKey 強制重新渲染
+<template x-for="eq in getPowerSupplyEquipment()"
+          :key="eq.id + '-' + equipmentRefreshKey">
+```
 
 #### Alpine.js 相容性修復 (v1.1.2)
 
@@ -411,6 +484,88 @@ if IS_VERCEL:
 
 ---
 
-**文件版本**: v1.2.0
+## 架構風險警示 (v1.2.1 新增)
+
+基於 Gemini 批判性回饋，以下架構決策存在長期風險：
+
+### 1. SQLite In-Memory + Serverless 資料不一致風險
+
+**現況**: Vercel Demo 模式使用 SQLite In-Memory singleton。
+
+**風險**:
+- Serverless 環境中，Vercel 會同時開啟多個 Function Instances
+- 每個 Instance 有獨立的記憶體空間 = **N 個獨立資料庫**
+- A 醫生在 Instance 1 寫入的資料，B 護理師若被導向 Instance 2 看不到
+
+**適用範圍**: **僅限單人 Demo 展示**。如果要多人協作測試，必須遷移到外部資料庫。
+
+```
+┌─────────────────────────────────────────────────┐
+│  目前架構 (OK for Demo)                          │
+│  ┌────────┐ ┌────────┐ ┌────────┐              │
+│  │ Inst 1 │ │ Inst 2 │ │ Inst 3 │              │
+│  │ DB-A   │ │ DB-B   │ │ DB-C   │  ← 互不相通  │
+│  └────────┘ └────────┘ └────────┘              │
+└─────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────┐
+│  生產架構 (Required for Production)              │
+│  ┌────────┐ ┌────────┐ ┌────────┐              │
+│  │ Inst 1 │ │ Inst 2 │ │ Inst 3 │              │
+│  └───┬────┘ └───┬────┘ └───┬────┘              │
+│      │          │          │                    │
+│      └────────┬─┴──────────┘                    │
+│               ▼                                  │
+│        ┌──────────────┐                          │
+│        │ 外部資料庫     │  ← Supabase/Neon/      │
+│        │ (Postgres)   │     Vercel Postgres     │
+│        └──────────────┘                          │
+└─────────────────────────────────────────────────┘
+```
+
+### 2. Import Time Execution 效能債
+
+**現況**: `main.py` 在 Global Scope 執行 `init_db()` 和 `seeder`。
+
+**風險**:
+- 每次 Cold Start 都執行「建表 + 塞資料」
+- Demo Data 增大時，啟動時間可能超過 Vercel 10s 限制 → Timeout
+
+**改善方向**: Lazy Initialization (惰性初始化)
+
+```python
+# 目前 (Anti-pattern)
+if IS_VERCEL:
+    init_db()          # ← 每次 import 都執行
+    seed_demo_data()
+
+# 改善 (Lazy Init)
+_db_initialized = False
+
+def ensure_db():
+    global _db_initialized
+    if not _db_initialized:
+        init_db()
+        seed_demo_data()
+        _db_initialized = True
+
+@app.get("/api/...")
+async def some_api():
+    ensure_db()  # ← 只在第一次 request 時執行
+    ...
+```
+
+### 3. 依賴管理 Definition of Done
+
+從 v1.2.1 起，每次引入新 Python Package 時，**必須**同步更新 `api/requirements.txt`。
+
+**DoD Checklist**:
+- [ ] 新增 `import xxx`
+- [ ] 更新 `api/requirements.txt`
+- [ ] 本地 `VERCEL=1` 模式測試通過
+
+---
+
+**文件版本**: v1.2.1
 **撰寫者**: Claude Code
 **日期**: 2026-01-11
