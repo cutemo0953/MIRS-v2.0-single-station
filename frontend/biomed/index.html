@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.15</p>
+                    <p class="text-xs opacity-80">v1.2.16</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -1540,22 +1540,37 @@
                         console.log('[BioMed] Checked', successCount, '/', units.length, 'units');
 
                         if (successCount > 0) {
-                            // 樂觀更新本地狀態
-                            const idx = this.equipment.findIndex(e => e.id === eq.id);
-                            if (idx !== -1) {
-                                this.equipment[idx] = {
-                                    ...this.equipment[idx],
-                                    check_status: 'CHECKED',
-                                    last_check: new Date().toISOString()
-                                };
-                            }
+                            // v1.2.16: 狀態聚合 (Gemini 建議)
+                            // 不要重新載入覆蓋樂觀更新，直接在前端計算狀態
+                            const newStatus = this.calculateEquipmentCheckStatus(successCount, units.length);
+                            console.log('[BioMed] v1.2.16: Calculated status:', newStatus);
+
+                            // 用「替換整個陣列」的方式更新 (Alpine 響應式要求)
+                            this.equipment = this.equipment.map(e => {
+                                if (e.id === eq.id) {
+                                    return {
+                                        ...e,
+                                        check_status: newStatus,
+                                        checked_count: successCount,
+                                        unit_count: units.length,
+                                        status: newStatus === 'CHECKED' ? 'NORMAL' : (newStatus === 'PARTIAL' ? 'WARNING' : e.status),
+                                        last_check: new Date().toISOString()
+                                    };
+                                }
+                                return e;
+                            });
+
                             this.showToast(`${eq.name} 已確認 (${successCount}/${units.length})`, 'success');
 
-                            // 重新載入以確保資料一致
-                            await this.loadEquipment();
-                            await this.loadResilienceStatus();
+                            // v1.2.16: 不要立刻重新載入！讓樂觀更新先生效
+                            // 只遞增 refreshKey 觸發 Alpine 重新渲染
                             this.equipmentRefreshKey++;
-                            this.resilienceRefreshKey++;
+
+                            // 延遲 500ms 後才重新載入 resilienceStatus (不影響 equipment)
+                            setTimeout(async () => {
+                                await this.loadResilienceStatus();
+                                this.resilienceRefreshKey++;
+                            }, 500);
                         } else {
                             this.showToast('確認失敗: 無單位被更新', 'error');
                         }
@@ -1563,6 +1578,15 @@
                         console.error('[BioMed] Failed to check equipment:', err);
                         this.showToast('確認失敗', 'error');
                     }
+                },
+
+                // v1.2.16: 狀態聚合函數 (Gemini 建議)
+                // 模仿 MIRS 的邏輯: 0/n=UNCHECKED, 1~n-1/n=PARTIAL, n/n=CHECKED
+                calculateEquipmentCheckStatus(checkedCount, totalCount) {
+                    if (totalCount === 0) return 'NO_UNITS';
+                    if (checkedCount === 0) return 'UNCHECKED';
+                    if (checkedCount < totalCount) return 'PARTIAL';
+                    return 'CHECKED';
                 },
 
                 editEquipment(eq) {

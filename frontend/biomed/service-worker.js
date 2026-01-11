@@ -74,9 +74,14 @@
  *          + API returns { unit: { id: ... } } (nested structure)
  *          + Was reading newUnit.unit_id (wrong), now reads newUnit.unit?.id
  *          + Added better error logging for debugging
+ * v1.2.16: State Aggregation (Gemini suggestion)
+ *          + Don't reload after optimistic update (was overwriting changes)
+ *          + Add calculateEquipmentCheckStatus() for frontend status calculation
+ *          + Use array.map() to replace entire equipment array (Alpine reactivity)
+ *          + Delay resilienceStatus reload by 500ms to not block UI update
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.15';
+const CACHE_NAME = 'mirs-biomed-v1.2.16';
 
 const CORE_ASSETS = [
     '/biomed/',
