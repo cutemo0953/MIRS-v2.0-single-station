@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.1.4</p>
+                    <p class="text-xs opacity-80">v1.2.0</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -288,39 +288,112 @@
                     <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
-                    韌性估算
+                    韌性估算 - 生存計算器
                 </h2>
 
-                <!-- Overall Status -->
-                <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 mb-4 text-center">
+                <!-- v1.2.0: Scenario Input Control Panel -->
+                <div class="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                        </svg>
+                        情境設定
+                    </h3>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">預計孤立天數</label>
+                            <div class="flex items-center gap-2">
+                                <button @click="isolationDays = Math.max(1, isolationDays - 1)"
+                                        class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg font-bold">−</button>
+                                <input type="number" x-model.number="isolationDays" min="1" max="14"
+                                       class="w-12 text-center text-lg font-bold border border-gray-300 rounded py-1">
+                                <button @click="isolationDays = Math.min(14, isolationDays + 1)"
+                                        class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg font-bold">+</button>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">目標: <span x-text="isolationDays * 24"></span>h</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">插管人數</label>
+                            <div class="flex items-center gap-2">
+                                <button @click="intubatedCount = Math.max(0, intubatedCount - 1)"
+                                        class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg font-bold">−</button>
+                                <input type="number" x-model.number="intubatedCount" min="0" max="50"
+                                       class="w-12 text-center text-lg font-bold border border-gray-300 rounded py-1">
+                                <button @click="intubatedCount++"
+                                        class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg font-bold">+</button>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">氧氣消耗↑</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">呼吸器運轉</label>
+                            <div class="flex items-center gap-2">
+                                <button @click="ventilatorCount = Math.max(0, ventilatorCount - 1)"
+                                        class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg font-bold">−</button>
+                                <input type="number" x-model.number="ventilatorCount" min="0" max="20"
+                                       class="w-12 text-center text-lg font-bold border border-gray-300 rounded py-1">
+                                <button @click="ventilatorCount++"
+                                        class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg font-bold">+</button>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">電力負載↑</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overall Status - Now shows survival vs target -->
+                <div class="rounded-xl p-6 mb-4 text-center transition-all duration-300"
+                     :class="{
+                         'bg-gradient-to-br from-red-50 to-red-100': getCalculatedSurvivalHours() < 24,
+                         'bg-gradient-to-br from-amber-50 to-amber-100': getCalculatedSurvivalHours() >= 24 && getCalculatedSurvivalHours() < (isolationDays * 24),
+                         'bg-gradient-to-br from-green-50 to-green-100': getCalculatedSurvivalHours() >= (isolationDays * 24)
+                     }">
                     <h3 class="text-lg font-semibold text-gray-700 mb-2">可獨立運作</h3>
                     <div class="text-5xl font-bold mb-2"
                          :class="{
-                             'text-red-500': resilienceStatus.summary?.overall_status === 'CRITICAL',
-                             'text-amber-500': resilienceStatus.summary?.overall_status === 'WARNING',
-                             'text-green-500': resilienceStatus.summary?.overall_status === 'SAFE',
-                             'text-gray-400': !resilienceStatus.summary
+                             'text-red-500': getCalculatedSurvivalHours() < 24,
+                             'text-amber-500': getCalculatedSurvivalHours() >= 24 && getCalculatedSurvivalHours() < (isolationDays * 24),
+                             'text-green-500': getCalculatedSurvivalHours() >= (isolationDays * 24)
                          }">
-                        <span x-text="resilienceStatus.summary?.weakest_link?.hours?.toFixed(1) || '—'"></span>
+                        <span x-text="getCalculatedSurvivalHours().toFixed(1)"></span>
                         <span class="text-2xl">小時</span>
                     </div>
-                    <p class="text-sm text-gray-500" x-show="resilienceStatus.summary?.weakest_link">
-                        瓶頸: <span class="font-medium" x-text="resilienceStatus.summary?.weakest_link?.resource"></span>
+                    <p class="text-sm mb-2" :class="{
+                        'text-red-600': getCalculatedSurvivalHours() < (isolationDays * 24),
+                        'text-green-600': getCalculatedSurvivalHours() >= (isolationDays * 24)
+                    }">
+                        <template x-if="getCalculatedSurvivalHours() >= (isolationDays * 24)">
+                            <span>達成 <span x-text="isolationDays"></span> 天目標!</span>
+                        </template>
+                        <template x-if="getCalculatedSurvivalHours() < (isolationDays * 24)">
+                            <span>距離 <span x-text="isolationDays"></span> 天目標差 <span x-text="((isolationDays * 24) - getCalculatedSurvivalHours()).toFixed(1)"></span> 小時</span>
+                        </template>
                     </p>
-                    <button @click="loadResilienceStatus()"
-                            class="mt-4 bg-amber-500 text-white px-6 py-2 rounded-lg hover:bg-amber-600 transition-colors inline-flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        重新計算
-                    </button>
+                    <p class="text-sm text-gray-500">
+                        瓶頸: <span class="font-medium" x-text="getBottleneckResource()"></span>
+                    </p>
+                    <div class="flex justify-center gap-2 mt-4">
+                        <button @click="loadResilienceStatus()"
+                                class="bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600 transition-colors inline-flex items-center gap-2 text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            從伺服器更新
+                        </button>
+                        <button @click="useLocalCalculation = !useLocalCalculation"
+                                :class="useLocalCalculation ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 hover:bg-gray-500'"
+                                class="text-white px-4 py-2 rounded-lg transition-colors inline-flex items-center gap-2 text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            <span x-text="useLocalCalculation ? '本地計算中' : '本地計算'"></span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Resource Breakdown -->
                 <div class="grid gap-4 sm:grid-cols-2">
                     <!-- Oxygen -->
                     <div class="bg-white border border-gray-200 rounded-xl p-4">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center justify-between mb-2">
                             <span class="font-medium text-gray-700 flex items-center gap-2">
                                 <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
@@ -329,20 +402,35 @@
                             </span>
                             <span class="text-xl font-bold"
                                   :class="{
-                                      'text-green-500': resilienceStatus.oxygen?.hours >= 24,
-                                      'text-amber-500': resilienceStatus.oxygen?.hours >= 12 && resilienceStatus.oxygen?.hours < 24,
-                                      'text-red-500': resilienceStatus.oxygen?.hours < 12
+                                      'text-green-500': getOxygenHours() >= (isolationDays * 24),
+                                      'text-amber-500': getOxygenHours() >= 24 && getOxygenHours() < (isolationDays * 24),
+                                      'text-red-500': getOxygenHours() < 24
                                   }"
-                                  x-text="(resilienceStatus.oxygen?.hours?.toFixed(1) || '—') + 'h'"></span>
+                                  x-text="getOxygenHours().toFixed(1) + 'h'"></span>
                         </div>
-                        <div class="h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
+                        <!-- Progress bar: % of target goal -->
+                        <div class="relative h-4 bg-gray-200 rounded-full overflow-hidden mb-2">
                             <div class="h-full transition-all duration-500"
                                  :class="{
-                                     'bg-green-500': resilienceStatus.oxygen?.hours >= 24,
-                                     'bg-amber-500': resilienceStatus.oxygen?.hours >= 12 && resilienceStatus.oxygen?.hours < 24,
-                                     'bg-red-500': resilienceStatus.oxygen?.hours < 12
+                                     'bg-green-500': getOxygenHours() >= (isolationDays * 24),
+                                     'bg-amber-500': getOxygenHours() >= 24 && getOxygenHours() < (isolationDays * 24),
+                                     'bg-red-500': getOxygenHours() < 24
                                  }"
-                                 :style="'width: ' + Math.min((resilienceStatus.oxygen?.hours || 0) / 72 * 100, 100) + '%'"></div>
+                                 :style="'width: ' + Math.min(getOxygenHours() / (isolationDays * 24) * 100, 100) + '%'"></div>
+                            <!-- Target marker -->
+                            <div class="absolute top-0 h-full w-0.5 bg-gray-800" style="left: 100%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500 mb-2">
+                            <span>0h</span>
+                            <span x-text="Math.round(getOxygenHours() / (isolationDays * 24) * 100) + '% 達標'"></span>
+                            <span x-text="(isolationDays * 24) + 'h 目標'"></span>
+                        </div>
+                        <!-- Consumption info -->
+                        <div class="text-xs text-blue-600 bg-blue-50 rounded p-2 mb-2" x-show="useLocalCalculation">
+                            <span>消耗: </span>
+                            <span x-text="getOxygenConsumptionLPM().toFixed(1)"></span>
+                            <span> L/min</span>
+                            <span class="text-gray-400 ml-1">(基礎10 + 插管<span x-text="intubatedCount"></span>x8)</span>
                         </div>
                         <!-- Oxygen Resources List -->
                         <div class="text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-2" x-show="resilienceStatus.oxygenResources && resilienceStatus.oxygenResources.length > 0">
@@ -360,7 +448,7 @@
 
                     <!-- Power -->
                     <div class="bg-white border border-gray-200 rounded-xl p-4">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center justify-between mb-2">
                             <span class="font-medium text-gray-700 flex items-center gap-2">
                                 <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -369,20 +457,35 @@
                             </span>
                             <span class="text-xl font-bold"
                                   :class="{
-                                      'text-green-500': resilienceStatus.power?.hours >= 24,
-                                      'text-amber-500': resilienceStatus.power?.hours >= 12 && resilienceStatus.power?.hours < 24,
-                                      'text-red-500': resilienceStatus.power?.hours < 12
+                                      'text-green-500': getPowerHours() >= (isolationDays * 24),
+                                      'text-amber-500': getPowerHours() >= 24 && getPowerHours() < (isolationDays * 24),
+                                      'text-red-500': getPowerHours() < 24
                                   }"
-                                  x-text="(resilienceStatus.power?.hours?.toFixed(1) || '—') + 'h'"></span>
+                                  x-text="getPowerHours().toFixed(1) + 'h'"></span>
                         </div>
-                        <div class="h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
+                        <!-- Progress bar: % of target goal -->
+                        <div class="relative h-4 bg-gray-200 rounded-full overflow-hidden mb-2">
                             <div class="h-full transition-all duration-500"
                                  :class="{
-                                     'bg-green-500': resilienceStatus.power?.hours >= 24,
-                                     'bg-amber-500': resilienceStatus.power?.hours >= 12 && resilienceStatus.power?.hours < 24,
-                                     'bg-red-500': resilienceStatus.power?.hours < 12
+                                     'bg-green-500': getPowerHours() >= (isolationDays * 24),
+                                     'bg-amber-500': getPowerHours() >= 24 && getPowerHours() < (isolationDays * 24),
+                                     'bg-red-500': getPowerHours() < 24
                                  }"
-                                 :style="'width: ' + Math.min((resilienceStatus.power?.hours || 0) / 72 * 100, 100) + '%'"></div>
+                                 :style="'width: ' + Math.min(getPowerHours() / (isolationDays * 24) * 100, 100) + '%'"></div>
+                            <!-- Target marker -->
+                            <div class="absolute top-0 h-full w-0.5 bg-gray-800" style="left: 100%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500 mb-2">
+                            <span>0h</span>
+                            <span x-text="Math.round(getPowerHours() / (isolationDays * 24) * 100) + '% 達標'"></span>
+                            <span x-text="(isolationDays * 24) + 'h 目標'"></span>
+                        </div>
+                        <!-- Load info -->
+                        <div class="text-xs text-yellow-600 bg-yellow-50 rounded p-2 mb-2" x-show="useLocalCalculation">
+                            <span>負載: </span>
+                            <span x-text="getPowerLoadWatts()"></span>
+                            <span> W</span>
+                            <span class="text-gray-400 ml-1">(基礎100 + 呼吸器<span x-text="ventilatorCount"></span>x50)</span>
                         </div>
                         <!-- Power Resources List -->
                         <div class="text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-2" x-show="resilienceStatus.powerResources && resilienceStatus.powerResources.length > 0">
@@ -400,13 +503,31 @@
                 </div>
             </div>
 
-            <!-- Formula Hint -->
+            <!-- Formula Hint (Collapsible) -->
             <div class="bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
-                <p class="font-medium mb-2">計算公式</p>
-                <ul class="space-y-1 text-xs">
-                    <li>氧氣時數 = 總容量 x 充填% / (10 L/min x 等效人數 x 60)</li>
-                    <li>電力時數 = 油箱容量 x 剩餘% / 3.0 L/hr</li>
-                    <li>可獨立運作 = MIN(氧氣, 電力)</li>
+                <button @click="showFormulaHint = !showFormulaHint" class="w-full flex items-center justify-between font-medium">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                        計算公式
+                    </span>
+                    <svg class="w-4 h-4 transition-transform" :class="showFormulaHint ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <ul x-show="showFormulaHint" x-transition class="space-y-2 text-xs mt-3 pt-3 border-t border-gray-200">
+                    <li class="bg-white p-2 rounded">
+                        <strong class="text-blue-600">氧氣時數</strong> = 總容量(L) x 充填% / (消耗率 L/min x 60)
+                        <br><span class="text-gray-400">消耗率 = 10 + (插管人數 x 8) L/min</span>
+                    </li>
+                    <li class="bg-white p-2 rounded">
+                        <strong class="text-yellow-600">電力時數</strong> = 總電量(Wh) / 負載(W)
+                        <br><span class="text-gray-400">負載 = 100 + (呼吸器數 x 50) W</span>
+                    </li>
+                    <li class="bg-white p-2 rounded">
+                        <strong class="text-amber-600">可獨立運作</strong> = MIN(氧氣時數, 電力時數)
+                    </li>
                 </ul>
             </div>
         </div>
@@ -721,6 +842,7 @@
                 showAddModal: false,
                 showEditModal: false,
                 showUnitManageModal: false,
+                showFormulaHint: false,
                 equipmentForm: {
                     id: '',
                     name: '',
@@ -728,6 +850,13 @@
                     quantity: 1,
                     power_level: null
                 },
+
+                // v1.2.0: Scenario inputs for survival calculator
+                isolationDays: 3,          // 預計孤立天數 (目標)
+                intubatedCount: 0,         // 插管人數 (影響氧氣消耗)
+                ventilatorCount: 0,        // 呼吸器運轉數 (影響電力負載)
+                useLocalCalculation: false, // 是否使用本地計算模式
+                powerLoadBase: 100,        // 基礎電力負載 (W)
                 // v1.1.2: 設備單位管理表單
                 unitManageForm: {
                     equipment_id: '',
@@ -1218,6 +1347,84 @@
                         'EMPTY': 'bg-red-100 text-red-800'
                     };
                     return classes[status] || 'bg-gray-100 text-gray-800';
+                },
+
+                // v1.2.0: Survival Calculator Methods
+                getOxygenConsumptionLPM() {
+                    // 基礎消耗 10 L/min + 每位插管病患 8 L/min
+                    return 10 + (this.intubatedCount * 8);
+                },
+
+                getPowerLoadWatts() {
+                    // 基礎負載 100W + 每台呼吸器 50W
+                    return this.powerLoadBase + (this.ventilatorCount * 50);
+                },
+
+                getOxygenHours() {
+                    if (this.useLocalCalculation) {
+                        // 本地計算: 從設備資源列表計算
+                        const oxygenResources = this.resilienceStatus.oxygenResources || [];
+                        let totalLiters = 0;
+
+                        for (const res of oxygenResources) {
+                            // 計算每種資源的有效容量
+                            const qty = res.quantity || 1;
+                            const capacity = res.capacity_L || 6800; // 預設 H 型鋼瓶容量
+                            const fillPct = (res.fill_pct || 100) / 100;
+                            totalLiters += qty * capacity * fillPct;
+                        }
+
+                        // 無資源時使用預設值
+                        if (totalLiters === 0) totalLiters = 6800 * 5 * 0.8; // 5瓶 80%
+
+                        const consumptionLPM = this.getOxygenConsumptionLPM();
+                        return totalLiters / consumptionLPM / 60;
+                    } else {
+                        // 使用伺服器計算結果
+                        return this.resilienceStatus.oxygen?.hours || 0;
+                    }
+                },
+
+                getPowerHours() {
+                    if (this.useLocalCalculation) {
+                        // 本地計算: 從設備資源列表計算
+                        const powerResources = this.resilienceStatus.powerResources || [];
+                        let totalWh = 0;
+
+                        for (const res of powerResources) {
+                            const qty = res.quantity || 1;
+                            // 電池類設備假設平均 1800Wh (Bluetti AC180 級別)
+                            // 發電機假設 50L 油箱, 3L/hr, ~17h
+                            const chargePct = (res.charge_pct || res.fuel_pct || 100) / 100;
+                            const capacityWh = res.capacity_Wh || 1800;
+                            totalWh += qty * capacityWh * chargePct;
+                        }
+
+                        // 無資源時使用預設值
+                        if (totalWh === 0) totalWh = 1800 * 2 * 0.85; // 2台 85%
+
+                        const loadWatts = this.getPowerLoadWatts();
+                        return totalWh / loadWatts;
+                    } else {
+                        // 使用伺服器計算結果
+                        return this.resilienceStatus.power?.hours || 0;
+                    }
+                },
+
+                getCalculatedSurvivalHours() {
+                    const oxygenHours = this.getOxygenHours();
+                    const powerHours = this.getPowerHours();
+                    return Math.min(oxygenHours, powerHours);
+                },
+
+                getBottleneckResource() {
+                    const oxygenHours = this.getOxygenHours();
+                    const powerHours = this.getPowerHours();
+                    if (oxygenHours <= powerHours) {
+                        return '氧氣供應';
+                    } else {
+                        return '電力供應';
+                    }
                 },
 
                 // v1.1.4: 更新單位電量/氧氣%
