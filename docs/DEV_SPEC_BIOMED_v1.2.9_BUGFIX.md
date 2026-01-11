@@ -1,7 +1,7 @@
-# BioMed PWA v1.2.6 ~ v1.2.14 Bug 修復記錄
+# BioMed PWA v1.2.6 ~ v1.2.17 Bug 修復記錄
 
 **日期**: 2026-01-11
-**版本**: v1.2.6 → v1.2.14
+**版本**: v1.2.6 → v1.2.17
 **問題來源**: RPi 實機測試 + Gemini 程式碼審查 + ChatGPT 架構分析
 
 ---
@@ -20,6 +20,9 @@
 | v1.2.12 | v1.2.11 仍無效 | Alpine.js 不偵測巢狀物件屬性變更 | 用 .map() 創建新陣列 |
 | v1.2.13 | v1.2.12 仍無效 | 只替換子陣列不夠，需替換父物件 | 替換整個 resilienceStatus 物件 |
 | **v1.2.14** | **v1.2.13 仍無效** | **checkEquipment() 用舊 API，不更新 equipment_units.last_check** | **改用 v2 unit-level API** |
+| v1.2.15 | Unit 建立失敗 | API 回傳 `{ unit: { id: ... } }`，程式讀 `newUnit.unit_id` | 改為 `newUnit.unit?.id` |
+| v1.2.16 | 樂觀更新被覆蓋 | `loadEquipment()` 立即呼叫覆蓋本地更新 | State Aggregation + 延遲載入 |
+| **v1.2.17** | **狀態文字仍顯示「未檢」** | **灰階用 check_status，文字用 status，兩欄位未同步** | **新增 status 欄位映射** |
 
 ---
 
@@ -184,6 +187,9 @@ return isOxygen && !isConcentrator && !isVentilator;
 | v1.2.12 | 用 .map() 創建新陣列觸發響應式 | index.html |
 | v1.2.13 | 替換整個 resilienceStatus 物件 | index.html |
 | **v1.2.14** | **改用 v2 unit-level API (根因修復)** | index.html, service-worker.js |
+| v1.2.15 | Unit ID 解析修復 | index.html, service-worker.js |
+| v1.2.16 | State Aggregation (Gemini 建議) | index.html, service-worker.js |
+| **v1.2.17** | **status 欄位映射 (UI 文字顯示)** | index.html, service-worker.js |
 
 ---
 
@@ -796,6 +802,242 @@ async checkEquipment(eq) {
 
 ---
 
-**文件版本**: v1.5
+## 問題九：Unit ID 解析錯誤 (v1.2.15)
+
+### 症狀
+- v1.2.14 修復後，建立新 unit 時失敗
+- 錯誤訊息：「建立單位失敗：無法取得 ID」
+- console 顯示 `newUnitId` 為 undefined
+
+### 根因分析
+
+API 回傳結構與程式碼預期不符：
+
+```javascript
+// API 實際回傳
+{
+    "unit": {
+        "id": "unit-xxx",
+        "level_percent": 100,
+        ...
+    }
+}
+
+// v1.2.14 的錯誤讀取
+const newUnitId = newUnitData.unit_id;  // ← undefined！
+```
+
+### 修復
+
+```javascript
+// v1.2.15: 正確解析巢狀結構
+const newUnitData = await createRes.json();
+const newUnitId = newUnitData.unit?.id || newUnitData.unit_id;  // 相容兩種格式
+if (!newUnitId) {
+    this.showToast('建立單位失敗：無法取得 ID', 'error');
+    return;
+}
+```
+
+---
+
+## 問題十：樂觀更新被立即重新載入覆蓋 (v1.2.16)
+
+### 症狀
+- 設備確認成功，但 UI 沒有立即更新
+- 需要手動刷新頁面才能看到狀態變化
+
+### Gemini 分析
+
+> **State Aggregation 問題**：
+> BioMed 只更新 unit (子層) 狀態，沒有重新計算 parent item 狀態。
+> 加上 `loadEquipment()` 立即呼叫會覆蓋本地更新。
+
+### 根因
+
+```javascript
+// v1.2.15 的問題：立即重新載入
+async checkEquipment(eq) {
+    // ... 確認成功後 ...
+    this.equipment[idx] = {...};    // 樂觀更新
+    await this.loadEquipment();      // ← 這會覆蓋樂觀更新！
+}
+```
+
+### 修復 (v1.2.16)
+
+**1. 新增 State Aggregation 函數**：
+
+```javascript
+// v1.2.16: 狀態聚合函數 (模仿 MIRS 邏輯)
+calculateEquipmentCheckStatus(checkedCount, totalCount) {
+    if (totalCount === 0) return 'NO_UNITS';
+    if (checkedCount === 0) return 'UNCHECKED';
+    if (checkedCount < totalCount) return 'PARTIAL';
+    return 'CHECKED';
+}
+```
+
+**2. 移除立即重新載入**：
+
+```javascript
+// v1.2.16: 不立即重新載入，用 array.map() 觸發 Alpine 響應式
+this.equipment = this.equipment.map(e => {
+    if (e.id === eq.id) {
+        return {
+            ...e,
+            check_status: this.calculateEquipmentCheckStatus(successCount, units.length),
+            checked_count: successCount,
+            unit_count: units.length
+        };
+    }
+    return e;
+});
+
+// 延遲 500ms 載入韌性狀態，不阻塞 UI
+setTimeout(() => this.loadResilienceStatus(), 500);
+```
+
+---
+
+## 問題十一：狀態文字仍顯示「未檢」(v1.2.17) 🎯 最終修復
+
+### 症狀
+- v1.2.16 後，設備確認後**灰色變黑色** ✓
+- 但狀態文字仍顯示**「未檢」** ✗
+
+### 根因分析
+
+UI 使用兩個不同的欄位：
+
+| UI 元素 | 綁定欄位 | 欄位值 |
+|---------|----------|--------|
+| 灰階效果 | `check_status` | UNCHECKED/PARTIAL/CHECKED |
+| 狀態文字 | `status` | UNCHECKED/WARNING/NORMAL |
+
+v1.2.16 只更新了 `check_status`，沒有更新 `status`！
+
+```html
+<!-- 灰階用 check_status -->
+:class="{ 'opacity-50 grayscale': eq.check_status === 'UNCHECKED' }"
+
+<!-- 文字用 status -->
+<span x-text="getStatusText(eq.status)"></span>
+```
+
+### 修復
+
+```javascript
+// v1.2.17: 新增 status 欄位映射
+const newCheckStatus = this.calculateEquipmentCheckStatus(successCount, units.length);
+
+// check_status → status 映射
+let newStatus = 'NORMAL';  // 確認成功預設為 NORMAL
+if (newCheckStatus === 'PARTIAL') newStatus = 'WARNING';
+if (newCheckStatus === 'UNCHECKED') newStatus = 'UNCHECKED';
+
+console.log('[BioMed] v1.2.17: check_status:', newCheckStatus, '→ status:', newStatus);
+
+// 同時更新兩個欄位
+this.equipment = this.equipment.map(e => {
+    if (e.id === eq.id) {
+        return {
+            ...e,
+            check_status: newCheckStatus,
+            status: newStatus,           // ← 新增！
+            checked_count: successCount,
+            unit_count: units.length,
+            last_check: new Date().toISOString()
+        };
+    }
+    return e;
+});
+```
+
+### 欄位對應表
+
+```
+check_status (DB view)  →  status (UI text)
+─────────────────────────────────────────────
+UNCHECKED               →  UNCHECKED (未檢)
+PARTIAL                 →  WARNING (部分)
+CHECKED                 →  NORMAL (正常)
+NO_UNITS                →  UNCHECKED (未檢)
+```
+
+---
+
+## 架構說明：MIRS / BioMed PWA 設備狀態連動
+
+### 狀態同步架構
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SQLite Database (RPi)                     │
+├─────────────────────────────────────────────────────────────┤
+│  equipment 表                 equipment_units 表              │
+│  ├── id                      ├── id                          │
+│  ├── name                    ├── equipment_id (FK)           │
+│  ├── status ←─┐              ├── level_percent               │
+│  └── ...      │              ├── last_check ←────────────┐   │
+│               │              └── status                   │   │
+│               │                                           │   │
+│  v_equipment_status 視圖                                  │   │
+│  └── check_status ←── 計算自 equipment_units.last_check ──┘   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                    API: /api/v2/equipment/units/{id}/check
+                            │
+        ┌───────────────────┼───────────────────┐
+        ▼                   ▼                   ▼
+┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+│   MIRS 主頁    │   │  BioMed PWA  │   │  韌性估算     │
+│  設備管理 Tab  │   │   設備 Tab   │   │  (兩者共用)   │
+└───────────────┘   └───────────────┘   └───────────────┘
+```
+
+### 連動確認
+
+**以下操作都會更新同一筆 `equipment_units.last_check`**：
+
+1. **MIRS 主頁** → 設備管理 → 確認設備
+2. **BioMed PWA** → 設備 Tab → 確認設備
+3. **MIRS 主頁** → 韌性估算 → 設備確認
+4. **BioMed PWA** → 韌性估算 → 設備確認
+
+### 資料庫查詢驗證
+
+```sql
+-- 查看設備確認狀態
+SELECT e.name, e.status, v.check_status, v.checked_count, v.unit_count
+FROM equipment e
+JOIN v_equipment_status v ON e.id = v.id
+WHERE e.category = '電力設備' OR e.category LIKE '%呼吸%';
+```
+
+### 結論
+
+MIRS 設備、BioMed PWA 設備、韌性估算的設備確認狀態**完全連動**，因為：
+1. 共用同一個 SQLite 資料庫
+2. 都透過 `/api/v2/equipment/units/{id}/check` API 更新
+3. 都從 `v_equipment_status` 視圖讀取 `check_status`
+
+---
+
+## 修復完成確認清單
+
+| 項目 | v1.2.17 狀態 |
+|------|-------------|
+| checkEquipment() 使用 v2 API | ✅ (v1.2.14) |
+| Unit ID 正確解析 | ✅ (v1.2.15) |
+| State Aggregation 前端計算 | ✅ (v1.2.16) |
+| status 欄位映射 | ✅ (v1.2.17) |
+| 灰階正確顯示 | ✅ |
+| 狀態文字正確顯示 | ✅ |
+| MIRS/BioMed 連動 | ✅ 已確認 |
+
+---
+
+**文件版本**: v1.6
 **撰寫者**: Claude Code + Gemini (程式碼審查) + ChatGPT (架構分析)
 **日期**: 2026-01-11
