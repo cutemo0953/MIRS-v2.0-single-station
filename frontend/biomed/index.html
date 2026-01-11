@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.1.3</p>
+                    <p class="text-xs opacity-80">v1.1.4</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -173,8 +173,7 @@
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
-                                            <button @click="checkEquipment(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認">✓</button>
-                                            <button @click="openUnitManageModal(eq)" class="text-equipment-500 hover:text-equipment-700 text-xs font-medium px-2 py-1 bg-equipment-50 rounded" title="管理單位">⊞</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認/管理">✓⊞</button>
                                             <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
                                             <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
                                         </div>
@@ -222,8 +221,7 @@
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
-                                            <button @click="checkEquipment(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認">✓</button>
-                                            <button @click="openUnitManageModal(eq)" class="text-equipment-500 hover:text-equipment-700 text-xs font-medium px-2 py-1 bg-equipment-50 rounded" title="管理單位">⊞</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認/管理">✓⊞</button>
                                             <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
                                             <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
                                         </div>
@@ -269,8 +267,7 @@
                                     </td>
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
-                                            <button @click="checkEquipment(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認">✓</button>
-                                            <button @click="openUnitManageModal(eq)" class="text-equipment-500 hover:text-equipment-700 text-xs font-medium px-2 py-1 bg-equipment-50 rounded" title="管理單位">⊞</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認/管理">✓⊞</button>
                                             <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
                                             <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
                                         </div>
@@ -540,20 +537,72 @@
                 <!-- Current Units -->
                 <div>
                     <h4 class="font-medium text-gray-700 mb-2">現有單位 (<span x-text="(unitManageForm.units || []).length"></span>)</h4>
-                    <div class="space-y-2 max-h-40 overflow-y-auto">
-                        <template x-for="unit in (unitManageForm.units || [])" :key="unit.id">
-                            <div class="flex items-center justify-between bg-gray-50 rounded-lg p-3 border">
-                                <div class="flex items-center gap-3">
-                                    <span class="font-medium" x-text="unit.unit_label || unit.unit_serial"></span>
-                                    <span class="text-sm text-gray-500" x-text="(unit.level_percent || 0) + '%'"></span>
-                                    <span class="text-xs px-2 py-1 rounded-full" :class="getUnitStatusClass(unit.status)" x-text="unit.status"></span>
+                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                        <template x-for="(unit, idx) in (unitManageForm.units || [])" :key="unit.id">
+                            <div class="bg-gray-50 rounded-lg p-3 border">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <!-- 確認狀態 -->
+                                        <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs"
+                                              :class="unit.last_check ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-400'">
+                                            <template x-if="unit.last_check">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                                </svg>
+                                            </template>
+                                            <template x-if="!unit.last_check">
+                                                <span>?</span>
+                                            </template>
+                                        </span>
+                                        <span class="font-medium" x-text="unit.unit_label || unit.unit_serial"></span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <!-- 電量/氧氣% 可編輯 -->
+                                        <template x-if="!unit.editing">
+                                            <button @click="unit.editing = true; unit.editLevel = unit.level_percent"
+                                                    class="flex items-center gap-1 px-2 py-1 rounded bg-white border hover:bg-equipment-50">
+                                                <span class="font-medium" :class="unit.level_percent >= 60 ? 'text-green-600' : unit.level_percent >= 30 ? 'text-yellow-600' : 'text-red-600'"
+                                                      x-text="(unit.level_percent || 0) + '%'"></span>
+                                                <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                                </svg>
+                                            </button>
+                                        </template>
+                                        <template x-if="unit.editing">
+                                            <div class="flex items-center gap-1">
+                                                <input type="number" x-model="unit.editLevel" min="0" max="100"
+                                                       class="w-16 px-2 py-1 text-center border border-equipment-400 rounded text-sm">
+                                                <button @click="updateUnitLevel(unit)" class="text-green-600 hover:text-green-800 p-1">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                                    </svg>
+                                                </button>
+                                                <button @click="unit.editing = false" class="text-gray-400 hover:text-gray-600 p-1">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </template>
+                                        <!-- 狀態 -->
+                                        <span class="text-xs px-2 py-1 rounded-full" :class="getUnitStatusClass(unit.status)" x-text="unit.status"></span>
+                                        <!-- 確認按鈕 -->
+                                        <button type="button" @click="checkUnit(unit)"
+                                                :class="unit.last_check ? 'text-gray-400 bg-gray-100' : 'text-equipment-600 bg-equipment-100 hover:bg-equipment-200'"
+                                                class="p-1.5 rounded" :title="unit.last_check ? '已確認' : '點擊確認'">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                            </svg>
+                                        </button>
+                                        <!-- 移除 -->
+                                        <button type="button" @click="removeUnit(unit)"
+                                                class="text-red-500 hover:text-red-700 p-1" title="移除">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
-                                <button type="button" @click="removeUnit(unit)"
-                                        class="text-red-500 hover:text-red-700 p-1" title="移除">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                    </svg>
-                                </button>
                             </div>
                         </template>
                         <div x-show="!unitManageForm.units || unitManageForm.units.length === 0" class="text-center text-gray-400 py-4">
@@ -731,24 +780,35 @@
                         const res = await fetch('/api/resilience/status');
                         if (res.ok) {
                             const data = await res.json();
+                            console.log('[BioMed] Resilience API response:', data);
+
                             const oxygenLifeline = data.lifelines?.find(l => l.type === 'OXYGEN');
                             const powerLifeline = data.lifelines?.find(l => l.type === 'POWER');
                             const weakestLifeline = data.lifelines?.reduce((min, ll) =>
                                 (!min || (ll.endurance?.effective_hours || 0) < (min.endurance?.effective_hours || 0)) ? ll : min, null);
 
+                            // v1.1.4: 使用 $nextTick 確保 Alpine 響應式更新
+                            this.resilienceStatus = {};
+                            await this.$nextTick();
+
                             this.resilienceStatus = {
                                 summary: {
                                     overall_status: data.summary?.overall_status || 'UNKNOWN',
                                     weakest_link: weakestLifeline ? {
-                                        hours: weakestLifeline.endurance?.effective_hours || 0,
+                                        hours: weakestLifeline.endurance?.effective_hours || weakestLifeline.endurance?.hours || 0,
                                         resource: weakestLifeline.name
                                     } : null
                                 },
-                                oxygen: oxygenLifeline?.endurance || {},
-                                power: powerLifeline?.endurance || {},
+                                oxygen: oxygenLifeline?.endurance || { hours: 0 },
+                                power: powerLifeline?.endurance || { hours: 0 },
                                 oxygenResources: oxygenLifeline?.resources || [],
                                 powerResources: powerLifeline?.resources || []
                             };
+
+                            console.log('[BioMed] Parsed resilience:', {
+                                oxygenResources: this.resilienceStatus.oxygenResources,
+                                powerResources: this.resilienceStatus.powerResources
+                            });
                         }
                     } catch (err) {
                         console.error('[BioMed] Failed to load resilience:', err);
@@ -1113,6 +1173,63 @@
                         'EMPTY': 'bg-red-100 text-red-800'
                     };
                     return classes[status] || 'bg-gray-100 text-gray-800';
+                },
+
+                // v1.1.4: 更新單位電量/氧氣%
+                async updateUnitLevel(unit) {
+                    const newLevel = parseInt(unit.editLevel) || 0;
+                    try {
+                        const response = await fetch(`/api/v2/equipment/units/${unit.id}/check`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                level_percent: newLevel,
+                                status: unit.status || 'AVAILABLE'
+                            })
+                        });
+
+                        if (response.ok) {
+                            unit.level_percent = newLevel;
+                            unit.last_check = new Date().toISOString();
+                            unit.editing = false;
+                            this.showToast(`已更新電量至 ${newLevel}%`, 'success');
+                            await this.loadEquipment();
+                            await this.loadResilienceStatus();
+                        } else {
+                            const err = await response.json();
+                            this.showToast(err.detail || '更新失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('[BioMed] 更新單位電量失敗:', error);
+                        this.showToast('更新失敗', 'error');
+                    }
+                },
+
+                // v1.1.4: 確認單一單位
+                async checkUnit(unit) {
+                    try {
+                        const response = await fetch(`/api/v2/equipment/units/${unit.id}/check`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                level_percent: unit.level_percent || 100,
+                                status: unit.status || 'AVAILABLE'
+                            })
+                        });
+
+                        if (response.ok) {
+                            unit.last_check = new Date().toISOString();
+                            this.showToast(`${unit.unit_label || unit.unit_serial} 已確認`, 'success');
+                            await this.loadEquipment();
+                            await this.loadResilienceStatus();
+                        } else {
+                            const err = await response.json();
+                            this.showToast(err.detail || '確認失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('[BioMed] 確認單位失敗:', error);
+                        this.showToast('確認失敗', 'error');
+                    }
                 }
             };
         }

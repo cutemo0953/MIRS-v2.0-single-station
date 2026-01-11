@@ -9407,7 +9407,7 @@ class UnitCheckRequest(BaseModel):
 
 
 @app.post("/api/v2/equipment/units/{unit_id}/check")
-async def check_equipment_unit_v2(unit_id: int, request: UnitCheckRequest):
+async def check_equipment_unit_v2(unit_id: str, request: UnitCheckRequest):
     """
     檢查/更新設備單位狀態 (v2)
 
@@ -9420,6 +9420,34 @@ async def check_equipment_unit_v2(unit_id: int, request: UnitCheckRequest):
     Returns:
         Updated unit and equipment aggregate status
     """
+    # Vercel demo 模式：返回成功模擬結果
+    if IS_VERCEL:
+        from datetime import datetime
+        return {
+            "success": True,
+            "message": f"單位 {unit_id} 已確認",
+            "unit": {
+                "id": unit_id,
+                "level_percent": request.level_percent,
+                "status": request.status,
+                "last_check": datetime.now().isoformat()
+            },
+            "equipment_summary": {
+                "equipment_id": "DEMO-EQ",
+                "name": "Demo 設備",
+                "active_unit_count": 2,
+                "total_level_percent": request.level_percent,
+                "check_status": "CHECKED",
+                "total_hours": (request.level_percent / 100) * 24
+            }
+        }
+
+    # 轉換 unit_id 為整數 (生產環境)
+    try:
+        unit_id_int = int(unit_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="unit_id 必須為整數")
+
     try:
         conn = db.get_connection()
         cursor = conn.cursor()
@@ -9432,11 +9460,11 @@ async def check_equipment_unit_v2(unit_id: int, request: UnitCheckRequest):
             JOIN equipment e ON u.equipment_id = e.id
             LEFT JOIN equipment_types et ON e.type_code = et.type_code
             WHERE u.id = ?
-        """, (unit_id,))
+        """, (unit_id_int,))
 
         row = cursor.fetchone()
         if not row:
-            raise HTTPException(status_code=404, detail=f"單位不存在: {unit_id}")
+            raise HTTPException(status_code=404, detail=f"單位不存在: {unit_id_int}")
 
         equipment_id = row[0]
         unit_serial = row[1]
@@ -9452,7 +9480,7 @@ async def check_equipment_unit_v2(unit_id: int, request: UnitCheckRequest):
              status_before, status_after, remarks)
             VALUES (?, ?, ?, date('now'), datetime('now'), ?, ?, ?, ?, ?)
         """, (
-            equipment_id, unit_serial, unit_id,
+            equipment_id, unit_serial, unit_id_int,
             old_level, request.level_percent,
             old_status, request.status,
             request.remarks
@@ -9464,7 +9492,7 @@ async def check_equipment_unit_v2(unit_id: int, request: UnitCheckRequest):
             SET level_percent = ?, status = ?, last_check = datetime('now'),
                 remarks = ?, updated_at = datetime('now')
             WHERE id = ?
-        """, (request.level_percent, request.status, request.remarks, unit_id))
+        """, (request.level_percent, request.status, request.remarks, unit_id_int))
 
         conn.commit()
 
