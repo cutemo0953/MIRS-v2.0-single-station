@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.1.0</p>
+                    <p class="text-xs opacity-80">v1.1.2</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -174,6 +174,7 @@
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
                                             <button @click="checkEquipment(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認">✓</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-amber-600 hover:text-amber-800 text-xs font-medium px-2 py-1 bg-amber-50 rounded" title="管理單位">⊞</button>
                                             <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
                                             <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
                                         </div>
@@ -222,6 +223,7 @@
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
                                             <button @click="checkEquipment(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認">✓</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-amber-600 hover:text-amber-800 text-xs font-medium px-2 py-1 bg-amber-50 rounded" title="管理單位">⊞</button>
                                             <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
                                             <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
                                         </div>
@@ -268,6 +270,7 @@
                                     <td class="px-3 py-2 text-center">
                                         <div class="flex gap-1 justify-center">
                                             <button @click="checkEquipment(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認">✓</button>
+                                            <button @click="openUnitManageModal(eq)" class="text-amber-600 hover:text-amber-800 text-xs font-medium px-2 py-1 bg-amber-50 rounded" title="管理單位">⊞</button>
                                             <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
                                             <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
                                         </div>
@@ -345,15 +348,15 @@
                                  :style="'width: ' + Math.min((resilienceStatus.oxygen?.hours || 0) / 72 * 100, 100) + '%'"></div>
                         </div>
                         <!-- Oxygen Resources List -->
-                        <div class="text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-2" x-show="resilienceStatus.oxygenResources?.length > 0">
-                            <template x-for="res in resilienceStatus.oxygenResources" :key="res.name">
+                        <div class="text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-2" x-show="resilienceStatus.oxygenResources && resilienceStatus.oxygenResources.length > 0">
+                            <template x-for="res in (resilienceStatus.oxygenResources || [])" :key="res.name">
                                 <div class="flex justify-between">
                                     <span x-text="res.name + (res.quantity ? ' x' + res.quantity : '')"></span>
                                     <span class="text-gray-600" x-text="res.fill_pct ? res.fill_pct + '%' : (res.capacity_L ? res.capacity_L + 'L' : '')"></span>
                                 </div>
                             </template>
                         </div>
-                        <div class="text-xs text-gray-400 pt-2 border-t border-gray-100" x-show="!resilienceStatus.oxygenResources?.length">
+                        <div class="text-xs text-gray-400 pt-2 border-t border-gray-100" x-show="!resilienceStatus.oxygenResources || resilienceStatus.oxygenResources.length === 0">
                             尚無氧氣設備資料
                         </div>
                     </div>
@@ -385,15 +388,15 @@
                                  :style="'width: ' + Math.min((resilienceStatus.power?.hours || 0) / 72 * 100, 100) + '%'"></div>
                         </div>
                         <!-- Power Resources List -->
-                        <div class="text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-2" x-show="resilienceStatus.powerResources?.length > 0">
-                            <template x-for="res in resilienceStatus.powerResources" :key="res.name">
+                        <div class="text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-2" x-show="resilienceStatus.powerResources && resilienceStatus.powerResources.length > 0">
+                            <template x-for="res in (resilienceStatus.powerResources || [])" :key="res.name">
                                 <div class="flex justify-between">
                                     <span x-text="res.name + (res.quantity ? ' x' + res.quantity : '')"></span>
                                     <span class="text-gray-600" x-text="res.fuel_pct ? res.fuel_pct + '%' : (res.charge_pct ? res.charge_pct + '%' : '')"></span>
                                 </div>
                             </template>
                         </div>
-                        <div class="text-xs text-gray-400 pt-2 border-t border-gray-100" x-show="!resilienceStatus.powerResources?.length">
+                        <div class="text-xs text-gray-400 pt-2 border-t border-gray-100" x-show="!resilienceStatus.powerResources || resilienceStatus.powerResources.length === 0">
                             尚無電力設備資料
                         </div>
                     </div>
@@ -478,6 +481,166 @@
         </div>
     </div>
 
+    <!-- Unit Manage Modal -->
+    <div x-show="showUnitManageModal" x-cloak
+         class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center overflow-y-auto py-4"
+         @click.self="showUnitManageModal = false">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 my-4 max-h-[90vh] overflow-y-auto">
+            <div class="bg-amber-500 text-white px-4 py-3 rounded-t-2xl flex items-center justify-between">
+                <h3 class="font-semibold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    <span>單位管理 - </span>
+                    <span x-text="unitManageForm.equipment_name"></span>
+                </h3>
+                <button @click="showUnitManageModal = false" class="text-white hover:text-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div x-show="unitManageForm.loading" class="text-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto"></div>
+                <p class="text-gray-500 mt-2">載入中...</p>
+            </div>
+
+            <div x-show="!unitManageForm.loading" class="p-4 space-y-4">
+                <!-- Quick Quantity Adjust -->
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">快速數量調整</label>
+                    <div class="flex items-center gap-3">
+                        <button type="button" @click="unitManageForm.targetQuantity = Math.max(0, unitManageForm.targetQuantity - 1)"
+                                class="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-xl font-bold">
+                            −
+                        </button>
+                        <input type="number" x-model="unitManageForm.targetQuantity" min="0"
+                               class="w-20 text-center text-xl font-bold border-2 border-amber-300 rounded-lg py-2">
+                        <button type="button" @click="unitManageForm.targetQuantity++"
+                                class="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-xl font-bold">
+                            +
+                        </button>
+                        <button type="button" @click="batchAdjustQuantity()"
+                                :disabled="unitManageForm.targetQuantity === (unitManageForm.units || []).length"
+                                :class="unitManageForm.targetQuantity === (unitManageForm.units || []).length ? 'bg-gray-300 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600'"
+                                class="px-4 py-2 text-white rounded-lg transition-colors">
+                            套用
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">
+                        目前: <span x-text="(unitManageForm.units || []).length"></span> 個單位
+                        <span x-show="unitManageForm.targetQuantity !== (unitManageForm.units || []).length" class="text-amber-600 font-medium">
+                            → <span x-text="unitManageForm.targetQuantity"></span>
+                        </span>
+                    </p>
+                </div>
+
+                <!-- Current Units -->
+                <div>
+                    <h4 class="font-medium text-gray-700 mb-2">現有單位 (<span x-text="(unitManageForm.units || []).length"></span>)</h4>
+                    <div class="space-y-2 max-h-40 overflow-y-auto">
+                        <template x-for="unit in (unitManageForm.units || [])" :key="unit.id">
+                            <div class="flex items-center justify-between bg-gray-50 rounded-lg p-3 border">
+                                <div class="flex items-center gap-3">
+                                    <span class="font-medium" x-text="unit.unit_label || unit.unit_serial"></span>
+                                    <span class="text-sm text-gray-500" x-text="(unit.level_percent || 0) + '%'"></span>
+                                    <span class="text-xs px-2 py-1 rounded-full" :class="getUnitStatusClass(unit.status)" x-text="unit.status"></span>
+                                </div>
+                                <button type="button" @click="removeUnit(unit)"
+                                        class="text-red-500 hover:text-red-700 p-1" title="移除">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </template>
+                        <div x-show="!unitManageForm.units || unitManageForm.units.length === 0" class="text-center text-gray-400 py-4">
+                            目前沒有可用單位
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Remove Reason -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">移除原因（可選）</label>
+                    <input type="text" x-model="unitManageForm.removeReason" placeholder="例如：設備故障、送修"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+
+                <!-- Add Unit -->
+                <div class="border-t pt-4">
+                    <h4 class="font-medium text-gray-700 mb-2">新增單位</h4>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">電量 %</label>
+                            <input type="number" x-model="unitManageForm.addForm.level_percent" min="0" max="100"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">狀態</label>
+                            <select x-model="unitManageForm.addForm.status"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="AVAILABLE">可用</option>
+                                <option value="IN_USE">使用中</option>
+                                <option value="CHARGING">充電中</option>
+                                <option value="MAINTENANCE">維護中</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="button" @click="addUnit()"
+                                    class="w-full bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600 transition-colors text-sm">
+                                + 新增
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <label class="block text-xs text-gray-500 mb-1">新增原因（可選）</label>
+                        <input type="text" x-model="unitManageForm.addForm.reason" placeholder="例如：演習增援"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                </div>
+
+                <!-- Removed Units -->
+                <div class="border-t pt-4">
+                    <button type="button" @click="unitManageForm.showInactive = !unitManageForm.showInactive"
+                            class="flex items-center gap-2 text-gray-600 hover:text-gray-800">
+                        <svg class="w-4 h-4 transition-transform" :class="unitManageForm.showInactive ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <span class="text-sm font-medium">已移除單位 (<span x-text="(unitManageForm.inactive_units || []).length"></span>)</span>
+                    </button>
+                    <div x-show="unitManageForm.showInactive" class="mt-2 space-y-2 max-h-32 overflow-y-auto">
+                        <template x-for="unit in (unitManageForm.inactive_units || [])" :key="unit.id">
+                            <div class="flex items-center justify-between bg-red-50 rounded-lg p-3 border border-red-200">
+                                <div>
+                                    <span class="font-medium text-gray-600 line-through" x-text="unit.unit_label || unit.unit_serial"></span>
+                                    <span class="text-xs text-red-500 ml-2" x-text="unit.removal_reason || '已移除'"></span>
+                                </div>
+                                <button type="button" @click="restoreUnit(unit)"
+                                        class="text-green-600 hover:text-green-800 px-3 py-1 text-sm bg-green-100 rounded-lg">
+                                    恢復
+                                </button>
+                            </div>
+                        </template>
+                        <div x-show="!unitManageForm.inactive_units || unitManageForm.inactive_units.length === 0" class="text-center text-gray-400 py-2 text-sm">
+                            沒有已移除的單位
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Close Button -->
+                <div class="flex justify-end pt-4 border-t">
+                    <button type="button" @click="showUnitManageModal = false"
+                            class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                        關閉
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div x-show="toast.show" x-transition
          class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg z-50"
@@ -500,12 +663,31 @@
                 toast: { show: false, message: '', type: 'success' },
                 showAddModal: false,
                 showEditModal: false,
+                showUnitManageModal: false,
                 equipmentForm: {
                     id: '',
                     name: '',
                     category: '',
                     quantity: 1,
                     power_level: null
+                },
+                // v1.1.2: 設備單位管理表單
+                unitManageForm: {
+                    equipment_id: '',
+                    equipment_name: '',
+                    type_code: '',
+                    unit_prefix: '',
+                    units: [],
+                    inactive_units: [],
+                    loading: false,
+                    showInactive: false,
+                    addForm: {
+                        level_percent: 100,
+                        status: 'AVAILABLE',
+                        reason: ''
+                    },
+                    removeReason: '',
+                    targetQuantity: null
                 },
 
                 // Lifecycle
@@ -740,6 +922,197 @@
                     setTimeout(() => {
                         this.toast.show = false;
                     }, 3000);
+                },
+
+                // v1.1.2: 單位管理功能
+                async openUnitManageModal(eq) {
+                    this.unitManageForm.equipment_id = eq.id;
+                    this.unitManageForm.equipment_name = eq.name;
+                    this.unitManageForm.type_code = eq.type_code || '';
+                    this.unitManageForm.loading = true;
+                    this.unitManageForm.showInactive = false;
+                    this.unitManageForm.units = [];
+                    this.unitManageForm.inactive_units = [];
+                    this.showUnitManageModal = true;
+
+                    try {
+                        const response = await fetch(`/v2/equipment/${eq.id}/units?include_inactive=true`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.unitManageForm.units = data.units || [];
+                            this.unitManageForm.inactive_units = data.inactive_units || [];
+                            this.unitManageForm.unit_prefix = data.unit_prefix;
+                            this.unitManageForm.targetQuantity = data.active_count || 0;
+                        } else {
+                            this.showToast('載入單位列表失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('[BioMed] 載入設備單位失敗:', error);
+                        this.showToast('載入設備單位失敗', 'error');
+                    } finally {
+                        this.unitManageForm.loading = false;
+                    }
+                },
+
+                async addUnit() {
+                    const equipmentId = this.unitManageForm.equipment_id;
+                    const form = this.unitManageForm.addForm;
+
+                    try {
+                        const response = await fetch(`/v2/equipment/${equipmentId}/units`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                level_percent: parseInt(form.level_percent) || 100,
+                                status: form.status || 'AVAILABLE',
+                                reason: form.reason || null
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.showToast(data.message || '已新增單位', 'success');
+                            this.unitManageForm.units.push(data.unit);
+                            this.unitManageForm.targetQuantity = data.equipment_summary?.active_unit_count;
+                            this.unitManageForm.addForm = { level_percent: 100, status: 'AVAILABLE', reason: '' };
+                            await this.loadEquipment();
+                            await this.loadResilienceStatus();
+                        } else {
+                            this.showToast(data.detail || '新增失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('[BioMed] 新增單位失敗:', error);
+                        this.showToast('新增單位失敗', 'error');
+                    }
+                },
+
+                async removeUnit(unit) {
+                    const reason = this.unitManageForm.removeReason || '演習調整';
+
+                    if (!confirm(`確定要移除「${unit.unit_label || unit.unit_serial}」？\n原因: ${reason}`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/v2/equipment/units/${unit.id}`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ reason: reason })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.showToast(data.message || '已移除單位', 'success');
+                            this.unitManageForm.units = this.unitManageForm.units.filter(u => u.id !== unit.id);
+                            this.unitManageForm.inactive_units.unshift({
+                                ...unit,
+                                is_active: false,
+                                removed_at: new Date().toISOString(),
+                                removal_reason: reason
+                            });
+                            this.unitManageForm.targetQuantity = data.equipment_summary?.active_unit_count;
+                            await this.loadEquipment();
+                            await this.loadResilienceStatus();
+                        } else {
+                            this.showToast(data.detail || '移除失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('[BioMed] 移除單位失敗:', error);
+                        this.showToast('移除單位失敗', 'error');
+                    }
+                },
+
+                async restoreUnit(unit) {
+                    if (!confirm(`確定要恢復「${unit.unit_label || unit.unit_serial}」？`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/v2/equipment/units/${unit.id}/restore`, {
+                            method: 'POST'
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.showToast(data.message || '已恢復單位', 'success');
+                            this.unitManageForm.inactive_units = this.unitManageForm.inactive_units.filter(u => u.id !== unit.id);
+                            this.unitManageForm.units.push({
+                                ...unit,
+                                is_active: true,
+                                removed_at: null,
+                                removal_reason: null
+                            });
+                            this.unitManageForm.targetQuantity = data.equipment_summary?.active_unit_count;
+                            await this.loadEquipment();
+                            await this.loadResilienceStatus();
+                        } else {
+                            this.showToast(data.detail || '恢復失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('[BioMed] 恢復單位失敗:', error);
+                        this.showToast('恢復單位失敗', 'error');
+                    }
+                },
+
+                async batchAdjustQuantity() {
+                    const equipmentId = this.unitManageForm.equipment_id;
+                    const target = parseInt(this.unitManageForm.targetQuantity);
+                    const current = (this.unitManageForm.units || []).length;
+
+                    if (target === current) {
+                        this.showToast('數量未變更', 'warning');
+                        return;
+                    }
+
+                    const action = target > current ? '新增' : '移除';
+                    const diff = Math.abs(target - current);
+
+                    if (!confirm(`確定要${action} ${diff} 個單位？\n(${current} → ${target})`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/v2/equipment/${equipmentId}/quantity`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                target_quantity: target,
+                                reason: '批次數量調整'
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            this.showToast(data.message || '調整完成', 'success');
+                            await this.openUnitManageModal({
+                                id: equipmentId,
+                                name: this.unitManageForm.equipment_name,
+                                type_code: this.unitManageForm.type_code
+                            });
+                            await this.loadEquipment();
+                            await this.loadResilienceStatus();
+                        } else {
+                            this.showToast(data.detail || '調整失敗', 'error');
+                        }
+                    } catch (error) {
+                        console.error('[BioMed] 批次調整失敗:', error);
+                        this.showToast('批次調整失敗', 'error');
+                    }
+                },
+
+                getUnitStatusClass(status) {
+                    const classes = {
+                        'AVAILABLE': 'bg-green-100 text-green-800',
+                        'IN_USE': 'bg-blue-100 text-blue-800',
+                        'CHARGING': 'bg-yellow-100 text-yellow-800',
+                        'MAINTENANCE': 'bg-gray-100 text-gray-800',
+                        'EMPTY': 'bg-red-100 text-red-800'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
                 }
             };
         }
