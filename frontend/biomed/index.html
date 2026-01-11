@@ -335,7 +335,7 @@
                                   }"
                                   x-text="(resilienceStatus.oxygen?.hours?.toFixed(1) || '—') + 'h'"></span>
                         </div>
-                        <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
                             <div class="h-full transition-all duration-500"
                                  :class="{
                                      'bg-green-500': resilienceStatus.oxygen?.hours >= 24,
@@ -343,6 +343,18 @@
                                      'bg-red-500': resilienceStatus.oxygen?.hours < 12
                                  }"
                                  :style="'width: ' + Math.min((resilienceStatus.oxygen?.hours || 0) / 72 * 100, 100) + '%'"></div>
+                        </div>
+                        <!-- Oxygen Resources List -->
+                        <div class="text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-2" x-show="resilienceStatus.oxygenResources?.length > 0">
+                            <template x-for="res in resilienceStatus.oxygenResources" :key="res.name">
+                                <div class="flex justify-between">
+                                    <span x-text="res.name + (res.quantity ? ' x' + res.quantity : '')"></span>
+                                    <span class="text-gray-600" x-text="res.fill_pct ? res.fill_pct + '%' : (res.capacity_L ? res.capacity_L + 'L' : '')"></span>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="text-xs text-gray-400 pt-2 border-t border-gray-100" x-show="!resilienceStatus.oxygenResources?.length">
+                            尚無氧氣設備資料
                         </div>
                     </div>
 
@@ -363,7 +375,7 @@
                                   }"
                                   x-text="(resilienceStatus.power?.hours?.toFixed(1) || '—') + 'h'"></span>
                         </div>
-                        <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
                             <div class="h-full transition-all duration-500"
                                  :class="{
                                      'bg-green-500': resilienceStatus.power?.hours >= 24,
@@ -371,6 +383,18 @@
                                      'bg-red-500': resilienceStatus.power?.hours < 12
                                  }"
                                  :style="'width: ' + Math.min((resilienceStatus.power?.hours || 0) / 72 * 100, 100) + '%'"></div>
+                        </div>
+                        <!-- Power Resources List -->
+                        <div class="text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-2" x-show="resilienceStatus.powerResources?.length > 0">
+                            <template x-for="res in resilienceStatus.powerResources" :key="res.name">
+                                <div class="flex justify-between">
+                                    <span x-text="res.name + (res.quantity ? ' x' + res.quantity : '')"></span>
+                                    <span class="text-gray-600" x-text="res.fuel_pct ? res.fuel_pct + '%' : (res.charge_pct ? res.charge_pct + '%' : '')"></span>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="text-xs text-gray-400 pt-2 border-t border-gray-100" x-show="!resilienceStatus.powerResources?.length">
+                            尚無電力設備資料
                         </div>
                     </div>
                 </div>
@@ -525,6 +549,8 @@
                         const res = await fetch('/api/resilience/status');
                         if (res.ok) {
                             const data = await res.json();
+                            const oxygenLifeline = data.lifelines?.find(l => l.type === 'OXYGEN');
+                            const powerLifeline = data.lifelines?.find(l => l.type === 'POWER');
                             const weakestLifeline = data.lifelines?.reduce((min, ll) =>
                                 (!min || (ll.endurance?.effective_hours || 0) < (min.endurance?.effective_hours || 0)) ? ll : min, null);
 
@@ -536,8 +562,10 @@
                                         resource: weakestLifeline.name
                                     } : null
                                 },
-                                oxygen: data.lifelines?.find(l => l.type === 'OXYGEN')?.endurance || {},
-                                power: data.lifelines?.find(l => l.type === 'POWER')?.endurance || {}
+                                oxygen: oxygenLifeline?.endurance || {},
+                                power: powerLifeline?.endurance || {},
+                                oxygenResources: oxygenLifeline?.resources || [],
+                                powerResources: powerLifeline?.resources || []
                             };
                         }
                     } catch (err) {
@@ -549,12 +577,26 @@
                     try {
                         const res = await fetch(`/api/equipment/check/${eq.id}`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                stationId: 'HC-000000',
+                                status: 'NORMAL',
+                                powerLevel: eq.power_level || null,
+                                remarks: null
+                            })
                         });
                         if (res.ok) {
+                            // 更新本地狀態
+                            const idx = this.equipment.findIndex(e => e.id === eq.id);
+                            if (idx !== -1) {
+                                this.equipment[idx].status = 'NORMAL';
+                                this.equipment[idx].last_checked = new Date().toISOString();
+                            }
                             this.showToast(`${eq.name} 已確認`, 'success');
-                            await this.loadEquipment();
                             await this.loadResilienceStatus();
+                        } else {
+                            const err = await res.json();
+                            this.showToast(err.detail || '確認失敗', 'error');
                         }
                     } catch (err) {
                         console.error('[BioMed] Failed to check equipment:', err);
