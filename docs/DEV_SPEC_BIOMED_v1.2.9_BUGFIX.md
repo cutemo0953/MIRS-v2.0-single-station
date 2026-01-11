@@ -1138,12 +1138,106 @@ MIRS 設備、BioMed PWA 設備、韌性估算的設備確認狀態**完全連�
 | ~~status 欄位映射~~ | ⚠️ 改為 Fix A |
 | **UI 只讀 check_status (Fix A)** | ✅ (v1.2.18) |
 | 灰階正確顯示 | ✅ |
-| 狀態文字正確顯示 | ✅ (待 RPi 驗證) |
+| 狀態文字正確顯示 | ✅ **RPi 驗證通過** |
 | MIRS/BioMed 連動 | ✅ 已確認 |
 | 欄位契約單一真相 | ✅ (v1.2.18) |
 
 ---
 
-**文件版本**: v1.7
+## 經驗教訓：PWA 剝離時的欄位契約問題
+
+### 問題模式
+
+當從 MIRS 主程式剝離功能到獨立 PWA 時，容易遇到**欄位契約混亂**問題：
+
+```
+主程式 (MIRS Index.html)         獨立 PWA (BioMed)
+┌─────────────────────────┐     ┌─────────────────────────┐
+│ 用 API 回傳的 aggregate  │     │ 直接讀 DB View 欄位     │
+│ 統一計算狀態             │     │ 但也參考舊的 status 欄位 │
+│ → 狀態一致               │     │ → 狀態不一致！          │
+└─────────────────────────┘     └─────────────────────────┘
+```
+
+### BioMed 遭遇的 13 個版本迭代
+
+| 版本 | 嘗試修復 | 為何失敗 |
+|------|----------|----------|
+| v1.2.6~v1.2.9 | Alpine.js 響應式 | 表面問題，非根因 |
+| v1.2.10~v1.2.13 | 樂觀更新 + 陣列替換 | 治標不治本 |
+| v1.2.14 | 改用 v2 API | **找到 API 問題** |
+| v1.2.15 | 修 Unit ID 解析 | 修復新問題 |
+| v1.2.16 | State Aggregation | 前端計算，接近正確 |
+| v1.2.17 | status 欄位映射 | 還是依賴雙欄位 |
+| **v1.2.18** | **Fix A: 只讀 check_status** | **根治欄位契約** |
+
+### 血庫 PWA 剝離時的預防措施
+
+未來剝離血庫 (BloodBank PWA) 時，建議遵循以下規則：
+
+#### 1. 確認 API 版本
+```python
+# 檢查：血庫相關 API 是否有 v1/v2 分歧？
+# /api/blood/... vs /api/v2/blood/...
+# 確保新 PWA 一開始就用正確的 API
+```
+
+#### 2. 確認狀態欄位來源
+```sql
+-- 血庫有類似的 View 嗎？
+-- 例如 v_blood_inventory_status?
+-- 確認 UI 應該綁定哪個欄位
+SELECT * FROM sqlite_master WHERE type='view' AND name LIKE '%blood%';
+```
+
+#### 3. 單一真相來源原則
+```javascript
+// ❌ 錯誤：混用多個狀態欄位
+:class="{ 'bg-green': item.status === 'AVAILABLE',
+          'opacity-50': item.check_status === 'UNCHECKED' }"
+
+// ✅ 正確：只用一個狀態欄位
+:class="{ 'bg-green': item.availability_status === 'AVAILABLE',
+          'opacity-50': item.availability_status === 'EXPIRED' }"
+```
+
+#### 4. 預先定義欄位契約
+在剝離前，先定義好 PWA 的欄位契約：
+
+| UI 元素 | 綁定欄位 | 來源 |
+|---------|----------|------|
+| 血袋狀態顏色 | `availability_status` | View 計算 |
+| 血袋狀態文字 | `availability_status` | View 計算 |
+| 效期警示 | `days_until_expiry` | View 計算 |
+| 庫存數量 | `quantity` | 表格欄位 |
+
+#### 5. 載入後正規化 (Fix B 備案)
+如果無法避免雙欄位，在每次 load 後做正規化：
+
+```javascript
+async loadBloodInventory() {
+    const data = await fetch('/api/blood/inventory').then(r => r.json());
+    // 正規化：確保 UI 用的欄位有值
+    this.bloodInventory = data.map(item => ({
+        ...item,
+        display_status: item.view_status || item.legacy_status || 'UNKNOWN'
+    }));
+}
+```
+
+### 總結
+
+| 原則 | 說明 |
+|------|------|
+| **單一真相來源** | UI 只綁定一個狀態欄位，不混用 |
+| **View 優先** | 優先使用 DB View 計算的聚合欄位 |
+| **API 版本一致** | 新 PWA 一開始就用最新 API |
+| **預先定義契約** | 剝離前先定義好 UI ↔ 欄位 對應 |
+| **載入後正規化** | 備案：每次 load 後統一欄位 |
+
+---
+
+**文件版本**: v1.8
 **撰寫者**: Claude Code + Gemini (程式碼審查) + ChatGPT (架構分析)
 **日期**: 2026-01-11
+**狀態**: ✅ v1.2.18 修復完成，RPi 驗證通過
