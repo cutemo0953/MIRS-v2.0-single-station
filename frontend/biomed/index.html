@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.9</p>
+                    <p class="text-xs opacity-80">v1.2.10</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -1376,6 +1376,19 @@
                             })
                         });
                         if (res.ok) {
+                            // v1.2.10: 樂觀更新 - 找到並更新對應的 unit
+                            const updateUnit = (units) => {
+                                const unit = units?.find(u => u.id === this.unitEditForm.id);
+                                if (unit) {
+                                    unit.level_percent = this.unitEditForm.level_percent;
+                                    unit.status = this.unitEditForm.status;
+                                    unit.last_check = new Date().toISOString();
+                                    unit.psi = Math.round(this.unitEditForm.level_percent / 100 * 2200);
+                                }
+                            };
+                            updateUnit(this.resilienceStatus.oxygenUnits);
+                            updateUnit(this.resilienceStatus.powerUnits);
+
                             this.showToast(`${this.unitEditForm.equipment_name} ${this.unitEditForm.unit_label} 已更新`, 'success');
                             this.showUnitEditModal = false;
                             await this.loadResilienceStatus();
@@ -1410,7 +1423,12 @@
                             })
                         });
                         if (res.ok) {
+                            // v1.2.10: 樂觀更新 - 立即更新本地狀態，不等重新載入
+                            unit.last_check = new Date().toISOString();
+                            unit.status = 'AVAILABLE';
+
                             this.showToast(`${unit.equipment_name} #${unit.unit_label || unit.unit_serial || ''} 已確認`, 'success');
+                            // 仍然重新載入以確保同步，但 UI 已經先更新了
                             await this.loadResilienceStatus();
                             this.resilienceRefreshKey++;
                         } else {

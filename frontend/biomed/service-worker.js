@@ -48,9 +48,13 @@
  * v1.2.9: Fix $nextTick reset clearing empty arrays
  *         + Keep empty arrays during $nextTick transition
  *         + Add units count to debug log
+ * v1.2.10: Optimistic UI update (Gemini suggestion)
+ *          + confirmOxygenUnit() now updates unit.last_check immediately
+ *          + saveUnitEdit() now updates local state before reload
+ *          + UI updates instantly, then syncs with server
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.9';
+const CACHE_NAME = 'mirs-biomed-v1.2.10';
 
 const CORE_ASSETS = [
     '/biomed/',

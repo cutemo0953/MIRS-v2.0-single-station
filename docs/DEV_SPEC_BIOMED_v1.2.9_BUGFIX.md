@@ -1,8 +1,8 @@
-# BioMed PWA v1.2.6 ~ v1.2.9 Bug 修復記錄
+# BioMed PWA v1.2.6 ~ v1.2.10 Bug 修復記錄
 
 **日期**: 2026-01-11
-**版本**: v1.2.6 → v1.2.9
-**問題來源**: RPi 實機測試
+**版本**: v1.2.6 → v1.2.10
+**問題來源**: RPi 實機測試 + Gemini 程式碼審查
 
 ---
 
@@ -15,6 +15,7 @@
 | v1.2.7 | 設備確認後仍灰階顯示 | 灰階條件用 check_status，但舊 API 只更新 status | 條件改為 `check_status=UNCHECKED && status!=NORMAL` |
 | v1.2.8 | Alpine undefined 錯誤 | resilienceStatus 初始為空物件 | 初始化包含空陣列 |
 | v1.2.9 | v1.2.8 修復無效 | $nextTick 前的 reset 清空陣列 | reset 時也保留空陣列 |
+| v1.2.10 | 確認後 UI 仍不更新 | API 成功但本地狀態未同步 | 樂觀更新 (Optimistic UI) |
 
 ---
 
@@ -174,6 +175,64 @@ return isOxygen && !isConcentrator && !isVentilator;
 | v1.2.7 | 灰階邏輯修復 | index.html |
 | v1.2.8 | Alpine 初始化修復 | index.html |
 | v1.2.9 | $nextTick 修復 | index.html |
+| v1.2.10 | 樂觀更新 (Gemini 建議) | index.html |
+
+---
+
+## 問題四：前端狀態與後端資料脫鉤 (v1.2.10)
+
+### 症狀
+- v1.2.9 後仍然有問題
+- 按確認後 API 成功，但 UI 不更新
+- Vercel 和 RPi 都有同樣問題
+
+### Gemini 分析
+
+> 這是一個典型的 **「前端狀態與後端資料脫鉤 (State Desync)」** 問題。
+>
+> 問題出在：**你按了按鈕，API 送出了，但前端畫面上的「那個變數」沒有被更新，
+> 或者更新了但沒有觸發重新渲染 (Re-render)。**
+
+### 根因
+
+```javascript
+// 錯誤寫法 (只送不改)
+async confirmOxygenUnit(unit) {
+    await fetch('/api/...');
+    // 結束了。前端沒有修改 local 的 unit 資料。
+    // UI 依賴 last_check，但這個變數還是 null。
+    await this.loadResilienceStatus();  // 重新載入，但可能有延遲
+}
+```
+
+### 修復 (樂觀更新 Optimistic UI)
+
+```javascript
+// v1.2.10: 正確寫法 - 樂觀更新
+async confirmOxygenUnit(unit) {
+    const res = await fetch('/api/...');
+    if (res.ok) {
+        // [關鍵] 立即更新本地資料，不等重新載入
+        unit.last_check = new Date().toISOString();
+        unit.status = 'AVAILABLE';
+
+        this.showToast('已確認', 'success');
+        // 仍然重新載入以確保同步，但 UI 已經先更新了
+        await this.loadResilienceStatus();
+    }
+}
+```
+
+### 關鍵概念
+
+**樂觀更新 (Optimistic UI)**:
+1. 使用者點擊按鈕
+2. **立即更新 UI** (假設 API 會成功)
+3. 發送 API 請求
+4. API 成功 → 保持 UI 狀態
+5. API 失敗 → 回滾 UI 狀態 + 顯示錯誤
+
+這樣使用者體驗更好，不需要等待網路延遲。
 
 ---
 
@@ -213,8 +272,30 @@ isGray: item.check_status === 'UNCHECKED'
 isGray: item.check_status === 'UNCHECKED' && item.status !== 'NORMAL'
 ```
 
+### 4. 樂觀更新 (Optimistic UI)
+
+API 成功後，**先更新本地狀態**，再重新載入：
+
+```javascript
+// 錯誤：只送不改
+async confirmItem(item) {
+    await api.post('/check');
+    await this.reload();  // UI 可能有延遲
+}
+
+// 正確：樂觀更新
+async confirmItem(item) {
+    const res = await api.post('/check');
+    if (res.ok) {
+        item.status = 'CHECKED';           // 立即更新
+        item.last_check = new Date().toISOString();
+        await this.reload();               // 背景同步
+    }
+}
+```
+
 ---
 
-**文件版本**: v1.0
-**撰寫者**: Claude Code
+**文件版本**: v1.1
+**撰寫者**: Claude Code + Gemini (程式碼審查)
 **日期**: 2026-01-11
