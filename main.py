@@ -9435,8 +9435,8 @@ async def check_equipment_unit_v2(unit_id: str, request: UnitCheckRequest):
         Updated unit and equipment aggregate status
     """
     # Vercel demo 模式：返回成功模擬結果
+    # v1.1.5: 移除 local import 避免 shadowing module-level datetime
     if IS_VERCEL:
-        from datetime import datetime
         return {
             "success": True,
             "message": f"單位 {unit_id} 已確認",
