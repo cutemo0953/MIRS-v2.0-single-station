@@ -1468,34 +1468,87 @@
                     }
                 },
 
+                // v1.2.14: 修正 checkEquipment 使用 v2 unit-level API
+                // 根因: 舊 /api/equipment/check/{id} 只更新 equipment.status
+                //       但 v_equipment_status 視圖根據 equipment_units.last_check 計算 check_status
+                //       所以舊 API 無法更新 check_status
                 async checkEquipment(eq) {
                     try {
-                        const res = await fetch(`/api/equipment/check/${eq.id}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                stationId: 'HC-000000',
-                                status: 'NORMAL',
-                                powerLevel: eq.power_level || null,
-                                remarks: null
-                            })
-                        });
-                        if (res.ok) {
-                            // v1.2.1: 使用 refreshKey 強制 DOM 更新
+                        console.log('[BioMed] v1.2.14: checkEquipment for', eq.id, eq.name);
+
+                        // Step 1: 取得該設備的所有 units
+                        const unitsRes = await fetch(`/api/v2/equipment/${eq.id}/units`);
+                        if (!unitsRes.ok) {
+                            // 如果無法取得 units，顯示錯誤
+                            console.error('[BioMed] Failed to get units for', eq.id);
+                            this.showToast('無法取得設備單位', 'error');
+                            return;
+                        }
+                        const unitsData = await unitsRes.json();
+                        const units = unitsData.units || [];
+                        console.log('[BioMed] Got', units.length, 'units for', eq.id);
+
+                        if (units.length === 0) {
+                            // 沒有 units，需要先建立一個
+                            console.log('[BioMed] No units, creating one...');
+                            const createRes = await fetch(`/api/v2/equipment/${eq.id}/units`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    level_percent: eq.power_level || 100,
+                                    status: 'AVAILABLE'
+                                })
+                            });
+                            if (!createRes.ok) {
+                                this.showToast('無法建立設備單位', 'error');
+                                return;
+                            }
+                            const newUnit = await createRes.json();
+                            console.log('[BioMed] Created unit:', newUnit.unit_id);
+                            units.push({ id: newUnit.unit_id });
+                        }
+
+                        // Step 2: 對每個 unit 呼叫 v2 check API
+                        let successCount = 0;
+                        for (const unit of units) {
+                            try {
+                                const checkRes = await fetch(`/api/v2/equipment/units/${unit.id}/check`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        level_percent: unit.level_percent || eq.power_level || 100,
+                                        status: 'AVAILABLE'
+                                    })
+                                });
+                                if (checkRes.ok) {
+                                    successCount++;
+                                }
+                            } catch (unitErr) {
+                                console.error('[BioMed] Failed to check unit:', unit.id, unitErr);
+                            }
+                        }
+
+                        console.log('[BioMed] Checked', successCount, '/', units.length, 'units');
+
+                        if (successCount > 0) {
+                            // 樂觀更新本地狀態
                             const idx = this.equipment.findIndex(e => e.id === eq.id);
                             if (idx !== -1) {
-                                this.equipment[idx].status = 'NORMAL';
-                                this.equipment[idx].last_checked = new Date().toISOString();
+                                this.equipment[idx] = {
+                                    ...this.equipment[idx],
+                                    check_status: 'CHECKED',
+                                    last_check: new Date().toISOString()
+                                };
                             }
-                            this.showToast(`${eq.name} 已確認`, 'success');
-                            // 重新載入並遞增 refreshKey
+                            this.showToast(`${eq.name} 已確認 (${successCount}/${units.length})`, 'success');
+
+                            // 重新載入以確保資料一致
                             await this.loadEquipment();
                             await this.loadResilienceStatus();
                             this.equipmentRefreshKey++;
                             this.resilienceRefreshKey++;
                         } else {
-                            const err = await res.json();
-                            this.showToast(err.detail || '確認失敗', 'error');
+                            this.showToast('確認失敗: 無單位被更新', 'error');
                         }
                     } catch (err) {
                         console.error('[BioMed] Failed to check equipment:', err);

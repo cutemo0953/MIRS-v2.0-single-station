@@ -64,9 +64,15 @@
  *          + v1.2.12 still didn't work - replacing child array not enough
  *          + Now replace entire parent object: this.resilienceStatus = {...}
  *          + Add more console.log for debugging
+ * v1.2.14: Fix checkEquipment() to use v2 unit-level API
+ *          + ROOT CAUSE FOUND: checkEquipment() used old /api/equipment/check/{id}
+ *          + Old API only updates equipment.status, NOT equipment_units.last_check
+ *          + v_equipment_status view calculates check_status from equipment_units.last_check
+ *          + FIX: Now fetches units first, then calls /api/v2/equipment/units/{id}/check for each
+ *          + Also handles equipment with no units (creates one first)
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.13';
+const CACHE_NAME = 'mirs-biomed-v1.2.14';
 
 const CORE_ASSETS = [
     '/biomed/',

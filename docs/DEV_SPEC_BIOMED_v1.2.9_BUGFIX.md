@@ -1,8 +1,8 @@
-# BioMed PWA v1.2.6 ~ v1.2.13 Bug 修復記錄
+# BioMed PWA v1.2.6 ~ v1.2.14 Bug 修復記錄
 
 **日期**: 2026-01-11
-**版本**: v1.2.6 → v1.2.13
-**問題來源**: RPi 實機測試 + Gemini 程式碼審查
+**版本**: v1.2.6 → v1.2.14
+**問題來源**: RPi 實機測試 + Gemini 程式碼審查 + ChatGPT 架構分析
 
 ---
 
@@ -19,6 +19,7 @@
 | v1.2.11 | v1.2.10 樂觀更新無效 | loadResilienceStatus() 創建新陣列覆蓋更新 | 移除 loadResilienceStatus() 呼叫 |
 | v1.2.12 | v1.2.11 仍無效 | Alpine.js 不偵測巢狀物件屬性變更 | 用 .map() 創建新陣列 |
 | v1.2.13 | v1.2.12 仍無效 | 只替換子陣列不夠，需替換父物件 | 替換整個 resilienceStatus 物件 |
+| **v1.2.14** | **v1.2.13 仍無效** | **checkEquipment() 用舊 API，不更新 equipment_units.last_check** | **改用 v2 unit-level API** |
 
 ---
 
@@ -182,6 +183,7 @@ return isOxygen && !isConcentrator && !isVentilator;
 | v1.2.11 | 移除 loadResilienceStatus() 呼叫 | index.html |
 | v1.2.12 | 用 .map() 創建新陣列觸發響應式 | index.html |
 | v1.2.13 | 替換整個 resilienceStatus 物件 | index.html |
+| **v1.2.14** | **改用 v2 unit-level API (根因修復)** | index.html, service-worker.js |
 
 ---
 
@@ -647,6 +649,153 @@ this.parentObj = {
 
 ---
 
-**文件版本**: v1.4
-**撰寫者**: Claude Code + Gemini (程式碼審查)
+## 問題八：checkEquipment() 使用錯誤的 API 端點 (v1.2.14) 🎯 根因修復
+
+### 症狀
+- v1.2.13 的 Alpine 響應式修復仍然無效
+- 設備確認後 API 回應 200 成功
+- 但 `check_status` 仍然是 `UNCHECKED`
+- RPi 和 Vercel 都有同樣問題
+
+### Gemini + ChatGPT 關鍵分析
+
+> **ChatGPT 批判點**:
+> BioMed 的 `checkEquipment()` 函數（第 1473 行）使用的是**舊的 API 端點**：
+> ```javascript
+> fetch(`/api/equipment/check/${eq.id}`)
+> ```
+> 這個舊 API 只更新 `equipment.status`，**不會更新 `equipment_units.last_check`**！
+>
+> 而 `v_equipment_status` 視圖計算 `check_status` 是根據 `equipment_units.last_check`。
+> 所以舊 API 執行後，`equipment.status = 'NORMAL'`，但 `check_status` 仍然是 `UNCHECKED`！
+
+### 根因分析
+
+**兩個 API 的差異：**
+
+| API | 更新什麼 | 影響 check_status |
+|-----|---------|-------------------|
+| `/api/equipment/check/{id}` (舊) | `equipment.status` | ❌ 不影響 |
+| `/api/v2/equipment/units/{id}/check` (v2) | `equipment_units.last_check` | ✅ 會更新 |
+
+**v_equipment_status 視圖的計算邏輯：**
+
+```sql
+CREATE VIEW v_equipment_status AS
+SELECT
+    CASE
+        WHEN COUNT(u.id) = 0 THEN 'NO_UNITS'
+        WHEN SUM(CASE WHEN u.last_check IS NOT NULL THEN 1 ELSE 0 END) = 0 THEN 'UNCHECKED'
+        WHEN SUM(CASE WHEN u.last_check IS NOT NULL THEN 1 ELSE 0 END) = COUNT(u.id) THEN 'CHECKED'
+        ELSE 'PARTIAL'
+    END as check_status
+FROM equipment e
+LEFT JOIN equipment_units u ON e.id = u.equipment_id
+```
+
+視圖只看 `equipment_units.last_check`，完全不管 `equipment.status`！
+
+### 為什麼其他函數可以運作？
+
+BioMed 中的其他確認函數都使用正確的 v2 API：
+
+```javascript
+// confirmOxygenUnit() - 第 1408 行 ✅
+fetch(`/api/v2/equipment/units/${unit.id}/check`, ...)
+
+// checkUnit() - 第 1989 行 ✅
+fetch(`/api/v2/equipment/units/${unit.id}/check`, ...)
+
+// updateUnitStatus() - 第 2015 行 ✅
+fetch(`/api/v2/equipment/units/${unit.id}/check`, ...)
+```
+
+只有 `checkEquipment()` 用舊 API！
+
+### v1.2.14 修復
+
+**重構 `checkEquipment()` 函數：**
+
+1. 先取得該設備的所有 units
+2. 對每個 unit 呼叫 v2 API
+3. 如果設備沒有 units，先建立一個
+
+```javascript
+// v1.2.14: 修正 checkEquipment 使用 v2 unit-level API
+async checkEquipment(eq) {
+    console.log('[BioMed] v1.2.14: checkEquipment for', eq.id, eq.name);
+
+    // Step 1: 取得該設備的所有 units
+    const unitsRes = await fetch(`/api/v2/equipment/${eq.id}/units`);
+    const unitsData = await unitsRes.json();
+    const units = unitsData.units || [];
+
+    if (units.length === 0) {
+        // 沒有 units，需要先建立一個
+        const createRes = await fetch(`/api/v2/equipment/${eq.id}/units`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ level_percent: 100, status: 'AVAILABLE' })
+        });
+        const newUnit = await createRes.json();
+        units.push({ id: newUnit.unit_id });
+    }
+
+    // Step 2: 對每個 unit 呼叫 v2 check API
+    for (const unit of units) {
+        await fetch(`/api/v2/equipment/units/${unit.id}/check`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                level_percent: unit.level_percent || 100,
+                status: 'AVAILABLE'
+            })
+        });
+    }
+
+    // Step 3: 樂觀更新 + 重新載入
+    this.equipment[idx] = { ...this.equipment[idx], check_status: 'CHECKED' };
+    await this.loadEquipment();
+    await this.loadResilienceStatus();
+}
+```
+
+### 關鍵差異
+
+| 項目 | v1.2.13 (之前) | v1.2.14 (修復) |
+|------|----------------|----------------|
+| API 端點 | `/api/equipment/check/{id}` | `/api/v2/equipment/units/{id}/check` |
+| 更新的欄位 | `equipment.status` | `equipment_units.last_check` |
+| 視圖計算 | `check_status` 不變 | `check_status` 變為 CHECKED |
+| 沒有 units 時 | 無法運作 | 自動建立 unit |
+
+### 為什麼花了 8 個版本才找到根因？
+
+1. **症狀誤導**：UI 不更新 → 以為是 Alpine 響應式問題
+2. **API 成功**：舊 API 回傳 200 OK → 以為後端正常
+3. **多重原因**：確實有 Alpine 響應式問題，但不是主因
+4. **測試環境差異**：Vercel Demo 資料不完整，難以驗證
+
+### 教訓
+
+1. **API 文件化**：每個 API 應該清楚說明它更新哪些欄位
+2. **視圖依賴**：視圖計算邏輯應該與 API 行為一致
+3. **統一 API 版本**：新舊 API 不應該共存太久
+4. **從資料流追查**：UI 問題不一定是前端問題，要追溯整個資料流
+
+---
+
+## 修復完成確認清單
+
+| 項目 | v1.2.14 狀態 |
+|------|-------------|
+| checkEquipment() 使用 v2 API | ✅ |
+| 處理沒有 units 的設備 | ✅ (自動建立) |
+| Service Worker 版本更新 | ✅ v1.2.14 |
+| DEV SPEC 文件更新 | ✅ |
+
+---
+
+**文件版本**: v1.5
+**撰寫者**: Claude Code + Gemini (程式碼審查) + ChatGPT (架構分析)
 **日期**: 2026-01-11
