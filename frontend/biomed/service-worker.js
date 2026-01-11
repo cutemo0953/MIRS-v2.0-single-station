@@ -42,9 +42,12 @@
  * v1.2.7: Fix grayscale logic for equipment without units
  *         + Grayscale only if check_status=UNCHECKED AND status!=NORMAL
  *         + Equipment confirmed via old API now shows correctly
+ * v1.2.8: Fix Alpine undefined error for oxygenUnits/powerUnits
+ *         + Initialize resilienceStatus with empty arrays
+ *         + Add null safety checks in filter expressions
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.7';
+const CACHE_NAME = 'mirs-biomed-v1.2.8';
 
 const CORE_ASSETS = [
     '/biomed/',
