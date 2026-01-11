@@ -70,9 +70,13 @@
  *          + v_equipment_status view calculates check_status from equipment_units.last_check
  *          + FIX: Now fetches units first, then calls /api/v2/equipment/units/{id}/check for each
  *          + Also handles equipment with no units (creates one first)
+ * v1.2.15: Fix unit ID parsing from API response
+ *          + API returns { unit: { id: ... } } (nested structure)
+ *          + Was reading newUnit.unit_id (wrong), now reads newUnit.unit?.id
+ *          + Added better error logging for debugging
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.14';
+const CACHE_NAME = 'mirs-biomed-v1.2.15';
 
 const CORE_ASSETS = [
     '/biomed/',

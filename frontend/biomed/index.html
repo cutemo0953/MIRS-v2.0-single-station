@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.14</p>
+                    <p class="text-xs opacity-80">v1.2.15</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -1500,12 +1500,21 @@
                                 })
                             });
                             if (!createRes.ok) {
-                                this.showToast('無法建立設備單位', 'error');
+                                const errData = await createRes.json().catch(() => ({}));
+                                console.error('[BioMed] Failed to create unit:', createRes.status, errData);
+                                this.showToast(errData.detail || '無法建立設備單位', 'error');
                                 return;
                             }
-                            const newUnit = await createRes.json();
-                            console.log('[BioMed] Created unit:', newUnit.unit_id);
-                            units.push({ id: newUnit.unit_id });
+                            const newUnitData = await createRes.json();
+                            // v1.2.15: API 回傳 { unit: { id: ... } } 巢狀結構
+                            const newUnitId = newUnitData.unit?.id || newUnitData.unit_id;
+                            console.log('[BioMed] Created unit:', newUnitId, 'response:', newUnitData);
+                            if (!newUnitId) {
+                                console.error('[BioMed] No unit ID in response:', newUnitData);
+                                this.showToast('建立單位失敗：無法取得 ID', 'error');
+                                return;
+                            }
+                            units.push({ id: newUnitId, level_percent: eq.power_level || 100 });
                         }
 
                         // Step 2: 對每個 unit 呼叫 v2 check API
