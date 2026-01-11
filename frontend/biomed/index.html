@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.6</p>
+                    <p class="text-xs opacity-80">v1.2.7</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -162,7 +162,7 @@
                                     'bg-amber-50': eq.status === 'NORMAL',
                                     'bg-yellow-50': eq.status === 'WARNING',
                                     'bg-red-50': eq.status === 'ERROR',
-                                    'opacity-50 grayscale': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS'
+                                    'opacity-50 grayscale': (eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS') && eq.status !== 'NORMAL'
                                 }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
@@ -220,7 +220,7 @@
                                     'bg-amber-50': eq.status === 'NORMAL',
                                     'bg-yellow-50': eq.status === 'WARNING',
                                     'bg-red-50': eq.status === 'ERROR',
-                                    'opacity-50 grayscale': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS'
+                                    'opacity-50 grayscale': (eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS') && eq.status !== 'NORMAL'
                                 }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
@@ -272,7 +272,7 @@
                                     'bg-amber-50': eq.status === 'NORMAL',
                                     'bg-yellow-50': eq.status === 'WARNING',
                                     'bg-red-50': eq.status === 'ERROR',
-                                    'opacity-50 grayscale': eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS'
+                                    'opacity-50 grayscale': (eq.check_status === 'UNCHECKED' || eq.check_status === 'NO_UNITS') && eq.status !== 'NORMAL'
                                 }">
                                     <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
                                     <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
@@ -1585,9 +1585,9 @@
                 },
 
                 getPendingCount() {
-                    // v1.2.6: 使用 check_status 判斷待確認設備
+                    // v1.2.7: 同時考慮 check_status 和 status (設備確認後 status=NORMAL)
                     return this.equipment.filter(e =>
-                        e.check_status === 'UNCHECKED' || e.check_status === 'NO_UNITS'
+                        (e.check_status === 'UNCHECKED' || e.check_status === 'NO_UNITS') && e.status !== 'NORMAL'
                     ).length;
                 },
 

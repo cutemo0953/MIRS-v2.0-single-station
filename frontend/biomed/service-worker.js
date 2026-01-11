@@ -39,9 +39,12 @@
  *         + Exclude 呼吸器 from oxygen section filter
  *         + Add EMPTY status to unit edit modal (5 options)
  *         + Sync status options between equipment and resilience
+ * v1.2.7: Fix grayscale logic for equipment without units
+ *         + Grayscale only if check_status=UNCHECKED AND status!=NORMAL
+ *         + Equipment confirmed via old API now shows correctly
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.6';
+const CACHE_NAME = 'mirs-biomed-v1.2.7';
 
 const CORE_ASSETS = [
     '/biomed/',
