@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.16</p>
+                    <p class="text-xs opacity-80">v1.2.17</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -1542,18 +1542,24 @@
                         if (successCount > 0) {
                             // v1.2.16: 狀態聚合 (Gemini 建議)
                             // 不要重新載入覆蓋樂觀更新，直接在前端計算狀態
-                            const newStatus = this.calculateEquipmentCheckStatus(successCount, units.length);
-                            console.log('[BioMed] v1.2.16: Calculated status:', newStatus);
+                            const newCheckStatus = this.calculateEquipmentCheckStatus(successCount, units.length);
+                            // v1.2.17: status 欄位映射 (用於 UI 文字顯示)
+                            // check_status: UNCHECKED/PARTIAL/CHECKED → status: UNCHECKED/WARNING/NORMAL
+                            let newStatus = 'NORMAL';  // 確認成功預設為 NORMAL
+                            if (newCheckStatus === 'PARTIAL') newStatus = 'WARNING';
+                            if (newCheckStatus === 'UNCHECKED') newStatus = 'UNCHECKED';
+
+                            console.log('[BioMed] v1.2.17: check_status:', newCheckStatus, '→ status:', newStatus);
 
                             // 用「替換整個陣列」的方式更新 (Alpine 響應式要求)
                             this.equipment = this.equipment.map(e => {
                                 if (e.id === eq.id) {
                                     return {
                                         ...e,
-                                        check_status: newStatus,
+                                        check_status: newCheckStatus,
                                         checked_count: successCount,
                                         unit_count: units.length,
-                                        status: newStatus === 'CHECKED' ? 'NORMAL' : (newStatus === 'PARTIAL' ? 'WARNING' : e.status),
+                                        status: newStatus,
                                         last_check: new Date().toISOString()
                                     };
                                 }

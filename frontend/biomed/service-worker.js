@@ -79,9 +79,13 @@
  *          + Add calculateEquipmentCheckStatus() for frontend status calculation
  *          + Use array.map() to replace entire equipment array (Alpine reactivity)
  *          + Delay resilienceStatus reload by 500ms to not block UI update
+ * v1.2.17: Fix status field mapping for UI text display
+ *          + check_status (view): UNCHECKED/PARTIAL/CHECKED
+ *          + status (UI text): UNCHECKED/WARNING/NORMAL
+ *          + Simplified logic: default to NORMAL on successful check
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.16';
+const CACHE_NAME = 'mirs-biomed-v1.2.17';
 
 const CORE_ASSETS = [
     '/biomed/',
