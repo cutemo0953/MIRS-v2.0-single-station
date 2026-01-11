@@ -1,7 +1,7 @@
-# BioMed PWA v1.2.6 ~ v1.2.12 Bug 修復記錄
+# BioMed PWA v1.2.6 ~ v1.2.13 Bug 修復記錄
 
 **日期**: 2026-01-11
-**版本**: v1.2.6 → v1.2.12
+**版本**: v1.2.6 → v1.2.13
 **問題來源**: RPi 實機測試 + Gemini 程式碼審查
 
 ---
@@ -18,6 +18,7 @@
 | v1.2.10 | 確認後 UI 仍不更新 | API 成功但本地狀態未同步 | 樂觀更新 (Optimistic UI) |
 | v1.2.11 | v1.2.10 樂觀更新無效 | loadResilienceStatus() 創建新陣列覆蓋更新 | 移除 loadResilienceStatus() 呼叫 |
 | v1.2.12 | v1.2.11 仍無效 | Alpine.js 不偵測巢狀物件屬性變更 | 用 .map() 創建新陣列 |
+| v1.2.13 | v1.2.12 仍無效 | 只替換子陣列不夠，需替換父物件 | 替換整個 resilienceStatus 物件 |
 
 ---
 
@@ -180,6 +181,7 @@ return isOxygen && !isConcentrator && !isVentilator;
 | v1.2.10 | 樂觀更新 (Gemini 建議) | index.html |
 | v1.2.11 | 移除 loadResilienceStatus() 呼叫 | index.html |
 | v1.2.12 | 用 .map() 創建新陣列觸發響應式 | index.html |
+| v1.2.13 | 替換整個 resilienceStatus 物件 | index.html |
 
 ---
 
@@ -396,6 +398,140 @@ Console 會顯示：
 
 ---
 
+## 問題七：v1.2.12 仍無效 - 只替換子陣列不夠 (v1.2.13)
+
+### 症狀
+- v1.2.12 部署後問題依舊
+- Console 有顯示 log，但 UI 不更新
+- RPi 和 Vercel 都一樣
+
+### MIRS vs BioMed 程式碼比較
+
+**為什麼 MIRS 可以正常運作，BioMed 不行？**
+
+#### MIRS 的做法 (Index.html)
+
+```javascript
+// MIRS submitCheckEquipment() - 第 8211-8224 行
+if (response.ok) {
+    // 1. 從 API 回應更新設備
+    this.updateEquipmentFromResponse(data);
+
+    // 2. 更新韌性狀態
+    if (data.dashboard_delta) {
+        this.applyDashboardDelta(data.dashboard_delta);
+    } else {
+        // fallback: 重新載入
+        await this.loadResilienceStatus();
+    }
+}
+
+// MIRS updateEquipmentFromResponse() - 第 8237-8257 行
+updateEquipmentFromResponse(data) {
+    const idx = this.equipment.findIndex(e => e.id === eqId);
+    // 替換整個物件
+    this.equipment[idx] = {
+        ...this.equipment[idx],
+        unit_count: data.equipment_aggregate.unit_count,
+        avg_level: data.equipment_aggregate.avg_level,
+        check_status: data.equipment_aggregate.check_status,
+        // ...
+    };
+}
+```
+
+**MIRS 關鍵特點**：
+1. API 回傳 `equipment_aggregate` 和 `dashboard_delta`
+2. 用 `this.equipment[idx] = {...}` 替換整個物件
+3. 有 fallback: 如果沒有 delta，就 `loadResilienceStatus()`
+
+#### BioMed 的問題
+
+BioMed 的狀態結構更深層：
+
+```
+MIRS:
+this.equipment[idx].check_status = 'CHECKED'  // 一層
+
+BioMed:
+this.resilienceStatus.oxygenUnits[idx].last_check = '...'  // 兩層
+```
+
+在 Alpine.js 中，巢狀越深，響應式越不可靠。
+
+### v1.2.12 失敗原因分析
+
+```javascript
+// v1.2.12: 只替換子陣列
+this.resilienceStatus.oxygenUnits = [...].map(u => ...);
+// ^ 這只替換了 oxygenUnits 陣列，但 resilienceStatus 物件本身沒變
+```
+
+Alpine 可能沒有追蹤到 `resilienceStatus` 物件內部屬性的變更。
+
+### v1.2.13 修復
+
+**替換整個父物件**：
+
+```javascript
+// v1.2.13: 替換整個 resilienceStatus 物件
+this.resilienceStatus = {
+    ...this.resilienceStatus,  // 複製現有屬性
+    oxygenUnits: (this.resilienceStatus.oxygenUnits || []).map(u =>
+        u.id === targetId ? { ...u, last_check: newLastCheck, status: 'AVAILABLE' } : u
+    ),
+    powerUnits: (this.resilienceStatus.powerUnits || []).map(mapUnit)
+};
+```
+
+這樣 `resilienceStatus` 本身是新物件，Alpine 一定會偵測到。
+
+### 調試 Console Log
+
+v1.2.13 新增更多 log：
+```
+[BioMed] v1.2.13: Updating unit xxx level: 50 status: AVAILABLE
+[BioMed] v1.2.13: resilienceStatus replaced, refreshKey: 1
+```
+
+如果看到這些 log 但 UI 還是不更新，問題可能在：
+1. 模板綁定有誤
+2. 其他地方覆蓋了 resilienceStatus
+3. Service Worker 快取問題
+
+---
+
+## MIRS vs BioMed 架構差異總結
+
+| 項目 | MIRS | BioMed |
+|------|------|--------|
+| 狀態深度 | 1 層 (`this.equipment[idx]`) | 2 層 (`this.resilienceStatus.oxygenUnits[idx]`) |
+| API 回傳 | `equipment_aggregate` + `dashboard_delta` | 只有成功/失敗 |
+| 更新策略 | `array[idx] = {...}` 替換物件 | 需替換整個 `resilienceStatus` |
+| Fallback | 有 `loadResilienceStatus()` | v1.2.11 移除了 |
+| 樣板 key | 用 `eq.id` | 用 `unit.id + '-' + resilienceRefreshKey` |
+
+### 為什麼 MIRS 直接修改屬性也能運作？
+
+看 MIRS `applyDashboardDelta()` 第 8275-8279 行：
+```javascript
+ll.total_hours = delta.total_hours;
+if (ll.endurance) {
+    ll.endurance.effective_hours = delta.total_hours >= 999999 ? '∞' : ...;
+}
+```
+
+MIRS 這裡也是直接修改屬性，為什麼能運作？
+
+**可能原因**：
+1. MIRS 的 `lifelines` 結構比較簡單
+2. MIRS 的模板綁定不依賴 `lifelines` 的深層屬性
+3. MIRS 有其他機制觸發重新渲染
+
+**結論**：BioMed 的 `resilienceStatus.oxygenUnits[idx].last_check` 太深層，必須替換整個父物件。
+
+---
+
 ## 教訓與最佳實踐
 
 ### 1. Alpine.js 響應式陣列初始化
@@ -494,8 +630,23 @@ this.items = this.items.map(i =>
 );
 ```
 
+### 7. Alpine.js 深層響應式 - 替換父物件
+
+當狀態結構超過一層時，替換整個父物件最可靠：
+
+```javascript
+// 錯誤：只替換子陣列
+this.parentObj.childArray = this.parentObj.childArray.map(item => ...);
+
+// 正確：替換整個父物件
+this.parentObj = {
+    ...this.parentObj,
+    childArray: this.parentObj.childArray.map(item => ...)
+};
+```
+
 ---
 
-**文件版本**: v1.3
+**文件版本**: v1.4
 **撰寫者**: Claude Code + Gemini (程式碼審查)
 **日期**: 2026-01-11

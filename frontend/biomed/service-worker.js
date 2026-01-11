@@ -60,9 +60,13 @@
  *          + Use .map() to create NEW array (Alpine doesn't detect nested property changes)
  *          + Add console.log for debugging
  *          + Root cause: modifying object properties doesn't trigger Alpine re-render
+ * v1.2.13: Replace entire resilienceStatus object
+ *          + v1.2.12 still didn't work - replacing child array not enough
+ *          + Now replace entire parent object: this.resilienceStatus = {...}
+ *          + Add more console.log for debugging
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.12';
+const CACHE_NAME = 'mirs-biomed-v1.2.13';
 
 const CORE_ASSETS = [
     '/biomed/',

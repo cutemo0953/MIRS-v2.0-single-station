@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.12</p>
+                    <p class="text-xs opacity-80">v1.2.13</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -1376,31 +1376,35 @@
                             })
                         });
                         if (res.ok) {
-                            // v1.2.12: 用 .map() 創建新陣列觸發 Alpine 響應式更新
-                            // (直接修改物件屬性不會觸發 Alpine 重新渲染)
-                            const updateUnitInArray = (units) => {
-                                if (!units) return units;
-                                return units.map(u => {
-                                    if (u.id === this.unitEditForm.id) {
-                                        console.log('[BioMed] v1.2.12: Updating unit', u.id, 'level:', this.unitEditForm.level_percent);
-                                        return {
-                                            ...u,
-                                            level_percent: this.unitEditForm.level_percent,
-                                            status: this.unitEditForm.status,
-                                            last_check: new Date().toISOString(),
-                                            psi: Math.round(this.unitEditForm.level_percent / 100 * 2200)
-                                        };
-                                    }
-                                    return u;
-                                });
+                            // v1.2.13: 替換整個 resilienceStatus 物件觸發 Alpine 響應式
+                            // (只替換子陣列可能不夠，需要替換父物件)
+                            const targetId = this.unitEditForm.id;
+                            const newLevel = this.unitEditForm.level_percent;
+                            const newStatus = this.unitEditForm.status;
+                            const newLastCheck = new Date().toISOString();
+                            const newPsi = Math.round(newLevel / 100 * 2200);
+
+                            console.log('[BioMed] v1.2.13: Updating unit', targetId, 'level:', newLevel, 'status:', newStatus);
+
+                            const mapUnit = (u) => {
+                                if (u.id === targetId) {
+                                    return { ...u, level_percent: newLevel, status: newStatus, last_check: newLastCheck, psi: newPsi };
+                                }
+                                return u;
                             };
-                            this.resilienceStatus.oxygenUnits = updateUnitInArray(this.resilienceStatus.oxygenUnits);
-                            this.resilienceStatus.powerUnits = updateUnitInArray(this.resilienceStatus.powerUnits);
+
+                            // 替換整個 resilienceStatus 物件 (不只是子陣列)
+                            this.resilienceStatus = {
+                                ...this.resilienceStatus,
+                                oxygenUnits: (this.resilienceStatus.oxygenUnits || []).map(mapUnit),
+                                powerUnits: (this.resilienceStatus.powerUnits || []).map(mapUnit)
+                            };
 
                             this.showToast(`${this.unitEditForm.equipment_name} ${this.unitEditForm.unit_label} 已更新`, 'success');
                             this.showUnitEditModal = false;
-                            // v1.2.12: 創建新陣列 + resilienceRefreshKey 雙重確保更新
+                            // v1.2.13: 替換整個物件 + resilienceRefreshKey 雙重確保
                             this.resilienceRefreshKey++;
+                            console.log('[BioMed] v1.2.13: resilienceStatus replaced, refreshKey:', this.resilienceRefreshKey);
                         } else {
                             try {
                                 const err = await res.json();
@@ -1431,21 +1435,23 @@
                             })
                         });
                         if (res.ok) {
-                            // v1.2.12: 用 .map() 創建新陣列觸發 Alpine 響應式更新
+                            // v1.2.13: 替換整個 resilienceStatus 物件觸發 Alpine 響應式
                             const unitId = unit.id;
                             const newLastCheck = new Date().toISOString();
-                            console.log('[BioMed] v1.2.12: Confirming unit', unitId);
+                            console.log('[BioMed] v1.2.13: Confirming unit', unitId);
 
-                            this.resilienceStatus.oxygenUnits = (this.resilienceStatus.oxygenUnits || []).map(u => {
-                                if (u.id === unitId) {
-                                    return { ...u, last_check: newLastCheck, status: 'AVAILABLE' };
-                                }
-                                return u;
-                            });
+                            // 替換整個 resilienceStatus 物件 (不只是子陣列)
+                            this.resilienceStatus = {
+                                ...this.resilienceStatus,
+                                oxygenUnits: (this.resilienceStatus.oxygenUnits || []).map(u =>
+                                    u.id === unitId ? { ...u, last_check: newLastCheck, status: 'AVAILABLE' } : u
+                                )
+                            };
 
                             this.showToast(`${unit.equipment_name} #${unit.unit_label || unit.unit_serial || ''} 已確認`, 'success');
-                            // v1.2.12: 創建新陣列 + resilienceRefreshKey 雙重確保更新
+                            // v1.2.13: 替換整個物件 + resilienceRefreshKey 雙重確保
                             this.resilienceRefreshKey++;
+                            console.log('[BioMed] v1.2.13: resilienceStatus replaced, refreshKey:', this.resilienceRefreshKey);
                         } else {
                             // 修復 [object Object] 錯誤訊息
                             try {
