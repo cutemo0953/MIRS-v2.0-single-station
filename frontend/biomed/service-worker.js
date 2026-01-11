@@ -45,9 +45,12 @@
  * v1.2.8: Fix Alpine undefined error for oxygenUnits/powerUnits
  *         + Initialize resilienceStatus with empty arrays
  *         + Add null safety checks in filter expressions
+ * v1.2.9: Fix $nextTick reset clearing empty arrays
+ *         + Keep empty arrays during $nextTick transition
+ *         + Add units count to debug log
  */
 
-const CACHE_NAME = 'mirs-biomed-v1.2.8';
+const CACHE_NAME = 'mirs-biomed-v1.2.9';
 
 const CORE_ASSETS = [
     '/biomed/',

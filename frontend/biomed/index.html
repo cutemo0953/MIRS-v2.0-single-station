@@ -38,7 +38,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.8</p>
+                    <p class="text-xs opacity-80">v1.2.9</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -1236,8 +1236,8 @@
                                 return min;
                             }, null);
 
-                            // v1.1.4: 使用 $nextTick 確保 Alpine 響應式更新
-                            this.resilienceStatus = {};
+                            // v1.2.9: 使用 $nextTick 確保 Alpine 響應式更新 (保留空陣列避免 undefined 錯誤)
+                            this.resilienceStatus = { oxygenUnits: [], powerUnits: [], oxygenResources: [], powerResources: [] };
                             await this.$nextTick();
 
                             this.resilienceStatus = {
@@ -1258,7 +1258,9 @@
 
                             console.log('[BioMed] Parsed resilience:', {
                                 oxygenResources: this.resilienceStatus.oxygenResources,
-                                powerResources: this.resilienceStatus.powerResources
+                                powerResources: this.resilienceStatus.powerResources,
+                                oxygenUnits: this.resilienceStatus.oxygenUnits?.length || 0,
+                                powerUnits: this.resilienceStatus.powerUnits?.length || 0
                             });
                         }
                     } catch (err) {
