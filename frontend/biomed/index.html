@@ -10,45 +10,15 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <link rel="stylesheet" href="/static/css/tailwind.min.css">
     <link rel="stylesheet" href="/static/css/mirs-colors.css">
+    <script defer src="/static/js/alpine.min.js"></script>
     <style>
-        /* BioMed Theme - Equipment Green #6C7362 */
-        :root {
-            --biomed-50: #f5f6f4;
-            --biomed-100: #e8eae5;
-            --biomed-200: #d1d5cc;
-            --biomed-300: #b3b9a8;
-            --biomed-400: #939b84;
-            --biomed-500: #6C7362;
-            --biomed-600: #5a6052;
-            --biomed-700: #484d42;
-            --biomed-800: #3b3f37;
-            --biomed-900: #33362f;
-        }
-
-        .bg-biomed-50 { background-color: var(--biomed-50); }
-        .bg-biomed-100 { background-color: var(--biomed-100); }
-        .bg-biomed-200 { background-color: var(--biomed-200); }
-        .bg-biomed-500 { background-color: var(--biomed-500); }
-        .bg-biomed-600 { background-color: var(--biomed-600); }
-        .bg-biomed-700 { background-color: var(--biomed-700); }
-        .bg-biomed-900 { background-color: var(--biomed-900); }
-        .text-biomed-500 { color: var(--biomed-500); }
-        .text-biomed-600 { color: var(--biomed-600); }
-        .text-biomed-700 { color: var(--biomed-700); }
-        .border-biomed-200 { border-color: var(--biomed-200); }
-        .border-biomed-500 { border-color: var(--biomed-500); }
-
-        /* Hover states */
-        .hover\:bg-biomed-600:hover { background-color: var(--biomed-600); }
-        .hover\:bg-biomed-700:hover { background-color: var(--biomed-700); }
-
-        /* PWA safe area */
+        [x-cloak] { display: none !important; }
         body {
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
+            background: linear-gradient(135deg, #f5f6f4 0%, #e8eae5 50%, #f5f5f5 100%);
+            background-attachment: fixed;
         }
-
-        /* Status indicator animation */
         @keyframes pulse-warning {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -56,53 +26,25 @@
         .pulse-warning { animation: pulse-warning 1.5s infinite; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen" x-data="biomedApp()" x-init="init()">
+<body class="min-h-screen" x-data="biomedApp()" x-init="init()">
 
     <!-- Header -->
-    <header class="bg-biomed-500 text-white sticky top-0 z-50 shadow-lg">
-        <div class="px-4 py-3">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                    <div>
-                        <h1 class="text-lg font-bold">BioMed</h1>
-                        <p class="text-xs text-biomed-100">設備維護 | 氧氣監測 | 韌性評估</p>
-                    </div>
-                </div>
-                <!-- Status Badge -->
-                <div class="flex items-center gap-2">
-                    <span class="text-xs bg-biomed-600 px-2 py-1 rounded" x-text="'v1.0.0'"></span>
-                    <div class="w-2 h-2 rounded-full" :class="isOnline ? 'bg-green-400' : 'bg-red-400'"></div>
+    <header class="bg-equipment-500 text-white sticky top-0 z-50 shadow-lg px-4 py-3">
+        <div class="flex items-center justify-between max-w-4xl mx-auto">
+            <div class="flex items-center gap-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <div>
+                    <h1 class="text-lg font-bold">BioMed 設備維護</h1>
+                    <p class="text-xs opacity-80">v1.1.0</p>
                 </div>
             </div>
-        </div>
-
-        <!-- Tab Navigation -->
-        <div class="flex border-t border-biomed-400">
-            <button @click="currentTab = 'equipment'"
-                    :class="currentTab === 'equipment' ? 'bg-biomed-600 border-b-2 border-white' : 'hover:bg-biomed-600'"
-                    class="flex-1 py-3 text-sm font-medium transition-colors">
-                <span class="flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                    設備管理
-                </span>
-            </button>
-            <button @click="currentTab = 'resilience'"
-                    :class="currentTab === 'resilience' ? 'bg-biomed-600 border-b-2 border-white' : 'hover:bg-biomed-600'"
-                    class="flex-1 py-3 text-sm font-medium transition-colors">
-                <span class="flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                    </svg>
-                    韌性估算
-                </span>
-            </button>
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full" :class="isOnline ? 'bg-green-400' : 'bg-red-400'"></div>
+                <span class="text-xs" x-text="isOnline ? '線上' : '離線'"></span>
+            </div>
         </div>
     </header>
 
@@ -112,14 +54,64 @@
     </div>
 
     <!-- Main Content -->
-    <main class="p-4 pb-24">
+    <main class="max-w-4xl mx-auto px-4 py-4">
+
+        <!-- Tab Navigation (MIRS Style) -->
+        <div class="bg-white rounded-xl shadow mb-4">
+            <div class="flex gap-2 p-2">
+                <button @click="currentTab = 'equipment'"
+                        :class="currentTab === 'equipment' ? 'bg-equipment-500 text-white font-semibold shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                        class="flex-1 py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <span class="text-sm sm:text-base">設備管理</span>
+                </button>
+                <button @click="currentTab = 'resilience'"
+                        :class="currentTab === 'resilience' ? 'bg-amber-500 text-white font-semibold shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                        class="flex-1 py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    <span class="text-sm sm:text-base">韌性估算</span>
+                </button>
+            </div>
+        </div>
 
         <!-- Equipment Tab -->
         <div x-show="currentTab === 'equipment'" x-cloak>
+            <!-- Header with Actions -->
+            <div class="bg-white rounded-xl shadow-lg p-4 mb-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-equipment-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        設備管理
+                    </h2>
+                    <div class="flex flex-wrap gap-2">
+                        <button @click="showAddModal = true" class="bg-equipment-500 text-white px-4 py-2 rounded-lg hover:bg-equipment-600 transition-colors flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            <span>新增設備</span>
+                        </button>
+                        <button @click="loadEquipment()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            <span class="hidden sm:inline">重新載入</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Stats Bar -->
             <div class="grid grid-cols-3 gap-3 mb-4">
                 <div class="bg-white rounded-lg p-3 shadow text-center">
-                    <p class="text-2xl font-bold text-biomed-500" x-text="equipment.length"></p>
+                    <p class="text-2xl font-bold text-equipment-500" x-text="equipment.length"></p>
                     <p class="text-xs text-gray-500">總設備數</p>
                 </div>
                 <div class="bg-white rounded-lg p-3 shadow text-center">
@@ -133,16 +125,16 @@
             </div>
 
             <!-- Auto Reset Info -->
-            <div class="bg-biomed-50 border border-biomed-200 rounded-lg p-3 mb-4 flex items-center gap-2 text-sm">
-                <svg class="w-5 h-5 text-biomed-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="bg-equipment-50 border border-equipment-200 rounded-lg p-3 mb-4 flex items-center gap-2 text-sm">
+                <svg class="w-5 h-5 text-equipment-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                <span class="text-gray-700">設備狀態將於每日 <strong class="text-biomed-600">07:00</strong> 自動重置為待檢查</span>
+                <span class="text-gray-700">設備狀態將於每日 <strong class="text-equipment-600">07:00</strong> 自動重置為待檢查</span>
             </div>
 
             <!-- Power Supply Equipment -->
-            <div class="bg-white rounded-xl shadow mb-4 overflow-hidden">
-                <div class="bg-biomed-900 text-white px-4 py-3 flex items-center justify-between">
+            <div class="bg-white rounded-xl shadow-lg mb-4 overflow-hidden">
+                <div class="bg-equipment-900 text-white px-4 py-3 flex items-center justify-between">
                     <h3 class="font-semibold flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -152,60 +144,51 @@
                     </h3>
                     <span class="text-xs bg-amber-500 px-2 py-0.5 rounded">韌性關鍵</span>
                 </div>
-                <div class="p-4">
-                    <template x-if="getPowerSupplyEquipment().length === 0">
-                        <p class="text-center text-gray-400 py-6">尚無供電設備</p>
-                    </template>
-                    <div class="space-y-2">
-                        <template x-for="eq in getPowerSupplyEquipment()" :key="eq.id">
-                            <div class="border rounded-lg p-3 flex items-center justify-between"
-                                 :class="{
-                                     'border-green-200 bg-green-50': eq.status === 'NORMAL',
-                                     'border-amber-200 bg-amber-50': eq.status === 'WARNING',
-                                     'border-red-200 bg-red-50': eq.status === 'ERROR',
-                                     'border-gray-200 bg-gray-50': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
-                                 }">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-medium" x-text="eq.name"></span>
-                                        <span class="text-xs font-mono text-gray-400" x-text="eq.id"></span>
-                                    </div>
-                                    <div class="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                                        <span>數量: <strong x-text="eq.quantity"></strong></span>
-                                        <template x-if="eq.power_level !== null">
-                                            <span :class="{
-                                                'text-green-600': eq.power_level >= 60,
-                                                'text-amber-600': eq.power_level >= 30 && eq.power_level < 60,
-                                                'text-red-600': eq.power_level < 30
-                                            }">
-                                                存量: <strong x-text="eq.power_level + '%'"></strong>
-                                            </span>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-medium">編號</th>
+                                <th class="px-3 py-2 text-left font-medium">名稱</th>
+                                <th class="px-3 py-2 text-center font-medium">數量</th>
+                                <th class="px-3 py-2 text-center font-medium">存量</th>
+                                <th class="px-3 py-2 text-center font-medium">狀態</th>
+                                <th class="px-3 py-2 text-center font-medium">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <template x-for="eq in getPowerSupplyEquipment()" :key="eq.id">
+                                <tr class="hover:bg-gray-50" :class="{ 'bg-green-50': eq.status === 'NORMAL', 'bg-yellow-50': eq.status === 'WARNING', 'bg-red-50': eq.status === 'ERROR' }">
+                                    <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
+                                    <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
+                                    <td class="px-3 py-2 text-center font-semibold" x-text="eq.quantity || eq.unit_count || 1"></td>
+                                    <td class="px-3 py-2 text-center">
+                                        <template x-if="eq.power_level !== null && eq.power_level !== undefined">
+                                            <span class="font-medium" :class="{ 'text-green-600': eq.power_level >= 60, 'text-yellow-600': eq.power_level >= 30 && eq.power_level < 60, 'text-red-600': eq.power_level < 30 }" x-text="eq.power_level + '%'"></span>
                                         </template>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="px-2 py-1 text-xs rounded-full"
-                                          :class="{
-                                              'bg-green-100 text-green-800': eq.status === 'NORMAL',
-                                              'bg-amber-100 text-amber-800': eq.status === 'WARNING',
-                                              'bg-red-100 text-red-800': eq.status === 'ERROR',
-                                              'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
-                                          }"
-                                          x-text="getStatusText(eq.status)"></span>
-                                    <button @click="checkEquipment(eq)"
-                                            class="bg-biomed-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-biomed-600 transition-colors">
-                                        確認
-                                    </button>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
+                                        <span x-show="eq.power_level === null || eq.power_level === undefined" class="text-gray-400">-</span>
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <span :class="{ 'bg-green-100 text-green-800': eq.status === 'NORMAL', 'bg-yellow-100 text-yellow-800': eq.status === 'WARNING', 'bg-red-100 text-red-800': eq.status === 'ERROR', 'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING' }" class="px-2 py-0.5 text-xs font-medium rounded-full" x-text="getStatusText(eq.status)"></span>
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <div class="flex gap-1 justify-center">
+                                            <button @click="checkEquipment(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認">✓</button>
+                                            <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
+                                            <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <div x-show="getPowerSupplyEquipment().length === 0" class="text-center text-gray-400 py-8">目前沒有供電設備</div>
                 </div>
             </div>
 
             <!-- Power Consuming Equipment -->
-            <div class="bg-white rounded-xl shadow mb-4 overflow-hidden">
-                <div class="bg-biomed-700 text-white px-4 py-3">
+            <div class="bg-white rounded-xl shadow-lg mb-4 overflow-hidden">
+                <div class="bg-equipment-700 text-white px-4 py-3">
                     <h3 class="font-semibold flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
@@ -214,51 +197,46 @@
                         <span class="text-sm font-normal opacity-80" x-text="'(' + getPowerConsumingEquipment().length + ')'"></span>
                     </h3>
                 </div>
-                <div class="p-4">
-                    <template x-if="getPowerConsumingEquipment().length === 0">
-                        <p class="text-center text-gray-400 py-6">尚無耗電設備</p>
-                    </template>
-                    <div class="space-y-2">
-                        <template x-for="eq in getPowerConsumingEquipment()" :key="eq.id">
-                            <div class="border rounded-lg p-3 flex items-center justify-between"
-                                 :class="{
-                                     'border-green-200 bg-green-50': eq.status === 'NORMAL',
-                                     'border-amber-200 bg-amber-50': eq.status === 'WARNING',
-                                     'border-red-200 bg-red-50': eq.status === 'ERROR',
-                                     'border-gray-200 bg-gray-50': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
-                                 }">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-medium" x-text="eq.name"></span>
-                                        <span class="text-xs text-gray-400" x-text="eq.category"></span>
-                                    </div>
-                                    <div class="text-sm text-gray-600 mt-1">
-                                        數量: <strong x-text="eq.quantity"></strong>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="px-2 py-1 text-xs rounded-full"
-                                          :class="{
-                                              'bg-green-100 text-green-800': eq.status === 'NORMAL',
-                                              'bg-amber-100 text-amber-800': eq.status === 'WARNING',
-                                              'bg-red-100 text-red-800': eq.status === 'ERROR',
-                                              'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
-                                          }"
-                                          x-text="getStatusText(eq.status)"></span>
-                                    <button @click="checkEquipment(eq)"
-                                            class="bg-biomed-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-biomed-600 transition-colors">
-                                        確認
-                                    </button>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-medium">編號</th>
+                                <th class="px-3 py-2 text-left font-medium">名稱</th>
+                                <th class="px-3 py-2 text-left font-medium hidden sm:table-cell">類別</th>
+                                <th class="px-3 py-2 text-center font-medium">數量</th>
+                                <th class="px-3 py-2 text-center font-medium">狀態</th>
+                                <th class="px-3 py-2 text-center font-medium">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <template x-for="eq in getPowerConsumingEquipment()" :key="eq.id">
+                                <tr class="hover:bg-gray-50" :class="{ 'bg-green-50': eq.status === 'NORMAL', 'bg-yellow-50': eq.status === 'WARNING', 'bg-red-50': eq.status === 'ERROR' }">
+                                    <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
+                                    <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
+                                    <td class="px-3 py-2 text-gray-600 hidden sm:table-cell" x-text="eq.category || '-'"></td>
+                                    <td class="px-3 py-2 text-center font-semibold" x-text="eq.quantity || eq.unit_count || 1"></td>
+                                    <td class="px-3 py-2 text-center">
+                                        <span :class="{ 'bg-green-100 text-green-800': eq.status === 'NORMAL', 'bg-yellow-100 text-yellow-800': eq.status === 'WARNING', 'bg-red-100 text-red-800': eq.status === 'ERROR', 'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING' }" class="px-2 py-0.5 text-xs font-medium rounded-full" x-text="getStatusText(eq.status)"></span>
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <div class="flex gap-1 justify-center">
+                                            <button @click="checkEquipment(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認">✓</button>
+                                            <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
+                                            <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <div x-show="getPowerConsumingEquipment().length === 0" class="text-center text-gray-400 py-8">目前沒有耗電設備</div>
                 </div>
             </div>
 
-            <!-- Non-Electric Equipment -->
-            <div class="bg-white rounded-xl shadow overflow-hidden">
-                <div class="bg-biomed-600 text-white px-4 py-3">
+            <!-- Other Equipment -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="bg-equipment-600 text-white px-4 py-3">
                     <h3 class="font-semibold flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
@@ -267,110 +245,89 @@
                         <span class="text-sm font-normal opacity-80" x-text="'(' + getNonElectricEquipment().length + ')'"></span>
                     </h3>
                 </div>
-                <div class="p-4">
-                    <template x-if="getNonElectricEquipment().length === 0">
-                        <p class="text-center text-gray-400 py-6">尚無其他設備</p>
-                    </template>
-                    <div class="space-y-2">
-                        <template x-for="eq in getNonElectricEquipment()" :key="eq.id">
-                            <div class="border rounded-lg p-3 flex items-center justify-between"
-                                 :class="{
-                                     'border-green-200 bg-green-50': eq.status === 'NORMAL',
-                                     'border-amber-200 bg-amber-50': eq.status === 'WARNING',
-                                     'border-red-200 bg-red-50': eq.status === 'ERROR',
-                                     'border-gray-200 bg-gray-50': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
-                                 }">
-                                <div class="flex-1">
-                                    <span class="font-medium" x-text="eq.name"></span>
-                                    <div class="text-sm text-gray-600 mt-1">
-                                        數量: <strong x-text="eq.quantity"></strong>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="px-2 py-1 text-xs rounded-full"
-                                          :class="{
-                                              'bg-green-100 text-green-800': eq.status === 'NORMAL',
-                                              'bg-amber-100 text-amber-800': eq.status === 'WARNING',
-                                              'bg-red-100 text-red-800': eq.status === 'ERROR',
-                                              'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING'
-                                          }"
-                                          x-text="getStatusText(eq.status)"></span>
-                                    <button @click="checkEquipment(eq)"
-                                            class="bg-biomed-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-biomed-600 transition-colors">
-                                        確認
-                                    </button>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-medium">編號</th>
+                                <th class="px-3 py-2 text-left font-medium">名稱</th>
+                                <th class="px-3 py-2 text-center font-medium">數量</th>
+                                <th class="px-3 py-2 text-center font-medium">狀態</th>
+                                <th class="px-3 py-2 text-center font-medium">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <template x-for="eq in getNonElectricEquipment()" :key="eq.id">
+                                <tr class="hover:bg-gray-50" :class="{ 'bg-green-50': eq.status === 'NORMAL', 'bg-yellow-50': eq.status === 'WARNING', 'bg-red-50': eq.status === 'ERROR' }">
+                                    <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="eq.id"></td>
+                                    <td class="px-3 py-2 font-medium text-gray-900" x-text="eq.name"></td>
+                                    <td class="px-3 py-2 text-center font-semibold" x-text="eq.quantity || eq.unit_count || 1"></td>
+                                    <td class="px-3 py-2 text-center">
+                                        <span :class="{ 'bg-green-100 text-green-800': eq.status === 'NORMAL', 'bg-yellow-100 text-yellow-800': eq.status === 'WARNING', 'bg-red-100 text-red-800': eq.status === 'ERROR', 'bg-gray-100 text-gray-800': eq.status === 'UNCHECKED' || eq.status === 'PENDING' }" class="px-2 py-0.5 text-xs font-medium rounded-full" x-text="getStatusText(eq.status)"></span>
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <div class="flex gap-1 justify-center">
+                                            <button @click="checkEquipment(eq)" class="text-equipment-600 hover:text-equipment-800 text-xs font-medium px-2 py-1 bg-equipment-100 rounded" title="確認">✓</button>
+                                            <button @click="editEquipment(eq)" class="text-gray-600 hover:text-gray-800 text-xs font-medium px-2 py-1 bg-gray-100 rounded" title="編輯">✎</button>
+                                            <button @click="deleteEquipment(eq)" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 bg-red-50 rounded" title="刪除">✕</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <div x-show="getNonElectricEquipment().length === 0" class="text-center text-gray-400 py-8">目前沒有其他設備</div>
                 </div>
             </div>
         </div>
 
         <!-- Resilience Tab -->
         <div x-show="currentTab === 'resilience'" x-cloak>
-            <!-- Overall Status -->
-            <div class="bg-white rounded-xl shadow p-6 mb-4 text-center">
-                <h3 class="text-lg font-semibold text-gray-700 mb-2">可獨立運作</h3>
-                <div class="text-5xl font-bold mb-2"
-                     :class="{
-                         'text-red-500': resilienceStatus.summary?.overall_status === 'CRITICAL',
-                         'text-amber-500': resilienceStatus.summary?.overall_status === 'WARNING',
-                         'text-green-500': resilienceStatus.summary?.overall_status === 'SAFE',
-                         'text-gray-400': !resilienceStatus.summary
-                     }">
-                    <span x-text="resilienceStatus.summary?.weakest_link?.hours?.toFixed(1) || '—'"></span>
-                    <span class="text-2xl">小時</span>
-                </div>
-                <p class="text-sm text-gray-500" x-show="resilienceStatus.summary?.weakest_link">
-                    瓶頸: <span class="font-medium" x-text="resilienceStatus.summary?.weakest_link?.resource"></span>
-                </p>
-                <button @click="loadResilienceStatus()"
-                        class="mt-4 bg-amber-500 text-white px-6 py-2 rounded-lg hover:bg-amber-600 transition-colors inline-flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            <div class="bg-white rounded-xl shadow-lg p-4 mb-4">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2 mb-4">
+                    <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
-                    重新計算
-                </button>
-            </div>
+                    韌性估算
+                </h2>
 
-            <!-- Configuration -->
-            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
-                <h4 class="font-medium text-amber-800 mb-3">計算參數</h4>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">預估孤立天數</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" x-model.number="resilienceConfig.isolation_target_days"
-                                   min="1" max="30"
-                                   class="w-20 px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500">
-                            <span class="text-gray-600">天</span>
-                        </div>
+                <!-- Overall Status -->
+                <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 mb-4 text-center">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">可獨立運作</h3>
+                    <div class="text-5xl font-bold mb-2"
+                         :class="{
+                             'text-red-500': resilienceStatus.summary?.overall_status === 'CRITICAL',
+                             'text-amber-500': resilienceStatus.summary?.overall_status === 'WARNING',
+                             'text-green-500': resilienceStatus.summary?.overall_status === 'SAFE',
+                             'text-gray-400': !resilienceStatus.summary
+                         }">
+                        <span x-text="resilienceStatus.summary?.weakest_link?.hours?.toFixed(1) || '—'"></span>
+                        <span class="text-2xl">小時</span>
                     </div>
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">等效插管人數</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" x-model.number="resilienceConfig.population_count"
-                                   min="0" max="100" step="0.1"
-                                   class="w-20 px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500">
-                            <span class="text-gray-600">人</span>
-                        </div>
-                    </div>
+                    <p class="text-sm text-gray-500" x-show="resilienceStatus.summary?.weakest_link">
+                        瓶頸: <span class="font-medium" x-text="resilienceStatus.summary?.weakest_link?.resource"></span>
+                    </p>
+                    <button @click="loadResilienceStatus()"
+                            class="mt-4 bg-amber-500 text-white px-6 py-2 rounded-lg hover:bg-amber-600 transition-colors inline-flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        重新計算
+                    </button>
                 </div>
-                <p class="text-xs text-gray-500 mt-2">插管=1.0 | 面罩=0.6 | 鼻導管=0.3</p>
-            </div>
 
-            <!-- Resource Breakdown -->
-            <div class="bg-white rounded-xl shadow overflow-hidden">
-                <div class="bg-amber-500 text-white px-4 py-3">
-                    <h3 class="font-semibold">資源細項</h3>
-                </div>
-                <div class="divide-y">
+                <!-- Resource Breakdown -->
+                <div class="grid gap-4 sm:grid-cols-2">
                     <!-- Oxygen -->
-                    <div class="p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="font-medium text-gray-700">氧氣供應</span>
-                            <span class="text-lg font-bold"
+                    <div class="bg-white border border-gray-200 rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="font-medium text-gray-700 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                </svg>
+                                氧氣供應
+                            </span>
+                            <span class="text-xl font-bold"
                                   :class="{
                                       'text-green-500': resilienceStatus.oxygen?.hours >= 24,
                                       'text-amber-500': resilienceStatus.oxygen?.hours >= 12 && resilienceStatus.oxygen?.hours < 24,
@@ -378,7 +335,7 @@
                                   }"
                                   x-text="(resilienceStatus.oxygen?.hours?.toFixed(1) || '—') + 'h'"></span>
                         </div>
-                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
                             <div class="h-full transition-all duration-500"
                                  :class="{
                                      'bg-green-500': resilienceStatus.oxygen?.hours >= 24,
@@ -390,10 +347,15 @@
                     </div>
 
                     <!-- Power -->
-                    <div class="p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="font-medium text-gray-700">電力供應</span>
-                            <span class="text-lg font-bold"
+                    <div class="bg-white border border-gray-200 rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="font-medium text-gray-700 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                電力供應
+                            </span>
+                            <span class="text-xl font-bold"
                                   :class="{
                                       'text-green-500': resilienceStatus.power?.hours >= 24,
                                       'text-amber-500': resilienceStatus.power?.hours >= 12 && resilienceStatus.power?.hours < 24,
@@ -401,7 +363,7 @@
                                   }"
                                   x-text="(resilienceStatus.power?.hours?.toFixed(1) || '—') + 'h'"></span>
                         </div>
-                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
                             <div class="h-full transition-all duration-500"
                                  :class="{
                                      'bg-green-500': resilienceStatus.power?.hours >= 24,
@@ -415,21 +377,86 @@
             </div>
 
             <!-- Formula Hint -->
-            <div class="mt-4 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
+            <div class="bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
                 <p class="font-medium mb-2">計算公式</p>
                 <ul class="space-y-1 text-xs">
-                    <li>氧氣時數 = 總容量 × 充填% ÷ (10 L/min × 等效人數 × 60)</li>
-                    <li>電力時數 = 油箱容量 × 剩餘% ÷ 3.0 L/hr</li>
+                    <li>氧氣時數 = 總容量 x 充填% / (10 L/min x 等效人數 x 60)</li>
+                    <li>電力時數 = 油箱容量 x 剩餘% / 3.0 L/hr</li>
                     <li>可獨立運作 = MIN(氧氣, 電力)</li>
                 </ul>
             </div>
         </div>
-
     </main>
+
+    <!-- Add/Edit Equipment Modal -->
+    <div x-show="showAddModal || showEditModal" x-cloak
+         class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+         @click.self="showAddModal = false; showEditModal = false">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="bg-equipment-500 text-white px-4 py-3 rounded-t-2xl flex items-center justify-between">
+                <h3 class="font-semibold" x-text="showEditModal ? '編輯設備' : '新增設備'"></h3>
+                <button @click="showAddModal = false; showEditModal = false" class="text-white hover:text-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">設備編號</label>
+                    <input type="text" x-model="equipmentForm.id" :disabled="showEditModal"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-equipment-500 disabled:bg-gray-100"
+                           placeholder="例: RESP-001">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">設備名稱</label>
+                    <input type="text" x-model="equipmentForm.name"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-equipment-500"
+                           placeholder="例: H型氧氣鋼瓶">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">類別</label>
+                    <select x-model="equipmentForm.category"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-equipment-500">
+                        <option value="">選擇類別</option>
+                        <option value="呼吸設備">呼吸設備</option>
+                        <option value="電力設備">電力設備</option>
+                        <option value="診斷設備">診斷設備</option>
+                        <option value="急救設備">急救設備</option>
+                        <option value="手術器械">手術器械</option>
+                        <option value="一般設備">一般設備</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">數量</label>
+                        <input type="number" x-model.number="equipmentForm.quantity" min="1"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-equipment-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">存量 %</label>
+                        <input type="number" x-model.number="equipmentForm.power_level" min="0" max="100"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-equipment-500"
+                               placeholder="僅供電設備">
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button @click="showAddModal = false; showEditModal = false"
+                            class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition-colors">
+                        取消
+                    </button>
+                    <button @click="saveEquipment()"
+                            class="flex-1 bg-equipment-500 text-white py-2 rounded-lg hover:bg-equipment-600 transition-colors">
+                        儲存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Toast Notification -->
     <div x-show="toast.show" x-transition
-         class="fixed bottom-20 left-4 right-4 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg z-50"
+         class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg z-50"
          :class="{
              'bg-green-600': toast.type === 'success',
              'bg-red-600': toast.type === 'error',
@@ -437,9 +464,6 @@
          }">
         <p x-text="toast.message"></p>
     </div>
-
-    <!-- Alpine.js -->
-    <script src="/static/js/alpine.min.js" defer></script>
 
     <script>
         function biomedApp() {
@@ -449,15 +473,19 @@
                 isOnline: navigator.onLine,
                 equipment: [],
                 resilienceStatus: {},
-                resilienceConfig: {
-                    isolation_target_days: 3,
-                    population_count: 2
-                },
                 toast: { show: false, message: '', type: 'success' },
+                showAddModal: false,
+                showEditModal: false,
+                equipmentForm: {
+                    id: '',
+                    name: '',
+                    category: '',
+                    quantity: 1,
+                    power_level: null
+                },
 
                 // Lifecycle
                 async init() {
-                    // Register Service Worker
                     if ('serviceWorker' in navigator) {
                         try {
                             await navigator.serviceWorker.register('/biomed/service-worker.js');
@@ -467,7 +495,6 @@
                         }
                     }
 
-                    // Online/Offline handlers
                     window.addEventListener('online', () => {
                         this.isOnline = true;
                         this.loadEquipment();
@@ -476,7 +503,6 @@
                         this.isOnline = false;
                     });
 
-                    // Load data
                     await this.loadEquipment();
                     await this.loadResilienceStatus();
                 },
@@ -499,7 +525,6 @@
                         const res = await fetch('/api/resilience/status');
                         if (res.ok) {
                             const data = await res.json();
-                            // 轉換 API 回應格式
                             const weakestLifeline = data.lifelines?.reduce((min, ll) =>
                                 (!min || (ll.endurance?.effective_hours || 0) < (min.endurance?.effective_hours || 0)) ? ll : min, null);
 
@@ -527,10 +552,7 @@
                             headers: { 'Content-Type': 'application/json' }
                         });
                         if (res.ok) {
-                            eq.status = 'NORMAL';
-                            eq.last_check = new Date().toISOString();
                             this.showToast(`${eq.name} 已確認`, 'success');
-                            // Reload to get updated data
                             await this.loadEquipment();
                             await this.loadResilienceStatus();
                         }
@@ -540,24 +562,106 @@
                     }
                 },
 
+                editEquipment(eq) {
+                    this.equipmentForm = {
+                        id: eq.id,
+                        name: eq.name,
+                        category: eq.category || '',
+                        quantity: eq.quantity || eq.unit_count || 1,
+                        power_level: eq.power_level
+                    };
+                    this.showEditModal = true;
+                },
+
+                async saveEquipment() {
+                    if (!this.equipmentForm.id || !this.equipmentForm.name) {
+                        this.showToast('請填寫必要欄位', 'warning');
+                        return;
+                    }
+
+                    try {
+                        const method = this.showEditModal ? 'PUT' : 'POST';
+                        const url = this.showEditModal
+                            ? `/api/equipment/${this.equipmentForm.id}`
+                            : '/api/equipment';
+
+                        const res = await fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.equipmentForm)
+                        });
+
+                        if (res.ok) {
+                            this.showToast(this.showEditModal ? '設備已更新' : '設備已新增', 'success');
+                            this.showAddModal = false;
+                            this.showEditModal = false;
+                            this.resetForm();
+                            await this.loadEquipment();
+                        } else {
+                            const err = await res.json();
+                            this.showToast(err.detail || '儲存失敗', 'error');
+                        }
+                    } catch (err) {
+                        console.error('[BioMed] Failed to save equipment:', err);
+                        this.showToast('儲存失敗', 'error');
+                    }
+                },
+
+                async deleteEquipment(eq) {
+                    if (!confirm(`確定要刪除 "${eq.name}" 嗎？`)) return;
+
+                    try {
+                        const res = await fetch(`/api/equipment/${eq.id}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (res.ok) {
+                            this.showToast(`${eq.name} 已刪除`, 'success');
+                            await this.loadEquipment();
+                        } else {
+                            this.showToast('刪除失敗', 'error');
+                        }
+                    } catch (err) {
+                        console.error('[BioMed] Failed to delete equipment:', err);
+                        this.showToast('刪除失敗', 'error');
+                    }
+                },
+
+                resetForm() {
+                    this.equipmentForm = {
+                        id: '',
+                        name: '',
+                        category: '',
+                        quantity: 1,
+                        power_level: null
+                    };
+                },
+
                 // Helpers
                 getPowerSupplyEquipment() {
                     return this.equipment.filter(e =>
+                        e.resilience_category === 'POWER' ||
                         e.category === 'power_supply' ||
-                        e.id.startsWith('UTIL-') ||
-                        e.name.includes('發電機') ||
-                        e.name.includes('電池') ||
-                        e.name.includes('UPS')
+                        e.category === '電力設備' ||
+                        e.id?.startsWith('UTIL-') ||
+                        e.name?.includes('發電機') ||
+                        e.name?.includes('電池') ||
+                        e.name?.includes('電源') ||
+                        e.name?.includes('UPS')
                     );
                 },
 
                 getPowerConsumingEquipment() {
                     return this.equipment.filter(e =>
                         e.power_consumption > 0 ||
+                        e.resilience_category === 'OXYGEN' ||
                         e.category === 'monitoring' ||
                         e.category === 'diagnostic' ||
-                        e.name.includes('監視器') ||
-                        e.name.includes('呼吸器')
+                        e.category === '診斷設備' ||
+                        e.category === '呼吸設備' ||
+                        e.name?.includes('監視器') ||
+                        e.name?.includes('呼吸器') ||
+                        e.name?.includes('氧氣')
                     );
                 },
 
@@ -573,7 +677,7 @@
 
                 getPendingCount() {
                     return this.equipment.filter(e =>
-                        e.status === 'UNCHECKED' || e.status === 'PENDING'
+                        e.status === 'UNCHECKED' || e.status === 'PENDING' || e.check_status === 'NO_UNITS'
                     ).length;
                 },
 
@@ -583,9 +687,10 @@
                         'WARNING': '注意',
                         'ERROR': '異常',
                         'UNCHECKED': '未檢',
-                        'PENDING': '待確認'
+                        'PENDING': '待確認',
+                        'NO_UNITS': '無單位'
                     };
-                    return map[status] || status;
+                    return map[status] || status || '未知';
                 },
 
                 showToast(message, type = 'success') {

@@ -6,6 +6,30 @@
 
 ---
 
+## [2.9.4] - 2026-01-11
+
+### 新增 (Added)
+- **BioMed PWA v1.1.0 重構**
+  - MIRS 風格 Tab 導覽（水平按鈕列取代邊框底線）
+  - 表格式設備列表（編號/名稱/類別/數量/狀態/操作）
+  - 設備分類顯示（耗電設備 vs 其他設備）
+  - 設備 CRUD 操作（✓ 確認、✎ 編輯、✕ 刪除）
+  - 新增/編輯設備 Modal
+  - Header 動作按鈕（新增設備、重新載入）
+
+### 修復 (Fixed)
+- **`/api/equipment` API 格式**：返回陣列而非 `{"equipment": [...]}`
+- **Gateway Lobby BioMed 卡片**：改用 Tailwind 類別取代 inline style
+
+### 檔案變更
+| 檔案 | 說明 |
+|------|------|
+| `frontend/biomed/index.html` | 完整重寫 v1.0.0 → v1.1.0 |
+| `main.py` | 修正 /api/equipment 返回格式 |
+| CIRS `frontend/lobby/index.html` | BioMed 卡片樣式修正 |
+
+---
+
 ## [2.8.0-local-auth] - 2026-01-08
 
 ### 新增 (Added)
