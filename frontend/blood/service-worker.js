@@ -7,7 +7,7 @@
  * - API 請求 Network-first
  */
 
-const CACHE_NAME = 'mirs-blood-v1.0.0';
+const CACHE_NAME = 'mirs-blood-v1.1.0';
 const SCOPE = '/blood/';
 
 // 需要快取的靜態資源
@@ -21,7 +21,7 @@ const STATIC_ASSETS = [
 
 // Install event
 self.addEventListener('install', (event) => {
-    console.log('[Blood SW] Installing v1.0.0');
+    console.log('[Blood SW] Installing v1.1.0');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
