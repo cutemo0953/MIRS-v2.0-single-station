@@ -6,6 +6,29 @@
 
 ---
 
+## [Blood Bank PWA v2.6] - 2026-01-13
+
+### 新增 (Added)
+- **血型庫存統計區**：深紅色背景，8 血型大字顯示 (仿原始 MIRS 設計)
+- **血品類型色塊系統**：WB 深紅、PRBC 紅、FFP 琥珀、PLT 黃、CRYO 青
+- **WB (全血) 血品類型**：支援緊急用血場景 (Walking Blood Bank)
+- **列印標籤功能**：入庫時可列印血袋標籤 (60mm x 40mm)
+- **手動位置輸入**：發血時可直接輸入送血目的地
+- **血品類型選擇**：發血時可選擇血品類型過濾
+
+### 改進 (Improved)
+- **血袋清單 UI 簡化**：左側狀態色條 + 清晰血型/血品顯示
+- **按血型分組統計**：groupedByBloodType 計算屬性
+- **色塊輔助函數**：getUnitTypeClass/Label/BorderClass
+
+### 檔案變更
+| 檔案 | 說明 |
+|------|------|
+| `frontend/blood/index.html` | +262 行 UI 改進 |
+| `docs/DEV_SPEC_BLOOD_BANK_PWA_v2.6.md` | 新增開發規格文件 |
+
+---
+
 ## [2.9.4] - 2026-01-11
 
 ### 新增 (Added)
