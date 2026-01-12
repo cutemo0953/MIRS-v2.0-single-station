@@ -1,18 +1,21 @@
 /**
- * MIRS Blood Bank PWA Service Worker v2.5.0
+ * MIRS Blood Bank PWA Service Worker v2.6.0
  *
- * Based on DEV_SPEC_BLOOD_BANK_PWA_v2.4:
+ * Based on DEV_SPEC_BLOOD_BANK_PWA_v2.6:
  * - Scope 隔離：/blood/ 獨立快取
  * - 離線優先策略
  * - API 請求 Network-first
  *
- * v2.5.0 Changes (P4):
- * - Pending Order Tracking Tab
- * - Overdue Alert Banner
- * - Resolve Pending Order Modal
+ * v2.6.0 Changes:
+ * - 血型庫存統計區 (仿原始 MIRS 深紅色背景)
+ * - 血品類型色塊系統 (WB/PRBC/FFP/PLT/CRYO)
+ * - 新增 WB (全血) 血品類型
+ * - 血袋清單 UI 簡化
+ * - 列印標籤功能
+ * - 手動位置輸入 + 血品類型選擇
  */
 
-const CACHE_NAME = 'mirs-blood-v2.5.0';
+const CACHE_NAME = 'mirs-blood-v2.6.0';
 const SCOPE = '/blood/';
 
 // 需要快取的靜態資源
@@ -26,7 +29,7 @@ const STATIC_ASSETS = [
 
 // Install event
 self.addEventListener('install', (event) => {
-    console.log('[Blood SW] Installing v2.5.0');
+    console.log('[Blood SW] Installing v2.6.0');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
