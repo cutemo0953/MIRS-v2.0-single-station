@@ -1,9 +1,30 @@
 # Blood Bank PWA DEV SPEC v2.4
 
-**版本**: 2.4
+**版本**: 2.5
 **日期**: 2026-01-12
-**狀態**: P0/P1/P2/P3 Completed, P4 In Progress
+**狀態**: P0/P1/P2/P3/P4 (Pending Order UI) Completed
 **基於**: Gemini + ChatGPT 第二輪審閱 + BioMed PWA 經驗教訓 + Claude 實作反饋 + **Gemini 第三輪戰時流程審閱**
+
+---
+
+## v2.4 → v2.5 變更摘要 (P4 待補單追蹤 UI)
+
+| 項目 | 狀態 | 說明 |
+|------|------|------|
+| **待補單追蹤 Tab** | ✅ 完成 | 新增「待補單」Tab，顯示緊急發血後需補開醫囑清單 |
+| **逾期警告 Badge** | ✅ 完成 | Tab 上顯示紅點 Badge 標示逾期筆數 |
+| **Overview 警告 Banner** | ✅ 完成 | 首頁顯示逾期待補單警告，可點擊跳轉 |
+| **補單解除 Modal** | ✅ 完成 | 輸入正式醫囑單號後解除待補單狀態 |
+| **待補單 API** | ✅ 完成 | `GET /pending-orders`, `POST /resolve`, `GET /summary` |
+| **Service Worker v2.5.0** | ✅ 完成 | 快取刷新 |
+
+### P4 實作檔案
+
+| 檔案 | 變更 |
+|------|------|
+| `frontend/blood/index.html` | +150 行，新增待補單 Tab、Resolve Modal |
+| `frontend/blood/service-worker.js` | v2.5.0，快取刷新 |
+| `routes/blood.py` | P4 API 已在 v2.4 實作 |
 
 ---
 

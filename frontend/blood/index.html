@@ -101,10 +101,14 @@
                 class="flex-1 py-3 text-sm font-medium border-b-2 transition">
             發血
         </button>
-        <button @click="activeTab = 'emergency'"
-                :class="activeTab === 'emergency' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
-                class="flex-1 py-3 text-sm font-medium border-b-2 transition">
-            緊急
+        <button @click="activeTab = 'pending'; loadPendingOrders()"
+                :class="activeTab === 'pending' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
+                class="flex-1 py-3 text-sm font-medium border-b-2 transition relative">
+            待補單
+            <span x-show="pendingOrdersSummary.overdue_count > 0"
+                  class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                <span x-text="pendingOrdersSummary.overdue_count"></span>
+            </span>
         </button>
     </nav>
 
@@ -114,6 +118,28 @@
         <!-- Overview Tab -->
         <div x-show="activeTab === 'overview'" x-cloak>
             <h2 class="text-lg font-bold mb-4">庫存總覽</h2>
+
+            <!-- v2.5 P4: Pending Orders Alert -->
+            <div x-show="pendingOrdersSummary.overdue_count > 0"
+                 @click="activeTab = 'pending'; loadPendingOrders()"
+                 class="bg-red-50 border-l-4 border-red-500 p-3 mb-4 cursor-pointer hover:bg-red-100 transition">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="font-bold text-red-700">
+                            <span x-text="pendingOrdersSummary.overdue_count"></span> 筆待補單已逾期
+                        </span>
+                    </div>
+                    <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </div>
+                <p class="text-sm text-red-600 mt-1">
+                    緊急發血需在 24 小時內補開正式醫囑
+                </p>
+            </div>
 
             <!-- FIFO Warning Banner -->
             <div x-show="expiringSoonCount > 0" class="bg-amber-50 border-l-4 border-amber-500 p-3 mb-4">
@@ -408,6 +434,124 @@
             </button>
         </div>
 
+        <!-- Pending Orders Tab (v2.5 P4) -->
+        <div x-show="activeTab === 'pending'" x-cloak>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">待補單追蹤</h2>
+                <button @click="loadPendingOrders()"
+                        class="text-blood-600 text-sm flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    重新整理
+                </button>
+            </div>
+
+            <!-- Summary Banner -->
+            <div x-show="pendingOrdersSummary.pending_count > 0"
+                 class="mb-4 p-4 rounded-lg"
+                 :class="pendingOrdersSummary.overdue_count > 0 ? 'bg-red-50 border-l-4 border-red-500' : 'bg-amber-50 border-l-4 border-amber-500'">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-5 h-5" :class="pendingOrdersSummary.overdue_count > 0 ? 'text-red-600' : 'text-amber-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="font-bold" :class="pendingOrdersSummary.overdue_count > 0 ? 'text-red-700' : 'text-amber-700'">
+                        <span x-text="pendingOrdersSummary.pending_count"></span> 筆待補單
+                    </span>
+                </div>
+                <p class="text-sm" :class="pendingOrdersSummary.overdue_count > 0 ? 'text-red-600' : 'text-amber-600'">
+                    <span x-show="pendingOrdersSummary.overdue_count > 0">
+                        <span class="font-bold" x-text="pendingOrdersSummary.overdue_count"></span> 筆已超過 24 小時期限
+                        <span x-show="pendingOrdersSummary.oldest_overdue_hours > 0">
+                            (最久 <span x-text="pendingOrdersSummary.oldest_overdue_hours"></span> 小時)
+                        </span>
+                    </span>
+                    <span x-show="pendingOrdersSummary.overdue_count === 0">
+                        請在 24 小時內補開正式醫囑
+                    </span>
+                </p>
+            </div>
+
+            <!-- Empty State -->
+            <div x-show="!pendingOrdersLoading && pendingOrders.length === 0" class="text-center py-12 text-gray-500">
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="font-medium">沒有待補單</p>
+                <p class="text-sm mt-1">所有緊急發血都已補開醫囑</p>
+            </div>
+
+            <!-- Loading -->
+            <div x-show="pendingOrdersLoading" class="text-center py-8 text-gray-500">
+                載入中...
+            </div>
+
+            <!-- Pending Orders List -->
+            <div x-show="!pendingOrdersLoading" class="space-y-3">
+                <template x-for="order in pendingOrders" :key="order.id">
+                    <div class="bg-white rounded-lg shadow p-4"
+                         :class="order.is_overdue ? 'border-l-4 border-red-500' : ''">
+                        <!-- Header -->
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono text-sm font-medium" x-text="order.id"></span>
+                                    <span x-show="order.is_overdue"
+                                          class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                                        已逾期
+                                    </span>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    建立時間: <span x-text="formatDateTime(order.created_at)"></span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-medium"
+                                     :class="order.hours_remaining > 0 ? 'text-amber-600' : 'text-red-600'">
+                                    <span x-show="order.hours_remaining > 0">
+                                        剩餘 <span x-text="order.hours_remaining"></span> 小時
+                                    </span>
+                                    <span x-show="order.hours_remaining <= 0">
+                                        逾期 <span x-text="Math.abs(order.hours_remaining)"></span> 小時
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Details -->
+                        <div class="bg-gray-50 rounded p-3 mb-3 space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">類型</span>
+                                <span class="font-medium" x-text="orderTypeLabel(order.type)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">發血袋數</span>
+                                <span class="font-medium" x-text="order.unit_ids ? order.unit_ids.length : 0"></span>
+                            </div>
+                            <div x-show="order.reason">
+                                <span class="text-gray-600">原因:</span>
+                                <span class="text-gray-800 ml-1" x-text="order.reason"></span>
+                            </div>
+                            <div x-show="order.unit_ids && order.unit_ids.length > 0">
+                                <span class="text-gray-600">血袋 ID:</span>
+                                <div class="text-xs font-mono text-gray-700 mt-1" x-text="order.unit_ids.join(', ')"></div>
+                            </div>
+                        </div>
+
+                        <!-- Action Button -->
+                        <button @click="openResolveModal(order)"
+                                class="w-full bg-green-600 text-white py-2 rounded font-medium flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            補開醫囑完成
+                        </button>
+                    </div>
+                </template>
+            </div>
+        </div>
+
         <!-- Emergency Tab -->
         <div x-show="activeTab === 'emergency'" x-cloak>
             <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
@@ -594,6 +738,65 @@
         </div>
     </div>
 
+    <!-- Resolve Pending Order Modal (v2.5 P4) -->
+    <div x-show="showResolveModal" x-cloak
+         class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
+        <div class="bg-white w-full rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold">補開醫囑</h3>
+                <button @click="showResolveModal = false" class="text-gray-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Order Info -->
+            <div x-show="resolvingOrder" class="bg-gray-50 rounded-lg p-4 mb-4">
+                <div class="flex justify-between text-sm mb-2">
+                    <span class="text-gray-600">待補單 ID</span>
+                    <span class="font-mono font-medium" x-text="resolvingOrder?.id"></span>
+                </div>
+                <div class="flex justify-between text-sm mb-2">
+                    <span class="text-gray-600">緊急原因</span>
+                    <span x-text="resolvingOrder?.reason || '-'"></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">血袋數</span>
+                    <span x-text="resolvingOrder?.unit_ids?.length || 0"></span>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">正式醫囑單號 *</label>
+                    <input type="text" x-model="resolveForm.order_id"
+                           placeholder="ORD-XXXXXX"
+                           class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">填寫人員</label>
+                    <input type="text" x-model="resolveForm.resolver_id"
+                           placeholder="醫師/護理師 ID"
+                           class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">備註</label>
+                    <textarea x-model="resolveForm.notes"
+                              rows="2"
+                              placeholder="選填..."
+                              class="w-full border rounded px-3 py-2"></textarea>
+                </div>
+                <button @click="resolvePendingOrder()"
+                        :disabled="!resolveForm.order_id"
+                        class="w-full bg-green-600 text-white py-3 rounded font-bold disabled:bg-gray-400">
+                    確認補單完成
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Expiry Blocker Modal -->
     <div x-show="showExpiryBlocker" class="blocker-modal">
         <svg class="w-24 h-24 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -686,6 +889,22 @@
                     type: 'info'
                 },
 
+                // v2.5 P4: Pending Orders State
+                pendingOrders: [],
+                pendingOrdersLoading: false,
+                pendingOrdersSummary: {
+                    pending_count: 0,
+                    overdue_count: 0,
+                    oldest_overdue_hours: 0
+                },
+                showResolveModal: false,
+                resolvingOrder: null,
+                resolveForm: {
+                    order_id: '',
+                    resolver_id: '',
+                    notes: ''
+                },
+
                 async init() {
                     // 監聽網路狀態
                     window.addEventListener('online', () => this.isOffline = false);
@@ -700,6 +919,9 @@
 
                     // 載入資料
                     await this.refresh();
+
+                    // v2.5 P4: 載入待補單摘要
+                    await this.loadPendingOrdersSummary();
                 },
 
                 async refresh() {
@@ -918,6 +1140,101 @@
                 showToast(message, type = 'info') {
                     this.toast = { show: true, message, type };
                     setTimeout(() => this.toast.show = false, 3000);
+                },
+
+                // ======================================================
+                // v2.5 P4: Pending Orders Methods
+                // ======================================================
+
+                async loadPendingOrdersSummary() {
+                    try {
+                        const res = await fetch('/api/blood/pending-orders/summary');
+                        const data = await res.json();
+                        if (data.success) {
+                            this.pendingOrdersSummary = {
+                                pending_count: data.pending_count || 0,
+                                overdue_count: data.overdue_count || 0,
+                                oldest_overdue_hours: data.oldest_overdue_hours || 0
+                            };
+                        }
+                    } catch (e) {
+                        console.error('Failed to load pending orders summary:', e);
+                    }
+                },
+
+                async loadPendingOrders() {
+                    this.pendingOrdersLoading = true;
+                    try {
+                        const res = await fetch('/api/blood/pending-orders');
+                        const data = await res.json();
+                        if (data.success) {
+                            this.pendingOrders = data.data || [];
+                            // 同時更新摘要
+                            this.pendingOrdersSummary = {
+                                pending_count: this.pendingOrders.length,
+                                overdue_count: data.overdue_count || 0,
+                                oldest_overdue_hours: 0
+                            };
+                        }
+                    } catch (e) {
+                        console.error('Failed to load pending orders:', e);
+                        this.showToast('載入待補單失敗', 'error');
+                    }
+                    this.pendingOrdersLoading = false;
+                },
+
+                openResolveModal(order) {
+                    this.resolvingOrder = order;
+                    this.resolveForm = {
+                        order_id: '',
+                        resolver_id: '',
+                        notes: ''
+                    };
+                    this.showResolveModal = true;
+                },
+
+                async resolvePendingOrder() {
+                    if (!this.resolveForm.order_id || !this.resolvingOrder) return;
+
+                    try {
+                        const res = await fetch(`/api/blood/pending-orders/${this.resolvingOrder.id}/resolve`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.resolveForm)
+                        });
+                        const data = await res.json();
+
+                        if (data.success) {
+                            this.showToast('補單完成', 'success');
+                            this.showResolveModal = false;
+                            this.resolvingOrder = null;
+                            await this.loadPendingOrders();
+                        } else {
+                            this.showToast(data.detail || '操作失敗', 'error');
+                        }
+                    } catch (e) {
+                        this.showToast('網路錯誤', 'error');
+                    }
+                },
+
+                formatDateTime(isoString) {
+                    if (!isoString) return '-';
+                    const d = new Date(isoString);
+                    return d.toLocaleString('zh-TW', {
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+
+                orderTypeLabel(type) {
+                    const labels = {
+                        'EMERGENCY_RELEASE': '緊急發血',
+                        'VERBAL_ORDER': '口頭醫囑',
+                        'RAPID_ISSUE': '快速發血'
+                    };
+                    return labels[type] || type;
                 },
 
                 // ======================================================
