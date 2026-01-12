@@ -36,6 +36,13 @@
         .text-blood-600 { color: var(--blood-600); }
         .border-blood-600 { border-color: var(--blood-600); }
 
+        /* 血品類型顏色 (v2.6) */
+        .unit-type-wb { background-color: #7f1d1d; color: white; }      /* 深紅 - Whole Blood */
+        .unit-type-prbc { background-color: #dc2626; color: white; }    /* 紅 - PRBC */
+        .unit-type-ffp { background-color: #d97706; color: white; }     /* 琥珀 - FFP */
+        .unit-type-plt { background-color: #eab308; color: #1f2937; }   /* 黃 - PLT */
+        .unit-type-cryo { background-color: #0891b2; color: white; }    /* 青 - CRYO */
+
         /* 狀態顏色 */
         .status-available { background-color: #10b981; color: white; }
         .status-reserved { background-color: #3b82f6; color: white; }
@@ -172,33 +179,58 @@
                 載入中...
             </div>
 
-            <!-- Availability Grid -->
-            <div x-show="!loading" class="grid grid-cols-2 gap-3">
-                <template x-for="item in availability" :key="item.blood_type + item.unit_type">
-                    <div class="bg-white rounded-lg shadow p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-2xl font-bold" x-text="item.blood_type"></span>
-                            <span class="text-xs bg-gray-200 px-2 py-1 rounded" x-text="item.unit_type"></span>
-                        </div>
-                        <div class="space-y-1 text-sm">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">可用</span>
-                                <span class="font-bold text-green-600" x-text="item.available_count"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">預約</span>
-                                <span class="text-blue-600" x-text="item.reserved_count"></span>
-                            </div>
-                            <div class="flex justify-between" x-show="item.expiring_soon_count > 0">
-                                <span class="text-orange-600">即將過期</span>
-                                <span class="font-bold text-orange-600" x-text="item.expiring_soon_count"></span>
+            <!-- v2.6: 血型庫存統計區 - 仿原始 MIRS 深紅色背景 -->
+            <div x-show="!loading" class="bg-gradient-to-br from-red-900 to-red-950 rounded-xl p-4 mb-4 shadow-xl">
+                <h3 class="text-white text-lg font-bold mb-3 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    血型庫存統計
+                </h3>
+                <div class="grid grid-cols-4 gap-2">
+                    <template x-for="blood in groupedByBloodType" :key="blood.blood_type">
+                        <div class="bg-red-800 bg-opacity-50 backdrop-blur rounded-lg p-3 border border-red-700 hover:border-red-500 transition-all duration-200">
+                            <div class="text-center">
+                                <div class="text-sm font-bold text-red-100 mb-1" x-text="blood.blood_type"></div>
+                                <div class="text-3xl font-extrabold mb-1"
+                                     :class="blood.total > 0 ? 'text-white' : 'text-gray-400'"
+                                     x-text="blood.total"></div>
+                                <div class="text-xs text-red-200">袋</div>
                             </div>
                         </div>
-                        <div class="mt-2 text-xs text-gray-500" x-show="item.nearest_expiry">
-                            最近效期: <span x-text="item.nearest_expiry"></span>
+                    </template>
+                </div>
+            </div>
+
+            <!-- v2.6: 血品類型明細 - 清晰色塊區分 -->
+            <div x-show="!loading" class="bg-white rounded-xl shadow p-4">
+                <h3 class="text-gray-800 font-bold mb-3">血品類型明細</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <template x-for="item in availability" :key="item.blood_type + item.unit_type">
+                        <div class="rounded-lg p-3 border-2"
+                             :class="getUnitTypeBorderClass(item.unit_type)">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xl font-bold text-gray-800" x-text="item.blood_type"></span>
+                                <span class="text-xs font-bold px-2 py-1 rounded"
+                                      :class="getUnitTypeClass(item.unit_type)"
+                                      x-text="getUnitTypeLabel(item.unit_type)"></span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="text-2xl font-extrabold"
+                                     :class="item.available_count > 0 ? 'text-green-600' : 'text-gray-400'"
+                                     x-text="item.available_count"></div>
+                                <div class="text-right text-xs">
+                                    <div x-show="item.reserved_count > 0" class="text-blue-600">
+                                        預約 <span x-text="item.reserved_count"></span>
+                                    </div>
+                                    <div x-show="item.expiring_soon_count > 0" class="text-orange-600 font-bold">
+                                        即期 <span x-text="item.expiring_soon_count"></span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </template>
+                    </template>
+                </div>
             </div>
 
             <!-- Empty State -->
@@ -233,51 +265,63 @@
                 </template>
             </div>
 
-            <!-- Units List -->
+            <!-- v2.6: 改進的血袋清單 UI - 更清晰簡潔 -->
             <div class="space-y-2">
                 <template x-for="unit in filteredUnits" :key="unit.id">
-                    <div class="bg-white rounded-lg shadow p-3">
+                    <div class="bg-white rounded-lg shadow-sm border-l-4 p-3"
+                         :class="{
+                             'border-green-500': unit.display_status === 'AVAILABLE',
+                             'border-blue-500': unit.display_status === 'RESERVED',
+                             'border-amber-500': unit.display_status === 'EXPIRING_SOON',
+                             'border-red-500': unit.display_status === 'EXPIRED'
+                         }">
                         <div class="flex items-center justify-between">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <span class="font-bold" x-text="unit.blood_type"></span>
-                                    <span class="text-xs bg-gray-200 px-1 rounded" x-text="unit.unit_type"></span>
-                                    <span x-show="unit.fifo_priority === 1"
-                                          class="text-xs bg-green-100 text-green-700 px-1 rounded">
-                                        FIFO
-                                    </span>
-                                </div>
-                                <div class="text-xs text-gray-500 mt-1" x-text="unit.id"></div>
+                            <div class="flex items-center gap-3">
+                                <!-- 血型大字 -->
+                                <div class="text-xl font-bold text-gray-800 w-12" x-text="unit.blood_type"></div>
+                                <!-- 血品類型色塊 -->
+                                <span class="text-xs font-bold px-2 py-1 rounded"
+                                      :class="getUnitTypeClass(unit.unit_type)"
+                                      x-text="getUnitTypeLabel(unit.unit_type)"></span>
+                                <!-- FIFO 標記 -->
+                                <span x-show="unit.fifo_priority === 1"
+                                      class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded font-bold">
+                                    FIFO
+                                </span>
                             </div>
                             <div class="text-right">
-                                <span :class="{
-                                    'status-available': unit.display_status === 'AVAILABLE',
-                                    'status-reserved': unit.display_status === 'RESERVED',
-                                    'status-expiring': unit.display_status === 'EXPIRING_SOON',
-                                    'status-expired': unit.display_status === 'EXPIRED'
-                                }" class="text-xs px-2 py-1 rounded" x-text="statusLabel(unit.display_status)">
-                                </span>
-                                <div class="text-xs text-gray-500 mt-1">
-                                    剩 <span x-text="unit.hours_until_expiry"></span>h
+                                <!-- 效期時間 -->
+                                <div class="text-sm font-medium"
+                                     :class="{
+                                         'text-green-600': unit.hours_until_expiry > 72,
+                                         'text-amber-600': unit.hours_until_expiry <= 72 && unit.hours_until_expiry > 0,
+                                         'text-red-600': unit.hours_until_expiry <= 0
+                                     }">
+                                    <span x-show="unit.hours_until_expiry > 0" x-text="'剩 ' + unit.hours_until_expiry + 'h'"></span>
+                                    <span x-show="unit.hours_until_expiry <= 0" class="font-bold">已過期</span>
                                 </div>
+                                <div class="text-xs text-gray-400 font-mono" x-text="unit.id"></div>
                             </div>
                         </div>
-                        <!-- Actions -->
-                        <div class="flex gap-2 mt-2" x-show="unit.display_status === 'AVAILABLE'">
+                        <!-- Actions - 簡化按鈕 -->
+                        <div class="flex gap-2 mt-2" x-show="unit.display_status === 'AVAILABLE' || unit.display_status === 'EXPIRING_SOON'">
                             <button @click="issueUnit(unit)"
-                                    class="flex-1 bg-green-600 text-white py-1 rounded text-sm">
+                                    class="flex-1 bg-blood-600 text-white py-2 rounded text-sm font-medium">
                                 發血
                             </button>
                             <button @click="reserveUnit(unit)"
-                                    class="flex-1 bg-blue-600 text-white py-1 rounded text-sm">
+                                    class="flex-1 bg-gray-100 text-gray-700 py-2 rounded text-sm font-medium border">
                                 預約
                             </button>
                         </div>
                         <div class="mt-2" x-show="unit.display_status === 'RESERVED'">
                             <button @click="unreserveUnit(unit)"
-                                    class="w-full bg-gray-500 text-white py-1 rounded text-sm">
+                                    class="w-full bg-gray-100 text-gray-600 py-2 rounded text-sm border">
                                 取消預約
                             </button>
+                        </div>
+                        <div class="mt-2 text-center text-red-600 text-sm font-bold" x-show="unit.display_status === 'EXPIRED'">
+                            此血袋已過期，請報廢處理
                         </div>
                     </div>
                 </template>
@@ -360,18 +404,35 @@
                 </div>
             </div>
 
+            <!-- v2.6: 位置欄位 (直接輸入) -->
+            <div class="bg-white rounded-lg shadow p-4 mb-4" x-show="issueFlow.tier !== 3 && !issueFlow.patientLocation">
+                <label class="block text-sm font-medium text-gray-700 mb-2">送血位置 (手動輸入)</label>
+                <input type="text" x-model="issueFlow.manualLocation"
+                       placeholder="例: ER-05, ICU-01, OR-2, WARD-305"
+                       class="w-full border rounded px-3 py-2">
+                <p class="text-xs text-gray-500 mt-1">若無法查詢病患位置，可直接輸入送血目的地</p>
+            </div>
+
             <!-- Blood Unit Selection -->
             <div class="bg-white rounded-lg shadow p-4 mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">血袋選擇</label>
-                <div class="flex gap-2 mb-2">
-                    <select x-model="issueFlow.bloodType" class="flex-1 border rounded px-3 py-2">
-                        <option value="">選擇血型</option>
+                <div class="grid grid-cols-3 gap-2 mb-2">
+                    <select x-model="issueFlow.bloodType" class="border rounded px-3 py-2">
+                        <option value="">血型</option>
                         <template x-for="type in ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']">
                             <option :value="type" x-text="type"></option>
                         </template>
                     </select>
+                    <select x-model="issueFlow.unitType" class="border rounded px-3 py-2">
+                        <option value="">血品類型</option>
+                        <option value="WB">全血 WB</option>
+                        <option value="PRBC">紅血球 PRBC</option>
+                        <option value="FFP">血漿 FFP</option>
+                        <option value="PLT">血小板 PLT</option>
+                        <option value="CRYO">冷沉澱 CRYO</option>
+                    </select>
                     <input type="number" x-model="issueFlow.quantity" min="1" max="10"
-                           placeholder="數量" class="w-20 border rounded px-3 py-2">
+                           placeholder="數量" class="border rounded px-3 py-2">
                 </div>
 
                 <!-- Scan Blood Unit Barcode -->
@@ -619,6 +680,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">血品類型</label>
                     <select x-model="receiveForm.unit_type" class="w-full border rounded px-3 py-2">
+                        <option value="WB">WB (全血 Whole Blood)</option>
                         <option value="PRBC">PRBC (濃縮紅血球)</option>
                         <option value="FFP">FFP (新鮮冷凍血漿)</option>
                         <option value="PLT">PLT (血小板)</option>
@@ -636,10 +698,22 @@
                            placeholder="D-XXXXXXXX"
                            class="w-full border rounded px-3 py-2">
                 </div>
-                <button @click="receiveUnit()"
-                        class="w-full bg-blood-600 text-white py-3 rounded font-bold">
-                    確認入庫
-                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button @click="receiveUnit()"
+                            class="bg-blood-600 text-white py-3 rounded font-bold flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        確認入庫
+                    </button>
+                    <button @click="printBloodLabel()"
+                            class="bg-white text-blood-600 py-3 rounded font-bold border-2 border-blood-600 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                        </svg>
+                        列印標籤
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -851,7 +925,9 @@
                     patientLocationType: '',
                     patientWarning: '',
                     patientTriageLevel: null,
+                    manualLocation: '',  // v2.6: 手動輸入位置
                     bloodType: '',
+                    unitType: '',  // v2.6: 血品類型
                     quantity: 1,
                     selectedUnits: [],
                     orderId: '',
@@ -872,7 +948,7 @@
 
                 receiveForm: {
                     blood_type: 'O+',
-                    unit_type: 'PRBC',
+                    unit_type: 'WB',
                     expiry_date: '',
                     donation_id: ''
                 },
@@ -974,6 +1050,50 @@
                         'EXPIRED': '已過期'
                     };
                     return labels[status] || status;
+                },
+
+                // v2.6: 血品類型輔助函數
+                getUnitTypeClass(unitType) {
+                    const classes = {
+                        'WB': 'unit-type-wb',
+                        'PRBC': 'unit-type-prbc',
+                        'FFP': 'unit-type-ffp',
+                        'PLT': 'unit-type-plt',
+                        'CRYO': 'unit-type-cryo'
+                    };
+                    return classes[unitType] || 'bg-gray-500 text-white';
+                },
+
+                getUnitTypeBorderClass(unitType) {
+                    const classes = {
+                        'WB': 'border-red-900',
+                        'PRBC': 'border-red-500',
+                        'FFP': 'border-amber-500',
+                        'PLT': 'border-yellow-400',
+                        'CRYO': 'border-cyan-500'
+                    };
+                    return classes[unitType] || 'border-gray-300';
+                },
+
+                getUnitTypeLabel(unitType) {
+                    const labels = {
+                        'WB': '全血',
+                        'PRBC': '紅血球',
+                        'FFP': '血漿',
+                        'PLT': '血小板',
+                        'CRYO': '冷沉澱'
+                    };
+                    return labels[unitType] || unitType;
+                },
+
+                // v2.6: 按血型分組的庫存統計
+                get groupedByBloodType() {
+                    const bloodTypes = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
+                    return bloodTypes.map(bt => {
+                        const items = this.availability.filter(a => a.blood_type === bt);
+                        const total = items.reduce((sum, item) => sum + (item.available_count || 0), 0);
+                        return { blood_type: bt, total };
+                    });
                 },
 
                 async receiveUnit() {
@@ -1142,6 +1262,62 @@
                     setTimeout(() => this.toast.show = false, 3000);
                 },
 
+                // v2.6: 列印血袋標籤
+                printBloodLabel() {
+                    const { blood_type, unit_type, expiry_date, donation_id } = this.receiveForm;
+                    if (!blood_type) {
+                        this.showToast('請選擇血型', 'error');
+                        return;
+                    }
+
+                    const unitTypeLabels = {
+                        'WB': '全血 Whole Blood',
+                        'PRBC': '濃縮紅血球 PRBC',
+                        'FFP': '新鮮冷凍血漿 FFP',
+                        'PLT': '血小板 PLT',
+                        'CRYO': '冷凍沉澱品 CRYO'
+                    };
+
+                    const unitTypeColors = {
+                        'WB': '#7f1d1d',
+                        'PRBC': '#dc2626',
+                        'FFP': '#d97706',
+                        'PLT': '#eab308',
+                        'CRYO': '#0891b2'
+                    };
+
+                    const printContent = `
+                        <html>
+                        <head>
+                            <title>血袋標籤</title>
+                            <style>
+                                @page { size: 60mm 40mm; margin: 2mm; }
+                                body { font-family: sans-serif; margin: 0; padding: 5mm; }
+                                .label { border: 2px solid ${unitTypeColors[unit_type] || '#333'}; padding: 3mm; }
+                                .header { background: ${unitTypeColors[unit_type] || '#333'}; color: white; padding: 2mm; text-align: center; font-weight: bold; margin: -3mm -3mm 3mm -3mm; }
+                                .blood-type { font-size: 24pt; font-weight: bold; text-align: center; margin: 2mm 0; }
+                                .info { font-size: 10pt; margin: 1mm 0; }
+                                .barcode { text-align: center; font-family: monospace; font-size: 12pt; margin-top: 2mm; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="label">
+                                <div class="header">${unitTypeLabels[unit_type] || unit_type}</div>
+                                <div class="blood-type">${blood_type}</div>
+                                <div class="info"><b>效期:</b> ${expiry_date || '未設定'}</div>
+                                <div class="info"><b>捐血編號:</b> ${donation_id || '-'}</div>
+                                <div class="info"><b>列印時間:</b> ${new Date().toLocaleString('zh-TW')}</div>
+                                <div class="barcode">${donation_id || 'BU-' + Date.now()}</div>
+                            </div>
+                        </body>
+                        </html>
+                    `;
+                    const printWindow = window.open('', '_blank', 'width=400,height=300');
+                    printWindow.document.write(printContent);
+                    printWindow.document.close();
+                    printWindow.print();
+                },
+
                 // ======================================================
                 // v2.5 P4: Pending Orders Methods
                 // ======================================================
@@ -1242,28 +1418,28 @@
                 // ======================================================
 
                 get canProcessIssue() {
-                    const { tier, patientId, patientLocation, selectedUnits, bloodType, quantity, orderId, verbalOrderNote } = this.issueFlow;
+                    const { tier, patientId, patientLocation, manualLocation, selectedUnits, bloodType, quantity, orderId, verbalOrderNote } = this.issueFlow;
+
+                    // v2.6: 合併位置來源
+                    const hasLocation = patientLocation || manualLocation;
 
                     // Tier 3: Only needs blood type (O+/O-) and reason
                     if (tier === 3) {
                         return bloodType && ['O+', 'O-'].includes(bloodType);
                     }
 
-                    // Tier 1 & 2: Need patient location
-                    if (tier === 1 || tier === 2) {
-                        // Need either selected units or blood type + quantity
-                        const hasBlood = selectedUnits.length > 0 || (bloodType && quantity > 0);
-                        if (!hasBlood) return false;
-                    }
+                    // Tier 1 & 2: Need either selected units or blood type + quantity
+                    const hasBlood = selectedUnits.length > 0 || (bloodType && quantity > 0);
+                    if (!hasBlood) return false;
 
-                    // Tier 1: Need order ID
+                    // Tier 1: Need order ID and patient ID
                     if (tier === 1) {
                         return orderId && patientId;
                     }
 
-                    // Tier 2: Need verbal order note
+                    // Tier 2: Need verbal order note and location (either from patient or manual)
                     if (tier === 2) {
-                        return verbalOrderNote && patientId && patientLocation;
+                        return verbalOrderNote && (patientId || hasLocation);
                     }
 
                     return false;
@@ -1337,7 +1513,10 @@
                 // Process issue based on tier
                 async processIssue() {
                     const { tier, patientId, patientLocation, patientLocationName, patientTriageLevel,
-                            selectedUnits, bloodType, quantity, orderId, verbalOrderNote } = this.issueFlow;
+                            selectedUnits, bloodType, unitType, quantity, orderId, verbalOrderNote, manualLocation } = this.issueFlow;
+
+                    // v2.6: 優先使用病患位置，否則使用手動輸入位置
+                    const finalLocation = patientLocation || manualLocation;
 
                     // Tier 3 goes to Emergency Release
                     if (tier === 3) {
@@ -1363,7 +1542,7 @@
                                         order_id: issueOrderId,
                                         issuer_id: 'blood-pwa',
                                         patient_id: patientId,
-                                        patient_location: patientLocation,
+                                        patient_location: finalLocation,  // v2.6: 使用合併的位置
                                         is_verbal_order: tier === 2,
                                         verbal_order_note: tier === 2 ? verbalOrderNote : null
                                     })
@@ -1374,8 +1553,12 @@
                                 }
                             }
                         } else if (bloodType && quantity > 0) {
-                            // Auto-select units by blood type (FIFO)
-                            const unitsRes = await fetch(`/api/blood/units?blood_type=${bloodType}&status=AVAILABLE`);
+                            // v2.6: Auto-select units by blood type AND unit type (FIFO)
+                            let apiUrl = `/api/blood/units?blood_type=${bloodType}&status=AVAILABLE`;
+                            if (unitType) {
+                                apiUrl += `&unit_type=${unitType}`;
+                            }
+                            const unitsRes = await fetch(apiUrl);
                             const unitsData = await unitsRes.json();
 
                             if (unitsData.success && unitsData.data) {
@@ -1391,7 +1574,7 @@
                                             order_id: issueOrderId,
                                             issuer_id: 'blood-pwa',
                                             patient_id: patientId,
-                                            patient_location: patientLocation,
+                                            patient_location: finalLocation,  // v2.6: 使用合併的位置
                                             is_verbal_order: tier === 2,
                                             verbal_order_note: tier === 2 ? verbalOrderNote : null
                                         })
@@ -1406,10 +1589,11 @@
 
                         if (issuedUnits.length > 0) {
                             // Show success modal with Location-First Display
+                            const unitTypeLabel = unitType ? this.getUnitTypeLabel(unitType) : '';
                             this.issueResult = {
-                                location: patientLocation,
-                                locationName: patientLocationName,
-                                bloodInfo: `${bloodType || issuedUnits[0].blood_type} x ${issuedUnits.length} 單位`,
+                                location: finalLocation,  // v2.6: 使用合併的位置
+                                locationName: patientLocationName || (manualLocation ? '手動輸入' : ''),
+                                bloodInfo: `${bloodType || issuedUnits[0].blood_type} ${unitTypeLabel} x ${issuedUnits.length} 單位`,
                                 patientId: patientId,
                                 triageLevel: patientTriageLevel,
                                 unitIds: issuedUnits.map(u => u.id)
@@ -1437,7 +1621,9 @@
                         patientLocationType: '',
                         patientWarning: '',
                         patientTriageLevel: null,
+                        manualLocation: '',  // v2.6
                         bloodType: '',
+                        unitType: '',  // v2.6
                         quantity: 1,
                         selectedUnits: [],
                         orderId: '',
