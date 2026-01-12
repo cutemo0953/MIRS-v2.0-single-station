@@ -2,12 +2,12 @@
 
 **版本**: 2.5
 **日期**: 2026-01-12
-**狀態**: P0/P1/P2/P3/P4 (Pending Order UI) Completed
+**狀態**: P0/P1/P2/P3/P4 (Pending Order + Reserve Timeout) Completed
 **基於**: Gemini + ChatGPT 第二輪審閱 + BioMed PWA 經驗教訓 + Claude 實作反饋 + **Gemini 第三輪戰時流程審閱**
 
 ---
 
-## v2.4 → v2.5 變更摘要 (P4 待補單追蹤 UI)
+## v2.4 → v2.5 變更摘要 (P4 完整實作)
 
 | 項目 | 狀態 | 說明 |
 |------|------|------|
@@ -16,6 +16,8 @@
 | **Overview 警告 Banner** | ✅ 完成 | 首頁顯示逾期待補單警告，可點擊跳轉 |
 | **補單解除 Modal** | ✅ 完成 | 輸入正式醫囑單號後解除待補單狀態 |
 | **待補單 API** | ✅ 完成 | `GET /pending-orders`, `POST /resolve`, `GET /summary` |
+| **預約逾時自動釋放** | ✅ 完成 | 4 小時後自動釋放 (Lazy Cleanup) |
+| **Reserve Timeout API** | ✅ 完成 | `POST /reserve-timeout/process`, `GET /reserve-timeout/status` |
 | **Service Worker v2.5.0** | ✅ 完成 | 快取刷新 |
 
 ### P4 實作檔案
@@ -24,7 +26,25 @@
 |------|------|
 | `frontend/blood/index.html` | +150 行，新增待補單 Tab、Resolve Modal |
 | `frontend/blood/service-worker.js` | v2.5.0，快取刷新 |
-| `routes/blood.py` | P4 API 已在 v2.4 實作 |
+| `routes/blood.py` | P4 完整: Pending Order API + Reserve Timeout |
+
+### Reserve Timeout 機制
+
+```
+預約後 4 小時 (RESERVE_EXPIRY_HOURS = 4)
+    ↓
+Lazy Cleanup: GET /availability 或 GET /units 時自動清理
+    ↓
+找出 reserve_expires_at < NOW 的血袋
+    ↓
+status: RESERVED → AVAILABLE
+    ↓
+記錄 RESERVE_TIMEOUT 事件 (Event Sourcing)
+```
+
+**API 端點**:
+- `POST /api/blood/reserve-timeout/process` - 手動觸發清理 (Admin)
+- `GET /api/blood/reserve-timeout/status` - 查詢即將過期的預約
 
 ---
 

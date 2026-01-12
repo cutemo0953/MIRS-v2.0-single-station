@@ -194,6 +194,7 @@ DEFAULT_EXPIRY_DAYS = {
 async def get_blood_availability():
     """
     取得血品可用性總覽 (View 驅動)
+    v2.5: 自動清理過期預約 (Lazy Cleanup)
     """
     if IS_VERCEL:
         # Demo 模式 - 模擬戰時野戰醫院庫存
@@ -220,6 +221,9 @@ async def get_blood_availability():
         }
 
     with get_db() as conn:
+        # v2.5: Lazy cleanup of expired reservations
+        release_expired_reservations(conn)
+
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM v_blood_availability ORDER BY blood_type, unit_type")
         rows = cursor.fetchall()
@@ -282,6 +286,9 @@ async def list_blood_units(
         }
 
     with get_db() as conn:
+        # v2.5: Lazy cleanup of expired reservations
+        release_expired_reservations(conn)
+
         cursor = conn.cursor()
 
         query = "SELECT * FROM v_blood_unit_status WHERE 1=1"
@@ -1016,6 +1023,175 @@ async def get_pending_orders_summary():
             "pending_count": pending_count,
             "overdue_count": overdue_count,
             "oldest_overdue_hours": oldest_overdue_hours
+        }
+
+
+# ==============================================================================
+# P4: Reserve Timeout (預約逾時自動釋放)
+# ==============================================================================
+
+def release_expired_reservations(conn: sqlite3.Connection = None) -> dict:
+    """
+    釋放過期的預約血袋
+    v2.5: P4 自動釋放機制
+
+    Returns:
+        dict: { released_count, unit_ids }
+    """
+    close_conn = False
+    if conn is None:
+        conn = get_db()
+        close_conn = True
+
+    cursor = conn.cursor()
+
+    # 找出過期的預約
+    cursor.execute("""
+        SELECT id, blood_type, reserved_for_order, reserved_by, reserve_expires_at
+        FROM blood_units
+        WHERE status = 'RESERVED'
+          AND reserve_expires_at IS NOT NULL
+          AND reserve_expires_at < datetime('now', 'localtime')
+    """)
+
+    expired_units = cursor.fetchall()
+    released_ids = []
+
+    for unit in expired_units:
+        unit_id = unit['id']
+
+        # 更新狀態為 AVAILABLE
+        cursor.execute("""
+            UPDATE blood_units
+            SET status = 'AVAILABLE',
+                reserved_for_order = NULL,
+                reserved_at = NULL,
+                reserved_by = NULL,
+                reserve_expires_at = NULL
+            WHERE id = ?
+        """, (unit_id,))
+
+        # 記錄事件
+        log_blood_event(
+            cursor, unit_id, "RESERVE_TIMEOUT", "system",
+            f"預約逾時自動釋放 (原訂單: {unit['reserved_for_order']}, 預約者: {unit['reserved_by']})",
+            unit['reserved_for_order'],
+            severity="WARNING"
+        )
+
+        released_ids.append(unit_id)
+        logger.info(f"[Blood] Released expired reservation: {unit_id}")
+
+    if released_ids:
+        conn.commit()
+        logger.info(f"[Blood] Released {len(released_ids)} expired reservations")
+
+    if close_conn:
+        conn.close()
+
+    return {
+        "released_count": len(released_ids),
+        "unit_ids": released_ids
+    }
+
+
+@router.post("/reserve-timeout/process")
+async def process_reserve_timeout():
+    """
+    手動觸發預約逾時清理
+    v2.5: P4 新增 (Admin 用)
+    """
+    if IS_VERCEL:
+        return {
+            "success": True,
+            "released_count": 0,
+            "unit_ids": [],
+            "demo": True,
+            "message": "Demo 模式無實際清理"
+        }
+
+    result = release_expired_reservations()
+
+    return {
+        "success": True,
+        **result,
+        "message": f"已釋放 {result['released_count']} 筆過期預約"
+    }
+
+
+@router.get("/reserve-timeout/status")
+async def get_reserve_timeout_status():
+    """
+    查詢即將過期的預約
+    v2.5: P4 新增
+    """
+    if IS_VERCEL:
+        now = datetime.now()
+        return {
+            "success": True,
+            "data": [
+                {
+                    "id": "BU-20260111-G7H8I9",
+                    "blood_type": "O+",
+                    "reserved_for_order": "ORD-2026-0001",
+                    "reserve_expires_at": (now - timedelta(minutes=30)).isoformat(),
+                    "is_expired": True,
+                    "hours_remaining": -0.5
+                },
+                {
+                    "id": "BU-20260112-X1Y2Z3",
+                    "blood_type": "A+",
+                    "reserved_for_order": "ORD-2026-0003",
+                    "reserve_expires_at": (now + timedelta(hours=2)).isoformat(),
+                    "is_expired": False,
+                    "hours_remaining": 2
+                }
+            ],
+            "expired_count": 1,
+            "expiring_soon_count": 1,
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, blood_type, unit_type, reserved_for_order, reserved_by,
+                   reserved_at, reserve_expires_at
+            FROM blood_units
+            WHERE status = 'RESERVED'
+              AND reserve_expires_at IS NOT NULL
+            ORDER BY reserve_expires_at ASC
+        """)
+
+        rows = cursor.fetchall()
+        now = datetime.now()
+
+        result = []
+        expired_count = 0
+        expiring_soon_count = 0  # < 1 hour
+
+        for row in rows:
+            item = dict(row)
+            expires_at = datetime.fromisoformat(item['reserve_expires_at'])
+            is_expired = now > expires_at
+            hours_remaining = (expires_at - now).total_seconds() / 3600
+
+            item['is_expired'] = is_expired
+            item['hours_remaining'] = round(hours_remaining, 1)
+
+            if is_expired:
+                expired_count += 1
+            elif hours_remaining < 1:
+                expiring_soon_count += 1
+
+            result.append(item)
+
+        return {
+            "success": True,
+            "data": result,
+            "expired_count": expired_count,
+            "expiring_soon_count": expiring_soon_count
         }
 
 
