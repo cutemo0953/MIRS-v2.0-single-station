@@ -1,21 +1,20 @@
 /**
- * MIRS Blood Bank PWA Service Worker v2.6.0
+ * MIRS Blood Bank PWA Service Worker v2.7.0
  *
- * Based on DEV_SPEC_BLOOD_BANK_PWA_v2.6:
+ * Based on DEV_SPEC_BLOOD_BANK_PWA_v2.7:
  * - Scope 隔離：/blood/ 獨立快取
  * - 離線優先策略
  * - API 請求 Network-first
  *
- * v2.6.0 Changes:
- * - 血型庫存統計區 (仿原始 MIRS 深紅色背景)
- * - 血品類型色塊系統 (WB/PRBC/FFP/PLT/CRYO)
- * - 新增 WB (全血) 血品類型
- * - 血袋清單 UI 簡化
- * - 列印標籤功能
- * - 手動位置輸入 + 血品類型選擇
+ * v2.7.0 Changes (MIRS Legacy Style):
+ * - Big Colored Cards Grid (2x4) for blood types
+ * - Click-to-filter dashboard
+ * - Left border color coding by component type
+ * - Prominent Unit ID & Expiry Date
+ * - Emergency FAB (Panic Button) with blinking animation
  */
 
-const CACHE_NAME = 'mirs-blood-v2.6.0';
+const CACHE_NAME = 'mirs-blood-v2.7.0';
 const SCOPE = '/blood/';
 
 // 需要快取的靜態資源
@@ -29,7 +28,7 @@ const STATIC_ASSETS = [
 
 // Install event
 self.addEventListener('install', (event) => {
-    console.log('[Blood SW] Installing v2.6.0');
+    console.log('[Blood SW] Installing v2.7.0');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {

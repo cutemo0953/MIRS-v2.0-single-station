@@ -78,7 +78,7 @@
                           d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                 </svg>
                 <h1 class="text-lg font-bold">Blood Bank</h1>
-                <span class="text-xs bg-red-800 px-2 py-0.5 rounded">v2.6</span>
+                <span class="text-xs bg-red-800 px-2 py-0.5 rounded">v2.7</span>
             </div>
             <div class="flex items-center gap-2">
                 <span x-show="isOffline" class="bg-yellow-500 text-xs px-2 py-1 rounded">離線</span>
@@ -180,58 +180,86 @@
                 載入中...
             </div>
 
-            <!-- v2.6: 血型庫存統計區 - 仿原始 MIRS 深紅色背景 -->
-            <div x-show="!loading" class="bg-gradient-to-br from-red-900 to-red-950 rounded-xl p-4 mb-4 shadow-xl">
-                <h3 class="text-white text-lg font-bold mb-3 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                    血型庫存統計
-                </h3>
-                <div class="grid grid-cols-4 gap-2">
+            <!-- v2.7: MIRS Legacy Style - Big Colored Cards Grid (The Soul of MIRS) -->
+            <div x-show="!loading" class="mb-6">
+                <!-- 2x4 Grid of Blood Type Cards -->
+                <div class="grid grid-cols-4 gap-3">
                     <template x-for="blood in groupedByBloodType" :key="blood.blood_type">
-                        <div class="bg-red-800 bg-opacity-50 backdrop-blur rounded-lg p-3 border border-red-700 hover:border-red-500 transition-all duration-200">
+                        <div @click="filterByBloodType(blood.blood_type)"
+                             class="cursor-pointer rounded-xl p-4 shadow-lg transform hover:scale-105 transition-all duration-200"
+                             :class="blood.total > 0 ? 'bg-red-900 hover:bg-red-800' : 'bg-gray-700 hover:bg-gray-600'">
                             <div class="text-center">
-                                <div class="text-sm font-bold text-red-100 mb-1" x-text="blood.blood_type"></div>
-                                <div class="text-3xl font-extrabold mb-1"
-                                     :class="blood.total > 0 ? 'text-white' : 'text-gray-400'"
-                                     x-text="blood.total"></div>
-                                <div class="text-xs text-red-200">袋</div>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <!-- v2.6: 血品類型明細 - 清晰色塊區分 -->
-            <div x-show="!loading" class="bg-white rounded-xl shadow p-4">
-                <h3 class="text-gray-800 font-bold mb-3">血品類型明細</h3>
-                <div class="grid grid-cols-2 gap-3">
-                    <template x-for="item in availability" :key="item.blood_type + item.unit_type">
-                        <div class="rounded-lg p-3 border-2"
-                             :class="getUnitTypeBorderClass(item.unit_type)">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-xl font-bold text-gray-800" x-text="item.blood_type"></span>
-                                <span class="text-xs font-bold px-2 py-1 rounded"
-                                      :class="getUnitTypeClass(item.unit_type)"
-                                      x-text="getUnitTypeLabel(item.unit_type)"></span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <div class="text-2xl font-extrabold"
-                                     :class="item.available_count > 0 ? 'text-green-600' : 'text-gray-400'"
-                                     x-text="item.available_count"></div>
-                                <div class="text-right text-xs">
-                                    <div x-show="item.reserved_count > 0" class="text-blue-600">
-                                        預約 <span x-text="item.reserved_count"></span>
-                                    </div>
-                                    <div x-show="item.expiring_soon_count > 0" class="text-orange-600 font-bold">
-                                        即期 <span x-text="item.expiring_soon_count"></span>
-                                    </div>
+                                <!-- Blood Type - HUGE -->
+                                <div class="text-3xl sm:text-4xl font-black text-white mb-1" x-text="blood.blood_type"></div>
+                                <!-- Count - Yellow for visibility -->
+                                <div class="text-xl sm:text-2xl font-bold"
+                                     :class="blood.total > 0 ? 'text-yellow-300' : 'text-gray-500'">
+                                    <span x-text="blood.total"></span>
+                                    <span class="text-sm">袋</span>
+                                </div>
+                                <!-- Expiring indicator -->
+                                <div x-show="blood.expiring > 0"
+                                     class="mt-1 text-xs text-orange-400 font-bold animate-pulse">
+                                    ⚠ <span x-text="blood.expiring"></span> 即期
                                 </div>
                             </div>
                         </div>
                     </template>
                 </div>
+
+                <!-- Quick Stats Bar -->
+                <div class="mt-4 bg-white rounded-lg shadow p-3 flex items-center justify-between">
+                    <div class="flex items-center gap-4 text-sm">
+                        <span class="text-gray-600">總庫存: <span class="font-bold text-gray-900" x-text="totalUnits"></span> 袋</span>
+                        <span x-show="totalExpiring > 0" class="text-orange-600 font-bold">
+                            即期: <span x-text="totalExpiring"></span>
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <!-- Unit Type Legend -->
+                        <span class="text-xs px-2 py-1 rounded unit-type-wb">全血</span>
+                        <span class="text-xs px-2 py-1 rounded unit-type-prbc">紅血球</span>
+                        <span class="text-xs px-2 py-1 rounded unit-type-ffp">血漿</span>
+                        <span class="text-xs px-2 py-1 rounded unit-type-plt">血小板</span>
+                    </div>
+                </div>
+
+                <!-- Active Filter Indicator -->
+                <div x-show="dashboardFilter" class="mt-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-2">
+                    <span class="text-blue-700 text-sm">
+                        篩選中: <span class="font-bold" x-text="dashboardFilter"></span>
+                    </span>
+                    <button @click="dashboardFilter = ''" class="text-blue-600 text-sm underline">清除篩選</button>
+                </div>
+            </div>
+
+            <!-- v2.7: Filtered Unit Cards by Component Type -->
+            <div x-show="!loading && filteredByDashboard.length > 0" class="space-y-2">
+                <h3 class="text-gray-700 font-bold text-sm mb-2" x-show="dashboardFilter">
+                    <span x-text="dashboardFilter"></span> 血袋明細
+                </h3>
+                <template x-for="item in filteredByDashboard" :key="item.blood_type + item.unit_type">
+                    <div class="bg-white rounded-lg shadow-sm p-3 border-l-8"
+                         :class="getUnitTypeBorderColorClass(item.unit_type)">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl font-bold text-gray-800" x-text="item.blood_type"></span>
+                                <span class="text-xs font-bold px-2 py-1 rounded"
+                                      :class="getUnitTypeClass(item.unit_type)"
+                                      x-text="getUnitTypeLabel(item.unit_type)"></span>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-extrabold"
+                                     :class="item.available_count > 0 ? 'text-green-600' : 'text-gray-400'"
+                                     x-text="item.available_count"></div>
+                                <div class="text-xs text-gray-500">可用</div>
+                            </div>
+                        </div>
+                        <div x-show="item.expiring_soon_count > 0" class="mt-2 text-xs text-orange-600 font-bold">
+                            ⚠ <span x-text="item.expiring_soon_count"></span> 袋即將過期
+                        </div>
+                    </div>
+                </template>
             </div>
 
             <!-- Empty State -->
@@ -266,63 +294,72 @@
                 </template>
             </div>
 
-            <!-- v2.6: 改進的血袋清單 UI - 更清晰簡潔 -->
+            <!-- v2.7: Clean & Scannable Unit List with Component Type Border Coding -->
             <div class="space-y-2">
                 <template x-for="unit in filteredUnits" :key="unit.id">
-                    <div class="bg-white rounded-lg shadow-sm border-l-4 p-3"
-                         :class="{
-                             'border-green-500': unit.display_status === 'AVAILABLE',
-                             'border-blue-500': unit.display_status === 'RESERVED',
-                             'border-amber-500': unit.display_status === 'EXPIRING_SOON',
-                             'border-red-500': unit.display_status === 'EXPIRED'
-                         }">
-                        <div class="flex items-center justify-between">
+                    <div class="bg-white rounded-lg shadow-sm p-3 border-l-8"
+                         :class="getUnitTypeBorderColorClass(unit.unit_type)">
+                        <!-- Main Row: Blood Type, Component, Status -->
+                        <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-3">
-                                <!-- 血型大字 -->
-                                <div class="text-xl font-bold text-gray-800 w-12" x-text="unit.blood_type"></div>
-                                <!-- 血品類型色塊 -->
+                                <!-- Blood Type - Large -->
+                                <div class="text-2xl font-black text-gray-900 w-14" x-text="unit.blood_type"></div>
+                                <!-- Component Type Badge -->
                                 <span class="text-xs font-bold px-2 py-1 rounded"
                                       :class="getUnitTypeClass(unit.unit_type)"
                                       x-text="getUnitTypeLabel(unit.unit_type)"></span>
-                                <!-- FIFO 標記 -->
-                                <span x-show="unit.fifo_priority === 1"
-                                      class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded font-bold">
-                                    FIFO
-                                </span>
+                                <!-- Status Badge -->
+                                <span class="text-xs px-2 py-1 rounded"
+                                      :class="{
+                                          'bg-green-100 text-green-700': unit.display_status === 'AVAILABLE',
+                                          'bg-blue-100 text-blue-700': unit.display_status === 'RESERVED',
+                                          'bg-orange-100 text-orange-700': unit.display_status === 'EXPIRING_SOON',
+                                          'bg-red-100 text-red-700': unit.display_status === 'EXPIRED'
+                                      }"
+                                      x-text="statusLabel(unit.display_status)"></span>
                             </div>
-                            <div class="text-right">
-                                <!-- 效期時間 -->
-                                <div class="text-sm font-medium"
-                                     :class="{
-                                         'text-green-600': unit.hours_until_expiry > 72,
-                                         'text-amber-600': unit.hours_until_expiry <= 72 && unit.hours_until_expiry > 0,
-                                         'text-red-600': unit.hours_until_expiry <= 0
-                                     }">
-                                    <span x-show="unit.hours_until_expiry > 0" x-text="'剩 ' + unit.hours_until_expiry + 'h'"></span>
-                                    <span x-show="unit.hours_until_expiry <= 0" class="font-bold">已過期</span>
-                                </div>
-                                <div class="text-xs text-gray-400 font-mono" x-text="unit.id"></div>
+                            <!-- FIFO Priority -->
+                            <span x-show="unit.fifo_priority === 1"
+                                  class="text-xs bg-yellow-400 text-yellow-900 px-2 py-1 rounded font-bold">
+                                FIFO 優先
+                            </span>
+                        </div>
+
+                        <!-- Second Row: Unit ID (Prominent) & Expiry (Prominent) -->
+                        <div class="flex items-center justify-between bg-gray-50 rounded px-2 py-1 mb-2">
+                            <div class="font-mono text-sm font-bold text-gray-700" x-text="unit.id"></div>
+                            <div class="text-sm font-bold"
+                                 :class="{
+                                     'text-green-600': unit.hours_until_expiry > 72,
+                                     'text-orange-600': unit.hours_until_expiry <= 72 && unit.hours_until_expiry > 24,
+                                     'text-red-600 animate-pulse': unit.hours_until_expiry <= 24
+                                 }">
+                                <span x-show="unit.hours_until_expiry > 0">
+                                    效期: <span x-text="unit.hours_until_expiry"></span>h
+                                </span>
+                                <span x-show="unit.hours_until_expiry <= 0">⚠️ 已過期</span>
                             </div>
                         </div>
-                        <!-- Actions - 簡化按鈕 -->
-                        <div class="flex gap-2 mt-2" x-show="unit.display_status === 'AVAILABLE' || unit.display_status === 'EXPIRING_SOON'">
+
+                        <!-- Action Buttons -->
+                        <div class="flex gap-2" x-show="unit.display_status === 'AVAILABLE' || unit.display_status === 'EXPIRING_SOON'">
                             <button @click="issueUnit(unit)"
-                                    class="flex-1 bg-blood-600 text-white py-2 rounded text-sm font-medium">
+                                    class="flex-1 bg-blood-600 text-white py-2 rounded text-sm font-bold hover:bg-blood-700 transition-colors">
                                 發血
                             </button>
                             <button @click="reserveUnit(unit)"
-                                    class="flex-1 bg-gray-100 text-gray-700 py-2 rounded text-sm font-medium border">
+                                    class="flex-1 bg-white text-gray-700 py-2 rounded text-sm font-medium border-2 border-gray-300 hover:border-gray-400">
                                 預約
                             </button>
                         </div>
-                        <div class="mt-2" x-show="unit.display_status === 'RESERVED'">
+                        <div x-show="unit.display_status === 'RESERVED'">
                             <button @click="unreserveUnit(unit)"
-                                    class="w-full bg-gray-100 text-gray-600 py-2 rounded text-sm border">
+                                    class="w-full bg-blue-50 text-blue-700 py-2 rounded text-sm font-medium border border-blue-200">
                                 取消預約
                             </button>
                         </div>
-                        <div class="mt-2 text-center text-red-600 text-sm font-bold" x-show="unit.display_status === 'EXPIRED'">
-                            此血袋已過期，請報廢處理
+                        <div class="text-center text-red-600 text-sm font-bold py-2 bg-red-50 rounded" x-show="unit.display_status === 'EXPIRED'">
+                            ⚠️ 此血袋已過期，請報廢處理
                         </div>
                     </div>
                 </template>
@@ -907,6 +944,7 @@
                 availability: [],
                 units: [],
                 unitFilter: '',
+                dashboardFilter: '',  // v2.7: Dashboard blood type filter
 
                 showReceiveModal: false,
                 showExpiryBlocker: false,
@@ -1087,14 +1125,52 @@
                     return labels[unitType] || unitType;
                 },
 
-                // v2.6: 按血型分組的庫存統計
+                // v2.7: 按血型分組的庫存統計 (含即期數)
                 get groupedByBloodType() {
                     const bloodTypes = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
                     return bloodTypes.map(bt => {
                         const items = this.availability.filter(a => a.blood_type === bt);
                         const total = items.reduce((sum, item) => sum + (item.available_count || 0), 0);
-                        return { blood_type: bt, total };
+                        const expiring = items.reduce((sum, item) => sum + (item.expiring_soon_count || 0), 0);
+                        return { blood_type: bt, total, expiring };
                     });
+                },
+
+                // v2.7: 總庫存
+                get totalUnits() {
+                    return this.groupedByBloodType.reduce((sum, b) => sum + b.total, 0);
+                },
+
+                // v2.7: 總即期
+                get totalExpiring() {
+                    return this.groupedByBloodType.reduce((sum, b) => sum + b.expiring, 0);
+                },
+
+                // v2.7: Dashboard 過濾後的 availability
+                get filteredByDashboard() {
+                    if (!this.dashboardFilter) return this.availability;
+                    return this.availability.filter(a => a.blood_type === this.dashboardFilter);
+                },
+
+                // v2.7: 點擊血型卡片過濾
+                filterByBloodType(bloodType) {
+                    if (this.dashboardFilter === bloodType) {
+                        this.dashboardFilter = '';  // 再次點擊清除過濾
+                    } else {
+                        this.dashboardFilter = bloodType;
+                    }
+                },
+
+                // v2.7: 血品類型左側邊框顏色 (8px)
+                getUnitTypeBorderColorClass(unitType) {
+                    const classes = {
+                        'WB': 'border-red-900',
+                        'PRBC': 'border-red-600',
+                        'FFP': 'border-yellow-400',
+                        'PLT': 'border-yellow-200',
+                        'CRYO': 'border-cyan-400'
+                    };
+                    return classes[unitType] || 'border-gray-300';
                 },
 
                 async receiveUnit() {
@@ -1746,5 +1822,70 @@
             };
         }
     </script>
+
+    <!-- v2.7: Emergency Release FAB (Floating Action Button) - The Panic Button -->
+    <div x-data="{ showEmergencyConfirm: false }" class="fixed bottom-20 right-4 z-40">
+        <!-- FAB Button -->
+        <button @click="showEmergencyConfirm = true"
+                class="bg-red-600 hover:bg-red-700 text-white rounded-full p-4 shadow-2xl
+                       flex items-center gap-2 animate-pulse-slow
+                       border-4 border-red-300">
+            <span class="text-2xl">🚨</span>
+            <span class="font-bold text-sm hidden sm:inline">緊急領血</span>
+        </button>
+
+        <!-- Emergency Confirm Modal -->
+        <div x-show="showEmergencyConfirm" x-cloak
+             class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+             @click.self="showEmergencyConfirm = false">
+            <div class="bg-white rounded-xl max-w-sm w-full overflow-hidden shadow-2xl">
+                <!-- Header - Blinking Red -->
+                <div class="bg-red-600 text-white p-4 text-center animate-pulse">
+                    <div class="text-3xl mb-2">🚨</div>
+                    <h3 class="text-xl font-bold">緊急領血 Emergency Release</h3>
+                    <p class="text-sm text-red-200 mt-1">僅限 O 型血 (萬能供血)</p>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="p-4 space-y-3">
+                    <p class="text-gray-600 text-sm text-center mb-4">
+                        緊急發血將跳過正常流程，事後需補開醫囑
+                    </p>
+
+                    <!-- O+ Button -->
+                    <button @click="$dispatch('emergency-release', { bloodType: 'O+' }); showEmergencyConfirm = false"
+                            class="w-full bg-red-900 hover:bg-red-800 text-white py-4 rounded-lg font-bold text-xl flex items-center justify-center gap-3">
+                        <span class="text-3xl">O+</span>
+                        <span>緊急發血</span>
+                    </button>
+
+                    <!-- O- Button (More Universal) -->
+                    <button @click="$dispatch('emergency-release', { bloodType: 'O-' }); showEmergencyConfirm = false"
+                            class="w-full bg-red-700 hover:bg-red-600 text-white py-4 rounded-lg font-bold text-xl flex items-center justify-center gap-3 border-2 border-yellow-400">
+                        <span class="text-3xl">O-</span>
+                        <span>萬能血型</span>
+                        <span class="text-xs bg-yellow-400 text-red-900 px-2 py-0.5 rounded">推薦</span>
+                    </button>
+
+                    <!-- Cancel -->
+                    <button @click="showEmergencyConfirm = false"
+                            class="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-medium">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* v2.7: Slow pulse animation for Emergency FAB */
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.9; transform: scale(1.05); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 2s ease-in-out infinite;
+        }
+    </style>
 </body>
 </html>

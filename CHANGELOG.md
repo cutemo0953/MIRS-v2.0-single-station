@@ -6,6 +6,33 @@
 
 ---
 
+## [Blood Bank PWA v2.7] - 2026-01-13
+
+### 新增 (Added)
+- **Big Colored Cards Grid**: 2x4 血型卡片網格，深紅(有庫存)/灰色(零庫存)
+- **Click-to-Filter**: 點擊血型卡片過濾下方血袋明細
+- **Emergency FAB**: 浮動緊急領血按鈕 (Panic Button)，慢速脈動動畫
+- **即期警示**: 卡片上顯示橙色脈動即期數量
+- **Quick Stats Bar**: 總庫存 + 血品類型圖例
+
+### 改進 (Improved)
+- **左側色條**: 血袋清單依血品類型顯示 8px 左邊框 (WB深紅/PRBC紅/FFP黃/PLT淺黃)
+- **突顯 Unit ID**: 等寬粗體顯示血袋編號
+- **突顯效期**: 依剩餘時間變色 (綠>72h / 橙24-72h / 紅<24h脈動)
+- **數量顏色**: 黃色數字提高對比度
+
+### 設計理念
+> 「當使用者打開 App，應該立刻看到『我有沒有 O- 血？』而不需要閱讀列表」
+
+### 檔案變更
+| 檔案 | 說明 |
+|------|------|
+| `frontend/blood/index.html` | MIRS Legacy Style UI 重構 |
+| `frontend/blood/service-worker.js` | v2.7.0 快取刷新 |
+| `docs/DEV_SPEC_BLOOD_BANK_PWA_v2.7.md` | 新增開發規格文件 |
+
+---
+
 ## [Blood Bank PWA v2.6] - 2026-01-13
 
 ### 新增 (Added)
