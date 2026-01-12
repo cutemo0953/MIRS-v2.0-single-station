@@ -1563,12 +1563,20 @@
                     </svg>
                     血庫管理
                 </h2>
-                <button @click.prevent.stop="showBloodHistoryModal = true; loadBloodHistory()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    <span>歷史記錄</span>
-                </button>
+                <div class="flex gap-2">
+                    <a href="/blood/" target="_blank" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                        <span>專業版</span>
+                    </a>
+                    <button @click.prevent.stop="showBloodHistoryModal = true; loadBloodHistory()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span>歷史記錄</span>
+                    </button>
+                </div>
             </div>
 
             <!-- 血型庫存統計區 - 深紅色背景 -->
@@ -1607,7 +1615,7 @@
                         血袋入庫
                     </h3>
                     <form @submit.prevent="submitBloodReceive()" class="space-y-3">
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-3 gap-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">血型 *</label>
                                 <select x-model="bloodReceiveForm.bloodType" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
@@ -1623,8 +1631,17 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">數量 (U) *</label>
-                                <input type="number" x-model="bloodReceiveForm.quantity" required min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">血品類型</label>
+                                <select x-model="bloodReceiveForm.unitType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                                    <option value="PRBC">紅血球 (PRBC)</option>
+                                    <option value="FFP">新鮮冷凍血漿 (FFP)</option>
+                                    <option value="PLT">血小板 (PLT)</option>
+                                    <option value="CRYO">冷凍沉澱品 (CRYO)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">數量 (袋) *</label>
+                                <input type="number" x-model="bloodReceiveForm.quantity" required min="1" max="50" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
                             </div>
                         </div>
 
@@ -5281,10 +5298,11 @@
                 bloodReceiveForm: {
                     bloodType: '',
                     quantity: 1,
+                    unitType: 'PRBC',        // v3.1: 血品類型 (PRBC/FFP/PLT/CRYO)
                     remarks: '',
-                    source: 'blood_center',  // 新增：血液來源
-                    donorName: '',           // 新增：捐血者姓名
-                    donorPhone: '',          // 新增：捐血者電話
+                    source: 'blood_center',  // 血液來源
+                    donorName: '',           // 捐血者姓名
+                    donorPhone: '',          // 捐血者電話
                     stationId: 'HC-000000'
                 },
                 bloodConsumeForm: {
@@ -7257,12 +7275,12 @@
                     this.toast('消耗記錄匯出成功', 'success');
                 },
 
-                // 血袋
+                // 血袋 (v3.1 使用新 Blood Bank API)
                 async loadBloodInventory() {
                     try {
                         // Add cache busting for Safari
                         const timestamp = new Date().getTime();
-                        const response = await fetch(`${this.apiUrl}/blood/inventory?_t=${timestamp}`, {
+                        const response = await fetch(`${this.apiUrl}/api/blood/availability?_t=${timestamp}`, {
                             cache: 'no-cache',
                             headers: {
                                 'Cache-Control': 'no-cache',
@@ -7270,27 +7288,46 @@
                             }
                         });
                         if (response.ok) {
-                            const data = await response.json();
-                            console.log('API Response:', data);
-                            console.log('Current station:', this.stationId);
+                            const result = await response.json();
+                            console.log('Blood API Response:', result);
 
-                            // Filter by current station only
-                            const stationBlood = data.bloodInventory.filter(b => b.station_id === this.stationId);
-                            console.log('Filtered blood for station:', stationBlood);
+                            // 新 API 格式: { success, data: [{blood_type, unit_type, available_count, reserved_count, ...}] }
+                            const bloodData = result.data || [];
+
+                            // 聚合同血型不同成分的可用數量 (PRBC + FFP + PLT + CRYO)
+                            const bloodByType = {};
+                            bloodData.forEach(item => {
+                                if (!bloodByType[item.blood_type]) {
+                                    bloodByType[item.blood_type] = {
+                                        blood_type: item.blood_type,
+                                        quantity: 0,
+                                        reserved: 0,
+                                        expiring_soon: 0,
+                                        nearest_expiry: null
+                                    };
+                                }
+                                bloodByType[item.blood_type].quantity += item.available_count || 0;
+                                bloodByType[item.blood_type].reserved += item.reserved_count || 0;
+                                bloodByType[item.blood_type].expiring_soon += item.expiring_soon_count || 0;
+                                // 取最近效期
+                                if (item.nearest_expiry && (!bloodByType[item.blood_type].nearest_expiry ||
+                                    item.nearest_expiry < bloodByType[item.blood_type].nearest_expiry)) {
+                                    bloodByType[item.blood_type].nearest_expiry = item.nearest_expiry;
+                                }
+                            });
 
                             // Ensure all blood types are present with at least 0 quantity
                             const allBloodTypes = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
                             this.bloodInventory = allBloodTypes.map(type => {
-                                const existing = stationBlood.find(b => b.blood_type === type);
-                                return existing || {
+                                return bloodByType[type] || {
                                     blood_type: type,
                                     quantity: 0,
-                                    station_id: this.stationId
+                                    reserved: 0,
+                                    expiring_soon: 0
                                 };
                             });
 
-                            console.log('✓ 血袋庫存已載入:', this.bloodInventory.length, '筆', `(站點: ${this.stationId})`);
-                            console.log('Blood inventory array:', JSON.stringify(this.bloodInventory));
+                            console.log('✓ 血袋庫存已載入 (新API):', this.bloodInventory.length, '筆');
 
                             // Force Alpine.js to reactively update
                             this.$nextTick(() => {
@@ -7306,10 +7343,21 @@
 
                 async submitBloodReceive() {
                     try {
-                        const response = await fetch(`${this.apiUrl}/blood/receive`, {
+                        // v3.1 使用新 Blood Bank API
+                        const payload = {
+                            blood_type: this.bloodReceiveForm.bloodType,
+                            quantity: parseInt(this.bloodReceiveForm.quantity) || 1,
+                            unit_type: this.bloodReceiveForm.unitType || 'PRBC',
+                            source: this.bloodReceiveForm.source || 'blood_center',
+                            donor_name: this.bloodReceiveForm.donorName || null,
+                            donor_phone: this.bloodReceiveForm.donorPhone || null,
+                            remarks: this.bloodReceiveForm.remarks || null
+                        };
+
+                        const response = await fetch(`${this.apiUrl}/api/blood/units/batch`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(this.bloodReceiveForm)
+                            body: JSON.stringify(payload)
                         });
 
                         const data = await response.json();
@@ -7319,6 +7367,7 @@
                             this.bloodReceiveForm = {
                                 bloodType: '',
                                 quantity: 1,
+                                unitType: 'PRBC',
                                 remarks: '',
                                 source: 'blood_center',
                                 donorName: '',

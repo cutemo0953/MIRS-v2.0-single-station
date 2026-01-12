@@ -158,6 +158,27 @@ class BatchUpdate(BaseModel):
     actor: str
 
 
+class SimpleBatchReceive(BaseModel):
+    """簡易批次入庫 (MIRS Tab 使用)"""
+    blood_type: str
+    quantity: int = 1
+    unit_type: str = "PRBC"
+    source: str = "blood_center"  # blood_center | walking_donor
+    donor_name: Optional[str] = None
+    donor_phone: Optional[str] = None
+    remarks: Optional[str] = None
+    expiry_days: int = 35  # PRBC 預設 35 天, FFP 365 天
+
+
+# 血品預設保存期限 (天)
+DEFAULT_EXPIRY_DAYS = {
+    "PRBC": 35,
+    "FFP": 365,
+    "PLT": 5,
+    "CRYO": 365,
+}
+
+
 # ==============================================================================
 # API Endpoints
 # ==============================================================================
@@ -168,14 +189,25 @@ async def get_blood_availability():
     取得血品可用性總覽 (View 驅動)
     """
     if IS_VERCEL:
-        # Demo 模式
+        # Demo 模式 - 模擬戰時野戰醫院庫存
+        today = datetime.now()
         return {
             "success": True,
             "data": [
-                {"blood_type": "O+", "unit_type": "PRBC", "available_count": 5, "reserved_count": 2, "physical_valid_count": 7, "expiring_soon_count": 1, "expired_pending_count": 0, "nearest_expiry": "2026-01-15"},
-                {"blood_type": "O-", "unit_type": "PRBC", "available_count": 3, "reserved_count": 0, "physical_valid_count": 3, "expiring_soon_count": 0, "expired_pending_count": 0, "nearest_expiry": "2026-01-20"},
-                {"blood_type": "A+", "unit_type": "PRBC", "available_count": 4, "reserved_count": 1, "physical_valid_count": 5, "expiring_soon_count": 0, "expired_pending_count": 0, "nearest_expiry": "2026-01-18"},
-                {"blood_type": "B+", "unit_type": "PRBC", "available_count": 2, "reserved_count": 0, "physical_valid_count": 2, "expiring_soon_count": 1, "expired_pending_count": 0, "nearest_expiry": "2026-01-14"},
+                # PRBC (紅血球) - 戰傷主要需求
+                {"blood_type": "O+", "unit_type": "PRBC", "available_count": 8, "reserved_count": 3, "physical_valid_count": 11, "expiring_soon_count": 2, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=3)).strftime("%Y-%m-%d")},
+                {"blood_type": "O-", "unit_type": "PRBC", "available_count": 4, "reserved_count": 1, "physical_valid_count": 5, "expiring_soon_count": 1, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=5)).strftime("%Y-%m-%d")},
+                {"blood_type": "A+", "unit_type": "PRBC", "available_count": 6, "reserved_count": 2, "physical_valid_count": 8, "expiring_soon_count": 0, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=12)).strftime("%Y-%m-%d")},
+                {"blood_type": "A-", "unit_type": "PRBC", "available_count": 2, "reserved_count": 0, "physical_valid_count": 2, "expiring_soon_count": 0, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=18)).strftime("%Y-%m-%d")},
+                {"blood_type": "B+", "unit_type": "PRBC", "available_count": 4, "reserved_count": 1, "physical_valid_count": 5, "expiring_soon_count": 1, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=2)).strftime("%Y-%m-%d")},
+                {"blood_type": "B-", "unit_type": "PRBC", "available_count": 1, "reserved_count": 0, "physical_valid_count": 1, "expiring_soon_count": 0, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=25)).strftime("%Y-%m-%d")},
+                {"blood_type": "AB+", "unit_type": "PRBC", "available_count": 2, "reserved_count": 0, "physical_valid_count": 2, "expiring_soon_count": 0, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=20)).strftime("%Y-%m-%d")},
+                {"blood_type": "AB-", "unit_type": "PRBC", "available_count": 1, "reserved_count": 0, "physical_valid_count": 1, "expiring_soon_count": 0, "expired_pending_count": 1, "nearest_expiry": (today - timedelta(days=1)).strftime("%Y-%m-%d")},
+                # FFP (血漿) - 凝血支援
+                {"blood_type": "AB+", "unit_type": "FFP", "available_count": 6, "reserved_count": 0, "physical_valid_count": 6, "expiring_soon_count": 0, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=180)).strftime("%Y-%m-%d")},
+                {"blood_type": "O+", "unit_type": "FFP", "available_count": 3, "reserved_count": 1, "physical_valid_count": 4, "expiring_soon_count": 0, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=200)).strftime("%Y-%m-%d")},
+                # PLT (血小板) - 短效期
+                {"blood_type": "O+", "unit_type": "PLT", "available_count": 2, "reserved_count": 0, "physical_valid_count": 2, "expiring_soon_count": 2, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=2)).strftime("%Y-%m-%d")},
             ],
             "demo": True
         }
@@ -202,14 +234,43 @@ async def list_blood_units(
     列出血袋 (使用 v_blood_unit_status View)
     """
     if IS_VERCEL:
-        # Demo 模式
+        # Demo 模式 - 模擬戰時野戰醫院血袋列表
+        today = datetime.now()
+        demo_units = [
+            # O+ PRBC - 最常用
+            {"id": "BU-20260112-A1B2C3", "blood_type": "O+", "unit_type": "PRBC", "volume_ml": 250, "status": "AVAILABLE", "display_status": "EXPIRING_SOON", "expiry_date": (today + timedelta(days=2)).strftime("%Y-%m-%d"), "hours_until_expiry": 48, "fifo_priority": 1},
+            {"id": "BU-20260112-D4E5F6", "blood_type": "O+", "unit_type": "PRBC", "volume_ml": 250, "status": "AVAILABLE", "display_status": "AVAILABLE", "expiry_date": (today + timedelta(days=8)).strftime("%Y-%m-%d"), "hours_until_expiry": 192, "fifo_priority": 2},
+            {"id": "BU-20260111-G7H8I9", "blood_type": "O+", "unit_type": "PRBC", "volume_ml": 250, "status": "RESERVED", "display_status": "RESERVED", "expiry_date": (today + timedelta(days=15)).strftime("%Y-%m-%d"), "hours_until_expiry": 360, "fifo_priority": 3, "reserved_for_order": "ORD-2026-0001"},
+            # O- PRBC - 萬能血
+            {"id": "BU-20260110-J1K2L3", "blood_type": "O-", "unit_type": "PRBC", "volume_ml": 250, "status": "AVAILABLE", "display_status": "AVAILABLE", "expiry_date": (today + timedelta(days=5)).strftime("%Y-%m-%d"), "hours_until_expiry": 120, "fifo_priority": 1},
+            {"id": "BU-20260109-M4N5O6", "blood_type": "O-", "unit_type": "PRBC", "volume_ml": 250, "status": "AVAILABLE", "display_status": "EXPIRING_SOON", "expiry_date": (today + timedelta(days=3)).strftime("%Y-%m-%d"), "hours_until_expiry": 72, "fifo_priority": 2, "is_emergency_release": 1},
+            # A+ PRBC
+            {"id": "BU-20260112-P7Q8R9", "blood_type": "A+", "unit_type": "PRBC", "volume_ml": 250, "status": "AVAILABLE", "display_status": "AVAILABLE", "expiry_date": (today + timedelta(days=12)).strftime("%Y-%m-%d"), "hours_until_expiry": 288, "fifo_priority": 1},
+            {"id": "BU-20260108-S1T2U3", "blood_type": "A+", "unit_type": "PRBC", "volume_ml": 250, "status": "RESERVED", "display_status": "RESERVED", "expiry_date": (today + timedelta(days=20)).strftime("%Y-%m-%d"), "hours_until_expiry": 480, "fifo_priority": 2, "reserved_for_order": "ORD-2026-0002"},
+            # B+ PRBC
+            {"id": "BU-20260111-V4W5X6", "blood_type": "B+", "unit_type": "PRBC", "volume_ml": 250, "status": "AVAILABLE", "display_status": "EXPIRING_SOON", "expiry_date": (today + timedelta(days=2)).strftime("%Y-%m-%d"), "hours_until_expiry": 48, "fifo_priority": 1},
+            # AB+ FFP - 萬能血漿
+            {"id": "BU-20260101-Y7Z8A9", "blood_type": "AB+", "unit_type": "FFP", "volume_ml": 200, "status": "AVAILABLE", "display_status": "AVAILABLE", "expiry_date": (today + timedelta(days=180)).strftime("%Y-%m-%d"), "hours_until_expiry": 4320, "fifo_priority": 1},
+            # PLT - 短效期
+            {"id": "BU-20260112-B1C2D3", "blood_type": "O+", "unit_type": "PLT", "volume_ml": 50, "status": "AVAILABLE", "display_status": "EXPIRING_SOON", "expiry_date": (today + timedelta(days=2)).strftime("%Y-%m-%d"), "hours_until_expiry": 48, "fifo_priority": 1},
+            # 已過期等待報廢
+            {"id": "BU-20260105-E4F5G6", "blood_type": "AB-", "unit_type": "PRBC", "volume_ml": 250, "status": "AVAILABLE", "display_status": "EXPIRED", "expiry_date": (today - timedelta(days=1)).strftime("%Y-%m-%d"), "hours_until_expiry": -24, "fifo_priority": 99},
+        ]
+
+        # Filter based on query params
+        result = demo_units
+        if blood_type:
+            result = [u for u in result if u["blood_type"] == blood_type]
+        if unit_type:
+            result = [u for u in result if u["unit_type"] == unit_type]
+        if status:
+            result = [u for u in result if u["display_status"] == status]
+        if not include_expired:
+            result = [u for u in result if u["display_status"] != "EXPIRED"]
+
         return {
             "success": True,
-            "data": [
-                {"id": "BU-20260112-001", "blood_type": "O+", "unit_type": "PRBC", "display_status": "AVAILABLE", "hours_until_expiry": 72, "fifo_priority": 1},
-                {"id": "BU-20260112-002", "blood_type": "O+", "unit_type": "PRBC", "display_status": "EXPIRING_SOON", "hours_until_expiry": 48, "fifo_priority": 2},
-                {"id": "BU-20260112-003", "blood_type": "A+", "unit_type": "PRBC", "display_status": "RESERVED", "hours_until_expiry": 120, "fifo_priority": 1},
-            ],
+            "data": result,
             "demo": True
         }
 
@@ -309,6 +370,89 @@ async def receive_blood_unit(unit: BloodUnitCreate):
             "id": unit_id,
             "message": f"血袋 {unit_id} 入庫成功"
         }
+
+
+@router.post("/units/batch")
+async def batch_receive_blood(data: SimpleBatchReceive):
+    """
+    簡易批次入庫 (MIRS Tab 使用)
+    - 自動生成血袋 ID
+    - 自動計算效期 (依血品類型)
+    - 支援 Walking Blood Bank 來源記錄
+    """
+    if IS_VERCEL:
+        return {
+            "success": True,
+            "count": data.quantity,
+            "ids": [f"BU-demo-{uuid.uuid4().hex[:8]}" for _ in range(data.quantity)],
+            "demo": True
+        }
+
+    # 驗證血型
+    if data.blood_type not in BLOOD_TYPES:
+        raise HTTPException(status_code=400, detail=f"無效血型: {data.blood_type}")
+
+    if data.unit_type not in UNIT_TYPES:
+        raise HTTPException(status_code=400, detail=f"無效血品類型: {data.unit_type}")
+
+    if data.quantity < 1 or data.quantity > 50:
+        raise HTTPException(status_code=400, detail="數量必須在 1-50 之間")
+
+    # 計算效期
+    expiry_days = data.expiry_days or DEFAULT_EXPIRY_DAYS.get(data.unit_type, 35)
+    expiry_date = (datetime.now() + timedelta(days=expiry_days)).strftime("%Y-%m-%d")
+    collection_date = datetime.now().strftime("%Y-%m-%d")
+
+    created_ids = []
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        for i in range(data.quantity):
+            unit_id = f"BU-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+
+            # Walking Blood Bank 來源記錄 + 備註
+            metadata = {"source": data.source}
+            if data.remarks:
+                metadata["remarks"] = data.remarks
+            if data.source == "walking_donor":
+                if data.donor_name:
+                    metadata["donor_name"] = data.donor_name
+                if data.donor_phone:
+                    metadata["donor_phone"] = data.donor_phone
+
+            cursor.execute("""
+                INSERT INTO blood_units (
+                    id, blood_type, unit_type, volume_ml,
+                    collection_date, expiry_date, status
+                ) VALUES (?, ?, ?, 250, ?, ?, 'AVAILABLE')
+            """, (
+                unit_id,
+                data.blood_type,
+                data.unit_type,
+                collection_date,
+                expiry_date
+            ))
+
+            # 記錄事件 (metadata 包含來源和備註)
+            log_blood_event(
+                cursor, unit_id, "RECEIVE", "mirs-tab",
+                f"簡易入庫: {data.blood_type} {data.unit_type}",
+                metadata=metadata
+            )
+
+            created_ids.append(unit_id)
+
+        conn.commit()
+
+    return {
+        "success": True,
+        "count": len(created_ids),
+        "ids": created_ids,
+        "blood_type": data.blood_type,
+        "expiry_date": expiry_date,
+        "message": f"成功入庫 {len(created_ids)} 袋 {data.blood_type} 血品"
+    }
 
 
 @router.post("/units/{unit_id}/reserve")
