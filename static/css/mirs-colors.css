@@ -129,9 +129,12 @@
 .bg-blood-200 { background-color: var(--color-blood-200) !important; }
 .bg-blood-500 { background-color: var(--color-blood-500) !important; }
 .bg-blood-600 { background-color: var(--color-blood-600) !important; }
+.text-blood-50 { color: var(--color-blood-50) !important; }
 .text-blood-500 { color: var(--color-blood-500) !important; }
 .text-blood-600 { color: var(--color-blood-600) !important; }
 .border-blood-500 { border-color: var(--color-blood-500) !important; }
+.hover\:bg-blood-500:hover { background-color: var(--color-blood-500) !important; }
+.hover\:bg-blood-600:hover { background-color: var(--color-blood-600) !important; }
 
 /* =============== claude-red =============== */
 .bg-claude-red-500 { background-color: var(--color-claude-red-500) !important; }
