@@ -96,10 +96,15 @@
                 class="flex-1 py-3 text-sm font-medium border-b-2 transition">
             血袋清單
         </button>
+        <button @click="activeTab = 'issue'"
+                :class="activeTab === 'issue' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
+                class="flex-1 py-3 text-sm font-medium border-b-2 transition">
+            發血
+        </button>
         <button @click="activeTab = 'emergency'"
                 :class="activeTab === 'emergency' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
                 class="flex-1 py-3 text-sm font-medium border-b-2 transition">
-            緊急發血
+            緊急
         </button>
     </nav>
 
@@ -257,6 +262,152 @@
             </div>
         </div>
 
+        <!-- Issue Tab (v2.3 Location-First Display) -->
+        <div x-show="activeTab === 'issue'" x-cloak>
+            <h2 class="text-lg font-bold mb-4">發血作業</h2>
+
+            <!-- Three-Tier Flow Selector -->
+            <div class="bg-white rounded-lg shadow p-4 mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">發血流程</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button @click="issueFlow.tier = 1"
+                            :class="issueFlow.tier === 1 ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'"
+                            class="py-2 rounded text-sm font-medium">
+                        標準
+                    </button>
+                    <button @click="issueFlow.tier = 2"
+                            :class="issueFlow.tier === 2 ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'"
+                            class="py-2 rounded text-sm font-medium">
+                        快速
+                    </button>
+                    <button @click="issueFlow.tier = 3"
+                            :class="issueFlow.tier === 3 ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700'"
+                            class="py-2 rounded text-sm font-medium">
+                        緊急
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-2" x-show="issueFlow.tier === 1">
+                    標準流程：有位置 + 有醫囑 + 已配血
+                </p>
+                <p class="text-xs text-amber-600 mt-2" x-show="issueFlow.tier === 2">
+                    快速流程：有位置 + 口頭醫囑 (事後補單)
+                </p>
+                <p class="text-xs text-red-600 mt-2" x-show="issueFlow.tier === 3">
+                    緊急流程：無位置/極端混亂，僅限 O 型血
+                </p>
+            </div>
+
+            <!-- Patient ID Input -->
+            <div class="bg-white rounded-lg shadow p-4 mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">病患 ID</label>
+                <div class="flex gap-2">
+                    <input type="text" x-model="issueFlow.patientId"
+                           placeholder="輸入或掃描 P-XXXX"
+                           class="flex-1 border rounded px-3 py-2">
+                    <button @click="scanPatientQR()"
+                            class="bg-gray-200 px-4 py-2 rounded">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                        </svg>
+                    </button>
+                </div>
+                <button @click="lookupPatientLocation()"
+                        :disabled="!issueFlow.patientId"
+                        class="w-full mt-2 bg-blue-600 text-white py-2 rounded disabled:bg-gray-300">
+                    查詢病患位置
+                </button>
+
+                <!-- Patient Location Display (v2.3 Location-First) -->
+                <div x-show="issueFlow.patientLocation" class="mt-3 p-3 rounded-lg"
+                     :class="issueFlow.patientLocation ? 'bg-green-50 border-2 border-green-500' : ''">
+                    <div class="text-center">
+                        <span class="text-xs text-green-600 font-medium">送血目的地</span>
+                        <div class="text-2xl font-bold text-green-800" x-text="issueFlow.patientLocation"></div>
+                        <div class="text-sm text-green-600" x-text="issueFlow.patientLocationName"></div>
+                    </div>
+                </div>
+                <div x-show="issueFlow.patientWarning" class="mt-3 p-3 bg-amber-50 border-2 border-amber-400 rounded-lg">
+                    <div class="text-center">
+                        <span class="text-amber-700 font-medium" x-text="issueFlow.patientWarning"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blood Unit Selection -->
+            <div class="bg-white rounded-lg shadow p-4 mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">血袋選擇</label>
+                <div class="flex gap-2 mb-2">
+                    <select x-model="issueFlow.bloodType" class="flex-1 border rounded px-3 py-2">
+                        <option value="">選擇血型</option>
+                        <template x-for="type in ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']">
+                            <option :value="type" x-text="type"></option>
+                        </template>
+                    </select>
+                    <input type="number" x-model="issueFlow.quantity" min="1" max="10"
+                           placeholder="數量" class="w-20 border rounded px-3 py-2">
+                </div>
+
+                <!-- Scan Blood Unit Barcode -->
+                <button @click="scanBloodUnit()"
+                        class="w-full bg-blood-600 text-white py-3 rounded font-medium flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                    </svg>
+                    掃描血袋條碼
+                </button>
+
+                <!-- Selected Units -->
+                <div x-show="issueFlow.selectedUnits.length > 0" class="mt-3 space-y-2">
+                    <template x-for="(unit, idx) in issueFlow.selectedUnits" :key="unit.id">
+                        <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <div>
+                                <span class="font-medium" x-text="unit.blood_type"></span>
+                                <span class="text-xs text-gray-500 ml-2" x-text="unit.id"></span>
+                            </div>
+                            <button @click="issueFlow.selectedUnits.splice(idx, 1)"
+                                    class="text-red-500 text-sm">移除</button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Order ID (Tier 1 only) -->
+            <div x-show="issueFlow.tier === 1" class="bg-white rounded-lg shadow p-4 mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">醫囑單號</label>
+                <input type="text" x-model="issueFlow.orderId"
+                       placeholder="ORD-XXXX"
+                       class="w-full border rounded px-3 py-2">
+            </div>
+
+            <!-- Verbal Order Reason (Tier 2 only) -->
+            <div x-show="issueFlow.tier === 2" class="bg-white rounded-lg shadow p-4 mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">口頭醫囑備註</label>
+                <textarea x-model="issueFlow.verbalOrderNote"
+                          placeholder="醫師姓名、時間、指示內容..."
+                          rows="2"
+                          class="w-full border rounded px-3 py-2"></textarea>
+                <p class="text-xs text-amber-600 mt-1">
+                    請於 24h 內補開正式醫囑
+                </p>
+            </div>
+
+            <!-- Issue Button -->
+            <button @click="processIssue()"
+                    :disabled="!canProcessIssue"
+                    class="w-full py-4 rounded-lg font-bold text-lg disabled:bg-gray-300"
+                    :class="{
+                        'bg-green-600 text-white': issueFlow.tier === 1,
+                        'bg-amber-500 text-white': issueFlow.tier === 2,
+                        'bg-red-600 text-white': issueFlow.tier === 3
+                    }">
+                <span x-show="issueFlow.tier === 1">確認發血 (標準)</span>
+                <span x-show="issueFlow.tier === 2">確認發血 (快速)</span>
+                <span x-show="issueFlow.tier === 3">確認緊急發血</span>
+            </button>
+        </div>
+
         <!-- Emergency Tab -->
         <div x-show="activeTab === 'emergency'" x-cloak>
             <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
@@ -349,6 +500,100 @@
         </div>
     </div>
 
+    <!-- Issue Success Modal (v2.3 Location-First Display) -->
+    <div x-show="showIssueSuccess" x-cloak
+         class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl">
+            <!-- Success Header -->
+            <div class="bg-green-600 text-white p-4 text-center">
+                <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h2 class="text-xl font-bold">發血成功</h2>
+            </div>
+
+            <!-- Location-First Display (The Key UX) -->
+            <div class="p-6">
+                <!-- Location Box - THE MOST IMPORTANT -->
+                <div x-show="issueResult.location"
+                     class="bg-green-800 text-white p-6 rounded-xl text-center mb-4">
+                    <span class="text-xs opacity-75">送至</span>
+                    <div class="text-3xl font-bold mt-1" x-text="issueResult.location"></div>
+                    <div class="text-sm opacity-90 mt-1" x-text="issueResult.locationName"></div>
+                </div>
+
+                <!-- No Location Warning -->
+                <div x-show="!issueResult.location"
+                     class="bg-amber-500 text-white p-6 rounded-xl text-center mb-4">
+                    <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <div class="font-bold">尚未分配位置</div>
+                    <div class="text-sm mt-1">請確認病患所在地後送達</div>
+                </div>
+
+                <!-- Blood Info (Secondary) -->
+                <div class="space-y-2 text-center">
+                    <div class="text-xl font-bold text-blood-600" x-text="issueResult.bloodInfo"></div>
+                    <div class="text-sm text-gray-600">
+                        病患：<span x-text="issueResult.patientId || '未指定'"></span>
+                    </div>
+                    <div x-show="issueResult.triageLevel" class="text-sm">
+                        <span class="px-2 py-1 rounded text-white"
+                              :class="{
+                                  'bg-red-600': issueResult.triageLevel === 1,
+                                  'bg-amber-500': issueResult.triageLevel === 2,
+                                  'bg-green-500': issueResult.triageLevel >= 3
+                              }">
+                            檢傷 <span x-text="issueResult.triageLevel"></span> 級
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-6 space-y-2">
+                    <button @click="printDeliverySlip()"
+                            class="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-medium">
+                        列印派送單
+                    </button>
+                    <button @click="closeIssueSuccess()"
+                            class="w-full bg-green-600 text-white py-3 rounded-lg font-bold">
+                        完成
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barcode Scanner Modal -->
+    <div x-show="showScanner" x-cloak
+         class="fixed inset-0 bg-black z-50 flex flex-col">
+        <div class="bg-blood-700 text-white px-4 py-3 flex items-center justify-between">
+            <span class="font-medium" x-text="scannerMode === 'patient' ? '掃描病患 QR Code' : '掃描血袋條碼'"></span>
+            <button @click="closeScanner()" class="p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="flex-1 relative">
+            <video id="scanner-video" class="w-full h-full object-cover"></video>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="w-64 h-64 border-4 border-white rounded-lg opacity-50"></div>
+            </div>
+        </div>
+        <div class="bg-black text-white text-center py-4">
+            <p class="text-sm">將條碼對準框內</p>
+            <!-- Manual input fallback -->
+            <button @click="manualInput()"
+                    class="mt-2 text-xs underline opacity-75">
+                改用手動輸入
+            </button>
+        </div>
+    </div>
+
     <!-- Expiry Blocker Modal -->
     <div x-show="showExpiryBlocker" class="blocker-modal">
         <svg class="w-24 h-24 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -388,6 +633,39 @@
                 showReceiveModal: false,
                 showExpiryBlocker: false,
                 blockerMessage: '',
+
+                // v2.3: Issue Flow State
+                showIssueSuccess: false,
+                showScanner: false,
+                scannerMode: 'blood', // 'patient' | 'blood'
+                scannerStream: null,
+
+                issueFlow: {
+                    tier: 1,  // 1=Standard, 2=Rapid, 3=Emergency
+                    patientId: '',
+                    patientLocation: '',
+                    patientLocationName: '',
+                    patientLocationType: '',
+                    patientWarning: '',
+                    patientTriageLevel: null,
+                    bloodType: '',
+                    quantity: 1,
+                    selectedUnits: [],
+                    orderId: '',
+                    verbalOrderNote: ''
+                },
+
+                issueResult: {
+                    location: '',
+                    locationName: '',
+                    bloodInfo: '',
+                    patientId: '',
+                    triageLevel: null,
+                    unitIds: []
+                },
+
+                // CIRS Hub URL (for patient location lookup)
+                cirsHubUrl: localStorage.getItem('cirs_hub_url') || 'http://localhost:8090',
 
                 receiveForm: {
                     blood_type: 'O+',
@@ -607,14 +885,27 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 ...this.emergencyForm,
-                                requester_id: 'blood-pwa'
+                                requester_id: 'blood-pwa',
+                                patient_id: this.issueFlow.patientId || null,
+                                patient_location: this.issueFlow.patientLocation || null
                             })
                         });
                         const data = await res.json();
 
                         if (data.success) {
-                            this.showToast(`緊急發血成功: ${data.unit_ids.join(', ')}`, 'success');
+                            // v2.3: Show Location-First Success Modal
+                            this.issueResult = {
+                                location: this.issueFlow.patientLocation || null,
+                                locationName: this.issueFlow.patientLocationName || '',
+                                bloodInfo: `${this.emergencyForm.blood_type} x ${this.emergencyForm.quantity} 單位 (緊急發血)`,
+                                patientId: this.issueFlow.patientId || null,
+                                triageLevel: this.issueFlow.patientTriageLevel,
+                                unitIds: data.unit_ids || []
+                            };
+                            this.showIssueSuccess = true;
+
                             this.emergencyForm = { blood_type: 'O+', quantity: 1, reason: '' };
+                            this.resetIssueFlow();
                             await this.refresh();
                         } else {
                             this.showToast(data.detail || '發血失敗', 'error');
@@ -627,6 +918,326 @@
                 showToast(message, type = 'info') {
                     this.toast = { show: true, message, type };
                     setTimeout(() => this.toast.show = false, 3000);
+                },
+
+                // ======================================================
+                // v2.3: Issue Flow Methods
+                // ======================================================
+
+                get canProcessIssue() {
+                    const { tier, patientId, patientLocation, selectedUnits, bloodType, quantity, orderId, verbalOrderNote } = this.issueFlow;
+
+                    // Tier 3: Only needs blood type (O+/O-) and reason
+                    if (tier === 3) {
+                        return bloodType && ['O+', 'O-'].includes(bloodType);
+                    }
+
+                    // Tier 1 & 2: Need patient location
+                    if (tier === 1 || tier === 2) {
+                        // Need either selected units or blood type + quantity
+                        const hasBlood = selectedUnits.length > 0 || (bloodType && quantity > 0);
+                        if (!hasBlood) return false;
+                    }
+
+                    // Tier 1: Need order ID
+                    if (tier === 1) {
+                        return orderId && patientId;
+                    }
+
+                    // Tier 2: Need verbal order note
+                    if (tier === 2) {
+                        return verbalOrderNote && patientId && patientLocation;
+                    }
+
+                    return false;
+                },
+
+                // Query CIRS for patient location (v2.3 core feature)
+                async lookupPatientLocation() {
+                    if (!this.issueFlow.patientId) return;
+
+                    this.issueFlow.patientWarning = '';
+                    this.issueFlow.patientLocation = '';
+                    this.issueFlow.patientLocationName = '';
+
+                    try {
+                        const res = await fetch(`${this.cirsHubUrl}/api/patients/${this.issueFlow.patientId}`);
+
+                        if (!res.ok) {
+                            // Demo fallback - simulate patient location
+                            this.simulatePatientLocation();
+                            return;
+                        }
+
+                        const patient = await res.json();
+
+                        if (patient.current_bed) {
+                            this.issueFlow.patientLocation = patient.current_bed.id;
+                            this.issueFlow.patientLocationName = patient.current_bed.name || '';
+                            this.issueFlow.patientLocationType = patient.current_bed.type || 'UNKNOWN';
+                            this.issueFlow.patientTriageLevel = patient.triage_level;
+                            this.showToast(`病患位置: ${patient.current_bed.id}`, 'success');
+                        } else {
+                            this.issueFlow.patientWarning = '病患尚未分配位置';
+                            // Suggest switching to Tier 3 if no location
+                            if (this.issueFlow.tier !== 3) {
+                                this.showToast('無位置資訊，建議使用緊急流程', 'info');
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[Blood] CIRS lookup failed, using simulation:', e);
+                        this.simulatePatientLocation();
+                    }
+                },
+
+                // Demo mode: Simulate patient location
+                simulatePatientLocation() {
+                    const locations = [
+                        { id: 'RESUS-01', name: '急救區 1床', type: 'RESUS', triage: 1 },
+                        { id: 'RESUS-02', name: '急救區 2床', type: 'RESUS', triage: 1 },
+                        { id: 'ER-03', name: '急診觀察 3床', type: 'ER', triage: 2 },
+                        { id: 'ER-05', name: '急診觀察 5床', type: 'ER', triage: 2 },
+                        { id: 'ICU-01', name: '加護病房 1床', type: 'ICU', triage: 1 },
+                        { id: 'OR-2', name: '手術室 2', type: 'OR', triage: 1 },
+                        { id: 'WARD-305', name: '普通病房 305', type: 'INPATIENT', triage: 3 },
+                        { id: null, name: null, type: null, triage: 2 } // No location case
+                    ];
+
+                    const loc = locations[Math.floor(Math.random() * locations.length)];
+
+                    if (loc.id) {
+                        this.issueFlow.patientLocation = loc.id;
+                        this.issueFlow.patientLocationName = loc.name;
+                        this.issueFlow.patientLocationType = loc.type;
+                        this.issueFlow.patientTriageLevel = loc.triage;
+                        this.showToast(`(Demo) 病患位置: ${loc.id}`, 'success');
+                    } else {
+                        this.issueFlow.patientWarning = '病患尚未分配位置';
+                        this.issueFlow.patientTriageLevel = loc.triage;
+                    }
+                },
+
+                // Process issue based on tier
+                async processIssue() {
+                    const { tier, patientId, patientLocation, patientLocationName, patientTriageLevel,
+                            selectedUnits, bloodType, quantity, orderId, verbalOrderNote } = this.issueFlow;
+
+                    // Tier 3 goes to Emergency Release
+                    if (tier === 3) {
+                        this.emergencyForm.blood_type = bloodType;
+                        this.emergencyForm.quantity = quantity || 1;
+                        this.emergencyForm.reason = verbalOrderNote || '緊急需求';
+                        await this.emergencyRelease();
+                        return;
+                    }
+
+                    // Tier 1 & 2: Issue blood with location
+                    let issuedUnits = [];
+                    const issueOrderId = tier === 1 ? orderId : `VERBAL-${Date.now()}`;
+
+                    try {
+                        if (selectedUnits.length > 0) {
+                            // Issue selected units
+                            for (const unit of selectedUnits) {
+                                const res = await fetch(`/api/blood/units/${unit.id}/issue`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        order_id: issueOrderId,
+                                        issuer_id: 'blood-pwa',
+                                        patient_id: patientId,
+                                        patient_location: patientLocation,
+                                        is_verbal_order: tier === 2,
+                                        verbal_order_note: tier === 2 ? verbalOrderNote : null
+                                    })
+                                });
+
+                                if (res.ok) {
+                                    issuedUnits.push(unit);
+                                }
+                            }
+                        } else if (bloodType && quantity > 0) {
+                            // Auto-select units by blood type (FIFO)
+                            const unitsRes = await fetch(`/api/blood/units?blood_type=${bloodType}&status=AVAILABLE`);
+                            const unitsData = await unitsRes.json();
+
+                            if (unitsData.success && unitsData.data) {
+                                const availableUnits = unitsData.data
+                                    .filter(u => u.display_status !== 'EXPIRED')
+                                    .slice(0, quantity);
+
+                                for (const unit of availableUnits) {
+                                    const res = await fetch(`/api/blood/units/${unit.id}/issue`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            order_id: issueOrderId,
+                                            issuer_id: 'blood-pwa',
+                                            patient_id: patientId,
+                                            patient_location: patientLocation,
+                                            is_verbal_order: tier === 2,
+                                            verbal_order_note: tier === 2 ? verbalOrderNote : null
+                                        })
+                                    });
+
+                                    if (res.ok) {
+                                        issuedUnits.push(unit);
+                                    }
+                                }
+                            }
+                        }
+
+                        if (issuedUnits.length > 0) {
+                            // Show success modal with Location-First Display
+                            this.issueResult = {
+                                location: patientLocation,
+                                locationName: patientLocationName,
+                                bloodInfo: `${bloodType || issuedUnits[0].blood_type} x ${issuedUnits.length} 單位`,
+                                patientId: patientId,
+                                triageLevel: patientTriageLevel,
+                                unitIds: issuedUnits.map(u => u.id)
+                            };
+                            this.showIssueSuccess = true;
+                            await this.refresh();
+
+                            // Reset form
+                            this.resetIssueFlow();
+                        } else {
+                            this.showToast('發血失敗，請檢查庫存', 'error');
+                        }
+                    } catch (e) {
+                        console.error('Issue failed:', e);
+                        this.showToast('發血失敗', 'error');
+                    }
+                },
+
+                resetIssueFlow() {
+                    this.issueFlow = {
+                        tier: 1,
+                        patientId: '',
+                        patientLocation: '',
+                        patientLocationName: '',
+                        patientLocationType: '',
+                        patientWarning: '',
+                        patientTriageLevel: null,
+                        bloodType: '',
+                        quantity: 1,
+                        selectedUnits: [],
+                        orderId: '',
+                        verbalOrderNote: ''
+                    };
+                },
+
+                closeIssueSuccess() {
+                    this.showIssueSuccess = false;
+                    this.issueResult = {
+                        location: '',
+                        locationName: '',
+                        bloodInfo: '',
+                        patientId: '',
+                        triageLevel: null,
+                        unitIds: []
+                    };
+                },
+
+                printDeliverySlip() {
+                    const { location, locationName, bloodInfo, patientId, unitIds } = this.issueResult;
+                    const printContent = `
+                        <html>
+                        <head>
+                            <title>Blood Delivery Slip</title>
+                            <style>
+                                body { font-family: sans-serif; padding: 20px; }
+                                .header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+                                .location { background: #166534; color: white; padding: 30px; text-align: center; font-size: 36px; font-weight: bold; margin: 20px 0; }
+                                .info { font-size: 18px; margin: 10px 0; }
+                                .units { font-size: 12px; color: #666; margin-top: 20px; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">MIRS Blood Bank - 派送單</div>
+                            <div class="location">${location || '無位置'}<br><small>${locationName || ''}</small></div>
+                            <div class="info"><b>血品:</b> ${bloodInfo}</div>
+                            <div class="info"><b>病患:</b> ${patientId || '未指定'}</div>
+                            <div class="info"><b>時間:</b> ${new Date().toLocaleString('zh-TW')}</div>
+                            <div class="units"><b>血袋 ID:</b> ${unitIds.join(', ')}</div>
+                        </body>
+                        </html>
+                    `;
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(printContent);
+                    printWindow.document.close();
+                    printWindow.print();
+                },
+
+                // ======================================================
+                // Barcode Scanner Methods
+                // ======================================================
+
+                async scanPatientQR() {
+                    this.scannerMode = 'patient';
+                    await this.openScanner();
+                },
+
+                async scanBloodUnit() {
+                    this.scannerMode = 'blood';
+                    await this.openScanner();
+                },
+
+                async openScanner() {
+                    this.showScanner = true;
+                    try {
+                        const video = document.getElementById('scanner-video');
+                        this.scannerStream = await navigator.mediaDevices.getUserMedia({
+                            video: { facingMode: 'environment' }
+                        });
+                        video.srcObject = this.scannerStream;
+                        await video.play();
+
+                        // TODO: Integrate barcode scanning library (e.g., ZXing, QuaggaJS)
+                        // For now, show manual input option
+                        this.showToast('掃描功能開發中，請使用手動輸入', 'info');
+                    } catch (e) {
+                        console.error('Camera access failed:', e);
+                        this.showToast('無法存取相機', 'error');
+                        this.closeScanner();
+                    }
+                },
+
+                closeScanner() {
+                    this.showScanner = false;
+                    if (this.scannerStream) {
+                        this.scannerStream.getTracks().forEach(track => track.stop());
+                        this.scannerStream = null;
+                    }
+                },
+
+                manualInput() {
+                    this.closeScanner();
+                    if (this.scannerMode === 'patient') {
+                        const id = prompt('請輸入病患 ID (P-XXXX):');
+                        if (id) {
+                            this.issueFlow.patientId = id;
+                            this.lookupPatientLocation();
+                        }
+                    } else {
+                        const id = prompt('請輸入血袋 ID (BU-XXXX):');
+                        if (id) {
+                            // Find unit in loaded units
+                            const unit = this.units.find(u => u.id === id);
+                            if (unit) {
+                                if (unit.display_status === 'EXPIRED') {
+                                    this.blockerMessage = `血袋 ${id} 已過期`;
+                                    this.showExpiryBlocker = true;
+                                } else if (!this.issueFlow.selectedUnits.find(u => u.id === id)) {
+                                    this.issueFlow.selectedUnits.push(unit);
+                                    this.showToast(`已添加 ${id}`, 'success');
+                                }
+                            } else {
+                                this.showToast('找不到此血袋', 'error');
+                            }
+                        }
+                    }
                 }
             };
         }

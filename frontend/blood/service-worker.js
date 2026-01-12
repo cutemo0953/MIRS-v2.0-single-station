@@ -1,13 +1,19 @@
 /**
- * MIRS Blood Bank PWA Service Worker v1.0.0
+ * MIRS Blood Bank PWA Service Worker v2.3.0
  *
- * Based on DEV_SPEC_BLOOD_BANK_PWA_v2.0:
+ * Based on DEV_SPEC_BLOOD_BANK_PWA_v2.3:
  * - Scope 隔離：/blood/ 獨立快取
  * - 離線優先策略
  * - API 請求 Network-first
+ *
+ * v2.3.0 Changes:
+ * - Location-First Display UI
+ * - CIRS Patient Location Query
+ * - Three-Tier Issue Flow
+ * - Barcode Scanner Modal
  */
 
-const CACHE_NAME = 'mirs-blood-v1.1.0';
+const CACHE_NAME = 'mirs-blood-v2.3.0';
 const SCOPE = '/blood/';
 
 // 需要快取的靜態資源
@@ -21,7 +27,7 @@ const STATIC_ASSETS = [
 
 // Install event
 self.addEventListener('install', (event) => {
-    console.log('[Blood SW] Installing v1.1.0');
+    console.log('[Blood SW] Installing v2.3.0');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
