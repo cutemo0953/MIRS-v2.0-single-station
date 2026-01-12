@@ -98,6 +98,15 @@ except ImportError as e:
     local_auth_router = None
     init_local_auth = None
 
+# v3.1 新增: Blood Bank 血庫模組
+try:
+    from routes.blood import router as blood_router, init_blood_schema
+    BLOOD_MODULE_AVAILABLE = True
+except ImportError as e:
+    BLOOD_MODULE_AVAILABLE = False
+    blood_router = None
+    init_blood_schema = None
+
 
 # ============================================================================
 # 日誌配置
@@ -3294,6 +3303,63 @@ async def serve_biomed_icon(filename: str):
         return FileResponse(icon_file, media_type=media_type)
     # Fallback to mobile icons if biomed-specific ones don't exist
     fallback = PROJECT_ROOT / "static" / "mobile" / "icons" / filename
+    if fallback.exists() and fallback.suffix in ['.png', '.svg', '.ico']:
+        media_type = "image/png" if filename.endswith('.png') else "image/svg+xml"
+        return FileResponse(fallback, media_type=media_type)
+    raise HTTPException(status_code=404)
+
+
+# ============================================================================
+# Blood Bank PWA 路由 (v3.1)
+# ============================================================================
+
+@app.get("/blood")
+@app.get("/blood/")
+async def serve_blood_pwa():
+    """
+    Serve MIRS Blood Bank PWA (血庫站)
+    """
+    blood_file = PROJECT_ROOT / "frontend" / "blood" / "index.html"
+    if blood_file.exists():
+        return FileResponse(
+            blood_file,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Blood Bank PWA not found")
+
+
+@app.get("/blood/manifest.json")
+async def serve_blood_manifest():
+    """Serve Blood Bank PWA manifest"""
+    manifest_file = PROJECT_ROOT / "frontend" / "blood" / "manifest.json"
+    if manifest_file.exists():
+        return FileResponse(manifest_file, media_type="application/manifest+json")
+    raise HTTPException(status_code=404)
+
+
+@app.get("/blood/service-worker.js")
+async def serve_blood_service_worker():
+    """Serve Blood Bank Service Worker"""
+    sw_file = PROJECT_ROOT / "frontend" / "blood" / "service-worker.js"
+    if sw_file.exists():
+        return FileResponse(sw_file, media_type="application/javascript")
+    raise HTTPException(status_code=404)
+
+
+@app.get("/blood/icons/{filename}")
+async def serve_blood_icon(filename: str):
+    """Serve Blood Bank PWA icons"""
+    icon_file = PROJECT_ROOT / "frontend" / "blood" / "icons" / filename
+    if icon_file.exists() and icon_file.suffix in ['.png', '.svg', '.ico']:
+        media_type = "image/png" if filename.endswith('.png') else "image/svg+xml"
+        return FileResponse(icon_file, media_type=media_type)
+    # Fallback to biomed icons if blood-specific ones don't exist
+    fallback = PROJECT_ROOT / "frontend" / "biomed" / "icons" / filename
     if fallback.exists() and fallback.suffix in ['.png', '.svg', '.ico']:
         media_type = "image/png" if filename.endswith('.png') else "image/svg+xml"
         return FileResponse(fallback, media_type=media_type)
@@ -8760,6 +8826,13 @@ if LOCAL_AUTH_AVAILABLE and local_auth_router:
     logger.info("✓ MIRS Local Auth v2.8 已啟用 (/api/local-auth)")
 else:
     logger.warning("Local Auth 模組未啟用")
+
+# v3.1: Blood Bank 血庫模組
+if BLOOD_MODULE_AVAILABLE and blood_router:
+    app.include_router(blood_router)
+    logger.info("✓ MIRS Blood Bank v1.0 已啟用 (/api/blood)")
+else:
+    logger.warning("Blood Bank 模組未啟用")
 
 
 class ResilienceConfigUpdate(BaseModel):

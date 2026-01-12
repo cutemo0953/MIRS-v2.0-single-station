@@ -116,3 +116,4 @@ from . import m003_ensure_resilience_equipment
 from . import m004_ensure_surgical_packs
 from . import m005_ensure_equipment_units
 from . import m006_ensure_resilience_profiles
+from . import m007_blood_bank

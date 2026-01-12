@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#DC2626">
+
+    <title>MIRS Blood Bank</title>
+
+    <link rel="manifest" href="/blood/manifest.json">
+    <link rel="apple-touch-icon" href="/blood/icons/icon-192x192.png">
+
+    <!-- 本地 CSS (離線支援) -->
+    <link rel="stylesheet" href="/static/css/tailwind.min.css">
+    <link rel="stylesheet" href="/static/css/mirs-colors.css">
+
+    <style>
+        /* Blood Bank 專用色系 */
+        :root {
+            --blood-50: #fef2f2;
+            --blood-100: #fee2e2;
+            --blood-200: #fecaca;
+            --blood-300: #fca5a5;
+            --blood-400: #f87171;
+            --blood-500: #ef4444;
+            --blood-600: #dc2626;
+            --blood-700: #b91c1c;
+            --blood-800: #991b1b;
+            --blood-900: #7f1d1d;
+        }
+
+        .bg-blood-600 { background-color: var(--blood-600); }
+        .bg-blood-700 { background-color: var(--blood-700); }
+        .text-blood-600 { color: var(--blood-600); }
+        .border-blood-600 { border-color: var(--blood-600); }
+
+        /* 狀態顏色 */
+        .status-available { background-color: #10b981; color: white; }
+        .status-reserved { background-color: #3b82f6; color: white; }
+        .status-expiring { background-color: #f59e0b; color: white; }
+        .status-expired { background-color: #ef4444; color: white; }
+
+        /* 全螢幕阻擋 Modal */
+        .blocker-modal {
+            position: fixed;
+            inset: 0;
+            background: #b91c1c;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        /* 安全區域 */
+        .safe-area-top { padding-top: env(safe-area-inset-top); }
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen safe-area-top safe-area-bottom" x-data="bloodApp()" x-init="init()">
+
+    <!-- Header -->
+    <header class="bg-blood-600 text-white px-4 py-3 sticky top-0 z-50 shadow-lg">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+                <h1 class="text-lg font-bold">Blood Bank</h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <span x-show="isOffline" class="bg-yellow-500 text-xs px-2 py-1 rounded">離線</span>
+                <button @click="refresh()" class="p-2 hover:bg-blood-700 rounded">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="bg-white border-b flex">
+        <button @click="activeTab = 'overview'"
+                :class="activeTab === 'overview' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
+                class="flex-1 py-3 text-sm font-medium border-b-2 transition">
+            庫存總覽
+        </button>
+        <button @click="activeTab = 'units'"
+                :class="activeTab === 'units' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
+                class="flex-1 py-3 text-sm font-medium border-b-2 transition">
+            血袋清單
+        </button>
+        <button @click="activeTab = 'emergency'"
+                :class="activeTab === 'emergency' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
+                class="flex-1 py-3 text-sm font-medium border-b-2 transition">
+            緊急發血
+        </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-4 pb-24">
+
+        <!-- Overview Tab -->
+        <div x-show="activeTab === 'overview'" x-cloak>
+            <h2 class="text-lg font-bold mb-4">庫存總覽</h2>
+
+            <!-- Loading -->
+            <div x-show="loading" class="text-center py-8 text-gray-500">
+                載入中...
+            </div>
+
+            <!-- Availability Grid -->
+            <div x-show="!loading" class="grid grid-cols-2 gap-3">
+                <template x-for="item in availability" :key="item.blood_type + item.unit_type">
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-2xl font-bold" x-text="item.blood_type"></span>
+                            <span class="text-xs bg-gray-200 px-2 py-1 rounded" x-text="item.unit_type"></span>
+                        </div>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">可用</span>
+                                <span class="font-bold text-green-600" x-text="item.available_count"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">預約</span>
+                                <span class="text-blue-600" x-text="item.reserved_count"></span>
+                            </div>
+                            <div class="flex justify-between" x-show="item.expiring_soon_count > 0">
+                                <span class="text-orange-600">即將過期</span>
+                                <span class="font-bold text-orange-600" x-text="item.expiring_soon_count"></span>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500" x-show="item.nearest_expiry">
+                            最近效期: <span x-text="item.nearest_expiry"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Empty State -->
+            <div x-show="!loading && availability.length === 0" class="text-center py-8 text-gray-500">
+                目前沒有血品庫存
+            </div>
+        </div>
+
+        <!-- Units Tab -->
+        <div x-show="activeTab === 'units'" x-cloak>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">血袋清單</h2>
+                <button @click="showReceiveModal = true"
+                        class="bg-blood-600 text-white px-3 py-1 rounded text-sm">
+                    + 入庫
+                </button>
+            </div>
+
+            <!-- Filter -->
+            <div class="flex gap-2 mb-4 overflow-x-auto">
+                <button @click="unitFilter = ''"
+                        :class="unitFilter === '' ? 'bg-blood-600 text-white' : 'bg-white text-gray-700'"
+                        class="px-3 py-1 rounded text-sm whitespace-nowrap">
+                    全部
+                </button>
+                <template x-for="type in ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']">
+                    <button @click="unitFilter = type"
+                            :class="unitFilter === type ? 'bg-blood-600 text-white' : 'bg-white text-gray-700'"
+                            class="px-3 py-1 rounded text-sm whitespace-nowrap"
+                            x-text="type">
+                    </button>
+                </template>
+            </div>
+
+            <!-- Units List -->
+            <div class="space-y-2">
+                <template x-for="unit in filteredUnits" :key="unit.id">
+                    <div class="bg-white rounded-lg shadow p-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold" x-text="unit.blood_type"></span>
+                                    <span class="text-xs bg-gray-200 px-1 rounded" x-text="unit.unit_type"></span>
+                                    <span x-show="unit.fifo_priority === 1"
+                                          class="text-xs bg-green-100 text-green-700 px-1 rounded">
+                                        FIFO
+                                    </span>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1" x-text="unit.id"></div>
+                            </div>
+                            <div class="text-right">
+                                <span :class="{
+                                    'status-available': unit.display_status === 'AVAILABLE',
+                                    'status-reserved': unit.display_status === 'RESERVED',
+                                    'status-expiring': unit.display_status === 'EXPIRING_SOON',
+                                    'status-expired': unit.display_status === 'EXPIRED'
+                                }" class="text-xs px-2 py-1 rounded" x-text="statusLabel(unit.display_status)">
+                                </span>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    剩 <span x-text="unit.hours_until_expiry"></span>h
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Actions -->
+                        <div class="flex gap-2 mt-2" x-show="unit.display_status === 'AVAILABLE'">
+                            <button @click="issueUnit(unit)"
+                                    class="flex-1 bg-green-600 text-white py-1 rounded text-sm">
+                                發血
+                            </button>
+                            <button @click="reserveUnit(unit)"
+                                    class="flex-1 bg-blue-600 text-white py-1 rounded text-sm">
+                                預約
+                            </button>
+                        </div>
+                        <div class="mt-2" x-show="unit.display_status === 'RESERVED'">
+                            <button @click="unreserveUnit(unit)"
+                                    class="w-full bg-gray-500 text-white py-1 rounded text-sm">
+                                取消預約
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <div x-show="!loading && filteredUnits.length === 0" class="text-center py-8 text-gray-500">
+                沒有符合條件的血袋
+            </div>
+        </div>
+
+        <!-- Emergency Tab -->
+        <div x-show="activeTab === 'emergency'" x-cloak>
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                <h3 class="font-bold text-red-700">緊急發血 (Break-Glass)</h3>
+                <p class="text-sm text-red-600 mt-1">
+                    僅限緊急情況使用。將跳過配血流程，直接發放 O 型血。
+                    此操作將被最高級別稽核。
+                </p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">血型</label>
+                        <select x-model="emergencyForm.blood_type"
+                                class="w-full border rounded px-3 py-2">
+                            <option value="O+">O+ (通用陽性)</option>
+                            <option value="O-">O- (通用陰性)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">數量</label>
+                        <input type="number" x-model="emergencyForm.quantity"
+                               min="1" max="10"
+                               class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">緊急原因 (必填)</label>
+                        <textarea x-model="emergencyForm.reason"
+                                  rows="3"
+                                  placeholder="請說明緊急發血原因..."
+                                  class="w-full border rounded px-3 py-2"></textarea>
+                    </div>
+                    <button @click="emergencyRelease()"
+                            :disabled="!emergencyForm.reason"
+                            class="w-full bg-red-600 text-white py-3 rounded font-bold disabled:bg-gray-400">
+                        確認緊急發血
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Receive Modal -->
+    <div x-show="showReceiveModal" x-cloak
+         class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
+        <div class="bg-white w-full rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold">血袋入庫</h3>
+                <button @click="showReceiveModal = false" class="text-gray-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">血型</label>
+                    <select x-model="receiveForm.blood_type" class="w-full border rounded px-3 py-2">
+                        <template x-for="type in ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']">
+                            <option :value="type" x-text="type"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">血品類型</label>
+                    <select x-model="receiveForm.unit_type" class="w-full border rounded px-3 py-2">
+                        <option value="PRBC">PRBC (濃縮紅血球)</option>
+                        <option value="FFP">FFP (新鮮冷凍血漿)</option>
+                        <option value="PLT">PLT (血小板)</option>
+                        <option value="CRYO">CRYO (冷凍沉澱品)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">效期</label>
+                    <input type="date" x-model="receiveForm.expiry_date"
+                           class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">捐血編號 (選填)</label>
+                    <input type="text" x-model="receiveForm.donation_id"
+                           placeholder="D-XXXXXXXX"
+                           class="w-full border rounded px-3 py-2">
+                </div>
+                <button @click="receiveUnit()"
+                        class="w-full bg-blood-600 text-white py-3 rounded font-bold">
+                    確認入庫
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expiry Blocker Modal -->
+    <div x-show="showExpiryBlocker" class="blocker-modal">
+        <svg class="w-24 h-24 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <h2 class="text-3xl font-bold mb-2">血品已過期</h2>
+        <p class="text-xl mb-4" x-text="blockerMessage"></p>
+        <p class="text-lg opacity-75">禁止發放</p>
+        <button @click="showExpiryBlocker = false"
+                class="mt-8 bg-white text-red-700 px-8 py-3 rounded-lg font-bold text-lg">
+            我了解了
+        </button>
+    </div>
+
+    <!-- Toast -->
+    <div x-show="toast.show" x-transition
+         :class="toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-blue-600'"
+         class="fixed bottom-20 left-4 right-4 text-white px-4 py-3 rounded-lg shadow-lg z-40">
+        <span x-text="toast.message"></span>
+    </div>
+
+    <!-- Alpine.js -->
+    <script src="/static/js/alpine.min.js" defer></script>
+
+    <script>
+        function bloodApp() {
+            return {
+                activeTab: 'overview',
+                loading: false,
+                isOffline: !navigator.onLine,
+
+                availability: [],
+                units: [],
+                unitFilter: '',
+
+                showReceiveModal: false,
+                showExpiryBlocker: false,
+                blockerMessage: '',
+
+                receiveForm: {
+                    blood_type: 'O+',
+                    unit_type: 'PRBC',
+                    expiry_date: '',
+                    donation_id: ''
+                },
+
+                emergencyForm: {
+                    blood_type: 'O+',
+                    quantity: 1,
+                    reason: ''
+                },
+
+                toast: {
+                    show: false,
+                    message: '',
+                    type: 'info'
+                },
+
+                async init() {
+                    // 監聽網路狀態
+                    window.addEventListener('online', () => this.isOffline = false);
+                    window.addEventListener('offline', () => this.isOffline = true);
+
+                    // 註冊 Service Worker
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.register('/blood/service-worker.js')
+                            .then(reg => console.log('[Blood] SW registered'))
+                            .catch(err => console.error('[Blood] SW registration failed:', err));
+                    }
+
+                    // 載入資料
+                    await this.refresh();
+                },
+
+                async refresh() {
+                    this.loading = true;
+                    try {
+                        await Promise.all([
+                            this.loadAvailability(),
+                            this.loadUnits()
+                        ]);
+                    } catch (e) {
+                        console.error('Failed to load data:', e);
+                    }
+                    this.loading = false;
+                },
+
+                async loadAvailability() {
+                    const res = await fetch('/api/blood/availability');
+                    const data = await res.json();
+                    if (data.success) {
+                        this.availability = data.data;
+                    }
+                },
+
+                async loadUnits() {
+                    const res = await fetch('/api/blood/units');
+                    const data = await res.json();
+                    if (data.success) {
+                        this.units = data.data;
+                    }
+                },
+
+                get filteredUnits() {
+                    if (!this.unitFilter) return this.units;
+                    return this.units.filter(u => u.blood_type === this.unitFilter);
+                },
+
+                statusLabel(status) {
+                    const labels = {
+                        'AVAILABLE': '可用',
+                        'RESERVED': '已預約',
+                        'EXPIRING_SOON': '即將過期',
+                        'EXPIRED': '已過期'
+                    };
+                    return labels[status] || status;
+                },
+
+                async receiveUnit() {
+                    if (!this.receiveForm.blood_type || !this.receiveForm.expiry_date) {
+                        this.showToast('請填寫必要欄位', 'error');
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch('/api/blood/units', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.receiveForm)
+                        });
+                        const data = await res.json();
+
+                        if (data.success) {
+                            this.showToast('入庫成功', 'success');
+                            this.showReceiveModal = false;
+                            this.receiveForm = { blood_type: 'O+', unit_type: 'PRBC', expiry_date: '', donation_id: '' };
+                            await this.refresh();
+                        } else {
+                            this.showToast(data.detail || '入庫失敗', 'error');
+                        }
+                    } catch (e) {
+                        this.showToast('網路錯誤', 'error');
+                    }
+                },
+
+                async issueUnit(unit) {
+                    // 效期阻擋 (Layer 2: UI)
+                    if (unit.display_status === 'EXPIRED') {
+                        this.blockerMessage = `血袋 ${unit.id} 已過期`;
+                        this.showExpiryBlocker = true;
+                        return;
+                    }
+
+                    if (!confirm(`確定發放血袋 ${unit.id}？`)) return;
+
+                    try {
+                        const res = await fetch(`/api/blood/units/${unit.id}/issue`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                order_id: 'MANUAL-' + Date.now(),
+                                issuer_id: 'blood-pwa'
+                            })
+                        });
+
+                        if (res.status === 403) {
+                            const data = await res.json();
+                            this.blockerMessage = data.detail;
+                            this.showExpiryBlocker = true;
+                            return;
+                        }
+
+                        const data = await res.json();
+                        if (data.success) {
+                            this.showToast('發血成功', 'success');
+                            await this.refresh();
+                        } else {
+                            this.showToast(data.detail || '發血失敗', 'error');
+                        }
+                    } catch (e) {
+                        this.showToast('網路錯誤', 'error');
+                    }
+                },
+
+                async reserveUnit(unit) {
+                    const orderId = prompt('請輸入訂單編號 (Order ID):');
+                    if (!orderId) return;
+
+                    try {
+                        const res = await fetch(`/api/blood/units/${unit.id}/reserve`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                order_id: orderId,
+                                reserver_id: 'blood-pwa'
+                            })
+                        });
+                        const data = await res.json();
+
+                        if (res.status === 409) {
+                            this.showToast('血袋已被預約', 'error');
+                            return;
+                        }
+
+                        if (data.success) {
+                            this.showToast('預約成功', 'success');
+                            await this.refresh();
+                        } else {
+                            this.showToast(data.detail || '預約失敗', 'error');
+                        }
+                    } catch (e) {
+                        this.showToast('網路錯誤', 'error');
+                    }
+                },
+
+                async unreserveUnit(unit) {
+                    if (!confirm(`確定取消血袋 ${unit.id} 的預約？`)) return;
+
+                    try {
+                        const res = await fetch(`/api/blood/units/${unit.id}/unreserve?actor=blood-pwa`, {
+                            method: 'POST'
+                        });
+                        const data = await res.json();
+
+                        if (data.success) {
+                            this.showToast('已取消預約', 'success');
+                            await this.refresh();
+                        } else {
+                            this.showToast(data.detail || '取消失敗', 'error');
+                        }
+                    } catch (e) {
+                        this.showToast('網路錯誤', 'error');
+                    }
+                },
+
+                async emergencyRelease() {
+                    if (!this.emergencyForm.reason) {
+                        this.showToast('請填寫緊急原因', 'error');
+                        return;
+                    }
+
+                    if (!confirm('確定執行緊急發血？此操作將被最高級別稽核。')) return;
+
+                    try {
+                        const res = await fetch('/api/blood/emergency-release', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                ...this.emergencyForm,
+                                requester_id: 'blood-pwa'
+                            })
+                        });
+                        const data = await res.json();
+
+                        if (data.success) {
+                            this.showToast(`緊急發血成功: ${data.unit_ids.join(', ')}`, 'success');
+                            this.emergencyForm = { blood_type: 'O+', quantity: 1, reason: '' };
+                            await this.refresh();
+                        } else {
+                            this.showToast(data.detail || '發血失敗', 'error');
+                        }
+                    } catch (e) {
+                        this.showToast('網路錯誤', 'error');
+                    }
+                },
+
+                showToast(message, type = 'info') {
+                    this.toast = { show: true, message, type };
+                    setTimeout(() => this.toast.show = false, 3000);
+                }
+            };
+        }
+    </script>
+</body>
+</html>
