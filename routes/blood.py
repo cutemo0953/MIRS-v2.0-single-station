@@ -170,6 +170,13 @@ class SimpleBatchReceive(BaseModel):
     expiry_days: int = 35  # PRBC 預設 35 天, FFP 365 天
 
 
+class PendingOrderResolve(BaseModel):
+    """補單解除"""
+    order_id: str
+    resolver_id: str
+    notes: Optional[str] = None
+
+
 # 血品預設保存期限 (天)
 DEFAULT_EXPIRY_DAYS = {
     "PRBC": 35,
@@ -718,9 +725,22 @@ async def emergency_release(data: EmergencyRelease):
 
         logger.warning(f"[BREAK-GLASS] 緊急發血: {unit_ids}, 請求者: {data.requester_id}, 原因: {data.reason}")
 
+        # v2.4: Create pending order for follow-up
+        pending_id = f"PO-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+        deadline = (datetime.now() + timedelta(hours=24)).isoformat()
+
+        cursor.execute("""
+            INSERT INTO pending_orders (
+                id, type, unit_ids, requester_id, reason, deadline, status, created_at
+            ) VALUES (?, 'EMERGENCY_RELEASE', ?, ?, ?, ?, 'PENDING', CURRENT_TIMESTAMP)
+        """, (pending_id, json.dumps(unit_ids), data.requester_id, data.reason, deadline))
+        conn.commit()
+
         return {
             "success": True,
             "unit_ids": unit_ids,
+            "pending_order_id": pending_id,
+            "deadline": deadline,
             "warning": "緊急發血已記錄，請於 24h 內補齊醫囑"
         }
 
@@ -810,6 +830,192 @@ async def get_blood_events(unit_id: str, limit: int = 50):
         return {
             "success": True,
             "data": [dict(row) for row in rows]
+        }
+
+
+# ==============================================================================
+# P4: Pending Order Tracking (待補單追蹤)
+# ==============================================================================
+
+@router.get("/pending-orders")
+async def list_pending_orders(
+    status: str = "PENDING",
+    include_overdue: bool = True
+):
+    """
+    列出待補單 (緊急發血後需補開醫囑)
+    v2.4: P4 新增
+    """
+    if IS_VERCEL:
+        # Demo 模式
+        now = datetime.now()
+        return {
+            "success": True,
+            "data": [
+                {
+                    "id": "PO-20260112-A1B2",
+                    "type": "EMERGENCY_RELEASE",
+                    "unit_ids": ["BU-20260112-X1Y2Z3"],
+                    "requester_id": "blood-pwa",
+                    "reason": "大量傷患湧入",
+                    "deadline": (now + timedelta(hours=12)).isoformat(),
+                    "status": "PENDING",
+                    "is_overdue": False,
+                    "hours_remaining": 12,
+                    "created_at": (now - timedelta(hours=12)).isoformat()
+                },
+                {
+                    "id": "PO-20260111-C3D4",
+                    "type": "EMERGENCY_RELEASE",
+                    "unit_ids": ["BU-20260111-A1B2C3", "BU-20260111-D4E5F6"],
+                    "requester_id": "blood-pwa",
+                    "reason": "休克病患緊急輸血",
+                    "deadline": (now - timedelta(hours=6)).isoformat(),
+                    "status": "PENDING",
+                    "is_overdue": True,
+                    "hours_remaining": -6,
+                    "created_at": (now - timedelta(hours=30)).isoformat()
+                }
+            ],
+            "overdue_count": 1,
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        query = "SELECT * FROM pending_orders WHERE 1=1"
+        params = []
+
+        if status:
+            query += " AND status = ?"
+            params.append(status)
+
+        query += " ORDER BY deadline ASC"
+
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+        now = datetime.now()
+        result = []
+        overdue_count = 0
+
+        for row in rows:
+            item = dict(row)
+            deadline = datetime.fromisoformat(item['deadline'])
+            item['is_overdue'] = now > deadline
+            item['hours_remaining'] = int((deadline - now).total_seconds() / 3600)
+
+            if item['is_overdue']:
+                overdue_count += 1
+
+            # Parse unit_ids JSON
+            if item.get('unit_ids'):
+                item['unit_ids'] = json.loads(item['unit_ids'])
+
+            if include_overdue or not item['is_overdue']:
+                result.append(item)
+
+        return {
+            "success": True,
+            "data": result,
+            "overdue_count": overdue_count
+        }
+
+
+@router.post("/pending-orders/{order_id}/resolve")
+async def resolve_pending_order(order_id: str, data: PendingOrderResolve):
+    """
+    補單完成 - 解除待補單狀態
+    v2.4: P4 新增
+    """
+    if IS_VERCEL:
+        return {"success": True, "demo": True}
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 更新待補單狀態
+        cursor.execute("""
+            UPDATE pending_orders
+            SET status = 'RESOLVED',
+                resolved_order_id = ?,
+                resolved_by = ?,
+                resolved_at = CURRENT_TIMESTAMP,
+                resolve_notes = ?
+            WHERE id = ? AND status = 'PENDING'
+        """, (data.order_id, data.resolver_id, data.notes, order_id))
+
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="待補單不存在或已解除")
+
+        # 記錄事件
+        cursor.execute("SELECT unit_ids FROM pending_orders WHERE id = ?", (order_id,))
+        row = cursor.fetchone()
+        if row and row['unit_ids']:
+            unit_ids = json.loads(row['unit_ids'])
+            for unit_id in unit_ids:
+                log_blood_event(
+                    cursor, unit_id, "PENDING_ORDER_RESOLVED", data.resolver_id,
+                    f"補單完成: {data.order_id}", data.order_id
+                )
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "message": f"待補單 {order_id} 已解除"
+        }
+
+
+@router.get("/pending-orders/summary")
+async def get_pending_orders_summary():
+    """
+    待補單摘要 (Dashboard 用)
+    v2.4: P4 新增
+    """
+    if IS_VERCEL:
+        return {
+            "success": True,
+            "pending_count": 2,
+            "overdue_count": 1,
+            "oldest_overdue_hours": 6,
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN deadline < datetime('now', 'localtime') THEN 1 ELSE 0 END) as overdue
+            FROM pending_orders
+            WHERE status = 'PENDING'
+        """)
+
+        row = cursor.fetchone()
+        pending_count = row['total'] or 0
+        overdue_count = row['overdue'] or 0
+
+        # 最久過期的時數
+        oldest_overdue_hours = 0
+        if overdue_count > 0:
+            cursor.execute("""
+                SELECT MIN(deadline) as oldest
+                FROM pending_orders
+                WHERE status = 'PENDING' AND deadline < datetime('now', 'localtime')
+            """)
+            oldest_row = cursor.fetchone()
+            if oldest_row and oldest_row['oldest']:
+                oldest = datetime.fromisoformat(oldest_row['oldest'])
+                oldest_overdue_hours = int((datetime.now() - oldest).total_seconds() / 3600)
+
+        return {
+            "success": True,
+            "pending_count": pending_count,
+            "overdue_count": overdue_count,
+            "oldest_overdue_hours": oldest_overdue_hours
         }
 
 
