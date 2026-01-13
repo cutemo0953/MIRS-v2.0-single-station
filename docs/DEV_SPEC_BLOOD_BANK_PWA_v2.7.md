@@ -1,9 +1,38 @@
 # Blood Bank PWA DEV SPEC v2.7
 
-**版本**: 2.7
+**版本**: 2.7.1
 **日期**: 2026-01-13
-**狀態**: MIRS Legacy Style UI 重構完成
+**狀態**: MIRS Legacy Style UI 重構完成 + Responsive 優化
 **基於**: v2.6 + UI Visual Refinement 需求
+
+---
+
+## v2.7.1 變更摘要 (2026-01-13)
+
+### 新增功能
+
+| 項目 | 說明 |
+|------|------|
+| **入庫卡片式設計** | Units Tab 頂部新增深紅漸層入庫卡片，取代不明顯的小按鈕 |
+| **WB (全血) 資料** | Demo 模式新增 O+ (2袋) 和 O- (1袋即期) 全血範例 |
+| **MIRS 血庫卡片同步** | MIRS Index.html 血庫 Tab 同步採用大型卡片 + 點擊過濾 |
+
+### Responsive 優化
+
+| 問題 | 解決方案 |
+|------|----------|
+| 筆電上卡片過長 | 所有 Tab 內容添加 `max-w-3xl mx-auto` |
+| 血型卡片網格 | 手機 `grid-cols-4` / 平板以上 `grid-cols-8` |
+| Legend 標籤過窄 | 添加 `flex-wrap` 和較小 padding |
+
+### 檔案變更
+
+| 檔案 | 變更 |
+|------|------|
+| `frontend/blood/index.html` | 入庫卡片 + max-w-3xl 限制 |
+| `frontend/blood/service-worker.js` | v2.7.1 快取刷新 |
+| `routes/blood.py` | WB 加入 UNIT_TYPES + Demo 資料 |
+| `Index.html` | MIRS 血庫 Tab 大型卡片 + filterBloodType |
 
 ---
 
@@ -313,6 +342,7 @@ getUnitTypeBorderColorClass(unitType) {
 | v2.5 | 2026-01-12 | P4: 待補單追蹤 + 預約逾時自動釋放 |
 | v2.6 | 2026-01-13 | UI 改進: 仿原始 MIRS 血庫設計、血品色塊、WB 支援 |
 | v2.7 | 2026-01-13 | MIRS Legacy Style: Big Cards Grid、左側色條、Emergency FAB |
+| v2.7.1 | 2026-01-13 | 入庫卡片式設計、WB Demo 資料、Responsive 優化 |
 
 ---
 

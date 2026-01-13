@@ -6,6 +6,28 @@
 
 ---
 
+## [Blood Bank PWA v2.7.1] - 2026-01-13
+
+### 新增 (Added)
+- **入庫卡片式設計**: Units Tab 頂部新增深紅漸層入庫卡片，取代不明顯的小按鈕
+- **WB (全血) Demo 資料**: O+ 2袋 + O- 1袋即期，模擬 Walking Blood Bank 場景
+- **MIRS 血庫 Tab 同步**: Index.html 血庫區塊採用大型血型卡片 + filterBloodType 點擊過濾
+
+### 改進 (Improved)
+- **Responsive 優化**: 所有 Tab 內容添加 `max-w-3xl mx-auto` 防止筆電上卡片過寬
+- **血型網格**: 手機 4 欄 (`grid-cols-4`) / 平板以上 8 欄 (`grid-cols-8`)
+- **Legend 換行**: 添加 `flex-wrap` 支援小螢幕
+
+### 檔案變更
+| 檔案 | 說明 |
+|------|------|
+| `frontend/blood/index.html` | 入庫卡片 + Responsive 優化 |
+| `frontend/blood/service-worker.js` | v2.7.1 快取刷新 |
+| `routes/blood.py` | WB 加入 UNIT_TYPES + DEFAULT_EXPIRY_DAYS + Demo 資料 |
+| `Index.html` | MIRS 血庫 Tab 大型卡片 UI |
+
+---
+
 ## [Blood Bank PWA v2.7] - 2026-01-13
 
 ### 新增 (Added)
