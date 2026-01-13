@@ -78,7 +78,7 @@
                           d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                 </svg>
                 <h1 class="text-lg font-bold">Blood Bank</h1>
-                <span class="text-xs bg-red-800 px-2 py-0.5 rounded">v2.7</span>
+                <span class="text-xs bg-red-800 px-2 py-0.5 rounded">v2.7.1</span>
             </div>
             <div class="flex items-center gap-2">
                 <span x-show="isOffline" class="bg-yellow-500 text-xs px-2 py-1 rounded">離線</span>
@@ -181,9 +181,9 @@
             </div>
 
             <!-- v2.7: MIRS Legacy Style - Big Colored Cards Grid (The Soul of MIRS) -->
-            <div x-show="!loading" class="mb-6">
+            <div x-show="!loading" class="mb-6 max-w-3xl mx-auto">
                 <!-- 2x4 Grid of Blood Type Cards -->
-                <div class="grid grid-cols-4 gap-3">
+                <div class="grid grid-cols-4 sm:grid-cols-8 gap-3">
                     <template x-for="blood in groupedByBloodType" :key="blood.blood_type">
                         <div @click="filterByBloodType(blood.blood_type)"
                              class="cursor-pointer rounded-xl p-4 shadow-lg transform hover:scale-105 transition-all duration-200"
@@ -208,19 +208,19 @@
                 </div>
 
                 <!-- Quick Stats Bar -->
-                <div class="mt-4 bg-white rounded-lg shadow p-3 flex items-center justify-between">
+                <div class="mt-4 bg-white rounded-lg shadow p-3 flex items-center justify-between flex-wrap gap-2">
                     <div class="flex items-center gap-4 text-sm">
                         <span class="text-gray-600">總庫存: <span class="font-bold text-gray-900" x-text="totalUnits"></span> 袋</span>
                         <span x-show="totalExpiring > 0" class="text-orange-600 font-bold">
                             即期: <span x-text="totalExpiring"></span>
                         </span>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1 sm:gap-2 flex-wrap">
                         <!-- Unit Type Legend -->
-                        <span class="text-xs px-2 py-1 rounded unit-type-wb">全血</span>
-                        <span class="text-xs px-2 py-1 rounded unit-type-prbc">紅血球</span>
-                        <span class="text-xs px-2 py-1 rounded unit-type-ffp">血漿</span>
-                        <span class="text-xs px-2 py-1 rounded unit-type-plt">血小板</span>
+                        <span class="text-xs px-1.5 sm:px-2 py-1 rounded unit-type-wb">全血</span>
+                        <span class="text-xs px-1.5 sm:px-2 py-1 rounded unit-type-prbc">紅血球</span>
+                        <span class="text-xs px-1.5 sm:px-2 py-1 rounded unit-type-ffp">血漿</span>
+                        <span class="text-xs px-1.5 sm:px-2 py-1 rounded unit-type-plt">血小板</span>
                     </div>
                 </div>
 
@@ -234,7 +234,7 @@
             </div>
 
             <!-- v2.7: Filtered Unit Cards by Component Type -->
-            <div x-show="!loading && filteredByDashboard.length > 0" class="space-y-2">
+            <div x-show="!loading && filteredByDashboard.length > 0" class="space-y-2 max-w-3xl mx-auto">
                 <h3 class="text-gray-700 font-bold text-sm mb-2" x-show="dashboardFilter">
                     <span x-text="dashboardFilter"></span> 血袋明細
                 </h3>
@@ -269,13 +269,31 @@
         </div>
 
         <!-- Units Tab -->
-        <div x-show="activeTab === 'units'" x-cloak>
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-bold">血袋清單</h2>
-                <button @click="showReceiveModal = true"
-                        class="bg-blood-600 text-white px-3 py-1 rounded text-sm">
-                    + 入庫
-                </button>
+        <div x-show="activeTab === 'units'" x-cloak class="max-w-3xl mx-auto">
+            <h2 class="text-lg font-bold mb-4">血袋清單</h2>
+
+            <!-- v2.7.1: 入庫卡片 (Card Style) -->
+            <div class="bg-gradient-to-r from-red-800 to-red-900 rounded-xl p-4 mb-4 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3 text-white">
+                        <div class="bg-white bg-opacity-20 p-2 rounded-lg">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-bold text-lg">血袋入庫</div>
+                            <div class="text-red-200 text-sm">登記新進血袋</div>
+                        </div>
+                    </div>
+                    <button @click="showReceiveModal = true"
+                            class="bg-white text-red-700 px-4 py-2 rounded-lg font-bold shadow hover:bg-red-50 transition flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        入庫
+                    </button>
+                </div>
             </div>
 
             <!-- Filter -->
@@ -371,7 +389,7 @@
         </div>
 
         <!-- Issue Tab (v2.3 Location-First Display) -->
-        <div x-show="activeTab === 'issue'" x-cloak>
+        <div x-show="activeTab === 'issue'" x-cloak class="max-w-3xl mx-auto">
             <h2 class="text-lg font-bold mb-4">發血作業</h2>
 
             <!-- Three-Tier Flow Selector -->
@@ -534,7 +552,7 @@
         </div>
 
         <!-- Pending Orders Tab (v2.5 P4) -->
-        <div x-show="activeTab === 'pending'" x-cloak>
+        <div x-show="activeTab === 'pending'" x-cloak class="max-w-3xl mx-auto">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold">待補單追蹤</h2>
                 <button @click="loadPendingOrders()"

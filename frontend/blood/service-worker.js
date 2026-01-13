@@ -1,5 +1,5 @@
 /**
- * MIRS Blood Bank PWA Service Worker v2.7.0
+ * MIRS Blood Bank PWA Service Worker v2.7.1
  *
  * Based on DEV_SPEC_BLOOD_BANK_PWA_v2.7:
  * - Scope 隔離：/blood/ 獨立快取
@@ -12,9 +12,14 @@
  * - Left border color coding by component type
  * - Prominent Unit ID & Expiry Date
  * - Emergency FAB (Panic Button) with blinking animation
+ *
+ * v2.7.1 Changes:
+ * - Card-style receive button in Units tab
+ * - WB (Whole Blood) demo data support
+ * - Responsive max-width for laptop screens
  */
 
-const CACHE_NAME = 'mirs-blood-v2.7.0';
+const CACHE_NAME = 'mirs-blood-v2.7.1';
 const SCOPE = '/blood/';
 
 // 需要快取的靜態資源
@@ -28,7 +33,7 @@ const STATIC_ASSETS = [
 
 // Install event
 self.addEventListener('install', (event) => {
-    console.log('[Blood SW] Installing v2.7.0');
+    console.log('[Blood SW] Installing v2.7.1');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {

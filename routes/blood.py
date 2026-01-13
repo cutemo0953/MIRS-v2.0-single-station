@@ -58,7 +58,7 @@ ALLOWED_TRANSITIONS = {
 }
 
 BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
-UNIT_TYPES = ['PRBC', 'FFP', 'PLT', 'CRYO']
+UNIT_TYPES = ['WB', 'PRBC', 'FFP', 'PLT', 'CRYO']  # v2.7.1: WB 全血支援
 
 
 def validate_status_transition(current: str, target: str) -> bool:
@@ -179,6 +179,7 @@ class PendingOrderResolve(BaseModel):
 
 # 血品預設保存期限 (天)
 DEFAULT_EXPIRY_DAYS = {
+    "WB": 21,    # 全血 (Walking Blood Bank) - 冷藏可達35天
     "PRBC": 35,
     "FFP": 365,
     "PLT": 5,
@@ -216,6 +217,9 @@ async def get_blood_availability():
                 {"blood_type": "O+", "unit_type": "FFP", "available_count": 3, "reserved_count": 1, "physical_valid_count": 4, "expiring_soon_count": 0, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=200)).strftime("%Y-%m-%d")},
                 # PLT (血小板) - 短效期
                 {"blood_type": "O+", "unit_type": "PLT", "available_count": 2, "reserved_count": 0, "physical_valid_count": 2, "expiring_soon_count": 2, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=2)).strftime("%Y-%m-%d")},
+                # WB (全血) - Walking Blood Bank 緊急輸血
+                {"blood_type": "O+", "unit_type": "WB", "available_count": 2, "reserved_count": 0, "physical_valid_count": 2, "expiring_soon_count": 0, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=18)).strftime("%Y-%m-%d")},
+                {"blood_type": "O-", "unit_type": "WB", "available_count": 1, "reserved_count": 0, "physical_valid_count": 1, "expiring_soon_count": 1, "expired_pending_count": 0, "nearest_expiry": (today + timedelta(days=5)).strftime("%Y-%m-%d")},
             ],
             "demo": True
         }
@@ -264,6 +268,10 @@ async def list_blood_units(
             {"id": "BU-20260101-Y7Z8A9", "blood_type": "AB+", "unit_type": "FFP", "volume_ml": 200, "status": "AVAILABLE", "display_status": "AVAILABLE", "expiry_date": (today + timedelta(days=180)).strftime("%Y-%m-%d"), "hours_until_expiry": 4320, "fifo_priority": 1},
             # PLT - 短效期
             {"id": "BU-20260112-B1C2D3", "blood_type": "O+", "unit_type": "PLT", "volume_ml": 50, "status": "AVAILABLE", "display_status": "EXPIRING_SOON", "expiry_date": (today + timedelta(days=2)).strftime("%Y-%m-%d"), "hours_until_expiry": 48, "fifo_priority": 1},
+            # WB (全血) - Walking Blood Bank 緊急來源
+            {"id": "BU-20260113-WB001", "blood_type": "O+", "unit_type": "WB", "volume_ml": 450, "status": "AVAILABLE", "display_status": "AVAILABLE", "expiry_date": (today + timedelta(days=18)).strftime("%Y-%m-%d"), "hours_until_expiry": 432, "fifo_priority": 1},
+            {"id": "BU-20260113-WB002", "blood_type": "O+", "unit_type": "WB", "volume_ml": 450, "status": "AVAILABLE", "display_status": "AVAILABLE", "expiry_date": (today + timedelta(days=20)).strftime("%Y-%m-%d"), "hours_until_expiry": 480, "fifo_priority": 2},
+            {"id": "BU-20260112-WB003", "blood_type": "O-", "unit_type": "WB", "volume_ml": 450, "status": "AVAILABLE", "display_status": "EXPIRING_SOON", "expiry_date": (today + timedelta(days=5)).strftime("%Y-%m-%d"), "hours_until_expiry": 120, "fifo_priority": 1, "is_emergency_release": 1},
             # 已過期等待報廢
             {"id": "BU-20260105-E4F5G6", "blood_type": "AB-", "unit_type": "PRBC", "volume_ml": 250, "status": "AVAILABLE", "display_status": "EXPIRED", "expiry_date": (today - timedelta(days=1)).strftime("%Y-%m-%d"), "hours_until_expiry": -24, "fifo_priority": 99},
         ]
