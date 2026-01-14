@@ -22,9 +22,16 @@
  * - 庫存總覽: 整合完整血袋清單 (FIFO/預約/發血按鈕)
  * - 入庫+標籤: 新 Tab (捐血中心/緊急捐血/補印標籤)
  * - Walking Blood Bank: 緊急捐血入庫流程
+ *
+ * v2.8.1 Changes (UI Polish):
+ * - 修復標籤補印功能 (Client-side)
+ * - 緊急捐血 Modal UI 優化 (backdrop/close/heroicon)
+ * - 移除 emoji 改用 heroicon
+ * - 發血作業 UI 簡化 (統一配色)
+ * - WB 全血效期改為 7 天
  */
 
-const CACHE_NAME = 'mirs-blood-v2.8.0';
+const CACHE_NAME = 'mirs-blood-v2.8.1';
 const SCOPE = '/blood/';
 
 // 需要快取的靜態資源

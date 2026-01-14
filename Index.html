@@ -1579,52 +1579,23 @@
                 </div>
             </div>
 
-            <!-- v2.7.2: 血型庫存統計區 - 深紅色背景 (原始 MIRS 風格) -->
-            <div class="bg-gradient-to-br from-red-900 to-red-950 rounded-xl p-4 sm:p-6 mb-6 shadow-xl">
-                <h3 class="text-white text-lg font-bold mb-4 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                    即時庫存
-                    <span class="text-sm font-normal text-red-200">總計 <span x-text="stats.totalBlood"></span> 袋</span>
-                </h3>
-                <!-- 8 Blood Type Cards Grid -->
-                <div class="grid grid-cols-4 sm:grid-cols-8 gap-2 sm:gap-3">
-                    <template x-for="blood in bloodInventory" :key="blood.blood_type">
-                        <div class="bg-red-800 bg-opacity-50 backdrop-blur rounded-lg p-3 sm:p-4 border border-red-700 hover:border-red-500 transition-all duration-200 hover:shadow-lg cursor-pointer"
-                             @click="filterBloodType = filterBloodType === blood.blood_type ? '' : blood.blood_type"
-                             :class="filterBloodType === blood.blood_type ? 'ring-2 ring-yellow-400' : ''">
-                            <div class="text-center">
-                                <!-- 血型標籤 -->
-                                <div class="text-lg sm:text-xl font-bold text-red-100 mb-1" x-text="blood.blood_type"></div>
-                                <!-- 數量大字顯示 - 非0白色，0淺灰色 -->
-                                <div class="text-2xl sm:text-3xl font-extrabold mb-0.5"
-                                     :class="blood.quantity > 0 ? 'text-yellow-300' : 'text-gray-500'"
-                                     x-text="blood.quantity"></div>
-                                <div class="text-xs text-red-200">袋</div>
-                                <!-- 即期警示 -->
-                                <div x-show="blood.expiring_soon > 0"
-                                     class="mt-1 text-xs text-orange-400 font-bold animate-pulse">
-                                    ⚠ <span x-text="blood.expiring_soon"></span> 即期
-                                </div>
-                            </div>
-                        </div>
-                    </template>
+            <!-- v2.8.1: 血袋即時統計 - 簡化版 (僅深紅底+總數) -->
+            <div class="bg-red-900 rounded-xl p-4 sm:p-6 mb-6 shadow-xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-white text-lg font-bold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                        </svg>
+                        血庫即時統計
+                    </h3>
+                    <div class="text-right">
+                        <div class="text-3xl sm:text-4xl font-black text-yellow-300" x-text="stats.totalBlood"></div>
+                        <div class="text-sm text-red-200">袋</div>
+                    </div>
                 </div>
-                <!-- 血品類型圖例 -->
-                <div class="mt-4 flex items-center justify-center gap-2 flex-wrap">
-                    <span class="text-xs px-2 py-1 rounded bg-red-900 text-white border border-red-700">WB 全血</span>
-                    <span class="text-xs px-2 py-1 rounded bg-red-600 text-white">PRBC 紅血球</span>
-                    <span class="text-xs px-2 py-1 rounded bg-amber-600 text-white">FFP 血漿</span>
-                    <span class="text-xs px-2 py-1 rounded bg-yellow-400 text-gray-800">PLT 血小板</span>
-                </div>
-                <!-- 點擊篩選提示 -->
-                <div x-show="filterBloodType" class="mt-3 text-center">
-                    <span class="text-yellow-300 text-sm">
-                        已選擇: <span class="font-bold" x-text="filterBloodType"></span>
-                        <button @click="filterBloodType = ''" class="ml-2 underline hover:text-white">清除</button>
-                    </span>
-                </div>
+                <p class="text-red-200 text-sm mt-2">
+                    完整血袋清單請至 <a href="/blood/" class="underline hover:text-white">Blood Bank PWA</a> 查看
+                </p>
             </div>
 
             <!-- 功能區 - 淺色風格，統一 red 色系 -->

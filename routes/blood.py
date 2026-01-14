@@ -179,7 +179,7 @@ class PendingOrderResolve(BaseModel):
 
 # 血品預設保存期限 (天)
 DEFAULT_EXPIRY_DAYS = {
-    "WB": 21,    # 全血 (Walking Blood Bank) - 冷藏可達35天
+    "WB": 7,     # 全血 - 凝血因子7天內有效 (Fresh Whole Blood)
     "PRBC": 35,
     "FFP": 365,
     "PLT": 5,
