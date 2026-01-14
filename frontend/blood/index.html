@@ -78,7 +78,7 @@
                           d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                 </svg>
                 <h1 class="text-lg font-bold">Blood Bank</h1>
-                <span class="text-xs bg-red-800 px-2 py-0.5 rounded">v2.7.1</span>
+                <span class="text-xs bg-red-800 px-2 py-0.5 rounded">v2.8</span>
             </div>
             <div class="flex items-center gap-2">
                 <span x-show="isOffline" class="bg-yellow-500 text-xs px-2 py-1 rounded">離線</span>
@@ -92,17 +92,17 @@
         </div>
     </header>
 
-    <!-- Tab Navigation -->
+    <!-- Tab Navigation (v2.8: 重構 - 庫存總覽含清單、入庫+標籤獨立) -->
     <nav class="bg-white border-b flex">
         <button @click="activeTab = 'overview'"
                 :class="activeTab === 'overview' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
                 class="flex-1 py-3 text-sm font-medium border-b-2 transition">
             庫存總覽
         </button>
-        <button @click="activeTab = 'units'"
-                :class="activeTab === 'units' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
+        <button @click="activeTab = 'receive'"
+                :class="activeTab === 'receive' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
                 class="flex-1 py-3 text-sm font-medium border-b-2 transition">
-            血袋清單
+            入庫+標籤
         </button>
         <button @click="activeTab = 'issue'"
                 :class="activeTab === 'issue' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
@@ -233,158 +233,199 @@
                 </div>
             </div>
 
-            <!-- v2.7: Filtered Unit Cards by Component Type -->
-            <div x-show="!loading && filteredByDashboard.length > 0" class="space-y-2 max-w-3xl mx-auto">
-                <h3 class="text-gray-700 font-bold text-sm mb-2" x-show="dashboardFilter">
-                    <span x-text="dashboardFilter"></span> 血袋明細
-                </h3>
-                <template x-for="item in filteredByDashboard" :key="item.blood_type + item.unit_type">
-                    <div class="bg-white rounded-lg shadow-sm p-3 border-l-8"
-                         :class="getUnitTypeBorderColorClass(item.unit_type)">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <span class="text-xl font-bold text-gray-800" x-text="item.blood_type"></span>
-                                <span class="text-xs font-bold px-2 py-1 rounded"
-                                      :class="getUnitTypeClass(item.unit_type)"
-                                      x-text="getUnitTypeLabel(item.unit_type)"></span>
+            <!-- v2.8: 完整血袋清單 (含 FIFO、預約、發血按鈕) -->
+            <div x-show="!loading" class="max-w-3xl mx-auto">
+                <!-- Blood Type Filter -->
+                <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+                    <button @click="unitFilter = ''"
+                            :class="unitFilter === '' ? 'bg-blood-600 text-white' : 'bg-white text-gray-700'"
+                            class="px-3 py-1 rounded text-sm whitespace-nowrap shadow-sm">
+                        全部
+                    </button>
+                    <template x-for="type in ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']">
+                        <button @click="unitFilter = type"
+                                :class="unitFilter === type ? 'bg-blood-600 text-white' : 'bg-white text-gray-700'"
+                                class="px-3 py-1 rounded text-sm whitespace-nowrap shadow-sm"
+                                x-text="type">
+                        </button>
+                    </template>
+                </div>
+
+                <!-- Unit List with Full Features -->
+                <div class="space-y-2">
+                    <template x-for="unit in filteredUnits" :key="unit.id">
+                        <div class="bg-white rounded-lg shadow-sm p-3 border-l-8"
+                             :class="getUnitTypeBorderColorClass(unit.unit_type)">
+                            <!-- Main Row: Blood Type, Component, Status -->
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-3">
+                                    <!-- Blood Type - Large -->
+                                    <div class="text-2xl font-black text-gray-900 w-14" x-text="unit.blood_type"></div>
+                                    <!-- Component Type Badge -->
+                                    <span class="text-xs font-bold px-2 py-1 rounded"
+                                          :class="getUnitTypeClass(unit.unit_type)"
+                                          x-text="getUnitTypeLabel(unit.unit_type)"></span>
+                                    <!-- Status Badge -->
+                                    <span class="text-xs px-2 py-1 rounded"
+                                          :class="{
+                                              'bg-green-100 text-green-700': unit.display_status === 'AVAILABLE',
+                                              'bg-blue-100 text-blue-700': unit.display_status === 'RESERVED',
+                                              'bg-orange-100 text-orange-700': unit.display_status === 'EXPIRING_SOON',
+                                              'bg-red-100 text-red-700': unit.display_status === 'EXPIRED'
+                                          }"
+                                          x-text="statusLabel(unit.display_status)"></span>
+                                </div>
+                                <!-- FIFO Priority -->
+                                <span x-show="unit.fifo_priority === 1"
+                                      class="text-xs bg-yellow-400 text-yellow-900 px-2 py-1 rounded font-bold">
+                                    FIFO 優先
+                                </span>
                             </div>
-                            <div class="text-right">
-                                <div class="text-2xl font-extrabold"
-                                     :class="item.available_count > 0 ? 'text-green-600' : 'text-gray-400'"
-                                     x-text="item.available_count"></div>
-                                <div class="text-xs text-gray-500">可用</div>
+
+                            <!-- Second Row: Unit ID (Prominent) & Expiry (Prominent) -->
+                            <div class="flex items-center justify-between bg-gray-50 rounded px-2 py-1 mb-2">
+                                <div class="font-mono text-sm font-bold text-gray-700" x-text="unit.id"></div>
+                                <div class="text-sm font-bold"
+                                     :class="{
+                                         'text-green-600': unit.hours_until_expiry > 72,
+                                         'text-orange-600': unit.hours_until_expiry <= 72 && unit.hours_until_expiry > 24,
+                                         'text-red-600 animate-pulse': unit.hours_until_expiry <= 24
+                                     }">
+                                    <span x-show="unit.hours_until_expiry > 0">
+                                        效期: <span x-text="unit.hours_until_expiry"></span>h
+                                    </span>
+                                    <span x-show="unit.hours_until_expiry <= 0">⚠️ 已過期</span>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex gap-2" x-show="unit.display_status === 'AVAILABLE' || unit.display_status === 'EXPIRING_SOON'">
+                                <button @click="issueUnit(unit)"
+                                        class="flex-1 bg-blood-600 text-white py-2 rounded text-sm font-bold hover:bg-blood-700 transition-colors">
+                                    發血
+                                </button>
+                                <button @click="reserveUnit(unit)"
+                                        class="flex-1 bg-white text-gray-700 py-2 rounded text-sm font-medium border-2 border-gray-300 hover:border-gray-400">
+                                    預約
+                                </button>
+                            </div>
+                            <div x-show="unit.display_status === 'RESERVED'">
+                                <button @click="unreserveUnit(unit)"
+                                        class="w-full bg-blue-50 text-blue-700 py-2 rounded text-sm font-medium border border-blue-200">
+                                    取消預約
+                                </button>
+                            </div>
+                            <div class="text-center text-red-600 text-sm font-bold py-2 bg-red-50 rounded" x-show="unit.display_status === 'EXPIRED'">
+                                ⚠️ 此血袋已過期，請報廢處理
                             </div>
                         </div>
-                        <div x-show="item.expiring_soon_count > 0" class="mt-2 text-xs text-orange-600 font-bold">
-                            ⚠ <span x-text="item.expiring_soon_count"></span> 袋即將過期
-                        </div>
-                    </div>
-                </template>
+                    </template>
+                </div>
+
+                <div x-show="filteredUnits.length === 0" class="text-center py-8 text-gray-500">
+                    沒有符合條件的血袋
+                </div>
             </div>
 
             <!-- Empty State -->
-            <div x-show="!loading && availability.length === 0" class="text-center py-8 text-gray-500">
+            <div x-show="!loading && availability.length === 0 && units.length === 0" class="text-center py-8 text-gray-500">
                 目前沒有血品庫存
             </div>
         </div>
 
-        <!-- Units Tab -->
-        <div x-show="activeTab === 'units'" x-cloak class="max-w-3xl mx-auto">
-            <h2 class="text-lg font-bold mb-4">血袋清單</h2>
+        <!-- v2.8: 入庫+標籤 Tab (Receive + Label) -->
+        <div x-show="activeTab === 'receive'" x-cloak class="max-w-3xl mx-auto">
+            <h2 class="text-lg font-bold mb-4">入庫+標籤</h2>
 
-            <!-- v2.7.1: 入庫卡片 (Card Style) -->
-            <div class="bg-gradient-to-r from-red-800 to-red-900 rounded-xl p-4 mb-4 shadow-lg">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3 text-white">
-                        <div class="bg-white bg-opacity-20 p-2 rounded-lg">
+            <!-- 入庫來源選擇卡片 -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <!-- 捐血中心入庫 -->
+                <div @click="receiveForm.source = 'blood_center'; showReceiveModal = true"
+                     class="bg-white rounded-xl p-4 shadow-lg border-2 cursor-pointer hover:shadow-xl transition-all"
+                     :class="receiveForm.source === 'blood_center' ? 'border-blood-600' : 'border-gray-200 hover:border-blood-400'">
+                    <div class="text-center">
+                        <div class="bg-red-100 text-red-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                             </svg>
                         </div>
-                        <div>
-                            <div class="font-bold text-lg">血袋入庫</div>
-                            <div class="text-red-200 text-sm">登記新進血袋</div>
-                        </div>
+                        <div class="font-bold text-gray-800">捐血中心</div>
+                        <div class="text-xs text-gray-500 mt-1">血液基金會配送</div>
                     </div>
-                    <button @click="showReceiveModal = true"
-                            class="bg-white text-red-700 px-4 py-2 rounded-lg font-bold shadow hover:bg-red-50 transition flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        入庫
-                    </button>
+                </div>
+
+                <!-- 緊急捐血 (Walking Blood Bank) -->
+                <div @click="receiveForm.source = 'walking_donor'; showEmergencyDonationModal = true"
+                     class="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-4 shadow-lg cursor-pointer hover:shadow-xl transition-all text-white">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+                            </svg>
+                        </div>
+                        <div class="font-bold">緊急捐血</div>
+                        <div class="text-xs opacity-80 mt-1">Walking Blood Bank</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Filter -->
-            <div class="flex gap-2 mb-4 overflow-x-auto">
-                <button @click="unitFilter = ''"
-                        :class="unitFilter === '' ? 'bg-blood-600 text-white' : 'bg-white text-gray-700'"
-                        class="px-3 py-1 rounded text-sm whitespace-nowrap">
-                    全部
-                </button>
-                <template x-for="type in ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']">
-                    <button @click="unitFilter = type"
-                            :class="unitFilter === type ? 'bg-blood-600 text-white' : 'bg-white text-gray-700'"
-                            class="px-3 py-1 rounded text-sm whitespace-nowrap"
-                            x-text="type">
-                    </button>
-                </template>
-            </div>
+            <!-- 標籤管理區塊 -->
+            <div class="bg-white rounded-xl shadow-lg p-4 mb-6">
+                <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    補印標籤
+                </h3>
+                <p class="text-sm text-gray-500 mb-4">選擇血袋補印標籤</p>
 
-            <!-- v2.7: Clean & Scannable Unit List with Component Type Border Coding -->
-            <div class="space-y-2">
-                <template x-for="unit in filteredUnits" :key="unit.id">
-                    <div class="bg-white rounded-lg shadow-sm p-3 border-l-8"
-                         :class="getUnitTypeBorderColorClass(unit.unit_type)">
-                        <!-- Main Row: Blood Type, Component, Status -->
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center gap-3">
-                                <!-- Blood Type - Large -->
-                                <div class="text-2xl font-black text-gray-900 w-14" x-text="unit.blood_type"></div>
-                                <!-- Component Type Badge -->
-                                <span class="text-xs font-bold px-2 py-1 rounded"
+                <!-- 血袋清單 (可選擇補印) -->
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    <template x-for="unit in units.slice(0, 10)" :key="unit.id">
+                        <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg border-l-4"
+                             :class="getUnitTypeBorderColorClass(unit.unit_type)">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-gray-800" x-text="unit.blood_type"></span>
+                                <span class="text-xs px-1.5 py-0.5 rounded"
                                       :class="getUnitTypeClass(unit.unit_type)"
                                       x-text="getUnitTypeLabel(unit.unit_type)"></span>
-                                <!-- Status Badge -->
-                                <span class="text-xs px-2 py-1 rounded"
-                                      :class="{
-                                          'bg-green-100 text-green-700': unit.display_status === 'AVAILABLE',
-                                          'bg-blue-100 text-blue-700': unit.display_status === 'RESERVED',
-                                          'bg-orange-100 text-orange-700': unit.display_status === 'EXPIRING_SOON',
-                                          'bg-red-100 text-red-700': unit.display_status === 'EXPIRED'
-                                      }"
-                                      x-text="statusLabel(unit.display_status)"></span>
+                                <span class="font-mono text-xs text-gray-500" x-text="unit.id"></span>
                             </div>
-                            <!-- FIFO Priority -->
-                            <span x-show="unit.fifo_priority === 1"
-                                  class="text-xs bg-yellow-400 text-yellow-900 px-2 py-1 rounded font-bold">
-                                FIFO 優先
-                            </span>
+                            <button @click="printUnitLabel(unit.id)"
+                                    class="text-blood-600 text-sm font-medium hover:text-blood-800 flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                                </svg>
+                                列印
+                            </button>
                         </div>
+                    </template>
+                </div>
 
-                        <!-- Second Row: Unit ID (Prominent) & Expiry (Prominent) -->
-                        <div class="flex items-center justify-between bg-gray-50 rounded px-2 py-1 mb-2">
-                            <div class="font-mono text-sm font-bold text-gray-700" x-text="unit.id"></div>
-                            <div class="text-sm font-bold"
-                                 :class="{
-                                     'text-green-600': unit.hours_until_expiry > 72,
-                                     'text-orange-600': unit.hours_until_expiry <= 72 && unit.hours_until_expiry > 24,
-                                     'text-red-600 animate-pulse': unit.hours_until_expiry <= 24
-                                 }">
-                                <span x-show="unit.hours_until_expiry > 0">
-                                    效期: <span x-text="unit.hours_until_expiry"></span>h
-                                </span>
-                                <span x-show="unit.hours_until_expiry <= 0">⚠️ 已過期</span>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="flex gap-2" x-show="unit.display_status === 'AVAILABLE' || unit.display_status === 'EXPIRING_SOON'">
-                            <button @click="issueUnit(unit)"
-                                    class="flex-1 bg-blood-600 text-white py-2 rounded text-sm font-bold hover:bg-blood-700 transition-colors">
-                                發血
-                            </button>
-                            <button @click="reserveUnit(unit)"
-                                    class="flex-1 bg-white text-gray-700 py-2 rounded text-sm font-medium border-2 border-gray-300 hover:border-gray-400">
-                                預約
-                            </button>
-                        </div>
-                        <div x-show="unit.display_status === 'RESERVED'">
-                            <button @click="unreserveUnit(unit)"
-                                    class="w-full bg-blue-50 text-blue-700 py-2 rounded text-sm font-medium border border-blue-200">
-                                取消預約
-                            </button>
-                        </div>
-                        <div class="text-center text-red-600 text-sm font-bold py-2 bg-red-50 rounded" x-show="unit.display_status === 'EXPIRED'">
-                            ⚠️ 此血袋已過期，請報廢處理
-                        </div>
-                    </div>
-                </template>
+                <div x-show="units.length === 0" class="text-center py-4 text-gray-400">
+                    目前沒有血袋可補印標籤
+                </div>
             </div>
 
-            <div x-show="!loading && filteredUnits.length === 0" class="text-center py-8 text-gray-500">
-                沒有符合條件的血袋
+            <!-- 最近入庫記錄 -->
+            <div class="bg-white rounded-xl shadow-lg p-4">
+                <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    最近入庫
+                </h3>
+                <div class="space-y-2">
+                    <template x-for="unit in units.filter(u => u.status === 'AVAILABLE').slice(0, 5)" :key="'recent-' + unit.id">
+                        <div class="flex items-center justify-between text-sm py-1 border-b border-gray-100">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold" x-text="unit.blood_type"></span>
+                                <span class="text-xs px-1 rounded bg-gray-100" x-text="unit.unit_type"></span>
+                            </div>
+                            <span class="text-gray-500 font-mono text-xs" x-text="unit.id.slice(-8)"></span>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
 
@@ -713,11 +754,15 @@
     </main>
 
     <!-- Receive Modal -->
+    <!-- v2.8: 一般入庫 Modal (捐血中心) -->
     <div x-show="showReceiveModal" x-cloak
          class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
         <div class="bg-white w-full rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold">血袋入庫</h3>
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <span class="bg-red-100 text-red-600 p-1 rounded">🏥</span>
+                    捐血中心入庫
+                </h3>
                 <button @click="showReceiveModal = false" class="text-gray-500">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -725,26 +770,28 @@
                 </button>
             </div>
             <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">血型</label>
-                    <select x-model="receiveForm.blood_type" class="w-full border rounded px-3 py-2">
-                        <template x-for="type in ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']">
-                            <option :value="type" x-text="type"></option>
-                        </template>
-                    </select>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">血型 *</label>
+                        <select x-model="receiveForm.blood_type" class="w-full border rounded px-3 py-2">
+                            <template x-for="type in ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']">
+                                <option :value="type" x-text="type"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">血品類型</label>
+                        <select x-model="receiveForm.unit_type" class="w-full border rounded px-3 py-2">
+                            <option value="WB">WB (全血)</option>
+                            <option value="PRBC">PRBC (紅血球)</option>
+                            <option value="FFP">FFP (血漿)</option>
+                            <option value="PLT">PLT (血小板)</option>
+                            <option value="CRYO">CRYO (冷沉澱)</option>
+                        </select>
+                    </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">血品類型</label>
-                    <select x-model="receiveForm.unit_type" class="w-full border rounded px-3 py-2">
-                        <option value="WB">WB (全血 Whole Blood)</option>
-                        <option value="PRBC">PRBC (濃縮紅血球)</option>
-                        <option value="FFP">FFP (新鮮冷凍血漿)</option>
-                        <option value="PLT">PLT (血小板)</option>
-                        <option value="CRYO">CRYO (冷凍沉澱品)</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">效期</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">效期 *</label>
                     <input type="date" x-model="receiveForm.expiry_date"
                            class="w-full border rounded px-3 py-2">
                 </div>
@@ -770,6 +817,83 @@
                         列印標籤
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- v2.8: 緊急捐血 Modal (Walking Blood Bank) -->
+    <div x-show="showEmergencyDonationModal" x-cloak
+         class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
+        <div class="bg-gradient-to-b from-orange-50 to-white w-full rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold flex items-center gap-2 text-orange-700">
+                    <span class="bg-orange-500 text-white p-1 rounded">🚨</span>
+                    緊急捐血 (Walking Blood Bank)
+                </h3>
+                <button @click="showEmergencyDonationModal = false" class="text-gray-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- 警告提示 -->
+            <div class="bg-orange-100 border-l-4 border-orange-500 p-3 mb-4 rounded-r">
+                <p class="text-sm text-orange-800">
+                    <strong>緊急捐血</strong>：適用於現場捐血者直接輸血的緊急狀況。<br>
+                    需記錄捐血者資訊，事後補做完整血液檢驗。
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <!-- 捐血者資訊 -->
+                <div class="bg-white rounded-lg p-3 border border-orange-200">
+                    <h4 class="font-bold text-gray-700 mb-2">捐血者資訊</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">姓名 *</label>
+                            <input type="text" x-model="receiveForm.donor_name"
+                                   placeholder="捐血者姓名"
+                                   class="w-full border rounded px-3 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">電話</label>
+                            <input type="tel" x-model="receiveForm.donor_phone"
+                                   placeholder="0912-345-678"
+                                   class="w-full border rounded px-3 py-2">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 血品資訊 -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">血型 *</label>
+                        <select x-model="receiveForm.blood_type" class="w-full border rounded px-3 py-2">
+                            <template x-for="type in ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']">
+                                <option :value="type" x-text="type"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">血品類型</label>
+                        <select x-model="receiveForm.unit_type" class="w-full border rounded px-3 py-2">
+                            <option value="WB" selected>WB (全血) - 緊急首選</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-sm text-gray-500 bg-gray-50 p-2 rounded">
+                    效期將自動設為 21 天 (Walking Blood Bank 標準)
+                </div>
+
+                <button @click="receiveForm.source = 'walking_donor'; receiveForm.unit_type = 'WB'; receiveForm.expiry_date = new Date(Date.now() + 21*24*60*60*1000).toISOString().split('T')[0]; receiveUnit(); showEmergencyDonationModal = false;"
+                        class="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    確認緊急入庫
+                </button>
             </div>
         </div>
     </div>
@@ -965,6 +1089,7 @@
                 dashboardFilter: '',  // v2.7: Dashboard blood type filter
 
                 showReceiveModal: false,
+                showEmergencyDonationModal: false,  // v2.8: 緊急捐血 Modal
                 showExpiryBlocker: false,
                 blockerMessage: '',
 
@@ -1007,7 +1132,10 @@
                     blood_type: 'O+',
                     unit_type: 'WB',
                     expiry_date: '',
-                    donation_id: ''
+                    donation_id: '',
+                    source: 'blood_center',  // v2.8: blood_center | walking_donor
+                    donor_name: '',          // v2.8: 緊急捐血者姓名
+                    donor_phone: ''          // v2.8: 緊急捐血者電話
                 },
 
                 emergencyForm: {
@@ -1191,6 +1319,13 @@
                     return classes[unitType] || 'border-gray-300';
                 },
 
+                // v2.8: 補印標籤功能
+                printUnitLabel(unitId) {
+                    // 開啟標籤列印頁面
+                    window.open(`/api/blood/units/${unitId}/label`, '_blank');
+                    this.showToast('正在開啟標籤列印...', 'info');
+                },
+
                 async receiveUnit() {
                     if (!this.receiveForm.blood_type || !this.receiveForm.expiry_date) {
                         this.showToast('請填寫必要欄位', 'error');
@@ -1208,7 +1343,7 @@
                         if (data.success) {
                             this.showToast('入庫成功', 'success');
                             this.showReceiveModal = false;
-                            this.receiveForm = { blood_type: 'O+', unit_type: 'PRBC', expiry_date: '', donation_id: '' };
+                            this.receiveForm = { blood_type: 'O+', unit_type: 'WB', expiry_date: '', donation_id: '', source: 'blood_center', donor_name: '', donor_phone: '' };
                             await this.refresh();
                         } else {
                             this.showToast(data.detail || '入庫失敗', 'error');

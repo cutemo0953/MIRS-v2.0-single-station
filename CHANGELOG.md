@@ -6,6 +6,33 @@
 
 ---
 
+## [Blood Bank PWA v2.8.0] - 2026-01-14
+
+### 新增 (Added)
+- **Tab 架構重構**: 庫存總覽整合完整血袋清單 (含 FIFO/預約/發血按鈕)
+- **入庫+標籤 Tab**: 新 Tab 取代原「血袋清單」
+  - 入庫來源卡片選擇: 捐血中心 vs 緊急捐血 (Walking Blood Bank)
+  - 補印標籤功能: 從現有血袋清單選擇補印
+  - 最近入庫記錄顯示
+- **緊急捐血流程**: Walking Blood Bank 現場捐血入庫
+  - 捐血者資訊記錄 (姓名/電話)
+  - 自動設定 21 天效期
+  - 橙紅色警示 Modal UI
+
+### 改進 (Improved)
+- **MIRS 血庫統計**: 恢復深紅色漸層背景 (原始 MIRS 風格)
+- **庫存總覽 UX**: 點擊血型卡片後直接顯示該血型血袋清單，可直接發血/預約
+
+### 檔案變更
+| 檔案 | 說明 |
+|------|------|
+| `frontend/blood/index.html` | Tab 重構 + 緊急捐血 Modal + 補印標籤 |
+| `frontend/blood/service-worker.js` | v2.8.0 快取刷新 |
+| `Index.html` | MIRS 血庫 Tab 恢復深紅色統計區塊 |
+| `docs/DEV_SPEC_BLOOD_BANK_PWA_v2.7.md` | 更新為 v2.8 規格 |
+
+---
+
 ## [Blood Bank PWA v2.7.1] - 2026-01-13
 
 ### 新增 (Added)

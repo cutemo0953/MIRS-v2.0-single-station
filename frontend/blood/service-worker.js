@@ -1,5 +1,5 @@
 /**
- * MIRS Blood Bank PWA Service Worker v2.7.1
+ * MIRS Blood Bank PWA Service Worker v2.8.0
  *
  * Based on DEV_SPEC_BLOOD_BANK_PWA_v2.7:
  * - Scope 隔離：/blood/ 獨立快取
@@ -17,9 +17,14 @@
  * - Card-style receive button in Units tab
  * - WB (Whole Blood) demo data support
  * - Responsive max-width for laptop screens
+ *
+ * v2.8.0 Changes (Tab Restructure):
+ * - 庫存總覽: 整合完整血袋清單 (FIFO/預約/發血按鈕)
+ * - 入庫+標籤: 新 Tab (捐血中心/緊急捐血/補印標籤)
+ * - Walking Blood Bank: 緊急捐血入庫流程
  */
 
-const CACHE_NAME = 'mirs-blood-v2.7.1';
+const CACHE_NAME = 'mirs-blood-v2.8.0';
 const SCOPE = '/blood/';
 
 // 需要快取的靜態資源
@@ -33,7 +38,7 @@ const STATIC_ASSETS = [
 
 // Install event
 self.addEventListener('install', (event) => {
-    console.log('[Blood SW] Installing v2.7.1');
+    console.log('[Blood SW] Installing v2.8.0');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
