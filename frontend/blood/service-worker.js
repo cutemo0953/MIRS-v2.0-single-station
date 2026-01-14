@@ -31,7 +31,7 @@
  * - WB 全血效期改為 7 天
  */
 
-const CACHE_NAME = 'mirs-blood-v2.8.1';
+const CACHE_NAME = 'mirs-blood-v2.8.2';
 const SCOPE = '/blood/';
 
 // 需要快取的靜態資源
