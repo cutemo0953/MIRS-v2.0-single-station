@@ -6,6 +6,28 @@
 
 ---
 
+## [Blood Bank PWA v2.8.2] - 2026-01-14
+
+### 改進 (Improved)
+- **MIRS 色系統一**: 發血作業全面改用紅色系 (`red-700`)，取代灰色/綠色混用
+- **待補單按鈕**: `bg-green-600` → `bg-red-700`
+- **捐血中心 Modal**: emoji 🏥 改 heroicon
+
+### 設計規範
+- 主要按鈕: `bg-red-700 hover:bg-red-800`
+- 緊急按鈕: `bg-red-600 hover:bg-red-700`
+- 選中狀態: `border-red-600 bg-red-50`
+- focus ring: `ring-red-500`
+
+### 檔案變更
+| 檔案 | 說明 |
+|------|------|
+| `frontend/blood/index.html` | 發血/待補單色系統一 |
+| `frontend/blood/service-worker.js` | v2.8.2 快取刷新 |
+| `docs/DEV_SPEC_BLOOD_BANK_PWA_v2.7.md` | 新增色系規範章節 |
+
+---
+
 ## [Blood Bank PWA v2.8.1] - 2026-01-14
 
 ### 修復 (Fixed)
