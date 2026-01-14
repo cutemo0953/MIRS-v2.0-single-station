@@ -6,6 +6,28 @@
 
 ---
 
+## [Blood Bank PWA v2.8.1] - 2026-01-14
+
+### 修復 (Fixed)
+- **標籤補印**: 改為 Client-side 生成 HTML 標籤 (原 API 404)
+- **WB 全血效期**: 21 天改為 7 天 (凝血因子有效期)
+
+### 改進 (Improved)
+- **緊急捐血 Modal**: 加入半透明 backdrop、改良關閉按鈕、移除漸層改單色
+- **緊急領血 FAB**: emoji 改 heroicon
+- **發血作業 UI**: 統一灰色配色 (gray-800)，各欄位加 icon
+- **MIRS 血袋統計**: 簡化為僅深紅底 + 總數顯示 (移除分項卡片)
+
+### 檔案變更
+| 檔案 | 說明 |
+|------|------|
+| `frontend/blood/index.html` | Modal/Issue UI 優化、printUnitLabel client-side |
+| `frontend/blood/service-worker.js` | v2.8.1 快取刷新 |
+| `routes/blood.py` | WB 效期 21→7 天 |
+| `Index.html` | MIRS 血袋統計簡化 |
+
+---
+
 ## [Blood Bank PWA v2.8.0] - 2026-01-14
 
 ### 新增 (Added)
@@ -16,7 +38,6 @@
   - 最近入庫記錄顯示
 - **緊急捐血流程**: Walking Blood Bank 現場捐血入庫
   - 捐血者資訊記錄 (姓名/電話)
-  - 自動設定 21 天效期
   - 橙紅色警示 Modal UI
 
 ### 改進 (Improved)
