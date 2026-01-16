@@ -78,7 +78,7 @@
                           d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                 </svg>
                 <h1 class="text-lg font-bold">Blood Bank</h1>
-                <span class="text-xs bg-red-800 px-2 py-0.5 rounded">v2.8</span>
+                <span class="text-xs bg-red-800 px-2 py-0.5 rounded">v2.9</span>
             </div>
             <div class="flex items-center gap-2">
                 <span x-show="isOffline" class="bg-yellow-500 text-xs px-2 py-1 rounded">離線</span>
@@ -185,9 +185,14 @@
                 <!-- 2x4 Grid of Blood Type Cards -->
                 <div class="grid grid-cols-4 sm:grid-cols-8 gap-3">
                     <template x-for="blood in groupedByBloodType" :key="blood.blood_type">
+                        <!-- v2.9: 加入 ring 顯示選中狀態 -->
                         <div @click="filterByBloodType(blood.blood_type)"
                              class="cursor-pointer rounded-xl p-4 shadow-lg transform hover:scale-105 transition-all duration-200"
-                             :class="blood.total > 0 ? 'bg-red-900 hover:bg-red-800' : 'bg-gray-700 hover:bg-gray-600'">
+                             :class="{
+                                 'bg-red-900 hover:bg-red-800': blood.total > 0 && bloodTypeFilter !== blood.blood_type,
+                                 'bg-red-800 ring-4 ring-yellow-400 scale-105': bloodTypeFilter === blood.blood_type,
+                                 'bg-gray-700 hover:bg-gray-600': blood.total === 0 && bloodTypeFilter !== blood.blood_type
+                             }">
                             <div class="text-center">
                                 <!-- Blood Type - HUGE -->
                                 <div class="text-3xl sm:text-4xl font-black text-white mb-1" x-text="blood.blood_type"></div>
@@ -224,33 +229,18 @@
                     </div>
                 </div>
 
-                <!-- Active Filter Indicator -->
-                <div x-show="dashboardFilter" class="mt-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-2">
+                <!-- v2.9: Active Filter Indicator (統一使用 bloodTypeFilter) -->
+                <div x-show="bloodTypeFilter" class="mt-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-2">
                     <span class="text-blue-700 text-sm">
-                        篩選中: <span class="font-bold" x-text="dashboardFilter"></span>
+                        篩選中: <span class="font-bold" x-text="bloodTypeFilter"></span>
                     </span>
-                    <button @click="dashboardFilter = ''" class="text-blue-600 text-sm underline">清除篩選</button>
+                    <button @click="bloodTypeFilter = ''" class="text-blue-600 text-sm underline">清除篩選</button>
                 </div>
             </div>
 
             <!-- v2.8: 完整血袋清單 (含 FIFO、預約、發血按鈕) -->
+            <!-- v2.9: 移除重複的血型按鈕列，改用上方統計卡片進行篩選 -->
             <div x-show="!loading" class="max-w-3xl mx-auto">
-                <!-- Blood Type Filter -->
-                <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
-                    <button @click="unitFilter = ''"
-                            :class="unitFilter === '' ? 'bg-blood-600 text-white' : 'bg-white text-gray-700'"
-                            class="px-3 py-1 rounded text-sm whitespace-nowrap shadow-sm">
-                        全部
-                    </button>
-                    <template x-for="type in ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']">
-                        <button @click="unitFilter = type"
-                                :class="unitFilter === type ? 'bg-blood-600 text-white' : 'bg-white text-gray-700'"
-                                class="px-3 py-1 rounded text-sm whitespace-nowrap shadow-sm"
-                                x-text="type">
-                        </button>
-                    </template>
-                </div>
-
                 <!-- Unit List with Full Features -->
                 <div class="space-y-2">
                     <template x-for="unit in filteredUnits" :key="unit.id">
@@ -1161,8 +1151,7 @@
 
                 availability: [],
                 units: [],
-                unitFilter: '',
-                dashboardFilter: '',  // v2.7: Dashboard blood type filter
+                bloodTypeFilter: '',  // v2.9: 統一血型篩選 (原 unitFilter + dashboardFilter)
 
                 showReceiveModal: false,
                 showEmergencyDonationModal: false,  // v2.8: 緊急捐血 Modal
@@ -1290,9 +1279,10 @@
                     }
                 },
 
+                // v2.9: 使用統一的 bloodTypeFilter
                 get filteredUnits() {
-                    if (!this.unitFilter) return this.units;
-                    return this.units.filter(u => u.blood_type === this.unitFilter);
+                    if (!this.bloodTypeFilter) return this.units;
+                    return this.units.filter(u => u.blood_type === this.bloodTypeFilter);
                 },
 
                 get expiringSoonCount() {
@@ -1368,18 +1358,18 @@
                     return this.groupedByBloodType.reduce((sum, b) => sum + b.expiring, 0);
                 },
 
-                // v2.7: Dashboard 過濾後的 availability
+                // v2.9: 統一的過濾後 availability (使用 bloodTypeFilter)
                 get filteredByDashboard() {
-                    if (!this.dashboardFilter) return this.availability;
-                    return this.availability.filter(a => a.blood_type === this.dashboardFilter);
+                    if (!this.bloodTypeFilter) return this.availability;
+                    return this.availability.filter(a => a.blood_type === this.bloodTypeFilter);
                 },
 
-                // v2.7: 點擊血型卡片過濾
+                // v2.9: 點擊血型卡片過濾 (同時篩選 Dashboard 和血袋清單)
                 filterByBloodType(bloodType) {
-                    if (this.dashboardFilter === bloodType) {
-                        this.dashboardFilter = '';  // 再次點擊清除過濾
+                    if (this.bloodTypeFilter === bloodType) {
+                        this.bloodTypeFilter = '';  // 再次點擊清除過濾
                     } else {
-                        this.dashboardFilter = bloodType;
+                        this.bloodTypeFilter = bloodType;
                     }
                 },
 
