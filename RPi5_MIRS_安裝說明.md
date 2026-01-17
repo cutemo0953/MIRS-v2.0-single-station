@@ -8,6 +8,8 @@
 >
 > **xIRS Hub-Satellite 架構**：MIRS 作為 CIRS Hub 的 Satellite 運行（CIRS:8090, MIRS:8000）
 
+> **📅 2026-01-16 更新**：新增 Raspberry Pi OS Bookworm/Trixie 的 NetworkManager 熱點設定方法，以及 WiFi 穩定性問題排除指南
+
 ---
 
 ## 📦 需要準備的東西
@@ -793,6 +795,105 @@ crontab -e
 
 ---
 
+## 📱 第三階段 (替代)：NetworkManager 熱點設定 (Bookworm/Trixie)
+
+> **⚠️ 重要**：Raspberry Pi OS **Bookworm (2024+)** 和 **Trixie (2025+)** 已改用 **NetworkManager**，不再使用 dhcpcd。如果你的系統顯示 `dhcpcd.service not found`，請使用此方法。
+
+### 檢查系統版本
+
+```bash
+# 查看 OS 版本
+cat /etc/os-release | grep VERSION
+
+# 如果顯示 bookworm 或 trixie，使用此方法
+```
+
+### 步驟 1：使用 NetworkManager 建立熱點
+
+```bash
+# 一鍵建立熱點（推薦，預設 IP: 10.42.0.1）
+sudo nmcli device wifi hotspot ifname wlan0 ssid "DNO-HC01" password "mirs2025"
+
+# 設定穩定性優化（頻道 6 較少干擾）
+sudo nmcli con modify Hotspot 802-11-wireless.channel 6
+sudo nmcli con down Hotspot && sudo nmcli con up Hotspot
+```
+
+> **熱點 IP 位址**：一鍵建立熱點時，預設 IP 為 `10.42.0.1`
+> 連上熱點後，存取網址：`http://10.42.0.1:8000` (MIRS)、`http://10.42.0.1:8090` (CIRS)、`http://10.42.0.1:8001` (HIRS)
+
+**或使用自訂 IP（10.0.0.1）**：
+
+```bash
+# 分步驟建立（可自訂 IP 為 10.0.0.1）
+sudo nmcli con add type wifi ifname wlan0 con-name hotspot autoconnect yes ssid "DNO-HC01"
+sudo nmcli con modify hotspot 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared ipv4.addresses 10.0.0.1/24
+sudo nmcli con modify hotspot wifi-sec.key-mgmt wpa-psk wifi-sec.psk "mirs2025"
+sudo nmcli con modify hotspot 802-11-wireless.channel 6
+sudo nmcli con up hotspot
+```
+
+### 步驟 2：設定 NAT 網路轉發（讓熱點可上網）
+
+```bash
+# 開啟 IP 轉發
+sudo sysctl -w net.ipv4.ip_forward=1
+echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf
+
+# 設定 NAT (使用 nftables，Bookworm+ 預設)
+sudo nft add table nat
+sudo nft add chain nat postrouting { type nat hook postrouting priority 100 \; }
+sudo nft add rule nat postrouting oifname "eth0" masquerade
+
+# 永久保存 nftables 規則
+sudo nft list ruleset | sudo tee /etc/nftables.conf
+sudo systemctl enable nftables
+```
+
+### 步驟 3：WiFi 穩定性優化
+
+```bash
+# 關閉 WiFi 省電模式（重要！）
+sudo iw dev wlan0 set power_save off
+
+# 永久關閉省電模式
+echo 'ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan0", RUN+="/usr/sbin/iw dev wlan0 set power_save off"' | sudo tee /etc/udev/rules.d/70-wifi-powersave.rules
+
+# 設定正確的國家區域
+sudo iw reg set TW
+echo 'REGDOMAIN=TW' | sudo tee /etc/default/crda
+```
+
+### 步驟 4：驗證熱點設定
+
+```bash
+# 檢查熱點狀態
+nmcli con show --active
+
+# 檢查 wlan0 IP
+ip addr show wlan0
+# 一鍵建立: inet 10.42.0.1/24
+# 自訂 IP: inet 10.0.0.1/24
+
+# 檢查 AP 模式
+iw dev wlan0 info | grep type
+# 應顯示: type AP
+
+# 檢查省電模式
+iw dev wlan0 get power_save
+# 應顯示: Power save: off
+```
+
+### 步驟 5：設定開機自動啟動
+
+```bash
+# 已在 nmcli con add 時設定 autoconnect yes
+# 確認設定
+nmcli con show hotspot | grep autoconnect
+```
+
+---
+
 ## 🚨 常見問題排除
 
 ### 問題 0：pip 安裝失敗 (Python 3.13 相容性)
@@ -917,14 +1018,148 @@ sudo reboot
 # SSH 連線到 Pi（用乙太網路）
 ssh medical@medical-tc01.local
 
-# 查看密碼
+# 查看密碼 (hostapd 舊方法)
 sudo grep "wpa_passphrase" /etc/hostapd/hostapd.conf
 
-# 修改密碼
-sudo nano /etc/hostapd/hostapd.conf
-# 找到 wpa_passphrase= 這一行修改
-# 儲存後重啟
-sudo systemctl restart hostapd
+# 查看密碼 (NetworkManager 新方法)
+sudo nmcli con show hotspot | grep psk
+
+# 修改密碼 (NetworkManager)
+sudo nmcli con modify hotspot wifi-sec.psk "新密碼"
+sudo nmcli con down hotspot && sudo nmcli con up hotspot
+```
+
+### 問題 6：WiFi 熱點不穩定 / 常斷線 (Bookworm/Trixie)
+
+**症狀**：
+- 手機連上熱點後常斷線重連
+- WiFi 訊號不穩定
+- 連線速度緩慢
+
+**原因**：
+- RPi 內建 WiFi 作為 AP 時效能有限
+- WiFi 省電模式干擾
+- 頻道干擾
+- 驅動程式問題
+
+**解決方法**：
+
+```bash
+# 1. 關閉省電模式（最重要）
+sudo iw dev wlan0 set power_save off
+iw dev wlan0 get power_save  # 確認顯示 off
+
+# 永久關閉省電
+echo 'ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan0", RUN+="/usr/sbin/iw dev wlan0 set power_save off"' | sudo tee /etc/udev/rules.d/70-wifi-powersave.rules
+
+# 2. 更換 WiFi 頻道（1, 6, 11 較少干擾）
+sudo nmcli con modify hotspot 802-11-wireless.channel 1
+sudo nmcli con down hotspot && sudo nmcli con up hotspot
+
+# 3. 設定正確國家區域
+sudo iw reg set TW
+sudo raspi-config nonint do_wifi_country TW
+
+# 4. 強制使用 802.11g（較穩定）
+sudo nmcli con modify hotspot 802-11-wireless.band bg
+
+# 5. 檢查錯誤日誌
+dmesg | grep -i wlan
+journalctl -u NetworkManager | tail -50
+```
+
+**若仍不穩定，考慮以下方案**：
+
+1. **使用 USB WiFi 網卡做熱點**（推薦）
+   - 內建 WiFi 連家用網路
+   - USB WiFi 做 AP
+   - 穩定度大幅提升
+
+2. **使用有線網路存取**
+   - 讓所有裝置連同一個路由器
+   - 透過 `192.168.x.x` 存取 Pi
+   - 熱點只在無網路環境使用
+
+3. **降級到 Bullseye**
+   - 舊版 Raspberry Pi OS 使用 hostapd
+   - 某些使用者回報較穩定
+
+### 問題 7：dhcpcd.service not found (Bookworm/Trixie)
+
+**錯誤訊息**：
+```
+Failed to restart dhcpcd.service: Unit dhcpcd.service not found.
+```
+
+**原因**：
+- Raspberry Pi OS Bookworm (2024+) 和 Trixie (2025+) 已改用 NetworkManager
+- dhcpcd 不再預設安裝
+
+**解決方法**：
+- 請參考上方「第三階段 (替代)：NetworkManager 熱點設定」
+- 使用 `nmcli` 指令取代 hostapd/dnsmasq 設定
+
+### 問題 8：熱點無法上網 / NAT 不工作 (Bookworm/Trixie)
+
+**症狀**：
+- 手機連上熱點
+- 可以 ping 到 Pi (10.0.0.1)
+- 但無法上網
+
+**原因**：
+- IP 轉發未開啟
+- NAT 規則未設定
+- Bookworm+ 使用 nftables 而非 iptables
+
+**解決方法**：
+
+```bash
+# 1. 確認 IP 轉發已開啟
+cat /proc/sys/net/ipv4/ip_forward
+# 如果是 0，執行：
+sudo sysctl -w net.ipv4.ip_forward=1
+echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf
+
+# 2. 設定 NAT (nftables 方法)
+sudo nft add table nat
+sudo nft add chain nat postrouting { type nat hook postrouting priority 100 \; }
+sudo nft add rule nat postrouting oifname "eth0" masquerade
+
+# 3. 確認規則
+sudo nft list ruleset
+
+# 4. 永久保存
+sudo nft list ruleset | sudo tee /etc/nftables.conf
+sudo systemctl enable nftables
+
+# 5. 或安裝 iptables 相容層
+sudo apt install iptables
+sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+```
+
+### 問題 9：SSH 連線時 Host key verification failed
+
+**錯誤訊息**：
+```
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Host key verification failed.
+```
+
+**原因**：
+- 重刷 SD 卡後 SSH key 改變
+- 之前連線的紀錄與新的不符
+
+**解決方法**：
+```bash
+# 移除舊的 SSH key 紀錄
+ssh-keygen -R hostname.local
+ssh-keygen -R 192.168.1.xxx
+
+# 重新連線
+ssh user@hostname.local
+# 輸入 yes 接受新的 key
 ```
 
 ---
@@ -982,11 +1217,13 @@ sudo systemctl restart hostapd
 ### 步驟 1：確認網路連線
 
 ```bash
-# 確認可以連到 CIRS Hub（替換成實際 IP）
-ping 192.168.1.100
+# 如果 CIRS Hub 與 MIRS 在同一台 Pi（推薦）
+curl http://localhost:8090/api/health
+# 預期: {"status":"healthy"}
 
-# 測試 CIRS API（CIRS 預設在 8090）
-curl http://192.168.1.100:8090/api/health
+# 如果 CIRS Hub 在另一台 Pi（替換成實際 IP）
+ping 192.168.1.xxx
+curl http://192.168.1.xxx:8090/api/health
 ```
 
 ### 步驟 2：設定 CIRS Hub URL
@@ -1005,8 +1242,8 @@ sudo systemctl restart mirs
 
 ### 步驟 3：驗證連線
 
-開啟麻醉模組（http://10.0.0.1:8000/anesthesia），點擊「開始新案例」，
-應該會看到 CIRS 候診名單顯示「🟢 連線」狀態。
+開啟麻醉模組（`http://10.42.0.1:8000/anesthesia` 或 `http://Pi的IP:8000/anesthesia`），
+點擊「開始新案例」，應該會看到 CIRS 候診名單顯示「🟢 連線」狀態。
 
 > **離線模式**：若 CIRS Hub 無法連線，系統會自動切換為離線模式，
 > 仍可手動輸入病患資料繼續操作。
@@ -1015,7 +1252,11 @@ sudo systemctl restart mirs
 
 ## 🌐 第七階段：完整 xIRS 多服務部署（選用）
 
-在同一台 Raspberry Pi 上運行完整的 xIRS Hub-Satellite 架構：
+在同一台 Raspberry Pi 上運行完整的 xIRS Hub-Satellite 架構，提供社區物資管理 (CIRS)、家庭物資 (HIRS) 和醫療站庫存 (MIRS) 三合一服務。
+
+> **⚠️ 使用者名稱說明**：本指南使用 `$USER` 代表你的使用者名稱。如果你使用 Raspberry Pi Imager 設定的使用者名稱（例如 `dno`、`medical` 或 `pi`），請將所有 `$USER` 替換為該名稱。
+>
+> 例如：如果你的使用者是 `dno`，則 `/home/$USER/` 改為 `/home/dno/`
 
 ### 服務架構
 
@@ -1024,37 +1265,106 @@ sudo systemctl restart mirs
 │  Raspberry Pi (Hub-Satellite Architecture)      │
 ├─────────────────────────────────────────────────┤
 │  Port 8090: CIRS Hub (社區管理 - 權威中心)       │
-│  Port 8001: HIRS (家庭物資 - 選配)               │
+│    /lobby/     - Gateway Lobby (裝置配對)        │
+│    /admin/     - 管理控制台                       │
+│    /dashboard/ - Dashboard PWA (統計)            │
+│    /station/   - 物資站 PWA (Teal)               │
+│    /pharmacy/  - 藥局站 PWA (Indigo)             │
+│    /doctor/    - 醫師 PWA (Blue)                 │
+│    /nurse/     - 護理站 PWA (Pink)               │
+│    /mobile/    - Satellite PWA (志工手機)        │
+│                                                  │
+│  Port 8001: HIRS (家庭物資管理)                  │
+│    - PWA 離線優先，手機可安裝                     │
+│    - 連上 WiFi 即可讓民眾下載安裝                 │
+│                                                  │
 │  Port 8000: MIRS Satellite (醫療站麻醉模組)      │
+│    /anesthesia - 麻醉記錄                        │
+│    /emt        - 病患轉送                        │
 └─────────────────────────────────────────────────┘
+              ↑ WiFi Hotspot / LAN
+    ┌─────────┴─────────┐
+    │  手機/平板 PWA    │  ← 離線優先，Gateway 配對
+    └───────────────────┘
 ```
 
-### 步驟 1：下載 CIRS 和 HIRS
+---
+
+### 7.1 安裝 CIRS Hub (社區物資管理系統)
+
+CIRS 是 xIRS 架構的權威中心，負責社區物資管理、人員報到、檢傷分類等功能。
+
+#### 步驟 1：下載 CIRS
 
 ```bash
 cd ~
 git clone https://github.com/cutemo0953/CIRS.git
-git clone https://github.com/cutemo0953/HIRS.git
+cd CIRS
 ```
 
-### 步驟 2：建立 CIRS 服務
+#### 步驟 2：建立虛擬環境並安裝依賴
+
+```bash
+# 建立虛擬環境（在 CIRS 根目錄）
+python3 -m venv venv
+source venv/bin/activate
+
+# 升級 pip
+pip install --upgrade pip
+
+# 安裝依賴（從 backend 目錄）
+cd backend
+pip install -r requirements.txt
+```
+
+**如果遇到 Python 3.13 相容性問題**：
+```bash
+# 直接安裝新版套件
+pip install fastapi>=0.115.0 uvicorn[standard] pydantic>=2.8.0 sqlalchemy aiosqlite bcrypt pynacl httpx
+```
+
+#### 步驟 3：初始化資料庫
+
+```bash
+# 仍在 backend 目錄
+python init_db.py
+
+# 預期輸出：
+# ✅ 資料庫初始化完成
+# 預設帳號：admin001 (PIN: 1234)
+```
+
+#### 步驟 4：測試 CIRS
+
+```bash
+# 測試啟動（開發模式）
+uvicorn main:app --host 0.0.0.0 --port 8090
+
+# 測試連線
+curl http://localhost:8090/api/health
+# 預期回應: {"status":"healthy"}
+
+# 測試成功後按 Ctrl+C 停止
+```
+
+#### 步驟 5：建立 CIRS systemd 服務
 
 ```bash
 sudo nano /etc/systemd/system/cirs.service
 ```
 
-**貼上以下內容**：
+**貼上以下內容**（請將 `$USER` 替換為你的使用者名稱）：
 ```ini
 [Unit]
-Description=CIRS Hub Server v2.5.1
+Description=CIRS Hub v3.5 (xIRS Authority Center)
 After=network.target
 
 [Service]
 Type=simple
-User=medical
-WorkingDirectory=/home/medical/CIRS/backend
-Environment=PATH=/home/medical/CIRS/venv/bin:/usr/bin
-ExecStart=/home/medical/CIRS/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8090
+User=$USER
+WorkingDirectory=/home/$USER/CIRS/backend
+Environment=PATH=/home/$USER/CIRS/venv/bin:/usr/bin
+ExecStart=/home/$USER/CIRS/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8090
 Restart=always
 RestartSec=5
 
@@ -1062,22 +1372,65 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-### 步驟 3：建立 HIRS 服務
+**範例**（如果使用者是 `dno`）：
+```ini
+[Unit]
+Description=CIRS Hub v3.5 (xIRS Authority Center)
+After=network.target
+
+[Service]
+Type=simple
+User=dno
+WorkingDirectory=/home/dno/CIRS/backend
+Environment=PATH=/home/dno/CIRS/venv/bin:/usr/bin
+ExecStart=/home/dno/CIRS/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8090
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### 步驟 6：啟動 CIRS 服務
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable cirs
+sudo systemctl start cirs
+sudo systemctl status cirs
+```
+
+---
+
+### 7.2 安裝 HIRS (家庭物資管理系統)
+
+HIRS 是一個靜態 PWA，讓民眾連上 WiFi 熱點後可以下載安裝到手機，即使斷開 WiFi 也能離線使用。
+
+#### 步驟 1：下載 HIRS
+
+```bash
+cd ~
+git clone https://github.com/cutemo0953/HIRS.git
+```
+
+#### 步驟 2：建立 HIRS systemd 服務
+
+HIRS 是純靜態網頁，使用 Python HTTP Server 提供服務即可。
 
 ```bash
 sudo nano /etc/systemd/system/hirs.service
 ```
 
-**貼上以下內容**：
+**貼上以下內容**（請將 `$USER` 替換為你的使用者名稱）：
 ```ini
 [Unit]
-Description=HIRS (Home Inventory Resilience System)
+Description=HIRS v2.5 (Home Inventory Resilience System)
 After=network.target
 
 [Service]
 Type=simple
-User=medical
-WorkingDirectory=/home/medical/HIRS
+User=$USER
+WorkingDirectory=/home/$USER/HIRS
 ExecStart=/usr/bin/python3 -m http.server 8001
 Restart=always
 RestartSec=10
@@ -1086,7 +1439,102 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-### 步驟 4：啟動所有服務
+**範例**（如果使用者是 `dno`）：
+```ini
+[Unit]
+Description=HIRS v2.5 (Home Inventory Resilience System)
+After=network.target
+
+[Service]
+Type=simple
+User=dno
+WorkingDirectory=/home/dno/HIRS
+ExecStart=/usr/bin/python3 -m http.server 8001
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### 步驟 3：啟動 HIRS 服務
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable hirs
+sudo systemctl start hirs
+sudo systemctl status hirs
+```
+
+#### HIRS 使用場景
+
+連上 Pi 的 WiFi 熱點後，民眾可以：
+
+1. **開啟瀏覽器**，輸入 `http://10.42.0.1:8001`
+2. **點擊「加入主畫面」**（Safari 分享按鈕 → 加入主畫面）
+3. **安裝完成！** 即使離開 WiFi 熱點，HIRS 也能離線使用
+4. 下次災難發生時，打開 HIRS 就能查看家中物資狀態
+
+---
+
+### 7.3 更新 MIRS 服務設定
+
+如果 MIRS 要與 CIRS Hub 整合，需要更新服務設定。
+
+```bash
+sudo nano /etc/systemd/system/mirs.service
+```
+
+**貼上以下內容**（請將 `$USER` 替換為你的使用者名稱）：
+```ini
+[Unit]
+Description=MIRS Satellite v2.9.1 (Anesthesia Module)
+After=network.target cirs.service
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=/home/$USER/MIRS-v2.0-single-station
+Environment=PATH=/home/$USER/MIRS-v2.0-single-station/venv/bin:/usr/bin
+Environment=CIRS_HUB_URL=http://localhost:8090
+Environment=MIRS_STATION_ID=MIRS-001
+ExecStart=/home/$USER/MIRS-v2.0-single-station/venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**範例**（如果使用者是 `dno`）：
+```ini
+[Unit]
+Description=MIRS Satellite v2.9.1 (Anesthesia Module)
+After=network.target cirs.service
+
+[Service]
+Type=simple
+User=dno
+WorkingDirectory=/home/dno/MIRS-v2.0-single-station
+Environment=PATH=/home/dno/MIRS-v2.0-single-station/venv/bin:/usr/bin
+Environment=CIRS_HUB_URL=http://localhost:8090
+Environment=MIRS_STATION_ID=MIRS-001
+ExecStart=/home/dno/MIRS-v2.0-single-station/venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart mirs
+```
+
+---
+
+### 7.4 啟動所有服務
 
 ```bash
 # 重新載入服務設定
@@ -1096,36 +1544,129 @@ sudo systemctl daemon-reload
 sudo systemctl enable cirs hirs mirs
 sudo systemctl start cirs hirs mirs
 
-# 檢查狀態
+# 檢查狀態（應該都顯示 active (running)）
 sudo systemctl status cirs hirs mirs
 ```
 
-### 步驟 5：驗證多服務運作
+### 7.5 驗證多服務運作
 
 ```bash
-# 測試各服務
-curl http://localhost:8090/api/health  # CIRS Hub
-curl http://localhost:8001/            # HIRS
-curl http://localhost:8000/api/health  # MIRS Satellite
+# 測試 CIRS Hub
+curl http://localhost:8090/api/health
+# 預期: {"status":"healthy"}
 
-# 測試 v1.1 麻醉流程
-curl http://localhost:8090/api/registrations/waiting/anesthesia  # CIRS 待麻醉清單
-curl http://localhost:8000/api/anesthesia/proxy/cirs/waiting-anesthesia  # MIRS proxy
+# 測試 HIRS（靜態網頁）
+curl -s http://localhost:8001/ | head -5
+# 預期: <!DOCTYPE html>...
+
+# 測試 MIRS Satellite
+curl http://localhost:8000/api/health
+# 預期: {"status":"healthy"}
+
+# 測試 CIRS 待麻醉清單 API
+curl http://localhost:8090/api/registrations/waiting/anesthesia
+# 預期: {"registrations":[]}
 ```
 
-### 存取方式
+### 7.6 存取方式
+
+連上 Pi 的 WiFi 熱點後，用瀏覽器開啟以下網址：
+
+> **⚠️ IP 位址說明**：NetworkManager `shared` 模式預設使用 `10.42.0.1`。
+> 如果你手動設定了 `ipv4.addresses 10.0.0.1/24`，則使用 `10.0.0.1`。
+> 可用 `ip addr show wlan0` 查看實際 IP。
 
 | 服務 | URL | 說明 |
 |------|-----|------|
-| CIRS Hub | http://10.0.0.1:8090 | 社區管理、檢傷、掛號 |
-| HIRS | http://10.0.0.1:8001 | 家庭物資管理 |
-| MIRS | http://10.0.0.1:8000 | 醫療站物資 |
-| Mobile | http://10.0.0.1:8000/mobile | 行動版巡房助手 |
-| 麻醉模組 | http://10.0.0.1:8000/anesthesia | 麻醉記錄 |
-| EMT Transfer | http://10.0.0.1:8000/emt | 病患轉送物資規劃 |
+| **CIRS Hub** | http://10.42.0.1:8090 | 社區管理中心 |
+| CIRS Admin | http://10.42.0.1:8090/admin | 管理控制台 |
+| CIRS Lobby | http://10.42.0.1:8090/lobby | Gateway 裝置配對 |
+| CIRS Dashboard | http://10.42.0.1:8090/dashboard | 統計儀表板 |
+| CIRS Station | http://10.42.0.1:8090/station | 物資站 PWA |
+| CIRS Pharmacy | http://10.42.0.1:8090/pharmacy | 藥局站 PWA |
+| CIRS Doctor | http://10.42.0.1:8090/doctor | 醫師 PWA |
+| CIRS Nurse | http://10.42.0.1:8090/nurse | 護理站 PWA |
+| CIRS Mobile | http://10.42.0.1:8090/mobile | 志工手機 PWA |
+| **HIRS** | http://10.42.0.1:8001 | 家庭物資管理 |
+| **MIRS** | http://10.42.0.1:8000 | 醫療站物資 |
+| MIRS Anesthesia | http://10.42.0.1:8000/anesthesia | 麻醉記錄模組 |
+| MIRS EMT | http://10.42.0.1:8000/emt | 病患轉送規劃 |
+| MIRS Mobile | http://10.42.0.1:8000/mobile | 行動版巡房助手 |
+
+### 7.7 預設帳號
+
+**CIRS 預設帳號**（PIN 皆為 `1234`）：
+
+| ID | 名稱 | 角色 | 權限 |
+|---|---|---|---|
+| `admin001` | 管理員 | admin | 全部功能 + 站點設定 |
+| `staff001` | 志工小明 | staff | 入庫/出庫/報到/設備檢查 |
+| `medic001` | 醫護小華 | medic | 檢傷分類 + staff 權限 |
+
+### 7.8 更新 xIRS 系統
+
+```bash
+# 更新 CIRS
+cd ~/CIRS && git pull origin main
+cd backend && source ../venv/bin/activate && pip install -r requirements.txt
+python init_db.py  # 如果有 schema 更新
+sudo systemctl restart cirs
+
+# 更新 HIRS
+cd ~/HIRS && git pull origin main
+# HIRS 是靜態網頁，不需要重啟服務
+
+# 更新 MIRS
+cd ~/MIRS-v2.0-single-station && git pull origin main
+source venv/bin/activate && pip install -r api/requirements.txt --upgrade
+sudo systemctl restart mirs
+```
 
 ---
 
-**🏥 MIRS v2.9.1 - 專為野戰醫療站設計**
+### 7.9 問題排除：服務啟動失敗
+
+**問題：systemctl status 顯示 status=217/USER**
+
+```
+mirs.service: Failed at step USER spawning
+```
+
+**原因**：服務檔案中的 `User=xxx` 與實際使用者不符
+
+**解決方法**：
+
+```bash
+# 查看目前使用者
+whoami
+
+# 編輯服務檔案，確認 User 和路徑正確
+sudo nano /etc/systemd/system/mirs.service
+
+# 確認以下設定：
+# User=你的使用者名稱
+# WorkingDirectory=/home/你的使用者名稱/MIRS-v2.0-single-station
+# ExecStart=/home/你的使用者名稱/...
+
+# 重新載入並重啟
+sudo systemctl daemon-reload
+sudo systemctl restart mirs
+```
+
+**問題：CIRS 連線失敗**
+
+```bash
+# 檢查 CIRS 日誌
+sudo journalctl -u cirs -f
+
+# 常見原因：
+# 1. 虛擬環境路徑錯誤 → 檢查 Environment=PATH 設定
+# 2. 資料庫未初始化 → cd ~/CIRS/backend && python init_db.py
+# 3. 依賴未安裝 → pip install -r requirements.txt
+```
+
+---
+
+**🏥 MIRS v2.9.1 + CIRS v3.5 + HIRS v2.5 - 專為災難韌性設計**
 
 *De Novo Orthopedics Inc. © 2024-2026*
