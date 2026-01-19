@@ -432,6 +432,42 @@
             transform: scale(0.95);
         }
 
+        /* Timeline View Toggle v1.3 */
+        .timeline-view-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--bg);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .view-toggle-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-toggle-btn:hover {
+            background: var(--card-hover);
+        }
+
+        .view-toggle-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .view-toggle-btn svg {
+            flex-shrink: 0;
+        }
+
         .quick-btn.success {
             background: #10b981;
             border-color: #10b981;
@@ -1037,7 +1073,10 @@
                 </div>
             </div>
 
-            <!-- Quick Actions (順序: Vitals → 給藥 → 氧氣 → 開始麻醉 → 里程碑 → 結案) -->
+            <!-- Quick Actions: Record Events -->
+            <div class="section-title" style="margin: 12px 0 8px 0; font-size: 0.75rem; color: var(--text-muted);">
+                記錄麻醉事件
+            </div>
             <div class="quick-actions">
                 <button class="quick-btn primary" onclick="showVitalsModal()">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
@@ -1057,7 +1096,7 @@
                     </svg>
                     <span>氧氣</span>
                 </button>
-                <button class="quick-btn success" onclick="addMilestone('ANESTHESIA_START')" id="btnStart">
+                <button class="quick-btn success" onclick="startAnesthesiaWithTimeSelector()" id="btnStart">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -1078,12 +1117,23 @@
                 </button>
             </div>
 
-            <!-- Timeline v1.2 - Graphical Chart -->
+            <!-- Timeline v1.3 - Default to List View (better for mobile) -->
             <div class="timeline-section">
                 <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
                     <span>麻醉記錄時間軸</span>
-                    <div class="timeline-list-toggle">
-                        <button onclick="toggleTimelineView()">切換列表</button>
+                    <div class="timeline-view-toggle">
+                        <button class="view-toggle-btn active" id="btnListView" onclick="setTimelineView('list')">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                            </svg>
+                            列表
+                        </button>
+                        <button class="view-toggle-btn" id="btnChartView" onclick="setTimelineView('chart')">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            圖表
+                        </button>
                     </div>
                 </div>
 
@@ -1097,40 +1147,43 @@
                     <span class="milestone-chip pending" id="msPacu" onclick="recordMilestoneFromChip('ANESTHESIA_END', this)">送PACU</span>
                 </div>
 
-                <!-- Hour Pagination -->
-                <div class="timeline-pagination">
-                    <button onclick="timelineChart.prevHour()" id="btnPrevHour">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                        </svg>
-                    </button>
-                    <div class="timeline-hour-chips" id="hourChips">
-                        <!-- Populated by JS -->
+                <!-- Chart View Container (hidden by default, better for desktop) -->
+                <div id="chartViewContainer" class="hidden">
+                    <!-- Hour Pagination -->
+                    <div class="timeline-pagination">
+                        <button onclick="timelineChart.prevHour()" id="btnPrevHour">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                            </svg>
+                        </button>
+                        <div class="timeline-hour-chips" id="hourChips">
+                            <!-- Populated by JS -->
+                        </div>
+                        <button onclick="timelineChart.nextHour()" id="btnNextHour">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </button>
                     </div>
-                    <button onclick="timelineChart.nextHour()" id="btnNextHour">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </button>
+
+                    <!-- Canvas Chart -->
+                    <div class="timeline-chart" id="timelineChartContainer">
+                        <canvas id="vitalsCanvas"></canvas>
+                        <div class="now-indicator" id="nowIndicator" style="display: none;"></div>
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="timeline-legend">
+                        <div class="legend-item"><span class="legend-dot" style="background: var(--vital-sbp);"></span> BP</div>
+                        <div class="legend-item"><span class="legend-dot" style="background: var(--vital-hr);"></span> HR</div>
+                        <div class="legend-item"><span class="legend-dot" style="background: var(--vital-spo2);"></span> SpO2</div>
+                        <div class="legend-item"><span class="legend-dot" style="background: var(--event-medication);"></span> 藥物</div>
+                        <div class="legend-item"><span class="legend-dot" style="background: var(--event-milestone);"></span> 里程碑</div>
+                    </div>
                 </div>
 
-                <!-- Canvas Chart -->
-                <div class="timeline-chart" id="timelineChartContainer">
-                    <canvas id="vitalsCanvas"></canvas>
-                    <div class="now-indicator" id="nowIndicator" style="display: none;"></div>
-                </div>
-
-                <!-- Legend -->
-                <div class="timeline-legend">
-                    <div class="legend-item"><span class="legend-dot" style="background: var(--vital-sbp);"></span> BP</div>
-                    <div class="legend-item"><span class="legend-dot" style="background: var(--vital-hr);"></span> HR</div>
-                    <div class="legend-item"><span class="legend-dot" style="background: var(--vital-spo2);"></span> SpO2</div>
-                    <div class="legend-item"><span class="legend-dot" style="background: var(--event-medication);"></span> 藥物</div>
-                    <div class="legend-item"><span class="legend-dot" style="background: var(--event-milestone);"></span> 里程碑</div>
-                </div>
-
-                <!-- Legacy List View (hidden by default) -->
-                <div class="timeline hidden" id="timeline">
+                <!-- List View (default, better for mobile with larger fonts/buttons) -->
+                <div class="timeline" id="timeline">
                     <div class="empty-state">
                         <p>尚無事件</p>
                     </div>
@@ -1642,45 +1695,90 @@
         </div>
     </div>
 
-    <!-- Milestone Modal -->
+    <!-- Milestone Modal (Two-step: Select Type → Confirm Time) -->
     <div class="modal" id="milestoneModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title">記錄里程碑</h2>
                 <button class="modal-close" onclick="closeModal('milestoneModal')">&times;</button>
             </div>
-            <div class="section-title">選擇里程碑類型</div>
-            <div class="med-grid" style="margin-bottom: 16px;">
-                <button class="med-btn" onclick="confirmMilestone('ANESTHESIA_START')">
-                    <div class="med-name">誘導開始</div>
-                    <div class="med-dose">Induction</div>
-                </button>
-                <button class="med-btn" onclick="confirmMilestone('INTUBATION')">
-                    <div class="med-name">插管</div>
-                    <div class="med-dose">Intubation</div>
-                </button>
-                <button class="med-btn" onclick="confirmMilestone('SURGERY_START')">
-                    <div class="med-name">劃刀</div>
-                    <div class="med-dose">Incision</div>
-                </button>
-                <button class="med-btn" onclick="confirmMilestone('SURGERY_END')">
-                    <div class="med-name">關皮</div>
-                    <div class="med-dose">Skin Close</div>
-                </button>
-                <button class="med-btn" onclick="confirmMilestone('EXTUBATION')">
-                    <div class="med-name">拔管</div>
-                    <div class="med-dose">Extubation</div>
-                </button>
-                <button class="med-btn" onclick="confirmMilestone('ANESTHESIA_END')">
-                    <div class="med-name">送 PACU</div>
-                    <div class="med-dose">To Recovery</div>
-                </button>
+
+            <!-- Step 1: Select Milestone Type -->
+            <div id="milestoneStep1">
+                <div class="section-title">選擇里程碑類型</div>
+                <div class="med-grid" style="margin-bottom: 16px;">
+                    <button class="med-btn" onclick="selectMilestoneType('ANESTHESIA_START')">
+                        <div class="med-name">誘導開始</div>
+                        <div class="med-dose">Induction</div>
+                    </button>
+                    <button class="med-btn" onclick="selectMilestoneType('INTUBATION')">
+                        <div class="med-name">插管</div>
+                        <div class="med-dose">Intubation</div>
+                    </button>
+                    <button class="med-btn" onclick="selectMilestoneType('SURGERY_START')">
+                        <div class="med-name">劃刀</div>
+                        <div class="med-dose">Incision</div>
+                    </button>
+                    <button class="med-btn" onclick="selectMilestoneType('SURGERY_END')">
+                        <div class="med-name">關皮</div>
+                        <div class="med-dose">Skin Close</div>
+                    </button>
+                    <button class="med-btn" onclick="selectMilestoneType('EXTUBATION')">
+                        <div class="med-name">拔管</div>
+                        <div class="med-dose">Extubation</div>
+                    </button>
+                    <button class="med-btn" onclick="selectMilestoneType('ANESTHESIA_END')">
+                        <div class="med-name">送 PACU</div>
+                        <div class="med-dose">To Recovery</div>
+                    </button>
+                </div>
+                <button class="btn" style="background: var(--card-hover);" onclick="closeModal('milestoneModal')">取消</button>
             </div>
-            <div style="padding: 12px; background: var(--bg); border-radius: 8px; margin-bottom: 16px;">
-                <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 8px;">記錄時間</div>
-                <div id="milestoneTimeDisplay" style="font-size: 1.25rem; font-weight: 600;">--:--</div>
+
+            <!-- Step 2: Confirm Time -->
+            <div id="milestoneStep2" style="display: none;">
+                <div class="section-title">
+                    <span id="selectedMilestoneLabel">--</span>
+                </div>
+
+                <!-- Time Offset Selector (same pattern as vitals/med) -->
+                <div class="time-offset-selector" id="milestoneTimeSelector">
+                    <div class="time-offset-label">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                            <path stroke-width="2" d="M12 6v6l4 2"/>
+                        </svg>
+                        事件時間
+                    </div>
+                    <div class="time-offset-buttons">
+                        <button type="button" class="time-offset-btn active" data-offset="0" onclick="selectTimeOffset(this, 'milestone')">現在</button>
+                        <button type="button" class="time-offset-btn" data-offset="-60" onclick="selectTimeOffset(this, 'milestone')">-1分</button>
+                        <button type="button" class="time-offset-btn" data-offset="-180" onclick="selectTimeOffset(this, 'milestone')">-3分</button>
+                        <button type="button" class="time-offset-btn" data-offset="-300" onclick="selectTimeOffset(this, 'milestone')">-5分</button>
+                        <button type="button" class="time-offset-btn" data-offset="custom" onclick="selectTimeOffset(this, 'milestone')">自訂</button>
+                    </div>
+                    <div class="time-offset-custom" id="milestoneTimeCustom">
+                        <input type="datetime-local" id="milestoneCustomTime" onchange="updateComputedTime('milestone')">
+                    </div>
+                    <div class="late-entry-reason" id="milestoneLateEntry">
+                        <label>遲補登錄原因 (超過5分鐘需填寫)</label>
+                        <select id="milestoneLateReason">
+                            <option value="EMERGENCY_HANDLING">緊急處置中</option>
+                            <option value="EQUIPMENT_ISSUE">設備問題</option>
+                            <option value="SHIFT_HANDOFF">交班中</option>
+                            <option value="DOCUMENTATION_CATCH_UP">補登文件</option>
+                            <option value="OTHER">其他</option>
+                        </select>
+                        <input type="text" id="milestoneLateNote" placeholder="備註 (選填)">
+                    </div>
+                    <div class="computed-time" id="milestoneComputedTime" style="font-size: 1.5rem; font-weight: 600; padding: 16px; text-align: center; background: var(--bg); border-radius: 8px; margin-top: 8px;">記錄時間: 現在</div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button class="btn" style="background: var(--card-hover); flex: 1;" onclick="backToMilestoneStep1()">返回</button>
+                    <button class="btn btn-primary" style="flex: 2;" onclick="submitMilestone()">確認記錄</button>
+                </div>
             </div>
-            <button class="btn" style="background: var(--card-hover);" onclick="closeModal('milestoneModal')">取消</button>
         </div>
     </div>
 
@@ -1988,10 +2086,11 @@
         // v1.6.1: Time Offset Helper Functions
         // =================================================================
 
-        // Track selected time offset per modal (vitals, med, etc.)
+        // Track selected time offset per modal (vitals, med, milestone, etc.)
         const timeOffsetState = {
             vitals: { offset: 0, customTime: null },
-            med: { offset: 0, customTime: null }
+            med: { offset: 0, customTime: null },
+            milestone: { offset: 0, customTime: null }
         };
 
         function selectTimeOffset(btn, modalType) {
@@ -3016,39 +3115,98 @@
             return labels[type] || type;
         }
 
+        // Track selected milestone type for two-step flow
+        let selectedMilestoneType = null;
+
+        // Quick action for "開始麻醉" button - opens modal with time selector
+        function startAnesthesiaWithTimeSelector() {
+            if (!currentCase) {
+                alert('請先選擇或建立一個麻醉案例');
+                return;
+            }
+            showMilestoneModal();
+            selectMilestoneType('ANESTHESIA_START');
+        }
+
         function showMilestoneModal() {
             if (!currentCase) {
                 alert('請先選擇或建立一個麻醉案例');
                 return;
             }
+            // Reset to step 1
+            selectedMilestoneType = null;
+            document.getElementById('milestoneStep1').style.display = 'block';
+            document.getElementById('milestoneStep2').style.display = 'none';
+            // Reset time selector
+            resetTimeOffset('milestone');
             document.getElementById('milestoneModal').classList.add('active');
-            document.getElementById('milestoneTimeDisplay').textContent =
-                new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
 
-        async function confirmMilestone(type) {
-            if (!currentCase) {
-                alert('請先選擇或建立一個麻醉案例');
+        function selectMilestoneType(type) {
+            selectedMilestoneType = type;
+            // Show selected milestone name
+            document.getElementById('selectedMilestoneLabel').textContent = getMilestoneLabel(type);
+            // Switch to step 2
+            document.getElementById('milestoneStep1').style.display = 'none';
+            document.getElementById('milestoneStep2').style.display = 'block';
+            // Reset and update time display
+            resetTimeOffset('milestone');
+            updateComputedTime('milestone');
+        }
+
+        function backToMilestoneStep1() {
+            document.getElementById('milestoneStep1').style.display = 'block';
+            document.getElementById('milestoneStep2').style.display = 'none';
+            selectedMilestoneType = null;
+        }
+
+        async function submitMilestone() {
+            if (!currentCase || !selectedMilestoneType) {
+                alert('請先選擇里程碑類型');
                 return;
             }
 
             try {
-                const res = await apiFetch(
-                    `${API_BASE}/cases/${currentCase.id}/milestone?milestone_type=${type}&actor_id=${actorId}`,
-                    { method: 'POST' }
-                );
+                // Get time offset data
+                const timeData = getTimeOffsetData('milestone');
+
+                // Build URL with query params
+                let url = `${API_BASE}/cases/${currentCase.id}/milestone?milestone_type=${selectedMilestoneType}&actor_id=${actorId}`;
+
+                // Add time parameters if specified
+                if (timeData.clinical_time) {
+                    url += `&clinical_time=${encodeURIComponent(timeData.clinical_time)}`;
+                } else if (timeData.clinical_time_offset_seconds) {
+                    url += `&clinical_time_offset_seconds=${timeData.clinical_time_offset_seconds}`;
+                }
+
+                // Add late entry reason if applicable
+                if (timeData.late_entry_reason) {
+                    url += `&late_entry_reason=${encodeURIComponent(timeData.late_entry_reason)}`;
+                }
+                if (timeData.late_entry_note) {
+                    url += `&late_entry_note=${encodeURIComponent(timeData.late_entry_note)}`;
+                }
+
+                const res = await apiFetch(url, { method: 'POST' });
 
                 if (!res.ok) throw new Error('Failed');
 
                 closeModal('milestoneModal');
-                alert(`✓ ${getMilestoneLabel(type)} 已記錄`);
+                alert(`✓ ${getMilestoneLabel(selectedMilestoneType)} 已記錄`);
                 loadTimeline(currentCase.id);
             } catch (err) {
                 alert('記錄失敗: ' + (err.message || '未知錯誤'));
             }
         }
 
-        async function recordMilestoneFromChip(type, chipEl) {
+        // Legacy function - now opens modal with pre-selected type
+        async function confirmMilestone(type) {
+            selectMilestoneType(type);
+        }
+
+        // Updated: Clicking chip now opens time selector modal
+        function recordMilestoneFromChip(type, chipEl) {
             if (!currentCase) {
                 alert('請先選擇或建立一個麻醉案例');
                 return;
@@ -3060,9 +3218,15 @@
                 return;
             }
 
-            // Confirm
-            const label = getMilestoneLabel(type);
-            if (!confirm(`確定記錄「${label}」為現在時間？`)) {
+            // Open modal with this milestone type pre-selected
+            showMilestoneModal();
+            selectMilestoneType(type);
+        }
+
+        // Old direct submit function (kept for backward compatibility with "開始麻醉" button)
+        async function directMilestoneSubmit(type) {
+            if (!currentCase) {
+                alert('請先選擇或建立一個麻醉案例');
                 return;
             }
 
@@ -3785,16 +3949,34 @@
             }
         };
 
+        function setTimelineView(viewType) {
+            const chartContainer = document.getElementById('chartViewContainer');
+            const listContainer = document.getElementById('timeline');
+            const btnList = document.getElementById('btnListView');
+            const btnChart = document.getElementById('btnChartView');
+
+            if (viewType === 'chart') {
+                chartContainer?.classList.remove('hidden');
+                listContainer?.classList.add('hidden');
+                btnList?.classList.remove('active');
+                btnChart?.classList.add('active');
+                // Initialize chart if needed
+                timelineChart.init();
+            } else {
+                chartContainer?.classList.add('hidden');
+                listContainer?.classList.remove('hidden');
+                btnList?.classList.add('active');
+                btnChart?.classList.remove('active');
+            }
+        }
+
+        // Legacy function for backward compatibility
         function toggleTimelineView() {
-            const chart = document.getElementById('timelineChartContainer');
-            const list = document.getElementById('timeline');
-            const legend = document.querySelector('.timeline-legend');
-            const pagination = document.querySelector('.timeline-pagination');
-            if (chart && list) {
-                chart.classList.toggle('hidden');
-                list.classList.toggle('hidden');
-                if (legend) legend.classList.toggle('hidden');
-                if (pagination) pagination.classList.toggle('hidden');
+            const chartContainer = document.getElementById('chartViewContainer');
+            if (chartContainer?.classList.contains('hidden')) {
+                setTimelineView('chart');
+            } else {
+                setTimelineView('list');
             }
         }
 
@@ -3837,6 +4019,18 @@
 
     <script>
         // Enhanced loadTimeline with chart update
+        // Helper: translate event type to Chinese
+        function getEventTypeLabel(type) {
+            const labels = {
+                'VITAL_SIGN': '生命徵象',
+                'MEDICATION_ADMIN': '給藥',
+                'MILESTONE': '里程碑',
+                'OXYGEN_CHANGE': '氧氣',
+                'NOTE': '備註'
+            };
+            return labels[type] || type;
+        }
+
         async function loadTimeline(caseId) {
             try {
                 const res = await apiFetch(`${API_BASE}/cases/${caseId}/timeline`);
@@ -3844,14 +4038,15 @@
                 const timelineEl = document.getElementById('timeline');
 
                 if (data.all.length === 0) {
-                    timelineEl.innerHTML = `<div class="empty-state"><p>尚無事件</p></div>`;
+                    timelineEl.innerHTML = `<div class="empty-state"><p>尚無事件<br><small style="color:var(--text-muted);">使用上方按鈕記錄 Vitals、給藥、里程碑</small></p></div>`;
                     return;
                 }
 
                 const events = data.all.sort((a, b) => new Date(b.clinical_time) - new Date(a.clinical_time));
-                timelineEl.innerHTML = events.slice(0, 20).map(e => {
+                timelineEl.innerHTML = events.slice(0, 30).map(e => {
                     const time = new Date(e.clinical_time).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
                     const dotClass = e.event_type === 'VITAL_SIGN' ? 'vital' : e.event_type === 'MEDICATION_ADMIN' ? 'med' : e.event_type === 'MILESTONE' ? 'milestone' : '';
+                    const typeLabel = getEventTypeLabel(e.event_type);
                     let desc = '';
                     if (e.event_type === 'VITAL_SIGN') {
                         const p = e.payload;
@@ -3859,11 +4054,11 @@
                     } else if (e.event_type === 'MEDICATION_ADMIN') {
                         desc = `${e.payload.drug_name} ${e.payload.dose}${e.payload.unit} ${e.payload.route}`;
                     } else if (e.event_type === 'MILESTONE') {
-                        desc = e.payload.type;
+                        desc = getMilestoneLabel(e.payload.type);
                     } else {
                         desc = JSON.stringify(e.payload).substring(0, 50);
                     }
-                    return `<div class="timeline-item"><div class="timeline-time">${time}</div><div class="timeline-dot ${dotClass}"></div><div class="timeline-content"><div class="timeline-type">${e.event_type}</div><div class="timeline-desc">${desc}</div></div></div>`;
+                    return `<div class="timeline-item"><div class="timeline-time">${time}</div><div class="timeline-dot ${dotClass}"></div><div class="timeline-content"><div class="timeline-type">${typeLabel}</div><div class="timeline-desc">${desc}</div></div></div>`;
                 }).join('');
 
                 const lastVital = data.vitals[data.vitals.length - 1];
