@@ -1,8 +1,9 @@
 # 麻醉 PWA 時間軸 UI 規格書
 
-**版本**: v1.0
-**日期**: 2026-01-07
+**版本**: v1.1
+**日期**: 2026-01-19
 **狀態**: Draft
+**更新**: 新增生命徵象趨勢圖、庫存連動、分頁機制
 
 ---
 
@@ -349,49 +350,195 @@ zoomOut() {
 
 ---
 
-## 7. Vitals 圖表
+## 7. Vitals 圖表 (v1.1 重大更新)
 
-### 7.1 SVG 折線圖
+### 7.1 標準麻醉記錄單格式
 
-```html
-<svg class="vitals-chart" viewBox="0 0 100 60">
-    <!-- HR 折線 (藍色) -->
-    <polyline
-        class="hr-line"
-        points="0,30 10,28 20,25 30,22 40,26 50,28"
-        fill="none"
-        stroke="#3b82f6"
-        stroke-width="1"
-    />
+麻醉記錄單的核心是**生命徵象趨勢圖 (Vital Signs Trend)**，採用國際標準符號：
 
-    <!-- BP 範圍 (紅色區域) -->
-    <path
-        class="bp-area"
-        d="M0,20 L10,18 L20,15 ... L50,18 L50,35 L40,38 ... L0,35 Z"
-        fill="rgba(239,68,68,0.2)"
-        stroke="#ef4444"
-    />
-
-    <!-- SpO2 (綠色) -->
-    <polyline
-        class="spo2-line"
-        points="0,5 10,5 20,6 30,5 40,5 50,6"
-        fill="none"
-        stroke="#10b981"
-        stroke-width="1"
-    />
-</svg>
+```
+符號標準 (Anesthesia Chart Symbols)
+─────────────────────────────────
+  V  = 收縮壓 (SBP) - 紅色
+  ^  = 舒張壓 (DBP) - 紅色
+  ●  = 心跳 (HR) - 藍色
+  ○  = 血氧 (SpO2) - 綠色
+  ×  = 呼吸次數 (RR) - 紫色
 ```
 
-### 7.2 數值標籤
+### 7.2 趨勢圖視覺設計
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  mmHg/bpm                                                     │
+│  200 ─┼─────────────────────────────────────────────────────  │
+│       │                                                       │
+│  180 ─┼─────────────────────────────────────────────────────  │
+│       │                                                       │
+│  160 ─┼─────────────────────────────────────────────────────  │
+│       │                                                       │
+│  140 ─┼───────V───────────────────V─────────────────────────  │
+│       │      /│\                  │                           │
+│  120 ─┼─────V─┼─V───V───V───V────V──V───V───────────────────  │ ← SBP (V)
+│       │       │   \   \   /   \       \                       │
+│  100 ─┼───────●───●───●───●────●──●────●────────────────────  │ ← HR (●)
+│       │       │                                               │
+│   80 ─┼───────^───^───^───^────^──^────^────────────────────  │ ← DBP (^)
+│       │                                                       │
+│   60 ─┼─────────────────────────────────────────────────────  │
+│       │                                                       │
+│   40 ─┼─────────────────────────────────────────────────────  │
+│       │                                                       │
+│   20 ─┼─────────────────────────────────────────────────────  │
+│       │                                                       │
+│    0 ─┼─────────────────────────────────────────────────────  │
+│       └──┬──────┬──────┬──────┬──────┬──────┬──────┬────────  │
+│        09:00  09:05  09:10  09:15  09:20  09:25  09:30        │
+│                                                               │
+│  ══════════════════════════════════════════════════════════  │
+│  事件列：                                                     │
+│   09:05 💊 Propofol 150mg                                    │
+│   09:08 🔧 Intubation ETT 7.5                                │
+│   09:12 💨 Sevoflurane 2%                                    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 7.3 SVG Canvas 實作
+
+```html
+<div class="vitals-canvas-container">
+    <!-- Y軸標籤 -->
+    <div class="y-axis">
+        <span>200</span>
+        <span>160</span>
+        <span>120</span>
+        <span>80</span>
+        <span>40</span>
+        <span>0</span>
+    </div>
+
+    <!-- 主繪圖區 -->
+    <svg class="vitals-canvas" viewBox="0 0 720 300" preserveAspectRatio="none">
+        <!-- 網格線 -->
+        <defs>
+            <pattern id="grid" width="60" height="30" patternUnits="userSpaceOnUse">
+                <path d="M 60 0 L 0 0 0 30" fill="none" stroke="#e5e7eb" stroke-width="0.5"/>
+            </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)"/>
+
+        <!-- SBP 折線 (V 符號) -->
+        <g class="sbp-layer">
+            <polyline class="sbp-line" points="..." fill="none" stroke="#dc2626" stroke-width="1.5"/>
+            <!-- V 符號標記 -->
+            <text x="60" y="90" class="vital-symbol sbp">V</text>
+            <text x="120" y="85" class="vital-symbol sbp">V</text>
+            ...
+        </g>
+
+        <!-- DBP 折線 (^ 符號) -->
+        <g class="dbp-layer">
+            <polyline class="dbp-line" points="..." fill="none" stroke="#dc2626" stroke-width="1"/>
+            <text x="60" y="165" class="vital-symbol dbp">^</text>
+            ...
+        </g>
+
+        <!-- HR 折線 (● 符號) -->
+        <g class="hr-layer">
+            <polyline class="hr-line" points="..." fill="none" stroke="#2563eb" stroke-width="1.5"/>
+            <circle cx="60" cy="150" r="4" fill="#2563eb"/>
+            <circle cx="120" cy="145" r="4" fill="#2563eb"/>
+            ...
+        </g>
+
+        <!-- SpO2 (○ 符號) - 頂部區域 -->
+        <g class="spo2-layer">
+            <polyline class="spo2-line" points="..." fill="none" stroke="#16a34a" stroke-width="1"/>
+            <circle cx="60" cy="15" r="3" fill="none" stroke="#16a34a"/>
+            ...
+        </g>
+
+        <!-- 事件標記 (垂直線 + 圖標) -->
+        <g class="events-layer">
+            <line x1="60" y1="0" x2="60" y2="300" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4"/>
+            <text x="60" y="295" class="event-label">💊</text>
+        </g>
+    </svg>
+
+    <!-- X軸時間標籤 -->
+    <div class="x-axis">
+        <span>09:00</span>
+        <span>09:05</span>
+        <span>09:10</span>
+        ...
+    </div>
+</div>
+```
+
+### 7.4 座標轉換函數
 
 ```javascript
-// 顯示關鍵數值
-vitalsLabels: [
-    { type: 'HR', y: 'top', color: '#3b82f6' },
-    { type: 'BP', y: 'middle', color: '#ef4444' },
-    { type: 'SpO2', y: 'bottom', color: '#10b981' }
-]
+// Y軸：0-220 mmHg/bpm -> SVG 0-300px (倒置)
+valueToY(value, maxValue = 220) {
+    return 300 - (value / maxValue) * 300;
+}
+
+// X軸：時間 -> SVG 像素 (每分鐘 12px)
+timeToX(time) {
+    const elapsed = (time - this.hourStartTime) / 60000; // 分鐘數
+    return elapsed * 12; // 每分鐘 12px = 1小時 720px
+}
+
+// 繪製 Vitals 點
+plotVital(time, type, value) {
+    const x = this.timeToX(time);
+    const y = this.valueToY(value);
+    const symbol = this.getSymbol(type);
+
+    // 根據類型繪製不同符號
+    switch(type) {
+        case 'SBP':
+            this.drawText(x, y, 'V', '#dc2626');
+            break;
+        case 'DBP':
+            this.drawText(x, y, '^', '#dc2626');
+            break;
+        case 'HR':
+            this.drawCircle(x, y, 4, '#2563eb', true);
+            break;
+        case 'SpO2':
+            this.drawCircle(x, y, 3, '#16a34a', false);
+            break;
+        case 'RR':
+            this.drawText(x, y, '×', '#7c3aed');
+            break;
+    }
+}
+```
+
+### 7.5 異常值警示
+
+```javascript
+// 異常值定義
+VITAL_LIMITS: {
+    HR:   { low: 50,  high: 120, critical_low: 40,  critical_high: 150 },
+    SBP:  { low: 90,  high: 160, critical_low: 70,  critical_high: 200 },
+    DBP:  { low: 50,  high: 100, critical_low: 40,  critical_high: 120 },
+    SpO2: { low: 94,  high: 100, critical_low: 90,  critical_high: 100 },
+    RR:   { low: 10,  high: 24,  critical_low: 8,   critical_high: 30 }
+},
+
+// 檢查異常並標色
+getVitalColor(type, value) {
+    const limits = this.VITAL_LIMITS[type];
+    if (value <= limits.critical_low || value >= limits.critical_high) {
+        return '#dc2626';  // 紅色 - 危急
+    }
+    if (value <= limits.low || value >= limits.high) {
+        return '#f59e0b';  // 黃色 - 警告
+    }
+    return this.DEFAULT_COLORS[type];  // 正常顏色
+}
 ```
 
 ---
@@ -426,7 +573,366 @@ vitalsLabels: [
 
 ---
 
-## 9. CSS 樣式
+## 9. 庫存與計費連動 (v1.1 新增)
+
+### 9.1 設計理念
+
+> **「麻醉醫師只管救人，系統自動算錢與庫存」**
+
+當麻醉師在時間軸上記錄用藥事件，系統自動完成：
+1. MIRS 庫存扣減
+2. CashDesk 計費項目生成
+3. 管制藥品雙重驗證
+
+### 9.2 事件-庫存綁定流程
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    用藥事件資料流                                │
+│                                                                 │
+│   ┌──────────┐     ┌──────────┐     ┌──────────┐              │
+│   │ Anes PWA │────▶│ MIRS API │────▶│ CashDesk │              │
+│   │ 記錄用藥  │     │ 扣減庫存  │     │ 生成帳單  │              │
+│   └──────────┘     └──────────┘     └──────────┘              │
+│        │                │                │                     │
+│        ▼                ▼                ▼                     │
+│   anesthesia_     pharmacy_         billing_                  │
+│   events          inventory         line_items                 │
+│                                                                 │
+│   event_type:     quantity: -1      item_code: "PROP-200"     │
+│   MEDICATION      lot_number        unit_price: 150           │
+│                   expiry_date       quantity: 1               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 9.3 API 設計
+
+#### 9.3.1 新增用藥事件 (含庫存扣減)
+
+```javascript
+// POST /api/anesthesia/events/medication
+async recordMedication(caseId, medication) {
+    const payload = {
+        case_id: caseId,
+        event_time: medication.time,
+        drug_code: medication.drugCode,      // 對應 pharmacy_items.item_code
+        drug_name: medication.drugName,
+        dose: medication.dose,
+        unit: medication.unit,
+        route: medication.route,             // IV, IM, PO, INH...
+        lot_number: medication.lotNumber,    // 批號 (可選)
+        deduct_inventory: true,              // 觸發庫存扣減
+        create_billable: true                // 觸發計費項目
+    };
+
+    const response = await xIRS.API.post('/api/anesthesia/events/medication', payload);
+
+    // 回應包含庫存狀態
+    // {
+    //     event_id: "EVT-001",
+    //     inventory_deducted: true,
+    //     remaining_stock: 5,
+    //     billable_item_id: "BL-001"
+    // }
+}
+```
+
+#### 9.3.2 刪除/撤銷用藥事件 (庫存回補)
+
+```javascript
+// DELETE /api/anesthesia/events/{event_id}
+async deleteEvent(eventId, reason) {
+    const payload = {
+        reason: reason,                      // 刪除原因 (必填)
+        revert_inventory: true,              // 庫存加回
+        void_billable: true                  // 作廢計費項目
+    };
+
+    // 審計紀錄：誰、何時、為何刪除
+}
+```
+
+### 9.4 管制藥品處理
+
+管制藥品 (Controlled Drugs) 需要額外驗證：
+
+```javascript
+// 管制藥品類別
+CONTROLLED_DRUG_CLASSES: {
+    'CLASS_1': ['Morphine', 'Fentanyl', 'Pethidine'],
+    'CLASS_2': ['Ketamine', 'Midazolam'],
+    'CLASS_3': ['Diazepam', 'Lorazepam']
+},
+
+// UI：管制藥品紅框標示
+isControlledDrug(drugCode) {
+    const drugInfo = this.drugDatabase.find(d => d.code === drugCode);
+    return drugInfo?.controlled_class != null;
+}
+
+// UI：新增管制藥品需要確認
+async addControlledDrugEvent(medication) {
+    const confirmed = await this.showConfirmDialog({
+        title: '⚠️ 管制藥品確認',
+        message: `即將記錄 ${medication.drugName} ${medication.dose}${medication.unit}`,
+        confirmText: '確認無誤',
+        cancelText: '取消',
+        requireDoubleCheck: true  // 需要勾選確認框
+    });
+
+    if (confirmed) {
+        await this.recordMedication(this.caseId, medication);
+    }
+}
+```
+
+### 9.5 用藥選單設計
+
+```
+┌────────────────────────────────────────┐
+│  記錄用藥 @ 09:15                       │
+│  ─────────────────────────────────────│
+│                                        │
+│  ┌─ 常用藥物 ──────────────────────┐   │
+│  │  [Propofol]  [Fentanyl]         │   │
+│  │  [Rocuronium] [Sevoflurane]     │   │
+│  │  [Midazolam]  [Ketamine] ⚠️     │   │
+│  └──────────────────────────────────┘   │
+│                                        │
+│  藥物: [Propofol           ▼]          │
+│  劑量: [200    ] [mg  ▼]               │
+│  途徑: [IV     ▼]                      │
+│                                        │
+│  ┌─ 庫存資訊 ────────────────────┐     │
+│  │  現有庫存: 8 支                │     │
+│  │  批號: LOT-2026-001           │     │
+│  │  效期: 2026-06-30             │     │
+│  └────────────────────────────────┘     │
+│                                        │
+│  [取消]              [記錄用藥]        │
+└────────────────────────────────────────┘
+```
+
+### 9.6 計費項目對照表
+
+| 麻醉藥物 | drug_code | 對應 pricebook item_code | 健保點數 |
+|---------|-----------|-------------------------|---------|
+| Propofol 200mg | PROP-200 | MED-PROP-200 | 150 |
+| Fentanyl 100mcg | FENT-100 | MED-FENT-100 | 85 |
+| Rocuronium 50mg | ROCU-50 | MED-ROCU-50 | 280 |
+| Sevoflurane (per hr) | SEVO-HR | MED-SEVO-HR | 450 |
+| Ketamine 100mg | KET-100 | MED-KET-100 | 120 |
+
+---
+
+## 10. 分頁與捲動機制 (v1.1 新增)
+
+### 10.1 設計原則
+
+標準麻醉紀錄單一張紙約 1-2 小時。針對長時間手術 (8-12 小時)，採用**分頁機制**而非無限捲動。
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│  ◀ 第 2 小時 (09:00 - 10:00)                    ▶      │
+│    ════════════════════════════════════════════         │
+│                                                         │
+│  [01] [02] [03] [04] [05] [06] [07] [08] ... [現在]    │
+│                                                         │
+│  ┌───────────────────────────────────────────────┐     │
+│  │                                               │     │
+│  │           (Vitals 趨勢圖)                     │     │
+│  │                                               │     │
+│  └───────────────────────────────────────────────┘     │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 10.2 分頁狀態管理
+
+```javascript
+pagination: {
+    hourDuration: 60,              // 每頁顯示 60 分鐘
+    currentHour: 0,                // 當前顯示的小時索引 (0 = 第一小時)
+    totalHours: 1,                 // 總手術時數
+    caseStartTime: null,           // 手術開始時間
+},
+
+// 計算總頁數
+get totalPages() {
+    const elapsed = Date.now() - this.pagination.caseStartTime;
+    return Math.ceil(elapsed / (60 * 60 * 1000));
+},
+
+// 切換到指定小時
+goToHour(hourIndex) {
+    this.pagination.currentHour = Math.max(0, Math.min(hourIndex, this.totalPages - 1));
+    this.renderCurrentHour();
+},
+
+// 前一小時
+prevHour() {
+    if (this.pagination.currentHour > 0) {
+        this.goToHour(this.pagination.currentHour - 1);
+    }
+},
+
+// 下一小時
+nextHour() {
+    if (this.pagination.currentHour < this.totalPages - 1) {
+        this.goToHour(this.pagination.currentHour + 1);
+    }
+},
+
+// 跳到「現在」
+goToNow() {
+    this.goToHour(this.totalPages - 1);
+}
+```
+
+### 10.3 小時選擇器 UI
+
+```html
+<!-- 小時選擇器 -->
+<div class="hour-selector flex items-center gap-2 p-2 bg-gray-100">
+    <button @click="prevHour()" :disabled="pagination.currentHour === 0"
+            class="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50">
+        ◀
+    </button>
+
+    <div class="flex-1 flex items-center justify-center gap-1 overflow-x-auto">
+        <template x-for="hour in totalPages" :key="hour">
+            <button @click="goToHour(hour - 1)"
+                    :class="pagination.currentHour === hour - 1 ? 'bg-blue-600 text-white' : 'bg-white'"
+                    class="w-8 h-8 rounded-full text-sm font-medium">
+                <span x-text="hour"></span>
+            </button>
+        </template>
+    </div>
+
+    <button @click="nextHour()" :disabled="pagination.currentHour >= totalPages - 1"
+            class="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50">
+        ▶
+    </button>
+
+    <button @click="goToNow()" class="px-3 py-1 bg-red-600 text-white rounded-lg text-sm">
+        現在
+    </button>
+</div>
+```
+
+### 10.4 手勢支援
+
+```javascript
+// Touch 手勢：左右滑動切換小時
+initSwipeGesture() {
+    let startX = 0;
+    const container = this.$refs.timelineContainer;
+
+    container.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+    });
+
+    container.addEventListener('touchend', (e) => {
+        const endX = e.changedTouches[0].clientX;
+        const diff = endX - startX;
+
+        if (Math.abs(diff) > 50) {  // 滑動超過 50px
+            if (diff > 0) {
+                this.prevHour();  // 右滑 → 前一小時
+            } else {
+                this.nextHour();  // 左滑 → 下一小時
+            }
+        }
+    });
+}
+```
+
+---
+
+## 11. 緊急操作 (v1.1 新增)
+
+### 11.1 Code Blue / Stat 按鈕
+
+緊急情況下，醫師無法慢慢填表單。提供一鍵記錄功能：
+
+```html
+<!-- 緊急按鈕 (常駐於畫面右下角) -->
+<div class="fixed bottom-20 right-4 z-50">
+    <button @click="showStatMenu = true"
+            class="w-14 h-14 rounded-full bg-red-600 text-white shadow-lg
+                   flex items-center justify-center text-2xl
+                   active:scale-95 transition-transform">
+        ⚡
+    </button>
+</div>
+
+<!-- Stat 快選選單 -->
+<div x-show="showStatMenu" x-cloak
+     class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4">
+        <h3 class="text-lg font-bold text-red-600 mb-4">⚡ 緊急用藥</h3>
+
+        <div class="grid grid-cols-2 gap-3">
+            <button @click="statDrug('Epinephrine', 1, 'mg')"
+                    class="p-4 bg-red-100 text-red-800 rounded-xl font-bold">
+                Epinephrine 1mg
+            </button>
+            <button @click="statDrug('Atropine', 0.5, 'mg')"
+                    class="p-4 bg-red-100 text-red-800 rounded-xl font-bold">
+                Atropine 0.5mg
+            </button>
+            <button @click="statDrug('Ephedrine', 10, 'mg')"
+                    class="p-4 bg-amber-100 text-amber-800 rounded-xl font-bold">
+                Ephedrine 10mg
+            </button>
+            <button @click="statDrug('Phenylephrine', 100, 'mcg')"
+                    class="p-4 bg-amber-100 text-amber-800 rounded-xl font-bold">
+                Neo 100mcg
+            </button>
+        </div>
+
+        <button @click="showStatMenu = false"
+                class="w-full mt-4 py-3 bg-gray-200 rounded-xl">
+            取消
+        </button>
+    </div>
+</div>
+```
+
+### 11.2 Stat 用藥函數
+
+```javascript
+// 一鍵記錄緊急用藥 (時間 = 現在)
+async statDrug(drugName, dose, unit) {
+    const now = Date.now();
+
+    // 直接記錄，跳過確認對話框
+    await this.recordMedication(this.caseId, {
+        time: now,
+        drugCode: this.getDrugCode(drugName),
+        drugName: drugName,
+        dose: dose,
+        unit: unit,
+        route: 'IV',
+        isStat: true  // 標記為緊急用藥
+    });
+
+    this.showStatMenu = false;
+
+    // 震動回饋 (如果支援)
+    if (navigator.vibrate) {
+        navigator.vibrate(100);
+    }
+
+    // Toast 通知
+    XIRS_TOAST.success(`已記錄 ${drugName} ${dose}${unit}`);
+}
+```
+
+---
+
+## 12. CSS 樣式
 
 ```css
 /* 時間軸容器 */
@@ -514,36 +1020,80 @@ vitalsLabels: [
 
 ---
 
-## 10. 實作計畫
+## 13. 實作計畫 (v1.1 更新)
 
 ### Phase 1: 基礎時間軸
 1. 時間軸容器 + 刻度軸
 2. 里程碑顯示
 3. 點擊里程碑編輯
 
-### Phase 2: 事件記錄
+### Phase 2: Vitals 趨勢圖 ⭐ (v1.1)
+1. SVG Canvas 網格繪製
+2. 標準符號 (V/^/●/○/×) 繪製
+3. 異常值自動標色
+4. X軸與時間軸同步捲動
+
+### Phase 3: 事件記錄
 1. 新增事件模態窗
 2. Vitals 輸入模態窗
-3. 用藥輸入模態窗
+3. 用藥輸入模態窗（含常用藥物快選）
 
-### Phase 3: Vitals 圖表
-1. SVG 折線圖渲染
-2. 縮放與滾動
-3. 數值標籤
+### Phase 4: 庫存與計費連動 ⭐ (v1.1)
+1. MIRS 庫存扣減 API
+2. CashDesk 計費項目生成
+3. 管制藥品雙重驗證
+4. 事件刪除 → 庫存回補
 
-### Phase 4: 進階功能
-1. 手勢支援
-2. 自動 Vitals 提醒
-3. 列印/匯出
+### Phase 5: 分頁與 UX ⭐ (v1.1)
+1. 每小時分頁顯示
+2. 小時選擇器 UI
+3. 左右滑動手勢
+4. Code Blue / Stat 緊急按鈕
+
+### Phase 6: 進階功能
+1. 自動 Vitals 提醒
+2. 列印/匯出
+3. 離線支援
 
 ---
 
-## 11. 未決問題
+## 14. 未決問題
 
+- [x] ~~Vitals 異常值是否自動標紅？~~ → v1.1 已定義
 - [ ] 時間軸是否需要垂直模式（手機直式）？
-- [ ] Vitals 異常值是否自動標紅？
 - [ ] 是否需要語音輸入？
 - [ ] 離線時的時間同步策略？
+- [ ] 與 CIRS 病歷的整合方式？
+
+---
+
+## 15. 系統整合關係圖
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         xIRS 系統整合                            │
+│                                                                 │
+│   ┌───────────┐                                                 │
+│   │ Anes PWA  │ ──────────────────────────────────────────┐    │
+│   │ 時間軸 UI  │                                           │    │
+│   └─────┬─────┘                                           │    │
+│         │                                                  │    │
+│         │ 用藥事件                                         │    │
+│         ▼                                                  ▼    │
+│   ┌───────────┐     ┌───────────┐     ┌───────────┐           │
+│   │   MIRS    │────▶│ Pharmacy  │────▶│ CashDesk  │           │
+│   │  Backend  │     │ Inventory │     │  Billing  │           │
+│   └───────────┘     └───────────┘     └───────────┘           │
+│         │                                    │                 │
+│         │                                    │                 │
+│         ▼                                    ▼                 │
+│   ┌───────────┐                       ┌───────────┐           │
+│   │   CIRS    │◄──────────────────────│  Handoff  │           │
+│   │  病歷系統  │   Handoff Package     │  Package  │           │
+│   └───────────┘                       └───────────┘           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -552,3 +1102,4 @@ vitalsLabels: [
 | 版本 | 日期 | 變更 |
 |------|------|------|
 | v1.0 | 2026-01-07 | 初版 |
+| v1.1 | 2026-01-19 | 新增：(1) 標準麻醉記錄單趨勢圖 (V/^/●/○ 符號) (2) 庫存與計費連動 API (3) 分頁機制 (每小時一頁) (4) Code Blue 緊急按鈕 (5) 管制藥品處理流程 |
