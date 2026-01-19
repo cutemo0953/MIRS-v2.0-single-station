@@ -3794,7 +3794,10 @@
 
                 const res = await apiFetch(url, { method: 'POST' });
 
-                if (!res.ok) throw new Error('Failed');
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw errData;
+                }
 
                 closeModal('milestoneModal');
                 alert(`✓ ${getMilestoneLabel(selectedMilestoneType)} 已記錄`);
@@ -4232,7 +4235,7 @@
                 }
                 // Load existing preop data if available
                 loadPreopData(currentCase.id);
-                openModal('preopModal');
+                document.getElementById('preopModal').classList.add('active');
             } else if (tab === 'drugs') {
                 if (!currentCase) {
                     alert('請先選擇或建立案例');
@@ -4240,7 +4243,7 @@
                 }
                 loadDrugHoldings();
                 loadDrugTransactions();
-                openModal('drugsModal');
+                document.getElementById('drugsModal').classList.add('active');
             } else if (tab === 'o2') {
                 showO2Modal();
             }
@@ -4720,12 +4723,16 @@
                 const container = document.getElementById('timelineChartContainer');
                 if (!container || !this.canvas) return;
                 const rect = container.getBoundingClientRect();
+                // Skip if container has no size (hidden)
+                if (rect.width === 0 || rect.height === 0) return;
                 const dpr = window.devicePixelRatio || 1;
+                // Setting canvas dimensions resets transform matrix
                 this.canvas.width = rect.width * dpr;
                 this.canvas.height = rect.height * dpr;
                 this.canvas.style.width = rect.width + 'px';
                 this.canvas.style.height = rect.height + 'px';
-                this.ctx.scale(dpr, dpr);
+                // Reset and scale for HiDPI
+                this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 this.viewport.pixelWidth = rect.width - 60;
                 this.render();
             },

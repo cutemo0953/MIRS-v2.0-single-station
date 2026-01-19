@@ -23,40 +23,44 @@ router = APIRouter(prefix="/api/anesthesia", tags=["anesthesia"])
 # Vercel demo mode detection (moved to top for availability in all endpoints)
 IS_VERCEL = os.environ.get("VERCEL") == "1"
 
-# Demo anesthesia cases for Vercel mode
-_demo_now = datetime.now()
-DEMO_ANESTHESIA_CASES = [
-    {
-        "id": "ANES-DEMO-001",
-        "patient_id": "P-DEMO-001",
-        "patient_name": "王大明",
-        "status": "IN_PROGRESS",
-        "context_mode": "STANDARD",
-        "planned_technique": "GA_ETT",
-        "created_at": (_demo_now - timedelta(hours=1)).isoformat(),
-        "actor_id": "demo-user"
-    },
-    {
-        "id": "ANES-DEMO-002",
-        "patient_id": "P-DEMO-002",
-        "patient_name": "林小華",
-        "status": "PREOP",
-        "context_mode": "STANDARD",
-        "planned_technique": "RA_SPINAL",
-        "created_at": (_demo_now - timedelta(minutes=30)).isoformat(),
-        "actor_id": "demo-user"
-    },
-    {
-        "id": "ANES-DEMO-003",
-        "patient_id": "P-DEMO-003",
-        "patient_name": "張美玲",
-        "status": "CLOSED",
-        "context_mode": "STANDARD",
-        "planned_technique": "GA_LMA",
-        "created_at": (_demo_now - timedelta(hours=3)).isoformat(),
-        "actor_id": "demo-user"
-    }
-]
+def get_demo_anesthesia_cases():
+    """Generate demo cases with current timestamp (avoids stale dates)"""
+    now = datetime.now()
+    return [
+        {
+            "id": "ANES-DEMO-001",
+            "patient_id": "P-DEMO-001",
+            "patient_name": "王大明",
+            "status": "IN_PROGRESS",
+            "context_mode": "STANDARD",
+            "planned_technique": "GA_ETT",
+            "created_at": (now - timedelta(hours=1)).isoformat(),
+            "started_at": (now - timedelta(hours=1)).isoformat(),
+            "actor_id": "demo-user"
+        },
+        {
+            "id": "ANES-DEMO-002",
+            "patient_id": "P-DEMO-002",
+            "patient_name": "林小華",
+            "status": "PREOP",
+            "context_mode": "STANDARD",
+            "planned_technique": "RA_SPINAL",
+            "created_at": (now - timedelta(minutes=30)).isoformat(),
+            "started_at": (now - timedelta(minutes=30)).isoformat(),
+            "actor_id": "demo-user"
+        },
+        {
+            "id": "ANES-DEMO-003",
+            "patient_id": "P-DEMO-003",
+            "patient_name": "張美玲",
+            "status": "CLOSED",
+            "context_mode": "STANDARD",
+            "planned_technique": "GA_LMA",
+            "created_at": (now - timedelta(hours=3)).isoformat(),
+            "started_at": (now - timedelta(hours=3)).isoformat(),
+            "actor_id": "demo-user"
+        }
+    ]
 
 
 # =============================================================================
@@ -1185,9 +1189,9 @@ async def list_cases(
     limit: int = Query(default=50, le=200)
 ):
     """List anesthesia cases"""
-    # v1.5.3: Vercel demo mode - return demo cases
+    # v1.5.3: Vercel demo mode - return demo cases with fresh timestamps
     if IS_VERCEL:
-        demo_cases = DEMO_ANESTHESIA_CASES.copy()
+        demo_cases = get_demo_anesthesia_cases()
         # Filter by status if specified
         if status:
             demo_cases = [c for c in demo_cases if c["status"] == status]
@@ -1226,14 +1230,12 @@ async def list_cases(
 @router.get("/cases/{case_id}")
 async def get_case(case_id: str):
     """Get case details"""
-    # v1.5.3: Vercel demo mode
+    # v1.5.3: Vercel demo mode with fresh timestamps
     if IS_VERCEL and case_id.startswith("ANES-DEMO"):
-        demo_case = next((c for c in DEMO_ANESTHESIA_CASES if c["id"] == case_id), None)
+        demo_cases = get_demo_anesthesia_cases()
+        demo_case = next((c for c in demo_cases if c["id"] == case_id), None)
         if demo_case:
-            # Add started_at for chart initialization
-            demo_case_full = demo_case.copy()
-            demo_case_full["started_at"] = demo_case["created_at"]
-            return demo_case_full
+            return demo_case  # started_at already included in function
         raise HTTPException(status_code=404, detail=f"Demo case not found: {case_id}")
 
     conn = get_db_connection()
@@ -1645,13 +1647,30 @@ async def add_medication(case_id: str, request: QuickMedicationRequest, actor_id
 @router.post("/cases/{case_id}/milestone")
 async def add_milestone(
     case_id: str,
-    milestone_type: str = Query(..., regex="^(ANESTHESIA_START|SURGERY_START|SURGERY_END|ANESTHESIA_END)$"),
-    actor_id: str = Query(...)
+    milestone_type: str = Query(..., regex="^(ANESTHESIA_START|INTUBATION|SURGERY_START|SURGERY_END|EXTUBATION|ANESTHESIA_END|INCISION|SKIN_CLOSE|PACU)$"),
+    actor_id: str = Query(...),
+    clinical_time: Optional[str] = Query(None),
+    clinical_time_offset_seconds: Optional[int] = Query(None),
+    late_entry_reason: Optional[str] = Query(None),
+    late_entry_note: Optional[str] = Query(None)
 ):
     """Add milestone event"""
+    # Parse clinical_time if provided
+    parsed_clinical_time = None
+    if clinical_time:
+        from datetime import datetime as dt
+        try:
+            parsed_clinical_time = dt.fromisoformat(clinical_time.replace('Z', '+00:00'))
+        except:
+            parsed_clinical_time = None
+
     event_request = AddEventRequest(
         event_type=EventType.MILESTONE,
-        payload={"type": milestone_type}
+        payload={"type": milestone_type},
+        clinical_time=parsed_clinical_time,
+        clinical_time_offset_seconds=clinical_time_offset_seconds,
+        late_entry_reason=late_entry_reason,
+        late_entry_note=late_entry_note
     )
 
     return await add_event(case_id, event_request, actor_id)
