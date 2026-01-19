@@ -2895,10 +2895,23 @@
         }
 
         // Wrapped fetch for offline support
-        // Phase 2: Helper function that uses xIRS.API
+        // Phase 2: Helper function that uses xIRS.API with fallback to native fetch
         async function apiFetch(url, options = {}) {
             const method = options.method || 'GET';
             const body = options.body ? JSON.parse(options.body) : null;
+
+            // Fallback to native fetch if xIRS SDK not loaded (e.g., Vercel demo)
+            if (typeof xIRS === 'undefined' || !xIRS.API) {
+                const fetchOptions = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                if (body && method !== 'GET') {
+                    fetchOptions.body = JSON.stringify(body);
+                }
+                const response = await fetch(url, fetchOptions);
+                return response;
+            }
 
             let result;
             if (method === 'GET') {
