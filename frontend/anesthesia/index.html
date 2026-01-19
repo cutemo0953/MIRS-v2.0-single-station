@@ -4804,13 +4804,23 @@
                 const rect = container.getBoundingClientRect();
                 // Skip if container has no size (hidden)
                 if (rect.width === 0 || rect.height === 0) return;
-                // Simple 1:1 pixel mapping (no HiDPI scaling to avoid complexity)
-                this.canvas.width = rect.width;
-                this.canvas.height = rect.height;
-                this.canvas.style.width = rect.width + 'px';
-                this.canvas.style.height = rect.height + 'px';
+
+                // Use container's CSS dimensions for proper sizing
+                const width = container.offsetWidth || rect.width;
+                const height = container.offsetHeight || rect.height || 280;
+
+                console.log('[Timeline] Resize:', width, 'x', height);
+
+                // Set canvas internal resolution
+                this.canvas.width = width;
+                this.canvas.height = height;
+                // Set display size
+                this.canvas.style.width = width + 'px';
+                this.canvas.style.height = height + 'px';
+                // Reset transform
                 this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-                this.viewport.pixelWidth = rect.width - 60;
+                // Calculate drawable area (minus left margin for Y labels)
+                this.viewport.pixelWidth = width - 60;
                 this.render();
             },
 
@@ -4911,6 +4921,8 @@
                 if (!this.ctx || !this.canvas) return;
                 const width = this.canvas.width;
                 const height = this.canvas.height;
+                // Ensure clean slate - reset transform and clear entire canvas
+                this.ctx.setTransform(1, 0, 0, 1, 0, 0);
                 this.ctx.clearRect(0, 0, width, height);
                 this.drawGrid(width, height);
                 this.drawVitals(width, height);
@@ -5087,8 +5099,11 @@
                 listContainer?.classList.add('hidden');
                 btnList?.classList.remove('active');
                 btnChart?.classList.add('active');
-                // Initialize chart if needed
-                timelineChart.init();
+                // Initialize chart if needed, with slight delay for DOM to be ready
+                setTimeout(() => {
+                    timelineChart.init();
+                    timelineChart.resize();
+                }, 50);
             } else {
                 chartContainer?.classList.add('hidden');
                 listContainer?.classList.remove('hidden');
