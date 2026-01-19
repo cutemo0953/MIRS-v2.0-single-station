@@ -206,6 +206,15 @@
             background: var(--controlled-dark);
         }
 
+        .quick-btn.blood {
+            background: #b91c1c;
+            border-color: #b91c1c;
+        }
+
+        .quick-btn.blood:active {
+            background: #991b1b;
+        }
+
         /* Vitals Grid */
         .vitals-section {
             background: var(--card);
@@ -610,6 +619,7 @@
         .timeline-dot.vital { background: #71717a; }
         .timeline-dot.med { background: var(--controlled); }
         .timeline-dot.milestone { background: #52525b; }
+        .timeline-dot.blood { background: #b91c1c; }
 
         .timeline-content {
             flex: 1;
@@ -1118,6 +1128,12 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path>
                     </svg>
                     <span>氧氣</span>
+                </button>
+                <button class="quick-btn blood" onclick="showBloodModal()">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"></path>
+                    </svg>
+                    <span>輸血</span>
                 </button>
                 <button class="quick-btn success" onclick="startAnesthesiaWithTimeSelector()" id="btnStart">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
@@ -1807,6 +1823,219 @@
         </div>
     </div>
 
+    <!-- Blood Transfusion Modal -->
+    <div class="modal" id="bloodModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">輸血記錄</h2>
+                <button class="modal-close" onclick="closeModal('bloodModal')">&times;</button>
+            </div>
+
+            <!-- Step 1: Select Blood Product Type -->
+            <div id="bloodStep1">
+                <div class="section-title">選擇血品類型</div>
+                <div class="med-grid" style="margin-bottom: 16px;">
+                    <button class="med-btn blood-btn" onclick="selectBloodType('PRBC')">
+                        <div class="med-name">PRBC</div>
+                        <div class="med-dose">紅血球濃厚液</div>
+                    </button>
+                    <button class="med-btn blood-btn" onclick="selectBloodType('FFP')">
+                        <div class="med-name">FFP</div>
+                        <div class="med-dose">新鮮冷凍血漿</div>
+                    </button>
+                    <button class="med-btn blood-btn" onclick="selectBloodType('PLATELET')">
+                        <div class="med-name">Platelet</div>
+                        <div class="med-dose">血小板</div>
+                    </button>
+                    <button class="med-btn blood-btn" onclick="selectBloodType('CRYO')">
+                        <div class="med-name">Cryo</div>
+                        <div class="med-dose">冷凍乾燥凝血因子</div>
+                    </button>
+                    <button class="med-btn blood-btn" onclick="selectBloodType('WHOLE_BLOOD')">
+                        <div class="med-name">Whole Blood</div>
+                        <div class="med-dose">全血</div>
+                    </button>
+                </div>
+                <button class="btn" style="background: var(--card-hover);" onclick="closeModal('bloodModal')">取消</button>
+            </div>
+
+            <!-- Step 2: Enter Details -->
+            <div id="bloodStep2" style="display: none;">
+                <div class="section-title" style="display: flex; align-items: center; gap: 8px;">
+                    <span class="blood-type-badge" id="selectedBloodType">PRBC</span>
+                    <span id="selectedBloodLabel">紅血球濃厚液</span>
+                </div>
+
+                <!-- Blood Unit ID -->
+                <div class="form-group" style="margin: 16px 0;">
+                    <label class="form-label">血袋編號 (Unit ID)</label>
+                    <input type="text" class="form-input" id="bloodUnitId" placeholder="掃描或輸入血袋條碼" style="font-size: 1.1rem; padding: 12px;">
+                </div>
+
+                <!-- Action Type -->
+                <div class="form-group" style="margin: 16px 0;">
+                    <label class="form-label">動作</label>
+                    <div class="blood-action-buttons">
+                        <button type="button" class="blood-action-btn active" data-action="START" onclick="selectBloodAction('START')">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                            </svg>
+                            開始輸血
+                        </button>
+                        <button type="button" class="blood-action-btn" data-action="COMPLETE" onclick="selectBloodAction('COMPLETE')">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            輸血完成
+                        </button>
+                        <button type="button" class="blood-action-btn reaction" data-action="REACTION" onclick="selectBloodAction('REACTION')">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            輸血反應
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reaction Type (shown only when REACTION selected) -->
+                <div id="bloodReactionSection" style="display: none; margin: 16px 0;">
+                    <label class="form-label">反應類型</label>
+                    <div class="reaction-type-buttons">
+                        <button type="button" class="reaction-type-btn" data-type="FEBRILE" onclick="selectReactionType('FEBRILE')">發燒反應</button>
+                        <button type="button" class="reaction-type-btn" data-type="ALLERGIC" onclick="selectReactionType('ALLERGIC')">過敏反應</button>
+                        <button type="button" class="reaction-type-btn" data-type="HEMOLYTIC" onclick="selectReactionType('HEMOLYTIC')">溶血反應</button>
+                    </div>
+                    <textarea id="bloodReactionNote" placeholder="反應描述 (選填)" style="width: 100%; margin-top: 8px; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); resize: none;" rows="2"></textarea>
+                </div>
+
+                <!-- Time Offset Selector -->
+                <div class="time-offset-selector" id="bloodTimeSelector">
+                    <div class="time-offset-label">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                            <path stroke-width="2" d="M12 6v6l4 2"/>
+                        </svg>
+                        事件時間
+                    </div>
+                    <div class="time-offset-buttons">
+                        <button type="button" class="time-offset-btn active" data-offset="0" onclick="selectTimeOffset(this, 'blood')">現在</button>
+                        <button type="button" class="time-offset-btn" data-offset="-60" onclick="selectTimeOffset(this, 'blood')">-1分</button>
+                        <button type="button" class="time-offset-btn" data-offset="-180" onclick="selectTimeOffset(this, 'blood')">-3分</button>
+                        <button type="button" class="time-offset-btn" data-offset="-300" onclick="selectTimeOffset(this, 'blood')">-5分</button>
+                        <button type="button" class="time-offset-btn" data-offset="custom" onclick="selectTimeOffset(this, 'blood')">自訂</button>
+                    </div>
+                    <div class="time-offset-custom" id="bloodTimeCustom">
+                        <input type="datetime-local" id="bloodCustomTime" onchange="updateComputedTime('blood')">
+                    </div>
+                    <div class="late-entry-reason" id="bloodLateEntry">
+                        <label>遲補登錄原因 (超過5分鐘需填寫)</label>
+                        <select id="bloodLateReason">
+                            <option value="EMERGENCY_HANDLING">緊急處置中</option>
+                            <option value="EQUIPMENT_ISSUE">設備問題</option>
+                            <option value="SHIFT_HANDOFF">交班中</option>
+                            <option value="DOCUMENTATION_CATCH_UP">補登文件</option>
+                            <option value="OTHER">其他</option>
+                        </select>
+                        <input type="text" id="bloodLateNote" placeholder="備註 (選填)">
+                    </div>
+                    <div class="computed-time" id="bloodComputedTime" style="font-size: 1.25rem; font-weight: 600; padding: 12px; text-align: center; background: var(--bg); border-radius: 8px; margin-top: 8px;">記錄時間: 現在</div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button class="btn" style="background: var(--card-hover); flex: 1;" onclick="backToBloodStep1()">返回</button>
+                    <button class="btn btn-primary" style="flex: 2; background: #b91c1c;" onclick="submitBloodProduct()">確認記錄</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Blood Modal Styles */
+        .blood-type-badge {
+            background: #b91c1c;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .med-btn.blood-btn {
+            border-left: 3px solid #b91c1c;
+        }
+
+        .blood-action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .blood-action-btn {
+            flex: 1;
+            min-width: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            background: var(--card);
+            color: var(--text);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .blood-action-btn:hover {
+            background: var(--card-hover);
+        }
+
+        .blood-action-btn.active {
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary);
+        }
+
+        .blood-action-btn.reaction {
+            border-color: var(--danger);
+        }
+
+        .blood-action-btn.reaction.active {
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .reaction-type-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .reaction-type-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--card);
+            color: var(--text);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .reaction-type-btn:hover {
+            background: var(--card-hover);
+        }
+
+        .reaction-type-btn.active {
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+    </style>
+
     <style>
         /* Phase C: O2 Modal Styles */
         .o2-current-status {
@@ -2111,11 +2340,12 @@
         // v1.6.1: Time Offset Helper Functions
         // =================================================================
 
-        // Track selected time offset per modal (vitals, med, milestone, etc.)
+        // Track selected time offset per modal (vitals, med, milestone, blood, etc.)
         const timeOffsetState = {
             vitals: { offset: 0, customTime: null },
             med: { offset: 0, customTime: null },
-            milestone: { offset: 0, customTime: null }
+            milestone: { offset: 0, customTime: null },
+            blood: { offset: 0, customTime: null }
         };
 
         function selectTimeOffset(btn, modalType) {
@@ -2626,7 +2856,8 @@
                     const time = new Date(e.clinical_time).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
                     const dotClass = e.event_type === 'VITAL_SIGN' ? 'vital' :
                                     e.event_type === 'MEDICATION_ADMIN' ? 'med' :
-                                    e.event_type === 'MILESTONE' ? 'milestone' : '';
+                                    e.event_type === 'MILESTONE' ? 'milestone' :
+                                    e.event_type === 'BLOOD_PRODUCT' ? 'blood' : '';
 
                     let desc = '';
                     if (e.event_type === 'VITAL_SIGN') {
@@ -2636,6 +2867,13 @@
                         desc = `${e.payload.drug_name} ${e.payload.dose}${e.payload.unit} ${e.payload.route}`;
                     } else if (e.event_type === 'MILESTONE') {
                         desc = e.payload.type;
+                    } else if (e.event_type === 'BLOOD_PRODUCT') {
+                        const p = e.payload;
+                        const actionLabel = p.action === 'START' ? '開始' : p.action === 'COMPLETE' ? '完成' : '反應';
+                        desc = `${p.product_type} ${actionLabel} - ${p.unit_id}`;
+                        if (p.action === 'REACTION' && p.reaction_type) {
+                            desc += ` (${p.reaction_type})`;
+                        }
                     } else {
                         desc = JSON.stringify(e.payload).substring(0, 50);
                     }
@@ -3284,6 +3522,165 @@
             // Close any open modals
             document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
             loadCases();
+        }
+
+        // =================================================================
+        // Blood Transfusion Functions
+        // =================================================================
+        let selectedBloodProduct = null;
+        let selectedBloodAction = 'START';
+        let selectedReactionType = null;
+
+        const bloodProductLabels = {
+            'PRBC': '紅血球濃厚液',
+            'FFP': '新鮮冷凍血漿',
+            'PLATELET': '血小板',
+            'CRYO': '冷凍乾燥凝血因子',
+            'WHOLE_BLOOD': '全血'
+        };
+
+        function showBloodModal() {
+            if (!currentCase) {
+                alert('請先選擇或建立一個麻醉案例');
+                return;
+            }
+            // Reset state
+            selectedBloodProduct = null;
+            selectedBloodAction = 'START';
+            selectedReactionType = null;
+            // Reset to step 1
+            document.getElementById('bloodStep1').style.display = 'block';
+            document.getElementById('bloodStep2').style.display = 'none';
+            // Reset time selector
+            resetTimeSelector('blood');
+            document.getElementById('bloodModal').classList.add('active');
+        }
+
+        function selectBloodType(type) {
+            selectedBloodProduct = type;
+            // Update step 2 header
+            document.getElementById('selectedBloodType').textContent = type;
+            document.getElementById('selectedBloodLabel').textContent = bloodProductLabels[type] || type;
+            // Clear unit ID
+            document.getElementById('bloodUnitId').value = '';
+            // Reset action to START
+            selectBloodAction('START');
+            // Hide reaction section
+            document.getElementById('bloodReactionSection').style.display = 'none';
+            selectedReactionType = null;
+            // Switch to step 2
+            document.getElementById('bloodStep1').style.display = 'none';
+            document.getElementById('bloodStep2').style.display = 'block';
+            // Reset and update time display
+            resetTimeSelector('blood');
+            updateComputedTime('blood');
+        }
+
+        function backToBloodStep1() {
+            document.getElementById('bloodStep1').style.display = 'block';
+            document.getElementById('bloodStep2').style.display = 'none';
+            selectedBloodProduct = null;
+        }
+
+        function selectBloodAction(action) {
+            selectedBloodAction = action;
+            // Update button states
+            document.querySelectorAll('.blood-action-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.action === action);
+            });
+            // Show/hide reaction section
+            const reactionSection = document.getElementById('bloodReactionSection');
+            if (action === 'REACTION') {
+                reactionSection.style.display = 'block';
+                // Reset reaction type selection
+                document.querySelectorAll('.reaction-type-btn').forEach(btn => btn.classList.remove('active'));
+                selectedReactionType = null;
+            } else {
+                reactionSection.style.display = 'none';
+                selectedReactionType = null;
+            }
+        }
+
+        function selectReactionType(type) {
+            selectedReactionType = type;
+            // Update button states
+            document.querySelectorAll('.reaction-type-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.type === type);
+            });
+        }
+
+        async function submitBloodProduct() {
+            if (!currentCase || !selectedBloodProduct) {
+                alert('請先選擇血品類型');
+                return;
+            }
+
+            const unitId = document.getElementById('bloodUnitId').value.trim();
+            if (!unitId) {
+                alert('請輸入血袋編號');
+                return;
+            }
+
+            if (selectedBloodAction === 'REACTION' && !selectedReactionType) {
+                alert('請選擇反應類型');
+                return;
+            }
+
+            try {
+                // Get time offset data
+                const timeData = getTimeOffsetData('blood');
+
+                // Build request body
+                const body = {
+                    product_type: selectedBloodProduct,
+                    unit_id: unitId,
+                    action: selectedBloodAction
+                };
+
+                // Add reaction data if applicable
+                if (selectedBloodAction === 'REACTION') {
+                    body.reaction_type = selectedReactionType;
+                    const reactionNote = document.getElementById('bloodReactionNote').value.trim();
+                    if (reactionNote) {
+                        body.reaction_note = reactionNote;
+                    }
+                }
+
+                // Add time parameters if specified
+                if (timeData.clinical_time) {
+                    body.clinical_time = timeData.clinical_time;
+                } else if (timeData.clinical_time_offset_seconds) {
+                    body.clinical_time_offset_seconds = timeData.clinical_time_offset_seconds;
+                }
+
+                // Add late entry reason if applicable
+                if (timeData.late_entry_reason) {
+                    body.late_entry_reason = timeData.late_entry_reason;
+                    body.late_entry_note = timeData.late_entry_note;
+                }
+
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/blood-product?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) throw new Error('Failed');
+
+                closeModal('bloodModal');
+
+                // Show action-specific success message
+                const actionLabels = {
+                    'START': '開始輸血',
+                    'COMPLETE': '輸血完成',
+                    'REACTION': '輸血反應'
+                };
+                alert(`✓ ${selectedBloodProduct} ${actionLabels[selectedBloodAction]} 已記錄`);
+
+                loadTimeline(currentCase.id);
+            } catch (err) {
+                alert('記錄失敗: ' + (err.message || '未知錯誤'));
+            }
         }
 
         function switchTab(tab) {
