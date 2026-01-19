@@ -264,16 +264,242 @@
             color: var(--text-muted);
         }
 
-        /* Timeline */
+        /* ===== Timeline v1.2 - Graphical Chart UI ===== */
+        @import url('/shared/xirs-ui/core/xirs-colors.css');
+
+        /* CSS Variables for Vitals (xIRS integrated) */
+        :root {
+            --vital-sbp: #dc2626;
+            --vital-dbp: #dc2626;
+            --vital-hr: #2563eb;
+            --vital-spo2: #10b981;
+            --vital-rr: #7c3aed;
+            --vital-warning: #f59e0b;
+            --vital-critical: #dc2626;
+            --event-medication: #3b82f6;
+            --event-procedure: #8b5cf6;
+            --event-milestone: #14b8a6;
+            --event-stat: #dc2626;
+            --grid-line: #334155;
+            --now-indicator: #f59e0b;
+        }
+
         .timeline-section {
             background: var(--card);
             border-radius: 12px;
             padding: 16px;
+            position: relative;
+        }
+
+        /* Hour Pagination Header */
+        .timeline-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: var(--bg);
+            border-radius: 8px;
+        }
+
+        .timeline-pagination button {
+            background: var(--card-hover);
+            border: none;
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .timeline-pagination button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .timeline-pagination button:not(:disabled):active {
+            background: var(--primary);
+        }
+
+        .timeline-hour-display {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .timeline-hour-chips {
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            padding: 4px 0;
+        }
+
+        .hour-chip {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            background: var(--card-hover);
+            color: var(--text-muted);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .hour-chip.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .hour-chip.has-events {
+            border: 1px solid var(--primary);
+        }
+
+        /* Timeline Canvas Container */
+        .timeline-chart {
+            position: relative;
+            width: 100%;
+            height: 280px;
+            overflow: hidden;
+            touch-action: pan-x;
+        }
+
+        .timeline-chart canvas {
+            display: block;
+        }
+
+        /* NOW Indicator */
+        .now-indicator {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--now-indicator);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .now-indicator::before {
+            content: 'NOW';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--now-indicator);
+            color: #000;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 0 0 4px 4px;
+        }
+
+        /* Milestone Track */
+        .milestone-track {
+            display: flex;
+            gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 8px;
+            overflow-x: auto;
+        }
+
+        .milestone-chip {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            background: var(--event-milestone);
+            color: white;
+        }
+
+        .milestone-chip.pending {
+            background: var(--card-hover);
+            color: var(--text-muted);
+            border: 1px dashed var(--border);
+        }
+
+        /* Event Legend */
+        .timeline-legend {
+            display: flex;
+            gap: 12px;
+            padding: 8px 0;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* STAT Button - Fixed Position */
+        .stat-button {
+            position: fixed;
+            bottom: 90px;
+            right: 16px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--event-stat);
+            border: 3px solid #fff;
+            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            z-index: 50;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: pulse-stat 2s infinite;
+        }
+
+        .stat-button:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes pulse-stat {
+            0%, 100% { box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4); }
+            50% { box-shadow: 0 4px 20px rgba(220, 38, 38, 0.7); }
+        }
+
+        .stat-button.hidden {
+            display: none;
+        }
+
+        /* Legacy Timeline List (toggle view) */
+        .timeline-list-toggle {
+            text-align: right;
+            margin-bottom: 8px;
+        }
+
+        .timeline-list-toggle button {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-decoration: underline;
         }
 
         .timeline {
             max-height: 300px;
             overflow-y: auto;
+        }
+
+        .timeline.hidden {
+            display: none;
         }
 
         .timeline-item {
@@ -831,10 +1057,59 @@
                 </button>
             </div>
 
-            <!-- Timeline -->
+            <!-- Timeline v1.2 - Graphical Chart -->
             <div class="timeline-section">
-                <div class="section-title">事件時間軸</div>
-                <div class="timeline" id="timeline">
+                <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>麻醉記錄時間軸</span>
+                    <div class="timeline-list-toggle">
+                        <button onclick="toggleTimelineView()">切換列表</button>
+                    </div>
+                </div>
+
+                <!-- Milestone Track -->
+                <div class="milestone-track" id="milestoneTrack">
+                    <span class="milestone-chip pending" id="msInduction">誘導</span>
+                    <span class="milestone-chip pending" id="msIntubation">插管</span>
+                    <span class="milestone-chip pending" id="msIncision">劃刀</span>
+                    <span class="milestone-chip pending" id="msSkinClose">關皮</span>
+                    <span class="milestone-chip pending" id="msExtubation">拔管</span>
+                    <span class="milestone-chip pending" id="msPacu">送PACU</span>
+                </div>
+
+                <!-- Hour Pagination -->
+                <div class="timeline-pagination">
+                    <button onclick="timelineChart.prevHour()" id="btnPrevHour">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <div class="timeline-hour-chips" id="hourChips">
+                        <!-- Populated by JS -->
+                    </div>
+                    <button onclick="timelineChart.nextHour()" id="btnNextHour">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Canvas Chart -->
+                <div class="timeline-chart" id="timelineChartContainer">
+                    <canvas id="vitalsCanvas"></canvas>
+                    <div class="now-indicator" id="nowIndicator" style="display: none;"></div>
+                </div>
+
+                <!-- Legend -->
+                <div class="timeline-legend">
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--vital-sbp);"></span> BP</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--vital-hr);"></span> HR</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--vital-spo2);"></span> SpO2</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--event-medication);"></span> 藥物</div>
+                    <div class="legend-item"><span class="legend-dot" style="background: var(--event-milestone);"></span> 里程碑</div>
+                </div>
+
+                <!-- Legacy List View (hidden by default) -->
+                <div class="timeline hidden" id="timeline">
                     <div class="empty-state">
                         <p>尚無事件</p>
                     </div>
@@ -842,6 +1117,14 @@
             </div>
         </div>
     </main>
+
+    <!-- STAT Button (Emergency) -->
+    <button class="stat-button hidden" id="statButton" onclick="showStatModal()">
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        STAT
+    </button>
 
     <!-- Bottom Nav -->
     <nav class="bottom-nav">
@@ -3049,6 +3332,402 @@
                 quickMed(code, name, dose, unit);
             }
         }
+
+        // =================================================================
+        // Timeline Chart v1.2 - Canvas Rendering with Hour Pagination
+        // =================================================================
+
+        const timelineChart = {
+            canvas: null,
+            ctx: null,
+            data: { vitals: [], medications: [], milestones: [], events: [] },
+            viewport: {
+                startTime: null,
+                endTime: null,
+                duration: 3600000,
+                pixelWidth: 720,
+            },
+            caseStartTime: null,
+            currentHourIndex: 0,
+            hours: [],
+
+            init() {
+                this.canvas = document.getElementById('vitalsCanvas');
+                if (!this.canvas) return;
+                this.ctx = this.canvas.getContext('2d');
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+
+                // Touch swipe support
+                let touchStartX = 0;
+                this.canvas.addEventListener('touchstart', (e) => {
+                    touchStartX = e.touches[0].clientX;
+                });
+                this.canvas.addEventListener('touchend', (e) => {
+                    const diff = e.changedTouches[0].clientX - touchStartX;
+                    if (diff > 50) this.prevHour();
+                    else if (diff < -50) this.nextHour();
+                });
+            },
+
+            resize() {
+                const container = document.getElementById('timelineChartContainer');
+                if (!container || !this.canvas) return;
+                const rect = container.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                this.canvas.width = rect.width * dpr;
+                this.canvas.height = rect.height * dpr;
+                this.canvas.style.width = rect.width + 'px';
+                this.canvas.style.height = rect.height + 'px';
+                this.ctx.scale(dpr, dpr);
+                this.viewport.pixelWidth = rect.width - 60;
+                this.render();
+            },
+
+            setData(timelineData, caseStartTime) {
+                this.data = timelineData;
+                this.caseStartTime = new Date(caseStartTime).getTime();
+                this.calculateHours();
+                this.currentHourIndex = this.hours.length - 1;
+                this.setViewportToHour(this.currentHourIndex);
+                this.updateHourChips();
+                this.updateMilestones();
+                this.render();
+                this.updateNowIndicator();
+            },
+
+            calculateHours() {
+                const now = Date.now();
+                const startHour = Math.floor(this.caseStartTime / 3600000) * 3600000;
+                const endHour = Math.ceil(now / 3600000) * 3600000;
+                this.hours = [];
+                for (let h = startHour; h <= endHour; h += 3600000) {
+                    const hasEvents = this.data.vitals.some(v =>
+                        new Date(v.clinical_time).getTime() >= h &&
+                        new Date(v.clinical_time).getTime() < h + 3600000
+                    );
+                    this.hours.push({ time: h, hasEvents });
+                }
+            },
+
+            setViewportToHour(index) {
+                if (index < 0 || index >= this.hours.length) return;
+                this.currentHourIndex = index;
+                this.viewport.startTime = this.hours[index].time;
+                this.viewport.endTime = this.viewport.startTime + this.viewport.duration;
+                this.updateHourChips();
+                this.render();
+                this.updateNowIndicator();
+            },
+
+            prevHour() { if (this.currentHourIndex > 0) this.setViewportToHour(this.currentHourIndex - 1); },
+            nextHour() { if (this.currentHourIndex < this.hours.length - 1) this.setViewportToHour(this.currentHourIndex + 1); },
+
+            updateHourChips() {
+                const container = document.getElementById('hourChips');
+                if (!container) return;
+                container.innerHTML = this.hours.map((h, i) => {
+                    const hourStr = new Date(h.time).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+                    const activeClass = i === this.currentHourIndex ? 'active' : '';
+                    const eventsClass = h.hasEvents ? 'has-events' : '';
+                    return `<span class="hour-chip ${activeClass} ${eventsClass}" onclick="timelineChart.setViewportToHour(${i})">${hourStr}</span>`;
+                }).join('');
+
+                const prevBtn = document.getElementById('btnPrevHour');
+                const nextBtn = document.getElementById('btnNextHour');
+                if (prevBtn) prevBtn.disabled = this.currentHourIndex === 0;
+                if (nextBtn) nextBtn.disabled = this.currentHourIndex >= this.hours.length - 1;
+            },
+
+            updateNowIndicator() {
+                const indicator = document.getElementById('nowIndicator');
+                if (!indicator) return;
+                const now = Date.now();
+                if (now >= this.viewport.startTime && now <= this.viewport.endTime) {
+                    const x = this.timeToX(now) + 50;
+                    indicator.style.display = 'block';
+                    indicator.style.left = x + 'px';
+                } else {
+                    indicator.style.display = 'none';
+                }
+            },
+
+            updateMilestones() {
+                const milestones = this.data.milestones || [];
+                const map = {
+                    'INDUCTION': 'msInduction', 'ANESTHESIA_START': 'msInduction',
+                    'INTUBATION': 'msIntubation', 'INCISION': 'msIncision', 'SURGERY_START': 'msIncision',
+                    'SKIN_CLOSE': 'msSkinClose', 'SURGERY_END': 'msSkinClose',
+                    'EXTUBATION': 'msExtubation', 'PACU': 'msPacu', 'ANESTHESIA_END': 'msPacu'
+                };
+                document.querySelectorAll('.milestone-chip').forEach(el => el.classList.add('pending'));
+                milestones.forEach(m => {
+                    const type = m.payload?.type || m.event_type;
+                    const el = document.getElementById(map[type]);
+                    if (el) {
+                        el.classList.remove('pending');
+                        const time = new Date(m.clinical_time).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+                        el.innerHTML = el.textContent.split(' ')[0] + ' <small>' + time + '</small>';
+                    }
+                });
+            },
+
+            timeToX(timestamp) {
+                const elapsed = timestamp - this.viewport.startTime;
+                return Math.round((elapsed / this.viewport.duration) * this.viewport.pixelWidth);
+            },
+
+            render() {
+                if (!this.ctx || !this.canvas) return;
+                const width = this.canvas.width / (window.devicePixelRatio || 1);
+                const height = this.canvas.height / (window.devicePixelRatio || 1);
+                this.ctx.clearRect(0, 0, width, height);
+                this.drawGrid(width, height);
+                this.drawVitals(width, height);
+                this.drawEvents(width, height);
+            },
+
+            drawGrid(width, height) {
+                const ctx = this.ctx;
+                const mL = 50, mT = 20, mB = 40;
+                const chartH = height - mT - mB;
+
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(mL, mT, width - mL - 10, chartH);
+
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 0.5;
+                for (let m = 0; m <= 60; m += 10) {
+                    const x = mL + (m / 60) * this.viewport.pixelWidth;
+                    ctx.beginPath(); ctx.moveTo(x, mT); ctx.lineTo(x, height - mB); ctx.stroke();
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = '10px sans-serif';
+                    ctx.textAlign = 'center';
+                    const time = new Date(this.viewport.startTime + m * 60000);
+                    ctx.fillText(time.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }), x, height - mB + 15);
+                }
+
+                [200, 150, 100, 50, 0].forEach(v => {
+                    const y = mT + chartH * (1 - v / 200);
+                    ctx.beginPath(); ctx.moveTo(mL, y); ctx.lineTo(width - 10, y); ctx.stroke();
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(v.toString(), mL - 5, y + 4);
+                });
+            },
+
+            drawVitals(width, height) {
+                const ctx = this.ctx;
+                const mL = 50, mT = 20, mB = 40;
+                const chartH = height - mT - mB;
+
+                const vitalsInView = this.data.vitals.filter(v => {
+                    const t = new Date(v.clinical_time).getTime();
+                    return t >= this.viewport.startTime && t <= this.viewport.endTime;
+                });
+                if (vitalsInView.length === 0) return;
+
+                // SBP (V symbol)
+                this.drawLine(vitalsInView, 'bp_sys', '#dc2626', 'V', mL, mT, chartH);
+                // DBP (^ symbol)
+                this.drawLine(vitalsInView, 'bp_dia', '#dc2626', '^', mL, mT, chartH);
+                // HR (● symbol)
+                this.drawLine(vitalsInView, 'hr', '#2563eb', '●', mL, mT, chartH);
+                // SpO2 (○ symbol, scaled)
+                this.drawSpo2(vitalsInView, mL, mT, chartH);
+            },
+
+            drawLine(vitals, key, color, symbol, mL, mT, chartH) {
+                const ctx = this.ctx;
+                const filtered = vitals.filter(v => v.payload[key]);
+                if (filtered.length === 0) return;
+
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                filtered.forEach((v, i) => {
+                    const x = mL + this.timeToX(new Date(v.clinical_time).getTime());
+                    const val = Math.min(v.payload[key], 200);
+                    const y = mT + chartH * (1 - val / 200);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                filtered.forEach(v => {
+                    const x = mL + this.timeToX(new Date(v.clinical_time).getTime());
+                    const val = Math.min(v.payload[key], 200);
+                    const y = mT + chartH * (1 - val / 200);
+                    if (symbol === '●') {
+                        ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+                    } else {
+                        ctx.font = '12px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(symbol, x, y + 4);
+                    }
+                });
+            },
+
+            drawSpo2(vitals, mL, mT, chartH) {
+                const ctx = this.ctx;
+                const filtered = vitals.filter(v => v.payload.spo2);
+                if (filtered.length === 0) return;
+
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                filtered.forEach((v, i) => {
+                    const x = mL + this.timeToX(new Date(v.clinical_time).getTime());
+                    const spo2 = v.payload.spo2;
+                    const mapped = 100 + (spo2 - 80) * 5;
+                    const y = mT + chartH * (1 - mapped / 200);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                filtered.forEach(v => {
+                    const x = mL + this.timeToX(new Date(v.clinical_time).getTime());
+                    const spo2 = v.payload.spo2;
+                    const mapped = 100 + (spo2 - 80) * 5;
+                    const y = mT + chartH * (1 - mapped / 200);
+                    ctx.strokeStyle = '#10b981';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.stroke();
+                });
+            },
+
+            drawEvents(width, height) {
+                const ctx = this.ctx;
+                const mL = 50;
+                const eventY = height - 25;
+
+                const medsInView = (this.data.medications || []).filter(m => {
+                    const t = new Date(m.clinical_time).getTime();
+                    return t >= this.viewport.startTime && t <= this.viewport.endTime;
+                });
+
+                medsInView.forEach(m => {
+                    const x = mL + this.timeToX(new Date(m.clinical_time).getTime());
+                    ctx.fillStyle = m.payload?.is_controlled ? '#c026d3' : '#3b82f6';
+                    ctx.beginPath(); ctx.arc(x, eventY, 6, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#f1f5f9';
+                    ctx.font = '9px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText((m.payload?.drug_name || '').substring(0, 4), x, eventY - 10);
+                });
+            }
+        };
+
+        function toggleTimelineView() {
+            const chart = document.getElementById('timelineChartContainer');
+            const list = document.getElementById('timeline');
+            const legend = document.querySelector('.timeline-legend');
+            const pagination = document.querySelector('.timeline-pagination');
+            if (chart && list) {
+                chart.classList.toggle('hidden');
+                list.classList.toggle('hidden');
+                if (legend) legend.classList.toggle('hidden');
+                if (pagination) pagination.classList.toggle('hidden');
+            }
+        }
+
+        function updateStatButton() {
+            const btn = document.getElementById('statButton');
+            if (btn) {
+                btn.classList.toggle('hidden', !(currentCase && currentCase.status === 'IN_PROGRESS'));
+            }
+        }
+
+        async function showStatModal() {
+            const meds = [
+                { code: 'EPINEPHRINE', name: 'Epinephrine', dose: 1, unit: 'mg', desc: '心跳停止/過敏性休克' },
+                { code: 'ATROPINE', name: 'Atropine', dose: 1, unit: 'mg', desc: '心跳過慢' },
+                { code: 'EPHEDRINE', name: 'Ephedrine', dose: 10, unit: 'mg', desc: '血壓過低' },
+                { code: 'SUCCINYL', name: 'Succinylcholine', dose: 100, unit: 'mg', desc: '緊急插管' }
+            ];
+            const choice = prompt('⚡ STAT 緊急用藥\n\n' + meds.map((m, i) => `${i + 1}. ${m.name} ${m.dose}${m.unit} - ${m.desc}`).join('\n') + '\n\n輸入編號:');
+            const idx = parseInt(choice) - 1;
+            if (idx >= 0 && idx < meds.length) {
+                const med = meds[idx];
+                try {
+                    await apiFetch(`${API_BASE}/cases/${currentCase.id}/events?actor_id=${actorId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            event_type: 'MEDICATION_ADMIN',
+                            payload: { drug_code: med.code, drug_name: med.name, dose: med.dose, unit: med.unit, route: 'IV', is_stat: true }
+                        })
+                    });
+                    alert(`✓ ${med.name} ${med.dose}${med.unit} IV STAT 已記錄`);
+                    loadTimeline(currentCase.id);
+                } catch (err) { alert('記錄失敗'); }
+            }
+        }
+
+        // Override loadTimeline to update chart
+        const _originalLoadTimeline = typeof loadTimeline !== 'undefined' ? loadTimeline : null;
+    </script>
+
+    <script>
+        // Enhanced loadTimeline with chart update
+        async function loadTimeline(caseId) {
+            try {
+                const res = await apiFetch(`${API_BASE}/cases/${caseId}/timeline`);
+                const data = await res.json();
+                const timelineEl = document.getElementById('timeline');
+
+                if (data.all.length === 0) {
+                    timelineEl.innerHTML = `<div class="empty-state"><p>尚無事件</p></div>`;
+                    return;
+                }
+
+                const events = data.all.sort((a, b) => new Date(b.clinical_time) - new Date(a.clinical_time));
+                timelineEl.innerHTML = events.slice(0, 20).map(e => {
+                    const time = new Date(e.clinical_time).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+                    const dotClass = e.event_type === 'VITAL_SIGN' ? 'vital' : e.event_type === 'MEDICATION_ADMIN' ? 'med' : e.event_type === 'MILESTONE' ? 'milestone' : '';
+                    let desc = '';
+                    if (e.event_type === 'VITAL_SIGN') {
+                        const p = e.payload;
+                        desc = `BP ${p.bp_sys || '--'}/${p.bp_dia || '--'}, HR ${p.hr || '--'}, SpO2 ${p.spo2 || '--'}%`;
+                    } else if (e.event_type === 'MEDICATION_ADMIN') {
+                        desc = `${e.payload.drug_name} ${e.payload.dose}${e.payload.unit} ${e.payload.route}`;
+                    } else if (e.event_type === 'MILESTONE') {
+                        desc = e.payload.type;
+                    } else {
+                        desc = JSON.stringify(e.payload).substring(0, 50);
+                    }
+                    return `<div class="timeline-item"><div class="timeline-time">${time}</div><div class="timeline-dot ${dotClass}"></div><div class="timeline-content"><div class="timeline-type">${e.event_type}</div><div class="timeline-desc">${desc}</div></div></div>`;
+                }).join('');
+
+                const lastVital = data.vitals[data.vitals.length - 1];
+                if (lastVital) {
+                    document.getElementById('lastSpo2').textContent = lastVital.payload.spo2 || '--';
+                    document.getElementById('lastHr').textContent = lastVital.payload.hr || '--';
+                    document.getElementById('lastBp').textContent = `${lastVital.payload.bp_sys || '--'}/${lastVital.payload.bp_dia || '--'}`;
+                }
+
+                // Update chart
+                if (currentCase && timelineChart.canvas) {
+                    timelineChart.setData({
+                        vitals: data.vitals || [],
+                        medications: data.medications || [],
+                        milestones: data.milestones || [],
+                        events: data.all || []
+                    }, currentCase.started_at || currentCase.created_at);
+                }
+            } catch (err) {
+                console.error('Failed to load timeline:', err);
+            }
+        }
+
+        // Init on load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSyncQueue();
+            loadCases();
+            timelineChart.init();
+            setInterval(() => timelineChart.updateNowIndicator(), 60000);
+            setInterval(() => { if (isOnline && syncQueue.length > 0) syncWithServer(); }, 30000);
+        });
     </script>
 </body>
 </html>
