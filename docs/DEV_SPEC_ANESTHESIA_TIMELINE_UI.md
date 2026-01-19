@@ -35,7 +35,7 @@
 │  │                                                    │   │
 │  │  09:00 ●──────●──────●──────●──────●──────●─ NOW  │   │
 │  │        │      │      │      │      │      │       │   │
-│  │     入OR   誘導  切皮  主術  縫合  醒來         │   │
+│  │     入OR   誘導  劃刀  主術  縫合  醒來         │   │
 │  │                                                    │   │
 │  │  [+5min] [+10min] [+15min] [+30min] [自訂]        │   │
 │  │                                                    │   │
@@ -177,7 +177,7 @@
 │  ────────────────────────────────── │
 │                                      │
 │  ┌──────┐  ┌──────┐  ┌──────┐       │
-│  │ 入OR │  │ 誘導 │  │ 切皮 │       │
+│  │ 入OR │  │ 誘導 │  │ 劃刀 │       │
 │  └──────┘  └──────┘  └──────┘       │
 │  ┌──────┐  ┌──────┐  ┌──────┐       │
 │  │ 主術 │  │ 縫合 │  │ 醒來 │       │
@@ -749,7 +749,7 @@ getVitalColor(type, value) {
 | 1 | OR_IN | 入OR | OR In |
 | 2 | INDUCTION | 誘導 | Induction |
 | 3 | INTUBATION | 插管 | Intubation |
-| 4 | INCISION | 切皮 | Incision |
+| 4 | INCISION | 劃刀 | Incision |
 | 5 | MAIN_PROCEDURE | 主術 | Main Procedure |
 | 6 | CLOSURE | 縫合 | Closure |
 | 7 | EMERGENCE | 醒來 | Emergence |
@@ -763,7 +763,7 @@ getVitalColor(type, value) {
 | 1 | OR_IN | 入OR |
 | 2 | BLOCK_START | 開始阻斷 |
 | 3 | BLOCK_COMPLETE | 阻斷完成 |
-| 4 | INCISION | 切皮 |
+| 4 | INCISION | 劃刀 |
 | 5 | MAIN_PROCEDURE | 主術 |
 | 6 | CLOSURE | 縫合 |
 | 7 | OR_OUT | 出OR |
