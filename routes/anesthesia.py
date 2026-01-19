@@ -1226,6 +1226,16 @@ async def list_cases(
 @router.get("/cases/{case_id}")
 async def get_case(case_id: str):
     """Get case details"""
+    # v1.5.3: Vercel demo mode
+    if IS_VERCEL and case_id.startswith("ANES-DEMO"):
+        demo_case = next((c for c in DEMO_ANESTHESIA_CASES if c["id"] == case_id), None)
+        if demo_case:
+            # Add started_at for chart initialization
+            demo_case_full = demo_case.copy()
+            demo_case_full["started_at"] = demo_case["created_at"]
+            return demo_case_full
+        raise HTTPException(status_code=404, detail=f"Demo case not found: {case_id}")
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -1471,6 +1481,82 @@ async def get_events(
 @router.get("/cases/{case_id}/timeline")
 async def get_timeline(case_id: str):
     """Get reconstructed timeline (grouped by type)"""
+    # v1.5.3: Vercel demo mode - return demo timeline
+    if IS_VERCEL and case_id.startswith("ANES-DEMO"):
+        demo_now = datetime.now()
+        demo_events = [
+            {
+                "id": f"{case_id}-evt-001",
+                "case_id": case_id,
+                "event_type": "VITAL_SIGN",
+                "clinical_time": (demo_now - timedelta(minutes=45)).isoformat(),
+                "payload": {"bp_sys": 120, "bp_dia": 75, "hr": 72, "spo2": 99, "etco2": 35}
+            },
+            {
+                "id": f"{case_id}-evt-002",
+                "case_id": case_id,
+                "event_type": "MILESTONE",
+                "clinical_time": (demo_now - timedelta(minutes=40)).isoformat(),
+                "payload": {"type": "INTUBATION"}
+            },
+            {
+                "id": f"{case_id}-evt-003",
+                "case_id": case_id,
+                "event_type": "VITAL_SIGN",
+                "clinical_time": (demo_now - timedelta(minutes=35)).isoformat(),
+                "payload": {"bp_sys": 95, "bp_dia": 60, "hr": 85, "spo2": 98, "etco2": 38}
+            },
+            {
+                "id": f"{case_id}-evt-004",
+                "case_id": case_id,
+                "event_type": "MEDICATION_ADMIN",
+                "clinical_time": (demo_now - timedelta(minutes=33)).isoformat(),
+                "payload": {"drug_name": "Ephedrine", "dose": 5, "unit": "mg", "route": "IV"}
+            },
+            {
+                "id": f"{case_id}-evt-005",
+                "case_id": case_id,
+                "event_type": "VITAL_SIGN",
+                "clinical_time": (demo_now - timedelta(minutes=25)).isoformat(),
+                "payload": {"bp_sys": 110, "bp_dia": 70, "hr": 78, "spo2": 99, "etco2": 36}
+            },
+            {
+                "id": f"{case_id}-evt-006",
+                "case_id": case_id,
+                "event_type": "MILESTONE",
+                "clinical_time": (demo_now - timedelta(minutes=20)).isoformat(),
+                "payload": {"type": "INCISION"}
+            },
+            {
+                "id": f"{case_id}-evt-007",
+                "case_id": case_id,
+                "event_type": "VITAL_SIGN",
+                "clinical_time": (demo_now - timedelta(minutes=15)).isoformat(),
+                "payload": {"bp_sys": 115, "bp_dia": 72, "hr": 75, "spo2": 99, "etco2": 35}
+            },
+            {
+                "id": f"{case_id}-evt-008",
+                "case_id": case_id,
+                "event_type": "VITAL_SIGN",
+                "clinical_time": (demo_now - timedelta(minutes=5)).isoformat(),
+                "payload": {"bp_sys": 118, "bp_dia": 74, "hr": 70, "spo2": 100, "etco2": 34}
+            },
+        ]
+        return {
+            'vitals': [e for e in demo_events if e['event_type'] == 'VITAL_SIGN'],
+            'medications': [e for e in demo_events if e['event_type'] == 'MEDICATION_ADMIN'],
+            'vasoactive': [],
+            'fluids': [],
+            'airway': [],
+            'anesthesia_depth': [],
+            'milestones': [e for e in demo_events if e['event_type'] == 'MILESTONE'],
+            'labs': [],
+            'positioning': [],
+            'notes': [],
+            'all': demo_events,
+            'demo_mode': True
+        }
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
