@@ -3163,7 +3163,7 @@
             document.getElementById('milestoneStep1').style.display = 'block';
             document.getElementById('milestoneStep2').style.display = 'none';
             // Reset time selector
-            resetTimeOffset('milestone');
+            resetTimeSelector('milestone');
             document.getElementById('milestoneModal').classList.add('active');
         }
 
@@ -3175,7 +3175,7 @@
             document.getElementById('milestoneStep1').style.display = 'none';
             document.getElementById('milestoneStep2').style.display = 'block';
             // Reset and update time display
-            resetTimeOffset('milestone');
+            resetTimeSelector('milestone');
             updateComputedTime('milestone');
         }
 
