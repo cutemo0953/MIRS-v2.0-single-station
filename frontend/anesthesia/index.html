@@ -2593,6 +2593,45 @@
         let deviceId = localStorage.getItem('deviceId') || generateDeviceId();
 
         const API_BASE = '/api/anesthesia';
+        // Detect Vercel demo mode
+        const IS_VERCEL_DEMO = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('vercel.dev');
+
+        // Demo patients for Vercel mode
+        const DEMO_CIRS_PATIENTS = [
+            {
+                registration_id: 'REG-DEMO-001',
+                patient_id: 'P-DEMO-001',
+                name: '王大明',
+                triage_category: '3',
+                priority: 'ROUTINE',
+                chief_complaint: '右股骨頸骨折，需術前麻醉評估',
+                anesthesia_notes: '患者有高血壓病史',
+                consultation_by: '陳醫師',
+                waiting_minutes: 45
+            },
+            {
+                registration_id: 'REG-DEMO-002',
+                patient_id: 'P-DEMO-002',
+                name: '林小華',
+                triage_category: '2',
+                priority: 'URGENT',
+                chief_complaint: '急性闘尾炎，需緊急手術',
+                anesthesia_notes: '禁食6小時以上',
+                consultation_by: '張醫師',
+                waiting_minutes: 15
+            },
+            {
+                registration_id: 'REG-DEMO-003',
+                patient_id: 'P-DEMO-003',
+                name: '陳志明',
+                triage_category: '2',
+                priority: 'URGENT',
+                chief_complaint: '左脛骨開放性骨折，需 ORIF',
+                anesthesia_notes: '建議全身麻醉',
+                consultation_by: '李醫師',
+                waiting_minutes: 90
+            }
+        ];
 
         // =================================================================
         // v1.6.1: Time Offset Helper Functions
@@ -2932,6 +2971,33 @@
 
             statusEl.textContent = '檢查中...';
             statusEl.style.color = 'var(--text-secondary)';
+
+            // Vercel demo mode: use local demo data
+            if (IS_VERCEL_DEMO) {
+                statusEl.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#f59e0b;border-radius:50%;margin-right:4px;"></span>展示模式 (' + DEMO_CIRS_PATIENTS.length + ' 位)';
+                statusEl.style.color = '#f59e0b';
+                listEl.innerHTML = DEMO_CIRS_PATIENTS.map(p => `
+                    <div class="cirs-patient-item" onclick="selectCirsPatient('${p.registration_id}', '${p.patient_id || ''}', '${p.name || ''}', ${JSON.stringify(p).replace(/"/g, '&quot;')})"
+                         style="padding: 10px; margin-bottom: 6px; background: var(--bg-secondary); border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-weight: 500;">${p.name}</span>
+                                <span style="color: var(--text-secondary); margin-left: 8px; font-size: 13px;">${p.patient_id}</span>
+                            </div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <span style="font-size: 11px; color: var(--text-secondary);">等待 ${p.waiting_minutes} 分</span>
+                                <span style="font-size: 12px; padding: 2px 8px; background: ${getTriageColor(p.triage_category)}; border-radius: 4px;">${getPriorityLabel(p.priority) || '待麻醉'}</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                            <div>${p.chief_complaint}</div>
+                            <div style="color: var(--primary);">[備註] ${p.anesthesia_notes}</div>
+                            <div>[診] ${p.consultation_by}</div>
+                        </div>
+                    </div>
+                `).join('');
+                return;
+            }
 
             try {
                 // v1.1: 使用新的 waiting-anesthesia 端點
@@ -4725,14 +4791,12 @@
                 const rect = container.getBoundingClientRect();
                 // Skip if container has no size (hidden)
                 if (rect.width === 0 || rect.height === 0) return;
-                const dpr = window.devicePixelRatio || 1;
-                // Setting canvas dimensions resets transform matrix
-                this.canvas.width = rect.width * dpr;
-                this.canvas.height = rect.height * dpr;
+                // Simple 1:1 pixel mapping (no HiDPI scaling to avoid complexity)
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
                 this.canvas.style.width = rect.width + 'px';
                 this.canvas.style.height = rect.height + 'px';
-                // Reset and scale for HiDPI
-                this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                this.ctx.setTransform(1, 0, 0, 1, 0, 0);
                 this.viewport.pixelWidth = rect.width - 60;
                 this.render();
             },
@@ -4832,8 +4896,8 @@
 
             render() {
                 if (!this.ctx || !this.canvas) return;
-                const width = this.canvas.width / (window.devicePixelRatio || 1);
-                const height = this.canvas.height / (window.devicePixelRatio || 1);
+                const width = this.canvas.width;
+                const height = this.canvas.height;
                 this.ctx.clearRect(0, 0, width, height);
                 this.drawGrid(width, height);
                 this.drawVitals(width, height);
