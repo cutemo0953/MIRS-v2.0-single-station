@@ -367,7 +367,7 @@
             display: block;
         }
 
-        /* NOW Indicator */
+        /* NOW Indicator - iOS compatible */
         .now-indicator {
             position: absolute;
             top: 0;
@@ -376,6 +376,9 @@
             background: var(--now-indicator);
             z-index: 10;
             pointer-events: none;
+            /* iOS Safari fix */
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
         }
 
         .now-indicator::before {
@@ -384,12 +387,32 @@
             top: 0;
             left: 50%;
             transform: translateX(-50%);
+            -webkit-transform: translateX(-50%);
             background: var(--now-indicator);
             color: #000;
             font-size: 10px;
             font-weight: 700;
             padding: 2px 6px;
             border-radius: 0 0 4px 4px;
+            /* iOS Safari fix for pseudo-elements */
+            display: block;
+            white-space: nowrap;
+        }
+
+        /* NOW Indicator label as separate element for better iOS support */
+        .now-indicator-label {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            -webkit-transform: translateX(-50%);
+            background: var(--now-indicator);
+            color: #000;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 0 0 4px 4px;
+            white-space: nowrap;
         }
 
         /* Milestone Track */
@@ -1117,18 +1140,18 @@
                 </button>
             </div>
 
-            <!-- Timeline v1.3 - Default to List View (better for mobile) -->
+            <!-- Timeline v1.4 - Default to Chart View (horizontal scroll like traditional anesthesia record) -->
             <div class="timeline-section">
                 <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
                     <span>麻醉記錄時間軸</span>
                     <div class="timeline-view-toggle">
-                        <button class="view-toggle-btn active" id="btnListView" onclick="setTimelineView('list')">
+                        <button class="view-toggle-btn" id="btnListView" onclick="setTimelineView('list')">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                             </svg>
                             列表
                         </button>
-                        <button class="view-toggle-btn" id="btnChartView" onclick="setTimelineView('chart')">
+                        <button class="view-toggle-btn active" id="btnChartView" onclick="setTimelineView('chart')">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                             </svg>
@@ -1147,8 +1170,8 @@
                     <span class="milestone-chip pending" id="msPacu" onclick="recordMilestoneFromChip('ANESTHESIA_END', this)">送PACU</span>
                 </div>
 
-                <!-- Chart View Container (hidden by default, better for desktop) -->
-                <div id="chartViewContainer" class="hidden">
+                <!-- Chart View Container (default - horizontal scroll like traditional anesthesia record) -->
+                <div id="chartViewContainer">
                     <!-- Hour Pagination -->
                     <div class="timeline-pagination">
                         <button onclick="timelineChart.prevHour()" id="btnPrevHour">
@@ -1169,7 +1192,9 @@
                     <!-- Canvas Chart -->
                     <div class="timeline-chart" id="timelineChartContainer">
                         <canvas id="vitalsCanvas"></canvas>
-                        <div class="now-indicator" id="nowIndicator" style="display: none;"></div>
+                        <div class="now-indicator" id="nowIndicator" style="display: none;">
+                            <span class="now-indicator-label">NOW</span>
+                        </div>
                     </div>
 
                     <!-- Legend -->
@@ -1182,8 +1207,8 @@
                     </div>
                 </div>
 
-                <!-- List View (default, better for mobile with larger fonts/buttons) -->
-                <div class="timeline" id="timeline">
+                <!-- List View (alternative view) -->
+                <div class="timeline hidden" id="timeline">
                     <div class="empty-state">
                         <p>尚無事件</p>
                     </div>
@@ -3689,16 +3714,79 @@
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
 
-                // Touch swipe support
-                let touchStartX = 0;
+                // Smooth drag/pan support for touch devices
+                let isDragging = false;
+                let dragStartX = 0;
+                let dragStartTime = 0;
+
+                // Touch events
                 this.canvas.addEventListener('touchstart', (e) => {
-                    touchStartX = e.touches[0].clientX;
+                    isDragging = true;
+                    dragStartX = e.touches[0].clientX;
+                    dragStartTime = this.viewport.startTime;
+                    e.preventDefault(); // Prevent page scroll
+                }, { passive: false });
+
+                this.canvas.addEventListener('touchmove', (e) => {
+                    if (!isDragging) return;
+                    const deltaX = e.touches[0].clientX - dragStartX;
+                    // Convert pixel delta to time delta (negative because drag right = go back in time)
+                    const pixelsPerMs = this.viewport.pixelWidth / this.viewport.duration;
+                    const timeDelta = -deltaX / pixelsPerMs;
+                    this.panToTime(dragStartTime + timeDelta);
+                    e.preventDefault();
+                }, { passive: false });
+
+                this.canvas.addEventListener('touchend', () => {
+                    isDragging = false;
                 });
-                this.canvas.addEventListener('touchend', (e) => {
-                    const diff = e.changedTouches[0].clientX - touchStartX;
-                    if (diff > 50) this.prevHour();
-                    else if (diff < -50) this.nextHour();
+
+                // Mouse drag support (for desktop testing)
+                this.canvas.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    dragStartX = e.clientX;
+                    dragStartTime = this.viewport.startTime;
+                    this.canvas.style.cursor = 'grabbing';
                 });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    const deltaX = e.clientX - dragStartX;
+                    const pixelsPerMs = this.viewport.pixelWidth / this.viewport.duration;
+                    const timeDelta = -deltaX / pixelsPerMs;
+                    this.panToTime(dragStartTime + timeDelta);
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        this.canvas.style.cursor = 'grab';
+                    }
+                });
+
+                // Set initial cursor
+                this.canvas.style.cursor = 'grab';
+            },
+
+            // Pan timeline to specific start time (with bounds checking)
+            panToTime(newStartTime) {
+                if (!this.caseStartTime) return;
+                const now = Date.now();
+                const minStart = this.caseStartTime - 300000; // Allow 5 min before case start
+                const maxStart = now - 60000; // Don't show future (allow 1 min buffer)
+
+                this.viewport.startTime = Math.max(minStart, Math.min(maxStart, newStartTime));
+                this.viewport.endTime = this.viewport.startTime + this.viewport.duration;
+
+                // Update which hour we're in
+                const hourIndex = this.hours.findIndex(h =>
+                    this.viewport.startTime >= h.time && this.viewport.startTime < h.time + 3600000
+                );
+                if (hourIndex >= 0) this.currentHourIndex = hourIndex;
+
+                this.updateHourChips();
+                this.render();
+                this.updateNowIndicator();
             },
 
             resize() {
@@ -3852,10 +3940,14 @@
                 const mL = 50, mT = 20, mB = 40;
                 const chartH = height - mT - mB;
 
+                console.log('[Timeline] Drawing vitals, total:', this.data.vitals?.length || 0);
+                console.log('[Timeline] Viewport:', new Date(this.viewport.startTime).toLocaleTimeString(), '-', new Date(this.viewport.endTime).toLocaleTimeString());
+
                 const vitalsInView = this.data.vitals.filter(v => {
                     const t = new Date(v.clinical_time).getTime();
                     return t >= this.viewport.startTime && t <= this.viewport.endTime;
                 });
+                console.log('[Timeline] Vitals in view:', vitalsInView.length);
                 if (vitalsInView.length === 0) return;
 
                 // SBP (V symbol)
@@ -4068,14 +4160,20 @@
                     document.getElementById('lastBp').textContent = `${lastVital.payload.bp_sys || '--'}/${lastVital.payload.bp_dia || '--'}`;
                 }
 
-                // Update chart
-                if (currentCase && timelineChart.canvas) {
-                    timelineChart.setData({
-                        vitals: data.vitals || [],
-                        medications: data.medications || [],
-                        milestones: data.milestones || [],
-                        events: data.all || []
-                    }, currentCase.started_at || currentCase.created_at);
+                // Update chart (initialize if not yet done)
+                if (currentCase) {
+                    if (!timelineChart.canvas) {
+                        timelineChart.init();
+                    }
+                    if (timelineChart.canvas) {
+                        console.log('[Timeline] Updating chart with', data.vitals?.length || 0, 'vitals');
+                        timelineChart.setData({
+                            vitals: data.vitals || [],
+                            medications: data.medications || [],
+                            milestones: data.milestones || [],
+                            events: data.all || []
+                        }, currentCase.started_at || currentCase.created_at);
+                    }
                 }
             } catch (err) {
                 console.error('Failed to load timeline:', err);
