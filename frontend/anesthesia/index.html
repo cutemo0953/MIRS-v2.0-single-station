@@ -1620,6 +1620,14 @@
         }
     </style>
 
+    <!-- xIRS SDK v1.1 (Strangler Pattern Phase 1) -->
+    <script src="/shared/sdk/xirs-config.js"></script>
+    <script src="/shared/sdk/xirs-api.js"></script>
+    <script src="/shared/sdk/xirs-bus.js"></script>
+    <script src="/shared/sdk/xirs-offline.js"></script>
+    <script src="/shared/sdk/xirs-ui.js"></script>
+    <script src="/shared/sdk/index.js"></script>
+
     <script>
         // State
         let currentCase = null;
@@ -1817,7 +1825,7 @@
             if (indicator) indicator.classList.add('syncing');
 
             try {
-                const res = await fetch(`${API_BASE}/sync/batch`, {
+                const res = await apiFetch(`${API_BASE}/sync/batch`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1864,6 +1872,32 @@
         });
 
         // Wrapped fetch for offline support
+        // Phase 2: Helper function that uses xIRS.API
+        async function apiFetch(url, options = {}) {
+            const method = options.method || 'GET';
+            const body = options.body ? JSON.parse(options.body) : null;
+
+            let result;
+            if (method === 'GET') {
+                result = await xIRS.API.get(url);
+            } else if (method === 'POST') {
+                result = await xIRS.API.post(url, body);
+            } else if (method === 'PUT') {
+                result = await xIRS.API.put(url, body);
+            } else if (method === 'DELETE') {
+                result = await xIRS.API.delete(url);
+            } else {
+                result = await xIRS.API.request(url, { method, body });
+            }
+
+            // Return in fetch-compatible format for backwards compatibility
+            return {
+                ok: result.ok,
+                status: result.status,
+                json: () => Promise.resolve(result.data)
+            };
+        }
+
         async function offlineFetch(url, options = {}) {
             if (!isOnline) {
                 // Queue the request for later
@@ -1879,7 +1913,8 @@
                 }
             }
 
-            return fetch(url, options);
+            // Phase 2: Use xIRS.API instead of fetch
+            return apiFetch(url, options);
         }
 
         // Initialize
@@ -1917,7 +1952,7 @@
             try {
                 // v1.1: 使用新的 waiting-anesthesia 端點
                 // 只顯示醫師看診後勾選「需麻醉」的病患
-                const res = await fetch(`${API_BASE}/proxy/cirs/waiting-anesthesia`);
+                const res = await apiFetch(`${API_BASE}/proxy/cirs/waiting-anesthesia`);
                 const data = await res.json();
 
                 if (data.online && data.patients.length > 0) {
@@ -2027,7 +2062,7 @@
         async function loadCases() {
             try {
                 const today = new Date().toISOString().split('T')[0];
-                const res = await fetch(`${API_BASE}/cases?date=${today}&limit=20`);
+                const res = await apiFetch(`${API_BASE}/cases?date=${today}&limit=20`);
                 const data = await res.json();
 
                 const listEl = document.getElementById('caseList');
@@ -2071,7 +2106,7 @@
 
         async function selectCase(caseId) {
             try {
-                const res = await fetch(`${API_BASE}/cases/${caseId}`);
+                const res = await apiFetch(`${API_BASE}/cases/${caseId}`);
                 currentCase = await res.json();
 
                 // Update UI
@@ -2102,7 +2137,7 @@
 
         async function loadTimeline(caseId) {
             try {
-                const res = await fetch(`${API_BASE}/cases/${caseId}/timeline`);
+                const res = await apiFetch(`${API_BASE}/cases/${caseId}/timeline`);
                 const data = await res.json();
 
                 const timelineEl = document.getElementById('timeline');
@@ -2168,7 +2203,7 @@
 
         async function loadO2Status(caseId) {
             try {
-                const res = await fetch(`${API_BASE}/cases/${caseId}/oxygen-status`);
+                const res = await apiFetch(`${API_BASE}/cases/${caseId}/oxygen-status`);
                 const data = await res.json();
                 currentO2Status = data;
 
@@ -2251,11 +2286,13 @@
 
             try {
                 // Load E-size cylinders
-                const eRes = await fetch('/api/v2/equipment/EMER-EQ-006/units');
+                // Phase 2: Use apiFetch instead of fetch
+                const eRes = await apiFetch('/api/v2/equipment/EMER-EQ-006/units');
                 const eData = await eRes.json();
 
                 // Load H-size cylinders
-                const hRes = await fetch('/api/v2/equipment/RESP-001/units');
+                // Phase 2: Use apiFetch instead of fetch
+                const hRes = await apiFetch('/api/v2/equipment/RESP-001/units');
                 const hData = await hRes.json();
 
                 const allUnits = [
@@ -2298,7 +2335,7 @@
             if (!currentCase) return;
 
             try {
-                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/claim-oxygen?actor_id=${actorId}`, {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/claim-oxygen?actor_id=${actorId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ cylinder_unit_id: unitId })
@@ -2330,7 +2367,7 @@
             if (!confirm('確定要釋放氧氣瓶嗎？')) return;
 
             try {
-                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/claim-oxygen?actor_id=${actorId}`, {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/claim-oxygen?actor_id=${actorId}`, {
                     method: 'DELETE'
                 });
 
@@ -2377,7 +2414,7 @@
             };
 
             try {
-                const res = await fetch(`${API_BASE}/cases?actor_id=${actorId}`, {
+                const res = await apiFetch(`${API_BASE}/cases?actor_id=${actorId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
@@ -2421,7 +2458,7 @@
             }
 
             try {
-                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/vitals?actor_id=${actorId}`, {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/vitals?actor_id=${actorId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
@@ -2531,7 +2568,7 @@
             }
 
             try {
-                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/medication?actor_id=${actorId}`, {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/medication?actor_id=${actorId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
@@ -2561,7 +2598,7 @@
             };
 
             try {
-                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/medication?actor_id=${actorId}`, {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/medication?actor_id=${actorId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
@@ -2580,7 +2617,7 @@
             if (!currentCase) return;
 
             try {
-                const res = await fetch(
+                const res = await apiFetch(
                     `${API_BASE}/cases/${currentCase.id}/milestone?milestone_type=${type}&actor_id=${actorId}`,
                     { method: 'POST' }
                 );
@@ -2664,7 +2701,7 @@
             if (!currentCase) return;
 
             try {
-                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/drugs/holdings`);
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/drugs/holdings`);
                 const data = await res.json();
 
                 drugHoldings = data.holdings || [];
@@ -2701,7 +2738,7 @@
             if (!currentCase) return;
 
             try {
-                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/drugs/transactions`);
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/drugs/transactions`);
                 const data = await res.json();
 
                 const historyEl = document.getElementById('drugTxHistory');
@@ -2852,7 +2889,7 @@
             };
 
             try {
-                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/drugs/transaction?actor_id=${actorId}`, {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/drugs/transaction?actor_id=${actorId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
@@ -2882,7 +2919,7 @@
                 document.getElementById('flagHighRisk').checked = false;
                 document.getElementById('preopQuickNote').value = '';
 
-                const res = await fetch(`${API_BASE}/cases/${caseId}/battlefield-preop`);
+                const res = await apiFetch(`${API_BASE}/cases/${caseId}/battlefield-preop`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.battlefield_preop) {
@@ -2912,7 +2949,7 @@
             };
 
             try {
-                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/battlefield-preop?actor_id=${actorId}`, {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/battlefield-preop?actor_id=${actorId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -2968,7 +3005,7 @@
             };
 
             try {
-                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/events?actor_id=${actorId}`, {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/events?actor_id=${actorId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
@@ -2986,7 +3023,7 @@
             if (!confirm('確定要關閉此案例?')) return;
 
             try {
-                const res = await fetch(`${API_BASE}/cases/${currentCase.id}/close?actor_id=${actorId}`, {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/close?actor_id=${actorId}`, {
                     method: 'POST'
                 });
 

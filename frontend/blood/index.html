@@ -1139,6 +1139,14 @@
         <span x-text="toast.message"></span>
     </div>
 
+    <!-- xIRS SDK v1.1 (Strangler Pattern Phase 1) -->
+    <script src="/shared/sdk/xirs-config.js"></script>
+    <script src="/shared/sdk/xirs-api.js"></script>
+    <script src="/shared/sdk/xirs-bus.js"></script>
+    <script src="/shared/sdk/xirs-offline.js"></script>
+    <script src="/shared/sdk/xirs-ui.js"></script>
+    <script src="/shared/sdk/index.js"></script>
+
     <!-- Alpine.js -->
     <script src="/static/js/alpine.min.js" defer></script>
 
@@ -1264,18 +1272,18 @@
                 },
 
                 async loadAvailability() {
-                    const res = await fetch('/api/blood/availability');
-                    const data = await res.json();
-                    if (data.success) {
-                        this.availability = data.data;
+                    // Phase 2: Use xIRS.API instead of fetch
+                    const result = await xIRS.API.get('/api/blood/availability');
+                    if (result.ok && result.data.success) {
+                        this.availability = result.data.data;
                     }
                 },
 
                 async loadUnits() {
-                    const res = await fetch('/api/blood/units');
-                    const data = await res.json();
-                    if (data.success) {
-                        this.units = data.data;
+                    // Phase 2: Use xIRS.API instead of fetch
+                    const result = await xIRS.API.get('/api/blood/units');
+                    if (result.ok && result.data.success) {
+                        this.units = result.data.data;
                     }
                 },
 
@@ -1433,20 +1441,16 @@
                     }
 
                     try {
-                        const res = await fetch('/api/blood/units', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(this.receiveForm)
-                        });
-                        const data = await res.json();
+                        // Phase 2: Use xIRS.API instead of fetch
+                        const result = await xIRS.API.post('/api/blood/units', this.receiveForm);
 
-                        if (data.success) {
+                        if (result.ok && result.data.success) {
                             this.showToast('入庫成功', 'success');
                             this.showReceiveModal = false;
                             this.receiveForm = { blood_type: 'O+', unit_type: 'WB', expiry_date: '', donation_id: '', source: 'blood_center', donor_name: '', donor_phone: '' };
                             await this.refresh();
                         } else {
-                            this.showToast(data.detail || '入庫失敗', 'error');
+                            this.showToast(result.data?.detail || '入庫失敗', 'error');
                         }
                     } catch (e) {
                         this.showToast('網路錯誤', 'error');
@@ -1464,28 +1468,35 @@
                     if (!confirm(`確定發放血袋 ${unit.id}？`)) return;
 
                     try {
-                        const res = await fetch(`/api/blood/units/${unit.id}/issue`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                order_id: 'MANUAL-' + Date.now(),
-                                issuer_id: 'blood-pwa'
-                            })
+                        // Phase 2: Use xIRS.API instead of fetch
+                        const result = await xIRS.API.post(`/api/blood/units/${unit.id}/issue`, {
+                            order_id: 'MANUAL-' + Date.now(),
+                            issuer_id: 'blood-pwa'
                         });
 
-                        if (res.status === 403) {
-                            const data = await res.json();
-                            this.blockerMessage = data.detail;
+                        if (result.status === 403) {
+                            this.blockerMessage = result.data.detail;
                             this.showExpiryBlocker = true;
                             return;
                         }
 
-                        const data = await res.json();
-                        if (data.success) {
+                        if (result.ok && result.data.success) {
                             this.showToast('發血成功', 'success');
+
+                            // Phase 4: Emit cross-tab event via xIRS.Bus
+                            if (window.xIRS?.Bus?.emit) {
+                                xIRS.Bus.emit('blood:unit:issued', {
+                                    unit_id: unit.id,
+                                    blood_type: unit.blood_type,
+                                    unit_type: unit.unit_type,
+                                    order_id: 'MANUAL-' + Date.now()
+                                });
+                                console.log('[Blood] Bus event emitted: blood:unit:issued');
+                            }
+
                             await this.refresh();
                         } else {
-                            this.showToast(data.detail || '發血失敗', 'error');
+                            this.showToast(result.data?.detail || '發血失敗', 'error');
                         }
                     } catch (e) {
                         this.showToast('網路錯誤', 'error');
@@ -1497,26 +1508,34 @@
                     if (!orderId) return;
 
                     try {
-                        const res = await fetch(`/api/blood/units/${unit.id}/reserve`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                order_id: orderId,
-                                reserver_id: 'blood-pwa'
-                            })
+                        // Phase 2: Use xIRS.API instead of fetch
+                        const result = await xIRS.API.post(`/api/blood/units/${unit.id}/reserve`, {
+                            order_id: orderId,
+                            reserver_id: 'blood-pwa'
                         });
-                        const data = await res.json();
 
-                        if (res.status === 409) {
+                        if (result.status === 409) {
                             this.showToast('血袋已被預約', 'error');
                             return;
                         }
 
-                        if (data.success) {
+                        if (result.ok && result.data.success) {
                             this.showToast('預約成功', 'success');
+
+                            // Phase 4: Emit cross-tab event via xIRS.Bus
+                            if (window.xIRS?.Bus?.emit) {
+                                xIRS.Bus.emit('blood:unit:reserved', {
+                                    unit_id: unit.id,
+                                    blood_type: unit.blood_type,
+                                    unit_type: unit.unit_type,
+                                    order_id: orderId
+                                });
+                                console.log('[Blood] Bus event emitted: blood:unit:reserved');
+                            }
+
                             await this.refresh();
                         } else {
-                            this.showToast(data.detail || '預約失敗', 'error');
+                            this.showToast(result.data?.detail || '預約失敗', 'error');
                         }
                     } catch (e) {
                         this.showToast('網路錯誤', 'error');
@@ -1527,16 +1546,14 @@
                     if (!confirm(`確定取消血袋 ${unit.id} 的預約？`)) return;
 
                     try {
-                        const res = await fetch(`/api/blood/units/${unit.id}/unreserve?actor=blood-pwa`, {
-                            method: 'POST'
-                        });
-                        const data = await res.json();
+                        // Phase 2: Use xIRS.API instead of fetch
+                        const result = await xIRS.API.post(`/api/blood/units/${unit.id}/unreserve?actor=blood-pwa`);
 
-                        if (data.success) {
+                        if (result.ok && result.data.success) {
                             this.showToast('已取消預約', 'success');
                             await this.refresh();
                         } else {
-                            this.showToast(data.detail || '取消失敗', 'error');
+                            this.showToast(result.data?.detail || '取消失敗', 'error');
                         }
                     } catch (e) {
                         this.showToast('網路錯誤', 'error');
@@ -1552,19 +1569,16 @@
                     if (!confirm('確定執行緊急發血？此操作將被最高級別稽核。')) return;
 
                     try {
-                        const res = await fetch('/api/blood/emergency-release', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                ...this.emergencyForm,
-                                requester_id: 'blood-pwa',
-                                patient_id: this.issueFlow.patientId || null,
-                                patient_location: this.issueFlow.patientLocation || null
-                            })
+                        // Phase 2: Use xIRS.API instead of fetch
+                        const result = await xIRS.API.post('/api/blood/emergency-release', {
+                            ...this.emergencyForm,
+                            requester_id: 'blood-pwa',
+                            patient_id: this.issueFlow.patientId || null,
+                            patient_location: this.issueFlow.patientLocation || null
                         });
-                        const data = await res.json();
 
-                        if (data.success) {
+                        if (result.ok && result.data.success) {
+                            const data = result.data;
                             // v2.3: Show Location-First Success Modal
                             this.issueResult = {
                                 location: this.issueFlow.patientLocation || null,
@@ -1580,7 +1594,7 @@
                             this.resetIssueFlow();
                             await this.refresh();
                         } else {
-                            this.showToast(data.detail || '發血失敗', 'error');
+                            this.showToast(result.data?.detail || '發血失敗', 'error');
                         }
                     } catch (e) {
                         this.showToast('網路錯誤', 'error');
@@ -1654,13 +1668,13 @@
 
                 async loadPendingOrdersSummary() {
                     try {
-                        const res = await fetch('/api/blood/pending-orders/summary');
-                        const data = await res.json();
-                        if (data.success) {
+                        // Phase 2: Use xIRS.API instead of fetch
+                        const result = await xIRS.API.get('/api/blood/pending-orders/summary');
+                        if (result.ok && result.data.success) {
                             this.pendingOrdersSummary = {
-                                pending_count: data.pending_count || 0,
-                                overdue_count: data.overdue_count || 0,
-                                oldest_overdue_hours: data.oldest_overdue_hours || 0
+                                pending_count: result.data.pending_count || 0,
+                                overdue_count: result.data.overdue_count || 0,
+                                oldest_overdue_hours: result.data.oldest_overdue_hours || 0
                             };
                         }
                     } catch (e) {
@@ -1671,14 +1685,14 @@
                 async loadPendingOrders() {
                     this.pendingOrdersLoading = true;
                     try {
-                        const res = await fetch('/api/blood/pending-orders');
-                        const data = await res.json();
-                        if (data.success) {
-                            this.pendingOrders = data.data || [];
+                        // Phase 2: Use xIRS.API instead of fetch
+                        const result = await xIRS.API.get('/api/blood/pending-orders');
+                        if (result.ok && result.data.success) {
+                            this.pendingOrders = result.data.data || [];
                             // 同時更新摘要
                             this.pendingOrdersSummary = {
                                 pending_count: this.pendingOrders.length,
-                                overdue_count: data.overdue_count || 0,
+                                overdue_count: result.data.overdue_count || 0,
                                 oldest_overdue_hours: 0
                             };
                         }
@@ -1703,20 +1717,16 @@
                     if (!this.resolveForm.order_id || !this.resolvingOrder) return;
 
                     try {
-                        const res = await fetch(`/api/blood/pending-orders/${this.resolvingOrder.id}/resolve`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(this.resolveForm)
-                        });
-                        const data = await res.json();
+                        // Phase 2: Use xIRS.API instead of fetch
+                        const result = await xIRS.API.post(`/api/blood/pending-orders/${this.resolvingOrder.id}/resolve`, this.resolveForm);
 
-                        if (data.success) {
+                        if (result.ok && result.data.success) {
                             this.showToast('補單完成', 'success');
                             this.showResolveModal = false;
                             this.resolvingOrder = null;
                             await this.loadPendingOrders();
                         } else {
-                            this.showToast(data.detail || '操作失敗', 'error');
+                            this.showToast(result.data?.detail || '操作失敗', 'error');
                         }
                     } catch (e) {
                         this.showToast('網路錯誤', 'error');
@@ -1784,15 +1794,16 @@
                     this.issueFlow.patientLocationName = '';
 
                     try {
-                        const res = await fetch(`${this.cirsHubUrl}/api/patients/${this.issueFlow.patientId}`);
+                        // Phase 2: Use xIRS.API instead of fetch (cross-origin to CIRS)
+                        const result = await xIRS.API.get(`${this.cirsHubUrl}/api/patients/${this.issueFlow.patientId}`);
 
-                        if (!res.ok) {
+                        if (!result.ok) {
                             // Demo fallback - simulate patient location
                             this.simulatePatientLocation();
                             return;
                         }
 
-                        const patient = await res.json();
+                        const patient = result.data;
 
                         if (patient.current_bed) {
                             this.issueFlow.patientLocation = patient.current_bed.id;
@@ -1865,20 +1876,17 @@
                         if (selectedUnits.length > 0) {
                             // Issue selected units
                             for (const unit of selectedUnits) {
-                                const res = await fetch(`/api/blood/units/${unit.id}/issue`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        order_id: issueOrderId,
-                                        issuer_id: 'blood-pwa',
-                                        patient_id: patientId,
-                                        patient_location: finalLocation,  // v2.6: 使用合併的位置
-                                        is_verbal_order: tier === 2,
-                                        verbal_order_note: tier === 2 ? verbalOrderNote : null
-                                    })
+                                // Phase 2: Use xIRS.API instead of fetch
+                                const result = await xIRS.API.post(`/api/blood/units/${unit.id}/issue`, {
+                                    order_id: issueOrderId,
+                                    issuer_id: 'blood-pwa',
+                                    patient_id: patientId,
+                                    patient_location: finalLocation,  // v2.6: 使用合併的位置
+                                    is_verbal_order: tier === 2,
+                                    verbal_order_note: tier === 2 ? verbalOrderNote : null
                                 });
 
-                                if (res.ok) {
+                                if (result.ok) {
                                     issuedUnits.push(unit);
                                 }
                             }
@@ -1888,29 +1896,26 @@
                             if (unitType) {
                                 apiUrl += `&unit_type=${unitType}`;
                             }
-                            const unitsRes = await fetch(apiUrl);
-                            const unitsData = await unitsRes.json();
+                            // Phase 2: Use xIRS.API instead of fetch
+                            const unitsResult = await xIRS.API.get(apiUrl);
 
-                            if (unitsData.success && unitsData.data) {
-                                const availableUnits = unitsData.data
+                            if (unitsResult.ok && unitsResult.data.success && unitsResult.data.data) {
+                                const availableUnits = unitsResult.data.data
                                     .filter(u => u.display_status !== 'EXPIRED')
                                     .slice(0, quantity);
 
                                 for (const unit of availableUnits) {
-                                    const res = await fetch(`/api/blood/units/${unit.id}/issue`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            order_id: issueOrderId,
-                                            issuer_id: 'blood-pwa',
-                                            patient_id: patientId,
-                                            patient_location: finalLocation,  // v2.6: 使用合併的位置
-                                            is_verbal_order: tier === 2,
-                                            verbal_order_note: tier === 2 ? verbalOrderNote : null
-                                        })
+                                    // Phase 2: Use xIRS.API instead of fetch
+                                    const result = await xIRS.API.post(`/api/blood/units/${unit.id}/issue`, {
+                                        order_id: issueOrderId,
+                                        issuer_id: 'blood-pwa',
+                                        patient_id: patientId,
+                                        patient_location: finalLocation,  // v2.6: 使用合併的位置
+                                        is_verbal_order: tier === 2,
+                                        verbal_order_note: tier === 2 ? verbalOrderNote : null
                                     });
 
-                                    if (res.ok) {
+                                    if (result.ok) {
                                         issuedUnits.push(unit);
                                     }
                                 }

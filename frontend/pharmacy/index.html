@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#059669">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pharmacy Sub-Hub">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <title>MIRS Pharmacy Sub-Hub - 衛星藥局</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-152x152.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-96x96.png">
+
+    <!-- Tailwind CSS (Local - Offline Mode) -->
+    <link rel="stylesheet" href="/static/css/tailwind.min.css">
+    <link rel="stylesheet" href="/static/css/mirs-colors.css">
+
+    <!-- Alpine.js (Local) -->
+    <script defer src="/static/js/alpine.min.js"></script>
+
+    <!-- QR Scanner (Local) -->
+    <script src="/static/js/html5-qrcode.min.js"></script>
+
+    <!-- xIRS SDK v1.1 -->
+    <script src="/shared/sdk/xirs-config.js"></script>
+    <script src="/shared/sdk/xirs-auth.js"></script>
+    <script src="/shared/sdk/xirs-api.js"></script>
+    <script src="/shared/sdk/xirs-bus.js"></script>
+    <script src="/shared/sdk/xirs-offline.js"></script>
+    <script src="/shared/sdk/xirs-ui.js"></script>
+    <script src="/shared/sdk/index.js"></script>
+
+    <style>
+        [x-cloak] { display: none !important; }
+        .safe-top { padding-top: env(safe-area-inset-top, 0); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
+
+        /* Status colors */
+        .status-pending { @apply bg-amber-100 text-amber-800; }
+        .status-received { @apply bg-green-100 text-green-800; }
+        .status-partial { @apply bg-blue-100 text-blue-800; }
+
+        /* Card animation */
+        .dispatch-card {
+            transition: transform 0.1s ease;
+        }
+        .dispatch-card:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 safe-top safe-bottom">
+    <div x-data="pharmacySubHub()" x-init="init()" x-cloak>
+        <!-- Offline Banner (SDK UI) -->
+        <div id="xirs-offline-banner"></div>
+
+        <!-- Header -->
+        <header class="bg-emerald-700 text-white px-4 py-3 sticky top-0 z-40">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg">Pharmacy Sub-Hub</h1>
+                        <p class="text-xs text-emerald-200" x-text="stationName || '衛星藥局'"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Pending count -->
+                    <span x-show="pendingCount > 0"
+                          class="bg-amber-500 text-white px-2 py-1 rounded-full text-sm font-medium">
+                        <span x-text="pendingCount"></span> 待收
+                    </span>
+                    <!-- Sync status -->
+                    <button @click="syncNow()" class="p-2 rounded-lg hover:bg-emerald-600">
+                        <svg class="w-5 h-5" :class="syncing ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Bar -->
+        <div class="bg-white border-b px-4 py-3 grid grid-cols-3 gap-4 text-center">
+            <div>
+                <div class="text-2xl font-bold text-amber-600" x-text="stats.pending"></div>
+                <div class="text-xs text-gray-500">待收貨</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-green-600" x-text="stats.received_today"></div>
+                <div class="text-xs text-gray-500">今日已收</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-blue-600" x-text="stats.items_today"></div>
+                <div class="text-xs text-gray-500">藥品項數</div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="bg-white border-b flex">
+            <button @click="currentTab = 'pending'"
+                    class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
+                    :class="currentTab === 'pending' ? 'text-emerald-600 border-emerald-600' : 'text-gray-500 border-transparent'">
+                待收貨
+            </button>
+            <button @click="currentTab = 'history'"
+                    class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
+                    :class="currentTab === 'history' ? 'text-emerald-600 border-emerald-600' : 'text-gray-500 border-transparent'">
+                收貨紀錄
+            </button>
+            <button @click="currentTab = 'inventory'"
+                    class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
+                    :class="currentTab === 'inventory' ? 'text-emerald-600 border-emerald-600' : 'text-gray-500 border-transparent'">
+                庫存
+            </button>
+        </div>
+
+        <!-- Main Content -->
+        <main class="p-4 pb-24">
+            <!-- Pending Dispatches Tab -->
+            <div x-show="currentTab === 'pending'" class="space-y-4">
+                <template x-for="dispatch in pendingDispatches" :key="dispatch.dispatch_id">
+                    <div class="dispatch-card bg-white rounded-xl shadow-sm overflow-hidden"
+                         @click="openDispatchDetail(dispatch)">
+                        <div class="p-4">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="font-bold text-gray-800" x-text="dispatch.dispatch_id"></div>
+                                    <div class="text-sm text-gray-500 mt-1">
+                                        來源：<span x-text="dispatch.source_name || dispatch.source_station"></span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium"
+                                          :class="dispatch.priority === 'URGENT' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-600'"
+                                          x-text="dispatch.priority === 'URGENT' ? '急件' : '一般'"></span>
+                                    <div class="text-xs text-gray-400 mt-1" x-text="formatTime(dispatch.dispatched_at)"></div>
+                                </div>
+                            </div>
+                            <div class="mt-3 flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-sm text-gray-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                    </svg>
+                                    <span x-text="dispatch.items?.length || 0"></span> 項藥品
+                                </div>
+                                <button class="text-emerald-600 font-medium text-sm">
+                                    確認收貨 →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <div x-show="pendingDispatches.length === 0" class="text-center py-12 text-gray-500">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                    <p class="font-medium">沒有待收貨項目</p>
+                    <p class="text-sm mt-1">新的調撥單會自動顯示在這裡</p>
+                </div>
+            </div>
+
+            <!-- History Tab -->
+            <div x-show="currentTab === 'history'" class="space-y-4">
+                <template x-for="receipt in receiptHistory" :key="receipt.receipt_id">
+                    <div class="bg-white rounded-xl shadow-sm p-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <div class="font-medium text-gray-800" x-text="receipt.dispatch_id"></div>
+                                <div class="text-sm text-gray-500" x-text="receipt.source_name"></div>
+                            </div>
+                            <div class="text-right">
+                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">已收貨</span>
+                                <div class="text-xs text-gray-400 mt-1" x-text="formatTime(receipt.received_at)"></div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-600">
+                            <span x-text="receipt.items_count"></span> 項藥品 ·
+                            收貨人：<span x-text="receipt.received_by_name"></span>
+                        </div>
+                    </div>
+                </template>
+
+                <div x-show="receiptHistory.length === 0" class="text-center py-12 text-gray-500">
+                    <p>尚無收貨紀錄</p>
+                </div>
+            </div>
+
+            <!-- Inventory Tab -->
+            <div x-show="currentTab === 'inventory'" class="space-y-4">
+                <div class="bg-white rounded-xl shadow-sm p-4">
+                    <p class="text-center text-gray-500">庫存功能開發中...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t safe-bottom z-40">
+            <div class="grid grid-cols-4 py-2">
+                <button @click="currentTab = 'pending'" class="flex flex-col items-center py-2"
+                        :class="currentTab === 'pending' ? 'text-emerald-600' : 'text-gray-400'">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                    <span class="text-xs mt-1">待收貨</span>
+                </button>
+                <button @click="openScanner()" class="flex flex-col items-center py-2 text-gray-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                    </svg>
+                    <span class="text-xs mt-1">掃描</span>
+                </button>
+                <button @click="currentTab = 'history'" class="flex flex-col items-center py-2"
+                        :class="currentTab === 'history' ? 'text-emerald-600' : 'text-gray-400'">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="text-xs mt-1">紀錄</span>
+                </button>
+                <button @click="openSettings()" class="flex flex-col items-center py-2 text-gray-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span class="text-xs mt-1">設定</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Dispatch Detail Modal -->
+        <div x-show="showDispatchDetail" x-cloak
+             class="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center"
+             @click.self="showDispatchDetail = false">
+            <div class="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-hidden">
+                <div class="px-4 py-3 border-b flex items-center justify-between bg-emerald-700 text-white">
+                    <h3 class="font-bold">調撥單詳情</h3>
+                    <button @click="showDispatchDetail = false" class="text-2xl">&times;</button>
+                </div>
+                <div class="p-4 overflow-y-auto max-h-[60vh]" x-show="selectedDispatch">
+                    <div class="mb-4">
+                        <div class="text-sm text-gray-500">調撥單號</div>
+                        <div class="font-bold text-lg" x-text="selectedDispatch?.dispatch_id"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <div class="text-sm text-gray-500">來源</div>
+                            <div class="font-medium" x-text="selectedDispatch?.source_name"></div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-500">調撥時間</div>
+                            <div class="font-medium" x-text="formatTime(selectedDispatch?.dispatched_at)"></div>
+                        </div>
+                    </div>
+
+                    <!-- Items List -->
+                    <div class="border-t pt-4">
+                        <div class="text-sm font-medium text-gray-700 mb-2">藥品清單</div>
+                        <div class="space-y-2">
+                            <template x-for="item in selectedDispatch?.items || []" :key="item.item_id">
+                                <div class="flex items-center justify-between py-2 border-b">
+                                    <div>
+                                        <div class="font-medium" x-text="item.drug_name"></div>
+                                        <div class="text-xs text-gray-500" x-text="item.drug_code"></div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-emerald-600">
+                                            <span x-text="item.quantity"></span>
+                                            <span class="text-sm text-gray-500" x-text="item.unit"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 border-t bg-gray-50">
+                    <button @click="confirmReceipt()"
+                            class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">
+                        確認收貨
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scanner Modal -->
+        <div x-show="showScanner" x-cloak
+             class="fixed inset-0 z-50 bg-black flex flex-col">
+            <div class="p-4 flex items-center justify-between text-white">
+                <h3 class="font-bold">掃描藥品條碼</h3>
+                <button @click="closeScanner()" class="text-2xl">&times;</button>
+            </div>
+            <div class="flex-1 flex items-center justify-center">
+                <div id="scanner-container" class="w-full max-w-sm aspect-square"></div>
+            </div>
+            <div class="p-4 text-center text-white text-sm">
+                將藥品條碼對準掃描框
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div x-show="showSettings" x-cloak
+             class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+             @click.self="showSettings = false">
+            <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+                <div class="px-4 py-3 border-b bg-gray-800 text-white">
+                    <h3 class="font-bold">設定</h3>
+                </div>
+                <div class="p-4 space-y-4">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="text-sm text-gray-500">站點名稱</div>
+                        <div class="font-medium" x-text="stationName || '未設定'"></div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="text-sm text-gray-500">站點 ID</div>
+                        <div class="font-mono text-sm" x-text="stationId || '未配對'"></div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="text-sm text-gray-500">SDK 狀態</div>
+                        <div class="font-medium" x-text="sdkStatus"></div>
+                    </div>
+                    <button @click="showSettings = false"
+                            class="w-full border border-gray-300 py-2 rounded-lg">
+                        關閉
+                    </button>
+                </div>
+                <div class="p-4 text-center text-xs text-gray-400">
+                    MIRS Pharmacy Sub-Hub v1.0<br>
+                    xIRS SDK v1.1
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div x-show="toast.show" x-cloak
+             x-transition
+             class="fixed bottom-24 left-4 right-4 z-50">
+            <div class="rounded-lg px-4 py-3 shadow-lg text-white text-center"
+                 :class="{
+                     'bg-green-600': toast.type === 'success',
+                     'bg-red-600': toast.type === 'error',
+                     'bg-amber-600': toast.type === 'warning'
+                 }"
+                 x-text="toast.message">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function pharmacySubHub() {
+            return {
+                // State
+                currentTab: 'pending',
+                pendingDispatches: [],
+                receiptHistory: [],
+                stats: {
+                    pending: 0,
+                    received_today: 0,
+                    items_today: 0
+                },
+                pendingCount: 0,
+                syncing: false,
+
+                // Station info
+                stationId: null,
+                stationName: null,
+                sdkStatus: 'Initializing...',
+
+                // Modals
+                showDispatchDetail: false,
+                showScanner: false,
+                showSettings: false,
+                selectedDispatch: null,
+
+                // Scanner
+                scanner: null,
+
+                // Toast
+                toast: { show: false, message: '', type: 'success' },
+
+                async init() {
+                    console.log('[Pharmacy Sub-Hub] Initializing...');
+
+                    // Wait for SDK to be ready
+                    xIRS.ready(async () => {
+                        console.log('[Pharmacy Sub-Hub] SDK ready');
+                        this.sdkStatus = `Ready (${xIRS._state})`;
+
+                        // Load config
+                        const config = xIRS.Config.load();
+                        if (config) {
+                            this.stationId = config.station_id;
+                            this.stationName = config.station_name || '衛星藥局';
+                        }
+
+                        // Initialize offline module
+                        if (xIRS.Offline?.init) {
+                            await xIRS.Offline.init({
+                                autoSync: true,
+                                syncInterval: 30000
+                            });
+                        }
+
+                        // Load data
+                        await this.refreshData();
+
+                        // Listen for bus events
+                        if (xIRS.Bus) {
+                            xIRS.Bus.on('pharmacy:dispatch:new', (data) => {
+                                this.showToast('收到新調撥單', 'success');
+                                this.refreshData();
+                            });
+
+                            xIRS.Bus.on('sync:completed', () => {
+                                this.refreshData();
+                            });
+                        }
+
+                        console.log('[Pharmacy Sub-Hub] Initialized');
+                    });
+                },
+
+                async refreshData() {
+                    await Promise.all([
+                        this.loadPendingDispatches(),
+                        this.loadReceiptHistory(),
+                        this.loadStats()
+                    ]);
+                },
+
+                async loadPendingDispatches() {
+                    try {
+                        const result = await xIRS.API.get('/api/pharmacy/dispatch/pending');
+                        if (result.ok) {
+                            this.pendingDispatches = result.data.dispatches || [];
+                            this.pendingCount = this.pendingDispatches.length;
+                        }
+                    } catch (e) {
+                        console.error('[Pharmacy] Failed to load pending:', e);
+                        // Try loading from cache/offline
+                    }
+                },
+
+                async loadReceiptHistory() {
+                    try {
+                        const result = await xIRS.API.get('/api/pharmacy/dispatch/history', {
+                            params: { limit: 20 }
+                        });
+                        if (result.ok) {
+                            this.receiptHistory = result.data.receipts || [];
+                        }
+                    } catch (e) {
+                        console.error('[Pharmacy] Failed to load history:', e);
+                    }
+                },
+
+                async loadStats() {
+                    try {
+                        const result = await xIRS.API.get('/api/pharmacy/dispatch/stats');
+                        if (result.ok) {
+                            this.stats = result.data;
+                        }
+                    } catch (e) {
+                        // Use local counts
+                        this.stats.pending = this.pendingDispatches.length;
+                    }
+                },
+
+                openDispatchDetail(dispatch) {
+                    this.selectedDispatch = dispatch;
+                    this.showDispatchDetail = true;
+                },
+
+                async confirmReceipt() {
+                    if (!this.selectedDispatch) return;
+
+                    const dispatch = this.selectedDispatch;
+
+                    try {
+                        // Queue receipt event (works offline)
+                        await xIRS.Offline.queue({
+                            domain: 'pharmacy',
+                            action: 'MED_RECEIPT',
+                            priority: xIRS.Offline.Priority.P1_OPERATIONS,
+                            payload: {
+                                dispatch_id: dispatch.dispatch_id,
+                                items: dispatch.items.map(item => ({
+                                    item_id: item.item_id,
+                                    drug_code: item.drug_code,
+                                    quantity_received: item.quantity
+                                })),
+                                received_at: new Date().toISOString(),
+                                received_by: this.stationId
+                            }
+                        });
+
+                        // Optimistic UI update
+                        this.pendingDispatches = this.pendingDispatches.filter(
+                            d => d.dispatch_id !== dispatch.dispatch_id
+                        );
+                        this.pendingCount = this.pendingDispatches.length;
+                        this.stats.received_today++;
+
+                        this.showDispatchDetail = false;
+                        this.showToast('收貨已確認', 'success');
+
+                        // Emit bus event
+                        if (xIRS.Bus) {
+                            xIRS.Bus.emit('pharmacy:receipt:confirmed', {
+                                dispatch_id: dispatch.dispatch_id
+                            });
+                        }
+
+                    } catch (e) {
+                        console.error('[Pharmacy] Receipt failed:', e);
+                        this.showToast('收貨確認失敗', 'error');
+                    }
+                },
+
+                async syncNow() {
+                    if (this.syncing) return;
+
+                    this.syncing = true;
+                    try {
+                        if (xIRS.Offline?.sync) {
+                            await xIRS.Offline.sync();
+                        }
+                        await this.refreshData();
+                        this.showToast('同步完成', 'success');
+                    } catch (e) {
+                        console.error('[Pharmacy] Sync failed:', e);
+                        this.showToast('同步失敗', 'error');
+                    } finally {
+                        this.syncing = false;
+                    }
+                },
+
+                openScanner() {
+                    this.showScanner = true;
+                    this.$nextTick(() => this.startScanner());
+                },
+
+                closeScanner() {
+                    this.stopScanner();
+                    this.showScanner = false;
+                },
+
+                startScanner() {
+                    if (this.scanner) return;
+
+                    this.scanner = new Html5Qrcode('scanner-container');
+                    this.scanner.start(
+                        { facingMode: 'environment' },
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        (decodedText) => this.onScan(decodedText),
+                        () => {}
+                    ).catch(e => {
+                        console.error('[Scanner] Error:', e);
+                        this.showToast('無法啟動相機', 'error');
+                    });
+                },
+
+                stopScanner() {
+                    if (this.scanner) {
+                        this.scanner.stop().catch(() => {});
+                        this.scanner = null;
+                    }
+                },
+
+                onScan(code) {
+                    console.log('[Pharmacy] Scanned:', code);
+                    this.showToast(`掃描到: ${code}`, 'success');
+                    // TODO: Process barcode
+                },
+
+                openSettings() {
+                    this.showSettings = true;
+                },
+
+                formatTime(ts) {
+                    if (!ts) return '';
+                    const date = new Date(ts);
+                    return date.toLocaleString('zh-TW', {
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+
+                showToast(message, type = 'success') {
+                    this.toast = { show: true, message, type };
+                    setTimeout(() => this.toast.show = false, 3000);
+                }
+            };
+        }
+    </script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('[SW] Registered:', reg.scope))
+                .catch(err => console.error('[SW] Registration failed:', err));
+        }
+    </script>
+</body>
+</html>

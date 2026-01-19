@@ -11,6 +11,15 @@
     <link rel="stylesheet" href="/static/css/tailwind.min.css">
     <link rel="stylesheet" href="/static/css/mirs-colors.css">
     <script defer src="/static/js/alpine.min.js"></script>
+
+    <!-- xIRS SDK v1.1 (Strangler Pattern Phase 1 - TIER-2) -->
+    <script src="/shared/sdk/xirs-config.js"></script>
+    <script src="/shared/sdk/xirs-api.js"></script>
+    <script src="/shared/sdk/xirs-bus.js"></script>
+    <script src="/shared/sdk/xirs-offline.js"></script>
+    <script src="/shared/sdk/xirs-ui.js"></script>
+    <script src="/shared/sdk/index.js"></script>
+
     <style>
         [x-cloak] { display: none !important; }
         body {
@@ -1087,6 +1096,32 @@
     </div>
 
     <script>
+        // Phase 2: Helper function that uses xIRS.API (fetch-compatible response)
+        async function apiFetch(url, options = {}) {
+            const method = options.method || 'GET';
+            const body = options.body ? JSON.parse(options.body) : null;
+
+            let result;
+            if (method === 'GET') {
+                result = await xIRS.API.get(url);
+            } else if (method === 'POST') {
+                result = await xIRS.API.post(url, body);
+            } else if (method === 'PUT') {
+                result = await xIRS.API.put(url, body);
+            } else if (method === 'DELETE') {
+                result = await xIRS.API.delete(url);
+            } else {
+                result = await xIRS.API.request(url, { method, body });
+            }
+
+            // Return fetch-compatible format
+            return {
+                ok: result.ok,
+                status: result.status,
+                json: () => Promise.resolve(result.data)
+            };
+        }
+
         function biomedApp() {
             return {
                 // State
@@ -1176,7 +1211,7 @@
                 // API Methods
                 async loadEquipment() {
                     try {
-                        const res = await fetch('/api/equipment');
+                        const res = await apiFetch('/api/equipment');
                         if (res.ok) {
                             this.equipment = await res.json();
                         }
@@ -1188,7 +1223,7 @@
 
                 async loadResilienceStatus() {
                     try {
-                        const res = await fetch('/api/resilience/status');
+                        const res = await apiFetch('/api/resilience/status');
                         if (res.ok) {
                             const data = await res.json();
                             console.log('[BioMed] Resilience API response:', data);
@@ -1293,7 +1328,7 @@
                         const allUnits = [];
                         for (const eq of oxygenEquipment) {
                             try {
-                                const res = await fetch(`/api/v2/equipment/${eq.id}/units`);
+                                const res = await apiFetch(`/api/v2/equipment/${eq.id}/units`);
                                 if (res.ok) {
                                     const data = await res.json();
                                     const units = (data.units || []).map(u => ({
@@ -1332,7 +1367,7 @@
                         const allUnits = [];
                         for (const eq of powerEquipment) {
                             try {
-                                const res = await fetch(`/api/v2/equipment/${eq.id}/units`);
+                                const res = await apiFetch(`/api/v2/equipment/${eq.id}/units`);
                                 if (res.ok) {
                                     const data = await res.json();
                                     const units = (data.units || []).map(u => ({
@@ -1371,7 +1406,7 @@
                 // v1.2.5: 儲存單位編輯
                 async saveUnitEdit() {
                     try {
-                        const res = await fetch(`/api/v2/equipment/units/${this.unitEditForm.id}/check`, {
+                        const res = await apiFetch(`/api/v2/equipment/units/${this.unitEditForm.id}/check`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -1430,7 +1465,7 @@
                     try {
                         // API 需要 level_percent (必填), status, remarks
                         const levelPercent = unit.level_percent || Math.round((unit.psi || 0) / 2200 * 100);
-                        const res = await fetch(`/api/v2/equipment/units/${unit.id}/check`, {
+                        const res = await apiFetch(`/api/v2/equipment/units/${unit.id}/check`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -1454,6 +1489,19 @@
                             };
 
                             this.showToast(`${unit.equipment_name} #${unit.unit_label || unit.unit_serial || ''} 已確認`, 'success');
+
+                            // Phase 4: Emit cross-tab event via xIRS.Bus
+                            if (window.xIRS?.Bus?.emit) {
+                                xIRS.Bus.emit('equipment:unit:checked', {
+                                    unit_id: unitId,
+                                    equipment_id: unit.equipment_id,
+                                    equipment_name: unit.equipment_name,
+                                    unit_label: unit.unit_label || unit.unit_serial,
+                                    status: 'AVAILABLE',
+                                    checked_at: newLastCheck
+                                });
+                            }
+
                             // v1.2.13: 替換整個物件 + resilienceRefreshKey 雙重確保
                             this.resilienceRefreshKey++;
                             console.log('[BioMed] v1.2.13: resilienceStatus replaced, refreshKey:', this.resilienceRefreshKey);
@@ -1482,7 +1530,7 @@
                         console.log('[BioMed] v1.2.14: checkEquipment for', eq.id, eq.name);
 
                         // Step 1: 取得該設備的所有 units
-                        const unitsRes = await fetch(`/api/v2/equipment/${eq.id}/units`);
+                        const unitsRes = await apiFetch(`/api/v2/equipment/${eq.id}/units`);
                         if (!unitsRes.ok) {
                             // 如果無法取得 units，顯示錯誤
                             console.error('[BioMed] Failed to get units for', eq.id);
@@ -1496,7 +1544,7 @@
                         if (units.length === 0) {
                             // 沒有 units，需要先建立一個
                             console.log('[BioMed] No units, creating one...');
-                            const createRes = await fetch(`/api/v2/equipment/${eq.id}/units`, {
+                            const createRes = await apiFetch(`/api/v2/equipment/${eq.id}/units`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
@@ -1526,7 +1574,7 @@
                         let successCount = 0;
                         for (const unit of units) {
                             try {
-                                const checkRes = await fetch(`/api/v2/equipment/units/${unit.id}/check`, {
+                                const checkRes = await apiFetch(`/api/v2/equipment/units/${unit.id}/check`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
@@ -1572,6 +1620,19 @@
                             });
 
                             this.showToast(`${eq.name} 已確認 (${successCount}/${units.length})`, 'success');
+
+                            // Phase 4: Emit cross-tab event via xIRS.Bus
+                            if (window.xIRS?.Bus?.emit) {
+                                xIRS.Bus.emit('equipment:checked', {
+                                    equipment_id: eq.id,
+                                    equipment_name: eq.name,
+                                    equipment_type: eq.type,
+                                    check_status: newCheckStatus,
+                                    checked_count: successCount,
+                                    unit_count: units.length,
+                                    checked_at: new Date().toISOString()
+                                });
+                            }
 
                             // v1.2.16: 不要立刻重新載入！讓樂觀更新先生效
                             // 只遞增 refreshKey 觸發 Alpine 重新渲染
@@ -1623,7 +1684,7 @@
                             ? `/api/equipment/${this.equipmentForm.id}`
                             : '/api/equipment';
 
-                        const res = await fetch(url, {
+                        const res = await apiFetch(url, {
                             method,
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(this.equipmentForm)
@@ -1649,7 +1710,7 @@
                     if (!confirm(`確定要刪除 "${eq.name}" 嗎？`)) return;
 
                     try {
-                        const res = await fetch(`/api/equipment/${eq.id}`, {
+                        const res = await apiFetch(`/api/equipment/${eq.id}`, {
                             method: 'DELETE'
                         });
 
@@ -1762,7 +1823,7 @@
                     this.showUnitManageModal = true;
 
                     try {
-                        const response = await fetch(`/api/v2/equipment/${eq.id}/units?include_inactive=true`);
+                        const response = await apiFetch(`/api/v2/equipment/${eq.id}/units?include_inactive=true`);
                         if (response.ok) {
                             const data = await response.json();
                             this.unitManageForm.units = data.units || [];
@@ -1785,7 +1846,7 @@
                     const form = this.unitManageForm.addForm;
 
                     try {
-                        const response = await fetch(`/api/v2/equipment/${equipmentId}/units`, {
+                        const response = await apiFetch(`/api/v2/equipment/${equipmentId}/units`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -1821,7 +1882,7 @@
                     }
 
                     try {
-                        const response = await fetch(`/api/v2/equipment/units/${unit.id}`, {
+                        const response = await apiFetch(`/api/v2/equipment/units/${unit.id}`, {
                             method: 'DELETE',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ reason: reason })
@@ -1856,7 +1917,7 @@
                     }
 
                     try {
-                        const response = await fetch(`/api/v2/equipment/units/${unit.id}/restore`, {
+                        const response = await apiFetch(`/api/v2/equipment/units/${unit.id}/restore`, {
                             method: 'POST'
                         });
 
@@ -1901,7 +1962,7 @@
                     }
 
                     try {
-                        const response = await fetch(`/api/v2/equipment/${equipmentId}/quantity`, {
+                        const response = await apiFetch(`/api/v2/equipment/${equipmentId}/quantity`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -2056,7 +2117,7 @@
                 async updateUnitLevel(unit) {
                     const newLevel = parseInt(unit.editLevel) || 0;
                     try {
-                        const response = await fetch(`/api/v2/equipment/units/${unit.id}/check`, {
+                        const response = await apiFetch(`/api/v2/equipment/units/${unit.id}/check`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -2085,7 +2146,7 @@
                 // v1.1.4: 確認單一單位
                 async checkUnit(unit) {
                     try {
-                        const response = await fetch(`/api/v2/equipment/units/${unit.id}/check`, {
+                        const response = await apiFetch(`/api/v2/equipment/units/${unit.id}/check`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -2112,7 +2173,7 @@
                 // v1.1.5: 更新單位狀態
                 async updateUnitStatus(unit) {
                     try {
-                        const response = await fetch(`/api/v2/equipment/units/${unit.id}/check`, {
+                        const response = await apiFetch(`/api/v2/equipment/units/${unit.id}/check`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
