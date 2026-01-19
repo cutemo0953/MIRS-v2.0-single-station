@@ -2571,6 +2571,32 @@
             document.body.classList.add('offline');
         });
 
+        // Helper function to extract error message from various error types
+        function getErrorMessage(err) {
+            if (!err) return '未知錯誤';
+            // String error
+            if (typeof err === 'string') return err;
+            // APIError or Error with message
+            if (err.message && typeof err.message === 'string') return err.message;
+            // Error data with detail (FastAPI style)
+            if (err.data?.detail) {
+                if (typeof err.data.detail === 'string') return err.data.detail;
+                if (err.data.detail.message) return err.data.detail.message;
+            }
+            // Direct detail property
+            if (err.detail) {
+                if (typeof err.detail === 'string') return err.detail;
+                if (err.detail.message) return err.detail.message;
+            }
+            // Fallback to JSON string for debugging
+            try {
+                const str = JSON.stringify(err);
+                return str.length > 100 ? str.substring(0, 100) + '...' : str;
+            } catch {
+                return '未知錯誤';
+            }
+        }
+
         // Wrapped fetch for offline support
         // Phase 2: Helper function that uses xIRS.API
         async function apiFetch(url, options = {}) {
@@ -2767,10 +2793,11 @@
 
                 const listEl = document.getElementById('caseList');
 
-                // v1.1: Filter out CLOSED cases from main list
+                // Separate active and closed cases
                 const activeCases = data.cases.filter(c => c.status !== 'CLOSED');
+                const closedCases = data.cases.filter(c => c.status === 'CLOSED');
 
-                if (activeCases.length === 0) {
+                if (data.cases.length === 0) {
                     listEl.innerHTML = `
                         <div class="empty-state">
                             <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:64px;height:64px;opacity:0.5;">
@@ -2782,17 +2809,61 @@
                     return;
                 }
 
-                listEl.innerHTML = activeCases.map(c => `
-                    <div class="case-list-item" onclick="selectCase('${c.id}')">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div class="case-id">${c.id}</div>
-                                <div style="font-weight: 600;">${c.patient_name || c.patient_id}</div>
+                // Build case list HTML
+                let html = '';
+
+                // Active cases section
+                if (activeCases.length > 0) {
+                    html += activeCases.map(c => `
+                        <div class="case-list-item" onclick="selectCase('${c.id}')">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div class="case-id">${c.id}</div>
+                                    <div style="font-weight: 600;">${c.patient_name || c.patient_id}</div>
+                                </div>
+                                <span class="case-status ${c.status.toLowerCase()}">${c.status}</span>
                             </div>
-                            <span class="case-status ${c.status.toLowerCase()}">${c.status}</span>
                         </div>
-                    </div>
-                `).join('');
+                    `).join('');
+                }
+
+                // Closed cases section (collapsible)
+                if (closedCases.length > 0) {
+                    html += `
+                        <div class="closed-cases-section" style="margin-top: 16px;">
+                            <div class="section-header" onclick="toggleClosedCases()" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--card); border-radius: 8px; cursor: pointer;">
+                                <svg id="closedCasesArrow" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transition: transform 0.2s;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                                <span style="color: var(--text-muted); font-size: 0.875rem;">已結案 (${closedCases.length})</span>
+                            </div>
+                            <div id="closedCasesList" style="display: none; margin-top: 8px;">
+                                ${closedCases.map(c => `
+                                    <div class="case-list-item" onclick="selectCase('${c.id}')" style="opacity: 0.7;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <div class="case-id">${c.id}</div>
+                                                <div style="font-weight: 600;">${c.patient_name || c.patient_id}</div>
+                                            </div>
+                                            <span class="case-status closed">已結案</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // If only closed cases exist, show a message
+                if (activeCases.length === 0 && closedCases.length > 0) {
+                    html = `
+                        <div style="text-align: center; padding: 16px; color: var(--text-muted);">
+                            <p style="margin-bottom: 12px;">目前無進行中案例</p>
+                        </div>
+                    ` + html;
+                }
+
+                listEl.innerHTML = html;
 
                 // Auto-select if there's an in-progress case
                 const inProgress = activeCases.find(c => c.status === 'IN_PROGRESS');
@@ -2801,6 +2872,18 @@
                 }
             } catch (err) {
                 console.error('Failed to load cases:', err);
+            }
+        }
+
+        function toggleClosedCases() {
+            const list = document.getElementById('closedCasesList');
+            const arrow = document.getElementById('closedCasesArrow');
+            if (list.style.display === 'none') {
+                list.style.display = 'block';
+                arrow.style.transform = 'rotate(90deg)';
+            } else {
+                list.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
             }
         }
 
@@ -3352,7 +3435,7 @@
                 // Reload case to get updated status
                 selectCase(currentCase.id);
             } catch (err) {
-                alert('記錄失敗: ' + (err.message || '未知錯誤'));
+                alert('記錄失敗: ' + getErrorMessage(err));
             } finally {
                 // Reset button state
                 const btn = document.getElementById('btnStart');
@@ -3459,7 +3542,7 @@
                 alert(`✓ ${getMilestoneLabel(selectedMilestoneType)} 已記錄`);
                 loadTimeline(currentCase.id);
             } catch (err) {
-                alert('記錄失敗: ' + (err.message || '未知錯誤'));
+                alert('記錄失敗: ' + getErrorMessage(err));
             }
         }
 
@@ -3508,7 +3591,7 @@
 
                 loadTimeline(currentCase.id);
             } catch (err) {
-                alert('記錄失敗: ' + (err.message || '未知錯誤'));
+                alert('記錄失敗: ' + getErrorMessage(err));
             }
         }
 
@@ -3679,7 +3762,7 @@
 
                 loadTimeline(currentCase.id);
             } catch (err) {
-                alert('記錄失敗: ' + (err.message || '未知錯誤'));
+                alert('記錄失敗: ' + getErrorMessage(err));
             }
         }
 
@@ -4419,21 +4502,45 @@
             drawEvents(width, height) {
                 const ctx = this.ctx;
                 const mL = 50;
-                const eventY = height - 25;
+                const baseEventY = height - 25;
 
                 const medsInView = (this.data.medications || []).filter(m => {
                     const t = new Date(m.clinical_time).getTime();
                     return t >= this.viewport.startTime && t <= this.viewport.endTime;
                 });
 
-                medsInView.forEach(m => {
-                    const x = mL + this.timeToX(new Date(m.clinical_time).getTime());
+                // Sort by time and assign stack levels for overlapping medications
+                medsInView.sort((a, b) => new Date(a.clinical_time) - new Date(b.clinical_time));
+
+                // Track stack levels to avoid overlap (within 2 minutes = 120000ms)
+                const stackLevels = [];
+                const STACK_THRESHOLD = 120000; // 2 minutes
+                const STACK_OFFSET = 20; // pixels between stacked items
+
+                medsInView.forEach((m, i) => {
+                    const t = new Date(m.clinical_time).getTime();
+                    const x = mL + this.timeToX(t);
+
+                    // Calculate stack level - check how many previous meds are within threshold
+                    let stackLevel = 0;
+                    for (let j = i - 1; j >= 0; j--) {
+                        const prevT = new Date(medsInView[j].clinical_time).getTime();
+                        if (t - prevT < STACK_THRESHOLD) {
+                            stackLevel = (stackLevels[j] + 1) % 4; // Max 4 levels, then wrap
+                        } else {
+                            break;
+                        }
+                    }
+                    stackLevels[i] = stackLevel;
+
+                    const eventY = baseEventY - (stackLevel * STACK_OFFSET);
+
                     ctx.fillStyle = m.payload?.is_controlled ? '#c026d3' : '#3b82f6';
                     ctx.beginPath(); ctx.arc(x, eventY, 6, 0, Math.PI * 2); ctx.fill();
                     ctx.fillStyle = '#f1f5f9';
                     ctx.font = '9px sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText((m.payload?.drug_name || '').substring(0, 4), x, eventY - 10);
+                    ctx.fillText((m.payload?.drug_name || '').substring(0, 6), x, eventY - 10);
                 });
             }
         };
