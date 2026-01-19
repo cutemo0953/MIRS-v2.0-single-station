@@ -1,9 +1,9 @@
 # 麻醉 PWA 時間軸 UI 規格書
 
-**版本**: v1.1
+**版本**: v1.2
 **日期**: 2026-01-19
 **狀態**: Draft
-**更新**: 新增生命徵象趨勢圖、庫存連動、分頁機制
+**更新**: v1.2 修正時間模型、Event Sourcing、渲染效能、UI 一致性
 
 ---
 
@@ -304,53 +304,130 @@ timelineData: {
 
 ---
 
-## 6. 時間軸渲染
+## 6. 時間軸渲染 (v1.2 重大修正)
 
-### 6.1 座標計算
+### 6.1 時間模型 - 固定視窗 (Fixed Viewport)
 
+> ⚠️ **v1.2 Critical Fix**: 移除 `Date.now()` 作為座標系終點的錯誤設計
+
+**錯誤的舊模型 (已廢棄):**
 ```javascript
-// 將時間轉換為時間軸位置 (百分比)
+// ❌ 錯誤：座標系會隨時間推進而重新縮放
+// 導致舊事件點位「漂移」，無法信任視覺位置
 timeToPosition(time) {
-    const start = this.caseStartTime;
-    const end = Date.now();
-    const duration = end - start;
-    const elapsed = time - start;
-    return Math.min(100, Math.max(0, (elapsed / duration) * 100));
-}
-
-// 將位置轉換為時間
-positionToTime(percent) {
-    const start = this.caseStartTime;
-    const end = Date.now();
-    const duration = end - start;
-    return new Date(start + (percent / 100) * duration);
+    const end = Date.now();  // 每次呼叫都變！
+    return (time - start) / (end - start) * 100;
 }
 ```
 
-### 6.2 縮放與滾動
+**正確的新模型 (v1.2):**
+```javascript
+// ✅ 正確：使用固定視窗 (Viewport)
+// 每頁 = 1 小時 = 固定 3600000ms
+
+viewport: {
+    startTime: null,       // 當前視窗起始時間 (固定)
+    endTime: null,         // 當前視窗結束時間 (固定)
+    duration: 3600000,     // 1 小時 = 3600000ms
+    pixelWidth: 720,       // 視窗像素寬度 (每分鐘 12px)
+},
+
+// 初始化視窗 (進入某小時頁面時呼叫)
+setViewport(hourIndex) {
+    const caseStart = this.caseStartTime;
+    this.viewport.startTime = caseStart + (hourIndex * 3600000);
+    this.viewport.endTime = this.viewport.startTime + 3600000;
+},
+
+// 時間 → 像素位置 (固定座標系)
+timeToX(timestamp) {
+    const elapsed = timestamp - this.viewport.startTime;
+    const ratio = elapsed / this.viewport.duration;
+    return Math.round(ratio * this.viewport.pixelWidth);
+},
+
+// 像素位置 → 時間
+xToTime(x) {
+    const ratio = x / this.viewport.pixelWidth;
+    return this.viewport.startTime + (ratio * this.viewport.duration);
+},
+
+// 判斷時間是否在當前視窗內
+isInViewport(timestamp) {
+    return timestamp >= this.viewport.startTime &&
+           timestamp < this.viewport.endTime;
+}
+```
+
+### 6.2 NOW 指示器 (獨立於座標系)
 
 ```javascript
-timelineZoom: 1,  // 1 = 全程, 2 = 放大 2x
-timelineOffset: 0,  // 滾動偏移
+// NOW 是一個浮動指示器，不是座標系的 end
+nowIndicator: {
+    visible: true,
+    position: 0,  // 像素位置
+},
 
+updateNowIndicator() {
+    const now = Date.now();
+    if (this.isInViewport(now)) {
+        this.nowIndicator.visible = true;
+        this.nowIndicator.position = this.timeToX(now);
+    } else {
+        this.nowIndicator.visible = false;
+    }
+},
+
+// 每秒更新 NOW 位置
+startNowTimer() {
+    setInterval(() => this.updateNowIndicator(), 1000);
+}
+```
+
+### 6.3 分頁作為主要互動模型
+
+> **v1.2 設計原則**: 分頁是 canonical layout，縮放只在頁內發生
+
+```javascript
+// 分頁狀態
+pagination: {
+    currentHour: 0,           // 當前頁 (0-indexed)
+    hoursPerPage: 1,          // 每頁 1 小時 (標準麻醉單格式)
+    zoomLevel: 1,             // 頁內縮放 (1 = 正常, 2 = 放大)
+    maxZoom: 2,               // 最大縮放 (每頁最多顯示 30 分鐘)
+    minZoom: 1,               // 最小縮放 (每頁顯示 1 小時)
+},
+
+// 縮放只在頁內生效，不影響分頁邊界
 zoomIn() {
-    this.timelineZoom = Math.min(4, this.timelineZoom * 1.5);
+    this.pagination.zoomLevel = Math.min(
+        this.pagination.maxZoom,
+        this.pagination.zoomLevel * 1.5
+    );
+    this.renderCurrentPage();
 },
 
 zoomOut() {
-    this.timelineZoom = Math.max(0.5, this.timelineZoom / 1.5);
+    this.pagination.zoomLevel = Math.max(
+        this.pagination.minZoom,
+        this.pagination.zoomLevel / 1.5
+    );
+    this.renderCurrentPage();
 }
 ```
 
-### 6.3 手勢支援
+### 6.4 手勢支援
 
-- **雙指縮放**: 放大/縮小時間軸
-- **單指滑動**: 水平滾動
-- **長按**: 開啟快速新增選單
+| 手勢 | 動作 | 說明 |
+|------|------|------|
+| 左右滑動 | 切換小時頁 | 主要導航方式 |
+| 雙指縮放 | 頁內縮放 | 1x - 2x 範圍 |
+| 長按 | 快速新增選單 | 在觸碰位置新增事件 |
+| 點擊 NOW 按鈕 | 跳到當前小時 | 快速回到現在 |
 
 ---
 
-## 7. Vitals 圖表 (v1.1 重大更新)
+## 7. Vitals 圖表 (v1.2 更新)
 
 ### 7.1 標準麻醉記錄單格式
 
@@ -359,14 +436,43 @@ zoomOut() {
 ```
 符號標準 (Anesthesia Chart Symbols)
 ─────────────────────────────────
-  V  = 收縮壓 (SBP) - 紅色
-  ^  = 舒張壓 (DBP) - 紅色
-  ●  = 心跳 (HR) - 藍色
-  ○  = 血氧 (SpO2) - 綠色
-  ×  = 呼吸次數 (RR) - 紫色
+  V  = 收縮壓 (SBP)
+  ^  = 舒張壓 (DBP)
+  ●  = 心跳 (HR)
+  ○  = 血氧 (SpO2)
+  ×  = 呼吸次數 (RR)
 ```
 
-### 7.2 趨勢圖視覺設計
+> ⚠️ **v1.2 設計原則**: 符號 + 形狀作為主要識別，顏色作為輔助 (Shape + Label Redundancy)
+
+### 7.2 可主題化顏色系統 (Themable Colors)
+
+```javascript
+// v1.2: 顏色不硬編碼，透過 CSS 變數實現主題化
+// 預設主題 (Default Theme)
+:root {
+    --vital-sbp: #dc2626;      // 紅色系
+    --vital-dbp: #dc2626;      // 紅色系 (與 SBP 同色)
+    --vital-hr: #2563eb;       // 藍色系
+    --vital-spo2: #16a34a;     // 綠色系
+    --vital-rr: #7c3aed;       // 紫色系
+    --vital-warning: #f59e0b;  // 警告 (黃)
+    --vital-critical: #dc2626; // 危急 (紅)
+    --event-medication: #3b82f6;
+    --event-procedure: #8b5cf6;
+    --event-milestone: #14b8a6;
+}
+
+// 高對比主題 (High Contrast Theme)
+[data-theme="high-contrast"] {
+    --vital-sbp: #ff0000;
+    --vital-hr: #0000ff;
+    --vital-spo2: #00ff00;
+    // ...
+}
+```
+
+### 7.3 趨勢圖視覺設計
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -396,14 +502,105 @@ zoomOut() {
 │        09:00  09:05  09:10  09:15  09:20  09:25  09:30        │
 │                                                               │
 │  ══════════════════════════════════════════════════════════  │
-│  事件列：                                                     │
-│   09:05 💊 Propofol 150mg                                    │
-│   09:08 🔧 Intubation ETT 7.5                                │
-│   09:12 💨 Sevoflurane 2%                                    │
+│  事件列 (使用 SVG 圖標，非 Emoji)：                           │
+│   09:05 [藥] Propofol 150mg                                  │
+│   09:08 [管] Intubation ETT 7.5                              │
+│   09:12 [氣] Sevoflurane 2%                                  │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### 7.3 SVG Canvas 實作
+### 7.4 渲染策略：Canvas + DOM 混合 (v1.2)
+
+> ⚠️ **v1.2 效能考量**: SVG polyline 在長手術 (每 5 分鐘一點 × 5 條線 × 10 小時 = 600+ 點) 會導致行動裝置效能下降
+
+**推薦架構：**
+```
+┌─────────────────────────────────────────┐
+│  Y-Axis Labels (DOM)                    │
+├─────────────────────────────────────────┤
+│  ┌───────────────────────────────────┐  │
+│  │                                   │  │
+│  │   Vitals Canvas (Canvas 2D)      │  │ ← 高效能繪圖
+│  │   - Grid lines                    │  │
+│  │   - SBP/DBP/HR/SpO2/RR points    │  │
+│  │   - Trend lines                   │  │
+│  │                                   │  │
+│  └───────────────────────────────────┘  │
+├─────────────────────────────────────────┤
+│  Events Track (DOM + SVG Icons)         │ ← 可點擊互動
+│  NOW Indicator (DOM)                    │ ← 獨立更新
+├─────────────────────────────────────────┤
+│  X-Axis Labels (DOM)                    │
+└─────────────────────────────────────────┘
+```
+
+```javascript
+// Canvas 繪圖器
+class VitalsCanvasRenderer {
+    constructor(canvasElement) {
+        this.canvas = canvasElement;
+        this.ctx = canvasElement.getContext('2d');
+        this.dpr = window.devicePixelRatio || 1;
+        this.setupHighDPI();
+    }
+
+    setupHighDPI() {
+        const rect = this.canvas.getBoundingClientRect();
+        this.canvas.width = rect.width * this.dpr;
+        this.canvas.height = rect.height * this.dpr;
+        this.ctx.scale(this.dpr, this.dpr);
+    }
+
+    render(vitalsData, viewport) {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.drawGrid();
+        this.drawVitals(vitalsData, viewport);
+    }
+
+    drawVitals(vitalsData, viewport) {
+        // 只繪製當前視窗內的點
+        const visibleVitals = vitalsData.filter(v =>
+            v.time >= viewport.startTime && v.time < viewport.endTime
+        );
+
+        // 批量繪製每種類型
+        this.drawVitalType(visibleVitals, 'SBP', 'V');
+        this.drawVitalType(visibleVitals, 'DBP', '^');
+        this.drawVitalType(visibleVitals, 'HR', '●');
+        this.drawVitalType(visibleVitals, 'SpO2', '○');
+    }
+}
+```
+
+### 7.5 事件圖標：SVG 取代 Emoji (v1.2)
+
+> ⚠️ **v1.2**: 禁止使用 Emoji 作為事件圖標，因為不同 OS 字型渲染不一致
+
+```html
+<!-- 事件圖標定義 (SVG Sprite) -->
+<svg style="display:none">
+    <symbol id="icon-medication" viewBox="0 0 24 24">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l6.59-6.59L20 9l-8 8z"/>
+    </symbol>
+    <symbol id="icon-procedure" viewBox="0 0 24 24">
+        <path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75 1.84-1.83z"/>
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/>
+    </symbol>
+    <symbol id="icon-intubation" viewBox="0 0 24 24">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93z"/>
+    </symbol>
+    <symbol id="icon-gas" viewBox="0 0 24 24">
+        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+    </symbol>
+</svg>
+
+<!-- 使用方式 -->
+<svg class="event-icon" width="16" height="16">
+    <use href="#icon-medication"></use>
+</svg>
+```
+
+### 7.6 SVG 網格實作 (輕量 DOM)
 
 ```html
 <div class="vitals-canvas-container">
@@ -573,82 +770,198 @@ getVitalColor(type, value) {
 
 ---
 
-## 9. 庫存與計費連動 (v1.1 新增)
+## 9. 庫存與計費連動 (v1.2 Event Sourcing 模型)
 
 ### 9.1 設計理念
 
 > **「麻醉醫師只管救人，系統自動算錢與庫存」**
 
 當麻醉師在時間軸上記錄用藥事件，系統自動完成：
-1. MIRS 庫存扣減
-2. CashDesk 計費項目生成
+1. MIRS 庫存消費事件
+2. CashDesk 計費事件
 3. 管制藥品雙重驗證
 
-### 9.2 事件-庫存綁定流程
+### 9.2 Event Sourcing 架構 (v1.2 核心變更)
+
+> ⚠️ **v1.2 Critical**: 所有操作都是**不可變事件 (Immutable Events)**，禁止直接修改/刪除
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    用藥事件資料流                                │
-│                                                                 │
-│   ┌──────────┐     ┌──────────┐     ┌──────────┐              │
-│   │ Anes PWA │────▶│ MIRS API │────▶│ CashDesk │              │
-│   │ 記錄用藥  │     │ 扣減庫存  │     │ 生成帳單  │              │
-│   └──────────┘     └──────────┘     └──────────┘              │
-│        │                │                │                     │
-│        ▼                ▼                ▼                     │
-│   anesthesia_     pharmacy_         billing_                  │
-│   events          inventory         line_items                 │
-│                                                                 │
-│   event_type:     quantity: -1      item_code: "PROP-200"     │
-│   MEDICATION      lot_number        unit_price: 150           │
-│                   expiry_date       quantity: 1               │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Event Sourcing 資料流                             │
+│                                                                     │
+│   ┌──────────────┐                                                  │
+│   │ Anes PWA     │                                                  │
+│   │ 記錄給藥     │                                                  │
+│   └──────┬───────┘                                                  │
+│          │                                                          │
+│          ▼                                                          │
+│   ┌──────────────────────────────────────────────────────────────┐ │
+│   │  MedicationAdministeredEvent (不可變)                         │ │
+│   │  ─────────────────────────────────────────────────────────── │ │
+│   │  event_id: "EVT-20260119-001" (冪等鍵)                       │ │
+│   │  case_id: "ANES-001"                                         │ │
+│   │  drug_code: "PROP-200"                                       │ │
+│   │  dose: 200, unit: "mg", route: "IV"                          │ │
+│   │  lot_number: "LOT-2026-001" (管制藥必填)                     │ │
+│   │  expiry_date: "2026-06-30" (管制藥必填)                      │ │
+│   │  performed_by: "DR-WANG"                                     │ │
+│   │  performed_at: 1705654800000                                 │ │
+│   │  witness_by: "NS-LEE" (管制藥必填)                           │ │
+│   └──────────────────────────────────────────────────────────────┘ │
+│          │                                                          │
+│          │ Event 觸發 (每個事件只被消費一次)                         │
+│          ├─────────────────────────┬────────────────────────────┐  │
+│          ▼                         ▼                            ▼  │
+│   ┌─────────────┐          ┌─────────────┐          ┌─────────────┐│
+│   │ Inventory   │          │ Billing     │          │ Audit       ││
+│   │ Consumer    │          │ Consumer    │          │ Consumer    ││
+│   └─────────────┘          └─────────────┘          └─────────────┘│
+│          │                         │                            │  │
+│          ▼                         ▼                            ▼  │
+│   ┌─────────────┐          ┌─────────────┐          ┌─────────────┐│
+│   │ Inventory   │          │ Billing     │          │ Audit       ││
+│   │ ConsumedEvt │          │ ChargeEvt   │          │ LogEvent    ││
+│   └─────────────┘          └─────────────┘          └─────────────┘│
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### 9.3 API 設計
+### 9.3 事件結構定義
 
-#### 9.3.1 新增用藥事件 (含庫存扣減)
+#### 9.3.1 MedicationAdministeredEvent (給藥事件)
+
+```typescript
+interface MedicationAdministeredEvent {
+    // === 冪等性 ===
+    event_id: string;           // UUID，前端生成，確保重試不重複
+    idempotency_key: string;    // 同上，API 層使用
+
+    // === 病例關聯 ===
+    case_id: string;
+    patient_id: string;
+
+    // === 藥物資訊 ===
+    drug_code: string;          // 對應 pharmacy_items.item_code
+    drug_name: string;
+    dose: number;
+    unit: string;               // mg, mcg, ml, etc.
+    route: string;              // IV, IM, PO, INH, SC, etc.
+
+    // === 管制藥品必填欄位 ===
+    lot_number?: string;        // 批號 (管制藥必填)
+    expiry_date?: string;       // 效期 (管制藥必填)
+    witness_by?: string;        // 見證人 (管制藥必填)
+
+    // === 執行資訊 ===
+    performed_by: string;       // 執行者 ID
+    performed_at: number;       // 執行時間 (timestamp)
+    recorded_at: number;        // 記錄時間 (timestamp)
+
+    // === 狀態標記 ===
+    is_stat: boolean;           // 緊急用藥
+    is_controlled: boolean;     // 管制藥品
+}
+```
+
+#### 9.3.2 MedicationReversedEvent (撤銷事件)
+
+> ⚠️ **v1.2**: 不使用 DELETE，改用補償事件 (Compensating Event)
+
+```typescript
+interface MedicationReversedEvent {
+    event_id: string;           // 新的事件 ID
+    original_event_id: string;  // 被撤銷的事件 ID
+    case_id: string;
+
+    // === 撤銷資訊 ===
+    reversal_reason: string;    // 必填：為什麼撤銷
+    reversal_type: 'ERROR' | 'DUPLICATE' | 'NOT_GIVEN' | 'OTHER';
+
+    // === 執行資訊 ===
+    reversed_by: string;
+    reversed_at: number;
+    witness_by?: string;        // 管制藥品撤銷也需要見證
+}
+```
+
+### 9.4 API 設計 (v1.2)
+
+#### 9.4.1 新增用藥事件 (Idempotent)
 
 ```javascript
 // POST /api/anesthesia/events/medication
+// Header: X-Idempotency-Key: {client-generated-uuid}
+
 async recordMedication(caseId, medication) {
+    const eventId = xIRS.API.generateIdempotencyKey();
+
     const payload = {
+        event_id: eventId,
         case_id: caseId,
-        event_time: medication.time,
-        drug_code: medication.drugCode,      // 對應 pharmacy_items.item_code
+        drug_code: medication.drugCode,
         drug_name: medication.drugName,
         dose: medication.dose,
         unit: medication.unit,
-        route: medication.route,             // IV, IM, PO, INH...
-        lot_number: medication.lotNumber,    // 批號 (可選)
-        deduct_inventory: true,              // 觸發庫存扣減
-        create_billable: true                // 觸發計費項目
+        route: medication.route,
+        performed_at: medication.time,
+
+        // 管制藥品必填
+        lot_number: medication.lotNumber || null,
+        expiry_date: medication.expiryDate || null,
+        witness_by: medication.witnessId || null,
+
+        is_stat: medication.isStat || false,
+        is_controlled: medication.isControlled || false
     };
 
-    const response = await xIRS.API.post('/api/anesthesia/events/medication', payload);
+    const response = await xIRS.API.post(
+        '/api/anesthesia/events/medication',
+        payload,
+        { idempotencyKey: eventId }
+    );
 
-    // 回應包含庫存狀態
+    // 回應
     // {
-    //     event_id: "EVT-001",
-    //     inventory_deducted: true,
-    //     remaining_stock: 5,
-    //     billable_item_id: "BL-001"
+    //     event_id: "EVT-20260119-001",
+    //     status: "RECORDED",
+    //     downstream_events: {
+    //         inventory_consumed_event_id: "INV-EVT-001",
+    //         billing_charge_event_id: "BL-EVT-001"
+    //     }
     // }
 }
 ```
 
-#### 9.3.2 刪除/撤銷用藥事件 (庫存回補)
+#### 9.4.2 撤銷用藥事件 (Compensating Event)
 
 ```javascript
-// DELETE /api/anesthesia/events/{event_id}
-async deleteEvent(eventId, reason) {
+// POST /api/anesthesia/events/medication/reverse
+// 注意：是 POST 不是 DELETE
+
+async reverseEvent(originalEventId, reason, reversalType) {
     const payload = {
-        reason: reason,                      // 刪除原因 (必填)
-        revert_inventory: true,              // 庫存加回
-        void_billable: true                  // 作廢計費項目
+        original_event_id: originalEventId,
+        reversal_reason: reason,
+        reversal_type: reversalType,  // 'ERROR' | 'DUPLICATE' | 'NOT_GIVEN' | 'OTHER'
+        witness_by: this.currentWitness || null
     };
 
-    // 審計紀錄：誰、何時、為何刪除
+    const response = await xIRS.API.post(
+        '/api/anesthesia/events/medication/reverse',
+        payload
+    );
+
+    // 回應
+    // {
+    //     reversal_event_id: "REV-EVT-001",
+    //     original_event_id: "EVT-20260119-001",
+    //     status: "REVERSED",
+    //     downstream_events: {
+    //         inventory_restored_event_id: "INV-EVT-002",
+    //         billing_void_event_id: "BL-EVT-002"
+    //     }
+    // }
+
+    // 原始事件保留在 event stream 中，只是被標記為已撤銷
 }
 ```
 
@@ -1103,3 +1416,4 @@ async statDrug(drugName, dose, unit) {
 |------|------|------|
 | v1.0 | 2026-01-07 | 初版 |
 | v1.1 | 2026-01-19 | 新增：(1) 標準麻醉記錄單趨勢圖 (V/^/●/○ 符號) (2) 庫存與計費連動 API (3) 分頁機制 (每小時一頁) (4) Code Blue 緊急按鈕 (5) 管制藥品處理流程 |
+| v1.2 | 2026-01-19 | **Critical Fixes** (Based on ChatGPT review)：(1) 時間模型改為固定視窗 (Fixed Viewport)，移除 Date.now() 作為座標系終點的錯誤 (2) 分頁作為主要互動模型 (canonical layout) (3) Vitals 渲染改用 Canvas + DOM 混合架構 (4) 事件圖標改用 SVG，禁止 Emoji (5) 顏色系統改為 CSS 變數可主題化 (6) 庫存連動改為 Event Sourcing 模型，用補償事件取代 DELETE (7) 給藥事件加入冪等性、批號效期、見證人欄位 |
