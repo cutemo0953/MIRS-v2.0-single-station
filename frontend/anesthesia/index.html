@@ -214,6 +214,20 @@
         .quick-btn.blood:active {
             background: #991b1b;
         }
+        .quick-btn.vasoactive {
+            background: #7c3aed;
+            border-color: #7c3aed;
+        }
+        .quick-btn.vasoactive:active {
+            background: #6d28d9;
+        }
+        .quick-btn.vent {
+            background: #0891b2;
+            border-color: #0891b2;
+        }
+        .quick-btn.vent:active {
+            background: #0e7490;
+        }
 
         /* Vitals Grid */
         .vitals-section {
@@ -1156,6 +1170,37 @@
                 </button>
             </div>
 
+            <!-- Advanced Events Row -->
+            <div class="section-title" style="margin: 12px 0 8px 0; font-size: 0.75rem; color: var(--text-muted);">
+                進階事件
+            </div>
+            <div class="quick-actions">
+                <button class="quick-btn vasoactive" onclick="showVasoactiveModal()">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                    <span>昇壓劑</span>
+                </button>
+                <button class="quick-btn vent" onclick="showVentModal()">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>呼吸器</span>
+                </button>
+                <button class="quick-btn" onclick="showDepthModal()">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                    <span>麻醉深度</span>
+                </button>
+                <button class="quick-btn" onclick="showPositionModal()">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span>姿勢</span>
+                </button>
+            </div>
+
             <!-- Timeline v1.4 - Default to Chart View (horizontal scroll like traditional anesthesia record) -->
             <div class="timeline-section">
                 <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
@@ -2035,6 +2080,219 @@
             color: var(--danger);
         }
     </style>
+
+    <!-- Vasoactive Bolus Modal -->
+    <div class="modal" id="vasoactiveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>昇壓劑 / 血管活性藥物</h3>
+                <button class="close-btn" onclick="closeModal('vasoactiveModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">選擇藥物</label>
+                    <div class="med-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <button class="med-btn" onclick="selectVasoactive('EPHEDRINE', 5, 'mg')" style="border-left: 3px solid #7c3aed;">
+                            <div class="med-name">Ephedrine</div>
+                            <div class="med-dose">5 mg IV</div>
+                        </button>
+                        <button class="med-btn" onclick="selectVasoactive('EPHEDRINE', 10, 'mg')" style="border-left: 3px solid #7c3aed;">
+                            <div class="med-name">Ephedrine</div>
+                            <div class="med-dose">10 mg IV</div>
+                        </button>
+                        <button class="med-btn" onclick="selectVasoactive('PHENYLEPHRINE', 50, 'mcg')" style="border-left: 3px solid #7c3aed;">
+                            <div class="med-name">Phenylephrine</div>
+                            <div class="med-dose">50 mcg IV</div>
+                        </button>
+                        <button class="med-btn" onclick="selectVasoactive('PHENYLEPHRINE', 100, 'mcg')" style="border-left: 3px solid #7c3aed;">
+                            <div class="med-name">Phenylephrine</div>
+                            <div class="med-dose">100 mcg IV</div>
+                        </button>
+                        <button class="med-btn" onclick="selectVasoactive('ATROPINE', 0.5, 'mg')" style="border-left: 3px solid #7c3aed;">
+                            <div class="med-name">Atropine</div>
+                            <div class="med-dose">0.5 mg IV</div>
+                        </button>
+                        <button class="med-btn" onclick="selectVasoactive('GLYCOPYRROLATE', 0.2, 'mg')" style="border-left: 3px solid #7c3aed;">
+                            <div class="med-name">Glycopyrrolate</div>
+                            <div class="med-dose">0.2 mg IV</div>
+                        </button>
+                        <button class="med-btn" onclick="selectVasoactive('NOREPINEPHRINE', 4, 'mcg')" style="border-left: 3px solid #dc2626;">
+                            <div class="med-name">Norepinephrine</div>
+                            <div class="med-dose">4 mcg IV</div>
+                        </button>
+                        <button class="med-btn" onclick="selectVasoactive('EPINEPHRINE', 10, 'mcg')" style="border-left: 3px solid #dc2626;">
+                            <div class="med-name">Epinephrine</div>
+                            <div class="med-dose">10 mcg IV</div>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 16px;">
+                    <label class="form-label">適應症</label>
+                    <select class="form-input" id="vasoactiveIndication">
+                        <option value="HYPOTENSION">低血壓 (MAP &lt; 65)</option>
+                        <option value="BRADYCARDIA">心跳過慢 (HR &lt; 50)</option>
+                        <option value="INDUCTION">麻醉誘導</option>
+                        <option value="POSITIONING">姿勢改變</option>
+                        <option value="BLEEDING">出血</option>
+                        <option value="OTHER">其他</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vent Settings Modal -->
+    <div class="modal" id="ventModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>呼吸器參數調整</h3>
+                <button class="close-btn" onclick="closeModal('ventModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">調整項目</label>
+                    <select class="form-input" id="ventParameter" onchange="updateVentInputs()">
+                        <option value="FIO2">FiO2 (吸入氧濃度)</option>
+                        <option value="PEEP">PEEP (吐氣末正壓)</option>
+                        <option value="VT">VT (潮氣量)</option>
+                        <option value="RR">RR (呼吸速率)</option>
+                        <option value="PIP_LIMIT">PIP Limit (尖峰壓力上限)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label class="form-label">原設定</label>
+                        <input type="number" class="form-input" id="ventFromValue" placeholder="原值">
+                    </div>
+                    <div>
+                        <label class="form-label">新設定</label>
+                        <input type="number" class="form-input" id="ventToValue" placeholder="新值">
+                    </div>
+                </div>
+                <div id="ventUnitHint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: -8px;">單位: %</div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label class="form-label">調整原因</label>
+                    <select class="form-input" id="ventReason">
+                        <option value="">選擇原因 (選填)</option>
+                        <option value="HYPOXIA">低血氧</option>
+                        <option value="HYPERCARBIA">高二氧化碳</option>
+                        <option value="HYPOCARBIA">低二氧化碳</option>
+                        <option value="HIGH_AIRWAY_PRESSURE">氣道壓力過高</option>
+                        <option value="RECRUITMENT">肺復張</option>
+                        <option value="WEANING">脫離準備</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" style="width: 100%; margin-top: 16px; background: #0891b2;" onclick="submitVentChange()">記錄調整</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anesthesia Depth Modal -->
+    <div class="modal" id="depthModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>麻醉深度調整</h3>
+                <button class="close-btn" onclick="closeModal('depthModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">調整方向</label>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn" id="btnDeepen" onclick="setDepthAction('DEEPEN')" style="flex: 1; background: #7c3aed;">加深</button>
+                        <button class="btn" id="btnLighten" onclick="setDepthAction('LIGHTEN')" style="flex: 1; background: var(--card-hover);">減淺</button>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 16px;">
+                    <label class="form-label">調整方式</label>
+                    <select class="form-input" id="depthMethod" onchange="updateDepthInputs()">
+                        <option value="VOLATILE">吸入麻醉劑 (MAC)</option>
+                        <option value="IV_BOLUS">靜脈追加 (Bolus)</option>
+                        <option value="IV_INFUSION">靜脈輸注調整</option>
+                    </select>
+                </div>
+                <div id="depthVolatileInputs">
+                    <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label class="form-label">MAC 從</label>
+                            <input type="number" step="0.1" class="form-input" id="macFrom" placeholder="例: 1.0">
+                        </div>
+                        <div>
+                            <label class="form-label">MAC 到</label>
+                            <input type="number" step="0.1" class="form-input" id="macTo" placeholder="例: 1.2">
+                        </div>
+                    </div>
+                </div>
+                <div id="depthBolusInputs" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">Bolus 藥物</label>
+                        <input type="text" class="form-input" id="bolusAgent" placeholder="例: Propofol 30mg">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label class="form-label">原因</label>
+                    <select class="form-input" id="depthReason">
+                        <option value="">選擇原因 (選填)</option>
+                        <option value="PATIENT_MOVEMENT">病人體動</option>
+                        <option value="BP_HR_SPIKE">血壓/心跳上升</option>
+                        <option value="BIS_HIGH">BIS 過高</option>
+                        <option value="BIS_LOW">BIS 過低</option>
+                        <option value="SURGICAL_STIMULUS">手術刺激</option>
+                        <option value="EMERGENCE_PREP">甦醒準備</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" style="width: 100%; margin-top: 16px;" onclick="submitDepthAdjust()">記錄調整</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Position Change Modal -->
+    <div class="modal" id="positionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>姿勢調整</h3>
+                <button class="close-btn" onclick="closeModal('positionModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">選擇姿勢</label>
+                    <div class="med-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <button class="med-btn" onclick="submitPosition('SUPINE')">
+                            <div class="med-name">仰臥</div>
+                            <div class="med-dose">Supine</div>
+                        </button>
+                        <button class="med-btn" onclick="submitPosition('PRONE')">
+                            <div class="med-name">俯臥</div>
+                            <div class="med-dose">Prone</div>
+                        </button>
+                        <button class="med-btn" onclick="submitPosition('LEFT_LATERAL')">
+                            <div class="med-name">左側臥</div>
+                            <div class="med-dose">Left Lateral</div>
+                        </button>
+                        <button class="med-btn" onclick="submitPosition('RIGHT_LATERAL')">
+                            <div class="med-name">右側臥</div>
+                            <div class="med-dose">Right Lateral</div>
+                        </button>
+                        <button class="med-btn" onclick="submitPosition('LITHOTOMY')">
+                            <div class="med-name">截石位</div>
+                            <div class="med-dose">Lithotomy</div>
+                        </button>
+                        <button class="med-btn" onclick="submitPosition('TRENDELENBURG')">
+                            <div class="med-name">頭低腳高</div>
+                            <div class="med-dose">Trendelenburg</div>
+                        </button>
+                        <button class="med-btn" onclick="submitPosition('REVERSE_TRENDELENBURG')">
+                            <div class="med-name">頭高腳低</div>
+                            <div class="med-dose">Reverse Trend.</div>
+                        </button>
+                        <button class="med-btn" onclick="submitPosition('SITTING')">
+                            <div class="med-name">坐姿</div>
+                            <div class="med-dose">Sitting</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <style>
         /* Phase C: O2 Modal Styles */
@@ -3760,6 +4018,195 @@
                 };
                 alert(`✓ ${selectedBloodProduct} ${actionLabels[selectedBloodAction]} 已記錄`);
 
+                loadTimeline(currentCase.id);
+            } catch (err) {
+                alert('記錄失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        // =================================================================
+        // Advanced Events: Vasoactive, Vent, Depth, Position
+        // =================================================================
+
+        function showVasoactiveModal() {
+            if (!currentCase) {
+                alert('請先選擇或建立一個麻醉案例');
+                return;
+            }
+            document.getElementById('vasoactiveModal').classList.add('active');
+        }
+
+        async function selectVasoactive(drug, dose, unit) {
+            const indication = document.getElementById('vasoactiveIndication').value;
+
+            try {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/events?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_type: 'VASOACTIVE_BOLUS',
+                        payload: {
+                            drug_name: drug,
+                            dose: dose,
+                            unit: unit,
+                            route: 'IV',
+                            indication: indication
+                        }
+                    })
+                });
+                if (!res.ok) throw new Error('Failed');
+
+                closeModal('vasoactiveModal');
+                alert(`✓ ${drug} ${dose}${unit} 已記錄`);
+                loadTimeline(currentCase.id);
+            } catch (err) {
+                alert('記錄失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        function showVentModal() {
+            if (!currentCase) {
+                alert('請先選擇或建立一個麻醉案例');
+                return;
+            }
+            document.getElementById('ventFromValue').value = '';
+            document.getElementById('ventToValue').value = '';
+            updateVentInputs();
+            document.getElementById('ventModal').classList.add('active');
+        }
+
+        function updateVentInputs() {
+            const param = document.getElementById('ventParameter').value;
+            const unitHint = document.getElementById('ventUnitHint');
+            const units = {
+                'FIO2': '%',
+                'PEEP': 'cmH2O',
+                'VT': 'mL',
+                'RR': '/min',
+                'PIP_LIMIT': 'cmH2O'
+            };
+            unitHint.textContent = '單位: ' + (units[param] || '');
+        }
+
+        async function submitVentChange() {
+            const param = document.getElementById('ventParameter').value;
+            const fromVal = document.getElementById('ventFromValue').value;
+            const toVal = document.getElementById('ventToValue').value;
+            const reason = document.getElementById('ventReason').value;
+
+            if (!toVal) {
+                alert('請輸入新設定值');
+                return;
+            }
+
+            try {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/events?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_type: 'VENT_SETTING_CHANGE',
+                        payload: {
+                            parameter: param,
+                            from_value: fromVal || null,
+                            to_value: toVal,
+                            reason: reason || null
+                        }
+                    })
+                });
+                if (!res.ok) throw new Error('Failed');
+
+                closeModal('ventModal');
+                alert(`✓ ${param} 調整已記錄`);
+                loadTimeline(currentCase.id);
+            } catch (err) {
+                alert('記錄失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        let depthAction = 'DEEPEN';
+
+        function showDepthModal() {
+            if (!currentCase) {
+                alert('請先選擇或建立一個麻醉案例');
+                return;
+            }
+            setDepthAction('DEEPEN');
+            updateDepthInputs();
+            document.getElementById('depthModal').classList.add('active');
+        }
+
+        function setDepthAction(action) {
+            depthAction = action;
+            document.getElementById('btnDeepen').style.background = action === 'DEEPEN' ? '#7c3aed' : 'var(--card-hover)';
+            document.getElementById('btnLighten').style.background = action === 'LIGHTEN' ? '#7c3aed' : 'var(--card-hover)';
+        }
+
+        function updateDepthInputs() {
+            const method = document.getElementById('depthMethod').value;
+            document.getElementById('depthVolatileInputs').style.display = method === 'VOLATILE' ? 'block' : 'none';
+            document.getElementById('depthBolusInputs').style.display = method === 'IV_BOLUS' ? 'block' : 'none';
+        }
+
+        async function submitDepthAdjust() {
+            const method = document.getElementById('depthMethod').value;
+            const reason = document.getElementById('depthReason').value;
+
+            const payload = {
+                action: depthAction,
+                method: method,
+                reason: reason || null
+            };
+
+            if (method === 'VOLATILE') {
+                payload.mac_from = parseFloat(document.getElementById('macFrom').value) || null;
+                payload.mac_to = parseFloat(document.getElementById('macTo').value) || null;
+            } else if (method === 'IV_BOLUS') {
+                payload.bolus_dose = document.getElementById('bolusAgent').value;
+            }
+
+            try {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/events?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_type: 'ANESTHESIA_DEPTH_ADJUST',
+                        payload: payload
+                    })
+                });
+                if (!res.ok) throw new Error('Failed');
+
+                closeModal('depthModal');
+                alert(`✓ 麻醉深度${depthAction === 'DEEPEN' ? '加深' : '減淺'} 已記錄`);
+                loadTimeline(currentCase.id);
+            } catch (err) {
+                alert('記錄失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        function showPositionModal() {
+            if (!currentCase) {
+                alert('請先選擇或建立一個麻醉案例');
+                return;
+            }
+            document.getElementById('positionModal').classList.add('active');
+        }
+
+        async function submitPosition(position) {
+            try {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/events?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_type: 'POSITION_CHANGE',
+                        payload: {
+                            position: position
+                        }
+                    })
+                });
+                if (!res.ok) throw new Error('Failed');
+
+                closeModal('positionModal');
+                alert(`✓ 姿勢調整已記錄: ${position}`);
                 loadTimeline(currentCase.id);
             } catch (err) {
                 alert('記錄失敗: ' + getErrorMessage(err));
