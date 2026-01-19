@@ -103,7 +103,7 @@
     <!-- 事件軌道 -->
     <div class="timeline-track events">
         <div class="event" data-type="MEDICATION" style="left: 5%">
-            <span class="icon">💊</span>
+            <span class="icon"><svg class="w-4 h-4"><use href="#heroicon-beaker"/></svg></span>
         </div>
         ...
     </div>
@@ -308,7 +308,7 @@ timelineData: {
 
 ### 6.1 時間模型 - 固定視窗 (Fixed Viewport)
 
-> ⚠️ **v1.2 Critical Fix**: 移除 `Date.now()` 作為座標系終點的錯誤設計
+> **[!]** **v1.2 Critical Fix**: 移除 `Date.now()` 作為座標系終點的錯誤設計
 
 **錯誤的舊模型 (已廢棄):**
 ```javascript
@@ -443,34 +443,60 @@ zoomOut() {
   ×  = 呼吸次數 (RR)
 ```
 
-> ⚠️ **v1.2 設計原則**: 符號 + 形狀作為主要識別，顏色作為輔助 (Shape + Label Redundancy)
+> **[!]** **v1.2 設計原則**: 符號 + 形狀作為主要識別，顏色作為輔助 (Shape + Label Redundancy)
 
 ### 7.2 可主題化顏色系統 (Themable Colors)
 
-```javascript
-// v1.2: 顏色不硬編碼，透過 CSS 變數實現主題化
-// 預設主題 (Default Theme)
+> **xIRS 整合**: 繼承 `xirs-colors.css` 統一色彩系統，擴展麻醉專用變數
+
+```css
+/* 引入 xIRS 統一色彩 */
+@import '/shared/xirs-ui/core/xirs-colors.css';
+
+/* 麻醉專用變數 - 繼承 xIRS 顏色 */
 :root {
-    --vital-sbp: #dc2626;      // 紅色系
-    --vital-dbp: #dc2626;      // 紅色系 (與 SBP 同色)
-    --vital-hr: #2563eb;       // 藍色系
-    --vital-spo2: #16a34a;     // 綠色系
-    --vital-rr: #7c3aed;       // 紫色系
-    --vital-warning: #f59e0b;  // 警告 (黃)
-    --vital-critical: #dc2626; // 危急 (紅)
-    --event-medication: #3b82f6;
-    --event-procedure: #8b5cf6;
-    --event-milestone: #14b8a6;
+    /* === Vital Signs === */
+    --vital-sbp: var(--xirs-emergency);       /* #dc2626 紅色系 */
+    --vital-dbp: var(--xirs-emergency);       /* #dc2626 同 SBP */
+    --vital-hr: var(--xirs-role-doctor);      /* #2563eb 藍色系 */
+    --vital-spo2: var(--xirs-success);        /* #10b981 綠色系 */
+    --vital-rr: var(--xirs-role-anesthesia);  /* #7c3aed 紫色系 */
+
+    /* === 警戒等級 (繼承 xIRS 狀態色) === */
+    --vital-warning: var(--xirs-warning);     /* #f59e0b 黃 */
+    --vital-critical: var(--xirs-emergency);  /* #dc2626 紅 */
+
+    /* === 事件類型 === */
+    --event-medication: var(--xirs-info);     /* #3b82f6 藍 */
+    --event-procedure: var(--xirs-role-admin); /* #7c3aed 紫 */
+    --event-milestone: var(--xirs-hirs-primary); /* #0d9488 青綠 */
+    --event-stat: var(--xirs-priority-urgent); /* #dc2626 緊急紅 */
+
+    /* === 網格與背景 === */
+    --grid-line: var(--xirs-gray-200);        /* #e5e7eb */
+    --text-muted: var(--xirs-gray-500);       /* #6b7280 */
 }
 
-// 高對比主題 (High Contrast Theme)
+/* 高對比主題 (無障礙) */
 [data-theme="high-contrast"] {
     --vital-sbp: #ff0000;
     --vital-hr: #0000ff;
     --vital-spo2: #00ff00;
-    // ...
+    --vital-rr: #ff00ff;
+    --grid-line: #000000;
 }
 ```
+
+**xIRS 顏色對照表:**
+
+| 用途 | 麻醉變數 | xIRS 變數 | 值 |
+|------|---------|----------|-----|
+| 血壓 | `--vital-sbp/dbp` | `--xirs-emergency` | #dc2626 |
+| 心率 | `--vital-hr` | `--xirs-role-doctor` | #2563eb |
+| 血氧 | `--vital-spo2` | `--xirs-success` | #10b981 |
+| 呼吸 | `--vital-rr` | `--xirs-role-anesthesia` | #7c3aed |
+| 警告 | `--vital-warning` | `--xirs-warning` | #f59e0b |
+| 危急 | `--vital-critical` | `--xirs-emergency` | #dc2626 |
 
 ### 7.3 趨勢圖視覺設計
 
@@ -502,16 +528,16 @@ zoomOut() {
 │        09:00  09:05  09:10  09:15  09:20  09:25  09:30        │
 │                                                               │
 │  ══════════════════════════════════════════════════════════  │
-│  事件列 (使用 SVG 圖標，非 Emoji)：                           │
-│   09:05 [藥] Propofol 150mg                                  │
-│   09:08 [管] Intubation ETT 7.5                              │
-│   09:12 [氣] Sevoflurane 2%                                  │
+│  事件列 (Heroicons)：                                         │
+│   09:05 [beaker] Propofol 150mg                              │
+│   09:08 [arrow-down] Intubation ETT 7.5                      │
+│   09:12 [cloud] Sevoflurane 2%                               │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 ### 7.4 渲染策略：Canvas + DOM 混合 (v1.2)
 
-> ⚠️ **v1.2 效能考量**: SVG polyline 在長手術 (每 5 分鐘一點 × 5 條線 × 10 小時 = 600+ 點) 會導致行動裝置效能下降
+> **[!]** **v1.2 效能考量**: SVG polyline 在長手術 (每 5 分鐘一點 × 5 條線 × 10 小時 = 600+ 點) 會導致行動裝置效能下降
 
 **推薦架構：**
 ```
@@ -572,32 +598,57 @@ class VitalsCanvasRenderer {
 }
 ```
 
-### 7.5 事件圖標：SVG 取代 Emoji (v1.2)
+### 7.5 事件圖標：Heroicons (v1.2)
 
-> ⚠️ **v1.2**: 禁止使用 Emoji 作為事件圖標，因為不同 OS 字型渲染不一致
+> **v1.2**: 使用 [Heroicons](https://heroicons.com/) 作為標準圖標庫，確保跨平台一致性
+
+**圖標對照表：**
+
+| 事件類型 | Heroicon 名稱 | 樣式 | 說明 |
+|---------|---------------|------|------|
+| 用藥 (Medication) | `beaker` | outline | 藥物給予 |
+| 處置 (Procedure) | `wrench-screwdriver` | outline | 醫療處置 |
+| 插管 (Intubation) | `arrow-down-on-square` | solid | 氣管內管 |
+| 吸入麻醉 (Gas) | `cloud` | outline | 氣體麻醉劑 |
+| 里程碑 (Milestone) | `flag` | solid | 手術階段 |
+| 緊急 (STAT) | `bolt` | solid | 緊急用藥 |
+| 備註 (Note) | `chat-bubble-left` | outline | 文字記錄 |
+
+**使用方式 (Heroicons SVG)：**
 
 ```html
-<!-- 事件圖標定義 (SVG Sprite) -->
-<svg style="display:none">
-    <symbol id="icon-medication" viewBox="0 0 24 24">
-        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l6.59-6.59L20 9l-8 8z"/>
-    </symbol>
-    <symbol id="icon-procedure" viewBox="0 0 24 24">
-        <path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75 1.84-1.83z"/>
-        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/>
-    </symbol>
-    <symbol id="icon-intubation" viewBox="0 0 24 24">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93z"/>
-    </symbol>
-    <symbol id="icon-gas" viewBox="0 0 24 24">
-        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
-    </symbol>
+<!-- 方式 1: 直接嵌入 SVG (推薦，離線可用) -->
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+     stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+  <!-- beaker (用藥) -->
+  <path stroke-linecap="round" stroke-linejoin="round"
+        d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
 </svg>
 
-<!-- 使用方式 -->
-<svg class="event-icon" width="16" height="16">
-    <use href="#icon-medication"></use>
-</svg>
+<!-- 方式 2: Tailwind CSS + heroicons (需要 npm 安裝) -->
+<!-- npm install @heroicons/react -->
+<script>
+import { BeakerIcon, WrenchScrewdriverIcon, CloudIcon } from '@heroicons/react/24/outline';
+import { BoltIcon, FlagIcon } from '@heroicons/react/24/solid';
+</script>
+```
+
+**事件圖標 CSS 類別：**
+
+```css
+/* 事件圖標容器 */
+.event-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* 圖標顏色 (使用 CSS 變數) */
+.event-icon--medication { color: var(--event-medication, #3b82f6); }
+.event-icon--procedure  { color: var(--event-procedure, #8b5cf6); }
+.event-icon--milestone  { color: var(--event-milestone, #14b8a6); }
+.event-icon--stat       { color: var(--vital-critical, #dc2626); }
+.event-icon--note       { color: var(--text-muted, #6b7280); }
 ```
 
 ### 7.6 SVG 網格實作 (輕量 DOM)
@@ -658,7 +709,7 @@ class VitalsCanvasRenderer {
         <!-- 事件標記 (垂直線 + 圖標) -->
         <g class="events-layer">
             <line x1="60" y1="0" x2="60" y2="300" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4"/>
-            <text x="60" y="295" class="event-label">💊</text>
+            <use href="#heroicon-beaker" x="52" y="280" width="16" height="16"/>
         </g>
     </svg>
 
@@ -783,7 +834,7 @@ getVitalColor(type, value) {
 
 ### 9.2 Event Sourcing 架構 (v1.2 核心變更)
 
-> ⚠️ **v1.2 Critical**: 所有操作都是**不可變事件 (Immutable Events)**，禁止直接修改/刪除
+> **[!]** **v1.2 Critical**: 所有操作都是**不可變事件 (Immutable Events)**，禁止直接修改/刪除
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -864,7 +915,7 @@ interface MedicationAdministeredEvent {
 
 #### 9.3.2 MedicationReversedEvent (撤銷事件)
 
-> ⚠️ **v1.2**: 不使用 DELETE，改用補償事件 (Compensating Event)
+> **[!]** **v1.2**: 不使用 DELETE，改用補償事件 (Compensating Event)
 
 ```typescript
 interface MedicationReversedEvent {
@@ -986,7 +1037,7 @@ isControlledDrug(drugCode) {
 // UI：新增管制藥品需要確認
 async addControlledDrugEvent(medication) {
     const confirmed = await this.showConfirmDialog({
-        title: '⚠️ 管制藥品確認',
+        title: '**[!]** 管制藥品確認',
         message: `即將記錄 ${medication.drugName} ${medication.dose}${medication.unit}`,
         confirmText: '確認無誤',
         cancelText: '取消',
@@ -1009,7 +1060,7 @@ async addControlledDrugEvent(medication) {
 │  ┌─ 常用藥物 ──────────────────────┐   │
 │  │  [Propofol]  [Fentanyl]         │   │
 │  │  [Rocuronium] [Sevoflurane]     │   │
-│  │  [Midazolam]  [Ketamine] ⚠️     │   │
+│  │  [Midazolam]  [Ketamine] **[!]**     │   │
 │  └──────────────────────────────────┘   │
 │                                        │
 │  藥物: [Propofol           ▼]          │
@@ -1340,7 +1391,7 @@ async statDrug(drugName, dose, unit) {
 2. 里程碑顯示
 3. 點擊里程碑編輯
 
-### Phase 2: Vitals 趨勢圖 ⭐ (v1.1)
+### Phase 2: Vitals 趨勢圖 * (v1.1)
 1. SVG Canvas 網格繪製
 2. 標準符號 (V/^/●/○/×) 繪製
 3. 異常值自動標色
@@ -1351,13 +1402,13 @@ async statDrug(drugName, dose, unit) {
 2. Vitals 輸入模態窗
 3. 用藥輸入模態窗（含常用藥物快選）
 
-### Phase 4: 庫存與計費連動 ⭐ (v1.1)
+### Phase 4: 庫存與計費連動 * (v1.1)
 1. MIRS 庫存扣減 API
 2. CashDesk 計費項目生成
 3. 管制藥品雙重驗證
 4. 事件刪除 → 庫存回補
 
-### Phase 5: 分頁與 UX ⭐ (v1.1)
+### Phase 5: 分頁與 UX * (v1.1)
 1. 每小時分頁顯示
 2. 小時選擇器 UI
 3. 左右滑動手勢
