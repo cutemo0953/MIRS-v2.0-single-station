@@ -2,12 +2,13 @@
 MIRS Anesthesia Module - Phase A
 Event-Sourced, Offline-First Architecture
 
-Version: 1.5.1
+Version: 1.5.3
 """
 
 import json
+import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from enum import Enum
 
@@ -18,6 +19,44 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/anesthesia", tags=["anesthesia"])
+
+# Vercel demo mode detection (moved to top for availability in all endpoints)
+IS_VERCEL = os.environ.get("VERCEL") == "1"
+
+# Demo anesthesia cases for Vercel mode
+_demo_now = datetime.now()
+DEMO_ANESTHESIA_CASES = [
+    {
+        "id": "ANES-DEMO-001",
+        "patient_id": "P-DEMO-001",
+        "patient_name": "王大明",
+        "status": "IN_PROGRESS",
+        "context_mode": "STANDARD",
+        "planned_technique": "GA_ETT",
+        "created_at": (_demo_now - timedelta(hours=1)).isoformat(),
+        "actor_id": "demo-user"
+    },
+    {
+        "id": "ANES-DEMO-002",
+        "patient_id": "P-DEMO-002",
+        "patient_name": "林小華",
+        "status": "PREOP",
+        "context_mode": "STANDARD",
+        "planned_technique": "RA_SPINAL",
+        "created_at": (_demo_now - timedelta(minutes=30)).isoformat(),
+        "actor_id": "demo-user"
+    },
+    {
+        "id": "ANES-DEMO-003",
+        "patient_id": "P-DEMO-003",
+        "patient_name": "張美玲",
+        "status": "CLOSED",
+        "context_mode": "STANDARD",
+        "planned_technique": "GA_LMA",
+        "created_at": (_demo_now - timedelta(hours=3)).isoformat(),
+        "actor_id": "demo-user"
+    }
+]
 
 
 # =============================================================================
@@ -1146,6 +1185,18 @@ async def list_cases(
     limit: int = Query(default=50, le=200)
 ):
     """List anesthesia cases"""
+    # v1.5.3: Vercel demo mode - return demo cases
+    if IS_VERCEL:
+        demo_cases = DEMO_ANESTHESIA_CASES.copy()
+        # Filter by status if specified
+        if status:
+            demo_cases = [c for c in demo_cases if c["status"] == status]
+        return {
+            "cases": demo_cases[:limit],
+            "count": len(demo_cases[:limit]),
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -3312,16 +3363,11 @@ async def check_can_close_case(case_id: str):
 # ============================================================
 
 import httpx
-from typing import Optional
-import os
 from fastapi.responses import JSONResponse
 
 # CIRS Hub configuration
 CIRS_HUB_URL = os.getenv("CIRS_HUB_URL", "http://localhost:8090")
 CIRS_TIMEOUT = 5.0  # seconds
-
-# Vercel demo mode detection
-IS_VERCEL = os.environ.get("VERCEL") == "1"
 
 # xIRS Protocol Version (see DEV_SPEC Section I.2)
 XIRS_PROTOCOL_VERSION = "1.0"
