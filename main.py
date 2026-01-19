@@ -3372,6 +3372,12 @@ _static_dir = PROJECT_ROOT / "static"
 if _static_dir.exists() and not IS_VERCEL:
     app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
+# Mount shared SDK files (symlinked from CIRS or copied)
+_shared_dir = PROJECT_ROOT / "shared"
+if _shared_dir.exists() and not IS_VERCEL:
+    app.mount("/shared", StaticFiles(directory=str(_shared_dir)), name="shared")
+    print(f"[MIRS] Mounted /shared from {_shared_dir}")
+
 # ============================================================================
 # 資料庫初始化 - 支援 PostgreSQL (Neon) 或 SQLite
 # ============================================================================
