@@ -60,17 +60,24 @@
         <div id="xirs-offline-banner"></div>
 
         <!-- Header -->
-        <header class="bg-emerald-700 text-white px-4 py-3 sticky top-0 z-40">
+        <header class="text-white px-4 py-3 sticky top-0 z-40"
+                :class="contextMode === 'CIRS' ? 'bg-blue-700' : 'bg-emerald-700'">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center"
+                         :class="contextMode === 'CIRS' ? 'bg-blue-600' : 'bg-emerald-600'">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                         </svg>
                     </div>
                     <div>
-                        <h1 class="font-bold text-lg">Pharmacy Sub-Hub</h1>
-                        <p class="text-xs text-emerald-200" x-text="stationName || '衛星藥局'"></p>
+                        <h1 class="font-bold text-lg" x-text="contextMode === 'CIRS' ? 'Pharmacy Hub' : 'Pharmacy Sub-Hub'"></h1>
+                        <div class="flex items-center gap-2">
+                            <p class="text-xs opacity-80" x-text="stationName || '藥局'"></p>
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                                  :class="contextMode === 'CIRS' ? 'bg-blue-500' : 'bg-emerald-500'"
+                                  x-text="contextMode === 'CIRS' ? 'HUB' : 'SAT'"></span>
+                        </div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -107,21 +114,46 @@
 
         <!-- Tab Navigation -->
         <div class="bg-white border-b flex">
-            <button @click="currentTab = 'pending'"
-                    class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
-                    :class="currentTab === 'pending' ? 'text-emerald-600 border-emerald-600' : 'text-gray-500 border-transparent'">
-                待收貨
-            </button>
-            <button @click="currentTab = 'history'"
-                    class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
-                    :class="currentTab === 'history' ? 'text-emerald-600 border-emerald-600' : 'text-gray-500 border-transparent'">
-                收貨紀錄
-            </button>
-            <button @click="currentTab = 'inventory'"
-                    class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
-                    :class="currentTab === 'inventory' ? 'text-emerald-600 border-emerald-600' : 'text-gray-500 border-transparent'">
-                庫存
-            </button>
+            <!-- MIRS Mode: Receipt-focused tabs -->
+            <template x-if="contextMode === 'MIRS'">
+                <div class="flex w-full">
+                    <button @click="currentTab = 'pending'"
+                            class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
+                            :class="currentTab === 'pending' ? 'text-emerald-600 border-emerald-600' : 'text-gray-500 border-transparent'">
+                        待收貨
+                    </button>
+                    <button @click="currentTab = 'history'"
+                            class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
+                            :class="currentTab === 'history' ? 'text-emerald-600 border-emerald-600' : 'text-gray-500 border-transparent'">
+                        收貨紀錄
+                    </button>
+                    <button @click="currentTab = 'local-audit'"
+                            class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
+                            :class="currentTab === 'local-audit' ? 'text-emerald-600 border-emerald-600' : 'text-gray-500 border-transparent'">
+                        本地稽核
+                    </button>
+                </div>
+            </template>
+            <!-- CIRS Mode: Hub-focused tabs -->
+            <template x-if="contextMode === 'CIRS'">
+                <div class="flex w-full">
+                    <button @click="currentTab = 'dispatch'"
+                            class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
+                            :class="currentTab === 'dispatch' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent'">
+                        調撥
+                    </button>
+                    <button @click="currentTab = 'inventory'"
+                            class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
+                            :class="currentTab === 'inventory' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent'">
+                        庫存管理
+                    </button>
+                    <button @click="currentTab = 'global-audit'"
+                            class="flex-1 py-3 text-center font-medium border-b-2 transition-colors"
+                            :class="currentTab === 'global-audit' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent'">
+                        全域稽核
+                    </button>
+                </div>
+            </template>
         </div>
 
         <!-- Main Content -->
@@ -196,10 +228,139 @@
                 </div>
             </div>
 
-            <!-- Inventory Tab -->
+            <!-- Inventory Tab (CIRS Mode) -->
             <div x-show="currentTab === 'inventory'" class="space-y-4">
                 <div class="bg-white rounded-xl shadow-sm p-4">
-                    <p class="text-center text-gray-500">庫存功能開發中...</p>
+                    <h3 class="font-bold text-gray-800 mb-3">庫存總覽</h3>
+                    <div class="space-y-2">
+                        <template x-for="item in inventoryItems" :key="item.medicine_code">
+                            <div class="flex items-center justify-between py-2 border-b last:border-0">
+                                <div>
+                                    <div class="font-medium" x-text="item.medicine_name"></div>
+                                    <div class="text-xs text-gray-500" x-text="item.medicine_code"></div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold" :class="item.current_stock <= item.min_stock ? 'text-red-600' : 'text-gray-800'"
+                                         x-text="item.current_stock + ' ' + (item.stock_unit || 'amp')"></div>
+                                    <div class="text-xs" :class="item.current_stock <= item.min_stock ? 'text-red-500' : 'text-gray-400'"
+                                         x-text="item.current_stock <= item.min_stock ? '低庫存' : '正常'"></div>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="inventoryItems.length === 0" class="text-center py-8 text-gray-500">
+                            <p>載入庫存資料中...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dispatch Tab (CIRS Mode Only) -->
+            <div x-show="currentTab === 'dispatch'" class="space-y-4">
+                <div class="bg-white rounded-xl shadow-sm p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-800">建立調撥單</h3>
+                        <button @click="openNewDispatch()" class="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg">
+                            + 新增
+                        </button>
+                    </div>
+                    <div class="space-y-2">
+                        <template x-for="dispatch in outgoingDispatches" :key="dispatch.dispatch_id">
+                            <div class="border rounded-lg p-3">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium" x-text="dispatch.dispatch_id"></div>
+                                        <div class="text-xs text-gray-500">
+                                            目標: <span x-text="dispatch.to_location"></span>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium"
+                                          :class="{
+                                              'bg-amber-100 text-amber-800': dispatch.status === 'PENDING',
+                                              'bg-blue-100 text-blue-800': dispatch.status === 'IN_TRANSIT',
+                                              'bg-green-100 text-green-800': dispatch.status === 'RECEIVED'
+                                          }"
+                                          x-text="dispatch.status"></span>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="outgoingDispatches.length === 0" class="text-center py-8 text-gray-500">
+                            <p>無待處理調撥單</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Local Audit Tab (MIRS Mode Only) -->
+            <div x-show="currentTab === 'local-audit'" class="space-y-4">
+                <div class="bg-white rounded-xl shadow-sm p-4">
+                    <h3 class="font-bold text-gray-800 mb-3">本地稽核記錄</h3>
+                    <p class="text-sm text-gray-600 mb-4">本站 Point-of-Care 藥品使用記錄 (Layer A 紀錄)</p>
+                    <div class="space-y-2">
+                        <template x-for="log in localAuditLogs" :key="log.id">
+                            <div class="border-l-4 pl-3 py-2"
+                                 :class="log.is_controlled ? 'border-purple-500' : 'border-gray-300'">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium" x-text="log.medicine_name"></div>
+                                        <div class="text-xs text-gray-500">
+                                            <span x-text="log.clinical_dose + ' ' + log.clinical_unit"></span> ·
+                                            <span x-text="log.operator_name || log.operator_id"></span>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-gray-400" x-text="formatTime(log.event_timestamp)"></div>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="localAuditLogs.length === 0" class="text-center py-8 text-gray-500">
+                            <p>尚無本地稽核記錄</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Audit Tab (CIRS Mode Only) -->
+            <div x-show="currentTab === 'global-audit'" class="space-y-4">
+                <div class="bg-white rounded-xl shadow-sm p-4">
+                    <h3 class="font-bold text-gray-800 mb-3">全域稽核儀表板</h3>
+                    <p class="text-sm text-gray-600 mb-4">中央藥師審核待覆核記錄 (Layer B 審核)</p>
+
+                    <!-- Pending Review Stats -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-amber-50 rounded-lg p-3 text-center">
+                            <div class="text-2xl font-bold text-amber-600" x-text="globalAuditStats.pending_review"></div>
+                            <div class="text-xs text-gray-500">待審核</div>
+                        </div>
+                        <div class="bg-red-50 rounded-lg p-3 text-center">
+                            <div class="text-2xl font-bold text-red-600" x-text="globalAuditStats.flagged"></div>
+                            <div class="text-xs text-gray-500">異常標記</div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Reviews -->
+                    <div class="space-y-2">
+                        <template x-for="record in pendingAuditRecords" :key="record.id">
+                            <div class="border rounded-lg p-3" @click="openAuditDetail(record)">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium" x-text="record.medicine_name"></div>
+                                        <div class="text-xs text-gray-500">
+                                            <span x-text="record.station_name || record.station_id"></span> ·
+                                            <span x-text="record.operator_name || record.operator_id"></span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm font-bold" x-text="record.clinical_dose + ' ' + record.clinical_unit"></div>
+                                        <span class="px-2 py-0.5 rounded text-xs"
+                                              :class="record.is_flagged ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'"
+                                              x-text="record.is_flagged ? '異常' : '待審'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="pendingAuditRecords.length === 0" class="text-center py-8 text-gray-500">
+                            <p>無待審核記錄</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -316,6 +477,25 @@
                     <h3 class="font-bold">設定</h3>
                 </div>
                 <div class="p-4 space-y-4">
+                    <!-- Context Mode Selector -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="text-sm text-gray-500 mb-2">運作模式</div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button @click="setContextMode('MIRS')"
+                                    class="py-2 px-3 rounded-lg text-sm font-medium transition-colors"
+                                    :class="contextMode === 'MIRS' ? 'bg-emerald-600 text-white' : 'bg-white border text-gray-600'">
+                                <div class="font-bold">MIRS Mode</div>
+                                <div class="text-xs opacity-80">衛星站 (收貨)</div>
+                            </button>
+                            <button @click="setContextMode('CIRS')"
+                                    class="py-2 px-3 rounded-lg text-sm font-medium transition-colors"
+                                    :class="contextMode === 'CIRS' ? 'bg-blue-600 text-white' : 'bg-white border text-gray-600'">
+                                <div class="font-bold">CIRS Mode</div>
+                                <div class="text-xs opacity-80">中央站 (調撥)</div>
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="bg-gray-50 rounded-lg p-4">
                         <div class="text-sm text-gray-500">站點名稱</div>
                         <div class="font-medium" x-text="stationName || '未設定'"></div>
@@ -334,7 +514,7 @@
                     </button>
                 </div>
                 <div class="p-4 text-center text-xs text-gray-400">
-                    MIRS Pharmacy Sub-Hub v1.0<br>
+                    MIRS Pharmacy v1.1 (Context-Aware)<br>
                     xIRS SDK v1.1
                 </div>
             </div>
@@ -358,6 +538,9 @@
     <script>
         function pharmacySubHub() {
             return {
+                // Context Mode (CIRS = Hub, MIRS = Satellite)
+                contextMode: 'MIRS',
+
                 // State
                 currentTab: 'pending',
                 pendingDispatches: [],
@@ -369,6 +552,15 @@
                 },
                 pendingCount: 0,
                 syncing: false,
+
+                // CIRS Mode Data
+                outgoingDispatches: [],
+                inventoryItems: [],
+                pendingAuditRecords: [],
+                globalAuditStats: { pending_review: 0, flagged: 0 },
+
+                // MIRS Mode Data
+                localAuditLogs: [],
 
                 // Station info
                 stationId: null,
@@ -388,18 +580,25 @@
                 toast: { show: false, message: '', type: 'success' },
 
                 async init() {
-                    console.log('[Pharmacy Sub-Hub] Initializing...');
+                    console.log('[Pharmacy] Initializing...');
+
+                    // Load saved context mode from localStorage
+                    const savedMode = localStorage.getItem('pharmacy_context_mode');
+                    if (savedMode && ['CIRS', 'MIRS'].includes(savedMode)) {
+                        this.contextMode = savedMode;
+                        this.currentTab = savedMode === 'CIRS' ? 'dispatch' : 'pending';
+                    }
 
                     // Wait for SDK to be ready
                     xIRS.ready(async () => {
-                        console.log('[Pharmacy Sub-Hub] SDK ready');
+                        console.log('[Pharmacy] SDK ready');
                         this.sdkStatus = `Ready (${xIRS._state})`;
 
                         // Load config
                         const config = xIRS.Config.load();
                         if (config) {
                             this.stationId = config.station_id;
-                            this.stationName = config.station_name || '衛星藥局';
+                            this.stationName = config.station_name || '藥局';
                         }
 
                         // Initialize offline module
@@ -410,7 +609,7 @@
                             });
                         }
 
-                        // Load data
+                        // Load data based on context mode
                         await this.refreshData();
 
                         // Listen for bus events
@@ -425,16 +624,104 @@
                             });
                         }
 
-                        console.log('[Pharmacy Sub-Hub] Initialized');
+                        console.log(`[Pharmacy] Initialized in ${this.contextMode} mode`);
                     });
                 },
 
+                setContextMode(mode) {
+                    this.contextMode = mode;
+                    localStorage.setItem('pharmacy_context_mode', mode);
+
+                    // Switch to appropriate default tab
+                    this.currentTab = mode === 'CIRS' ? 'dispatch' : 'pending';
+
+                    // Reload data for new mode
+                    this.refreshData();
+                    this.showToast(`已切換至 ${mode} 模式`, 'success');
+                },
+
                 async refreshData() {
-                    await Promise.all([
-                        this.loadPendingDispatches(),
-                        this.loadReceiptHistory(),
-                        this.loadStats()
-                    ]);
+                    if (this.contextMode === 'CIRS') {
+                        // Hub mode: Load dispatch and audit data
+                        await Promise.all([
+                            this.loadOutgoingDispatches(),
+                            this.loadInventory(),
+                            this.loadGlobalAuditData()
+                        ]);
+                    } else {
+                        // Satellite mode: Load receipt and local audit data
+                        await Promise.all([
+                            this.loadPendingDispatches(),
+                            this.loadReceiptHistory(),
+                            this.loadStats(),
+                            this.loadLocalAuditLogs()
+                        ]);
+                    }
+                },
+
+                // CIRS Mode: Load outgoing dispatches
+                async loadOutgoingDispatches() {
+                    try {
+                        const result = await xIRS.API.get('/api/anesthesia/cart-dispatch', {
+                            params: { limit: 20 }
+                        });
+                        if (result.ok) {
+                            this.outgoingDispatches = result.data.dispatches || [];
+                        }
+                    } catch (e) {
+                        console.error('[Pharmacy] Failed to load outgoing dispatches:', e);
+                    }
+                },
+
+                // CIRS Mode: Load inventory
+                async loadInventory() {
+                    try {
+                        const result = await xIRS.API.get('/api/pharmacy/inventory');
+                        if (result.ok) {
+                            this.inventoryItems = result.data.items || [];
+                        }
+                    } catch (e) {
+                        console.error('[Pharmacy] Failed to load inventory:', e);
+                    }
+                },
+
+                // CIRS Mode: Load global audit data
+                async loadGlobalAuditData() {
+                    try {
+                        const result = await xIRS.API.get('/api/pharmacy/audit/pending');
+                        if (result.ok) {
+                            this.pendingAuditRecords = result.data.records || [];
+                            this.globalAuditStats = {
+                                pending_review: result.data.stats?.pending || 0,
+                                flagged: result.data.stats?.flagged || 0
+                            };
+                        }
+                    } catch (e) {
+                        // Demo/fallback data
+                        this.globalAuditStats = { pending_review: 0, flagged: 0 };
+                    }
+                },
+
+                // MIRS Mode: Load local audit logs
+                async loadLocalAuditLogs() {
+                    try {
+                        const result = await xIRS.API.get('/api/pharmacy/audit/local', {
+                            params: { limit: 30 }
+                        });
+                        if (result.ok) {
+                            this.localAuditLogs = result.data.logs || [];
+                        }
+                    } catch (e) {
+                        console.error('[Pharmacy] Failed to load local audit logs:', e);
+                    }
+                },
+
+                openNewDispatch() {
+                    this.showToast('調撥單建立功能開發中', 'warning');
+                },
+
+                openAuditDetail(record) {
+                    this.showToast('審核詳情功能開發中', 'warning');
                 },
 
                 async loadPendingDispatches() {

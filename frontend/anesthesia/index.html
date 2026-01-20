@@ -801,6 +801,48 @@
             color: var(--text-muted);
         }
 
+        /* Inventory Stock Badge */
+        .med-stock {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
+            font-size: 0.75rem;
+        }
+
+        .stock-badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .stock-badge.in-stock {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .stock-badge.low-stock {
+            background: rgba(234, 179, 8, 0.2);
+            color: #eab308;
+        }
+
+        .stock-badge.out-of-stock {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .med-btn.out-of-stock {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .med-loading {
+            grid-column: span 2;
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
         /* Dose Adjustment UI */
         .selected-drug-card {
             background: var(--bg);
@@ -1514,35 +1556,18 @@
 
             <!-- Drug Selection View -->
             <div id="medSelectView">
-                <div class="section-title">常用藥物</div>
-                <div class="med-grid">
-                    <button class="med-btn" onclick="selectMed('PROPO001', 'Propofol', 100, 'mg', false)">
-                        <div class="med-name">Propofol</div>
-                        <div class="med-dose">100 mg IV</div>
-                    </button>
-                    <button class="med-btn controlled-drug" onclick="selectMed('FENTA001', 'Fentanyl', 50, 'mcg', true)">
-                        <div class="med-name">Fentanyl</div>
-                        <div class="med-dose">50 mcg IV</div>
-                    </button>
-                    <button class="med-btn" onclick="selectMed('ROCUR001', 'Rocuronium', 50, 'mg', false)">
-                        <div class="med-name">Rocuronium</div>
-                        <div class="med-dose">50 mg IV</div>
-                    </button>
-                    <button class="med-btn controlled-drug" onclick="selectMed('MIDAZ001', 'Midazolam', 2, 'mg', true)">
-                        <div class="med-name">Midazolam</div>
-                        <div class="med-dose">2 mg IV</div>
-                    </button>
-                    <button class="med-btn" onclick="selectMed('ATRO001', 'Atropine', 0.5, 'mg', false)">
-                        <div class="med-name">Atropine</div>
-                        <div class="med-dose">0.5 mg IV</div>
-                    </button>
-                    <button class="med-btn" onclick="selectMed('EPHED001', 'Ephedrine', 5, 'mg', false)">
-                        <div class="med-name">Ephedrine</div>
-                        <div class="med-dose">5 mg IV</div>
-                    </button>
+                <div class="section-title">常用藥物 <span id="medInventoryStatus" style="font-size: 0.75rem; color: var(--text-muted);"></span></div>
+                <div class="med-grid" id="quickDrugsGrid">
+                    <div class="med-loading">載入藥品庫存中...</div>
                 </div>
-                <div style="margin-top: 20px;">
+                <div style="margin-top: 20px; display: flex; gap: 12px;">
                     <button class="btn" style="background: var(--card-hover);" onclick="showCustomMedForm()">自訂藥物</button>
+                    <button class="btn" style="background: var(--card-hover);" onclick="loadQuickDrugsWithInventory()">
+                        <svg style="width:16px;height:16px;vertical-align:middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        重新整理
+                    </button>
                 </div>
             </div>
 
@@ -3517,6 +3542,7 @@
 
         function showMedModal() {
             document.getElementById('medModal').classList.add('active');
+            loadQuickDrugsWithInventory();
         }
 
         function closeModal(id) {
@@ -4022,6 +4048,92 @@
         // Medication Selection with Dose Adjustment
         // =================================================================
         let selectedMed = null;
+        let quickDrugsCache = null;
+
+        // Load quick drugs with inventory from API
+        async function loadQuickDrugsWithInventory() {
+            const gridEl = document.getElementById('quickDrugsGrid');
+            const statusEl = document.getElementById('medInventoryStatus');
+
+            gridEl.innerHTML = '<div class="med-loading">載入藥品庫存中...</div>';
+            statusEl.textContent = '';
+
+            try {
+                const res = await apiFetch(`${API_BASE}/quick-drugs-with-inventory`);
+                if (!res.ok) throw new Error('Failed to load');
+
+                const data = await res.json();
+                quickDrugsCache = data.drugs;
+
+                if (!data.drugs || data.drugs.length === 0) {
+                    gridEl.innerHTML = '<div class="med-loading">無可用藥品</div>';
+                    return;
+                }
+
+                // Group by category (controlled vs regular)
+                const controlled = data.drugs.filter(d => d.is_controlled);
+                const regular = data.drugs.filter(d => !d.is_controlled);
+
+                let html = '';
+
+                // Render regular drugs first, then controlled
+                [...regular, ...controlled].forEach(drug => {
+                    const stockClass = getStockClass(drug.current_stock);
+                    const stockLabel = getStockLabel(drug.current_stock);
+                    const isDisabled = drug.current_stock === 0;
+                    const controlledClass = drug.is_controlled ? 'controlled-drug' : '';
+                    const disabledClass = isDisabled ? 'out-of-stock' : '';
+
+                    html += `
+                        <button class="med-btn ${controlledClass} ${disabledClass}"
+                                onclick="${isDisabled ? '' : `selectMed('${drug.medicine_code}', '${drug.medicine_name}', ${drug.default_dose}, '${drug.default_unit}', ${drug.is_controlled})`}"
+                                ${isDisabled ? 'disabled' : ''}>
+                            <div class="med-name">${drug.medicine_name}</div>
+                            <div class="med-dose">${drug.default_dose} ${drug.default_unit} IV</div>
+                            <div class="med-stock">
+                                <span class="stock-badge ${stockClass}">${stockLabel}</span>
+                                <span style="color: var(--text-muted);">${drug.current_stock} ${drug.stock_unit || 'amp'}</span>
+                            </div>
+                        </button>
+                    `;
+                });
+
+                gridEl.innerHTML = html;
+
+                // Update status
+                const lowStockCount = data.drugs.filter(d => d.current_stock > 0 && d.current_stock <= 3).length;
+                const outOfStockCount = data.drugs.filter(d => d.current_stock === 0).length;
+
+                if (outOfStockCount > 0) {
+                    statusEl.innerHTML = `<span style="color: #ef4444;">${outOfStockCount} 項缺貨</span>`;
+                } else if (lowStockCount > 0) {
+                    statusEl.innerHTML = `<span style="color: #eab308;">${lowStockCount} 項低庫存</span>`;
+                } else {
+                    statusEl.textContent = '庫存正常';
+                }
+
+            } catch (err) {
+                console.error('Failed to load quick drugs:', err);
+                gridEl.innerHTML = `
+                    <div class="med-loading">
+                        載入失敗
+                        <button class="btn" style="margin-top: 12px; background: var(--card-hover);" onclick="loadQuickDrugsWithInventory()">重試</button>
+                    </div>
+                `;
+            }
+        }
+
+        function getStockClass(stock) {
+            if (stock === 0) return 'out-of-stock';
+            if (stock <= 3) return 'low-stock';
+            return 'in-stock';
+        }
+
+        function getStockLabel(stock) {
+            if (stock === 0) return '缺貨';
+            if (stock <= 3) return '低庫存';
+            return '庫存充足';
+        }
 
         function selectMed(code, name, defaultDose, unit, isControlled) {
             if (!currentCase) {

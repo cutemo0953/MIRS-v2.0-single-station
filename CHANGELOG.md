@@ -6,6 +6,62 @@
 
 ---
 
+## [Anesthesia Billing v1.2.0] - 2026-01-20
+
+### 新增 (Added)
+- **完整麻醉計費整合** (DEV_SPEC v1.2.0)
+  - `services/anesthesia_billing.py`: 計費核心服務模組
+    - `calculate_billing_quantity()`: 單位換算 (mcg→mg→amp)
+    - `process_medication_admin()`: 用藥處理+庫存扣減+計費
+    - `calculate_anesthesia_fee()`: 麻醉處置費計算
+    - `generate_cashdesk_handoff()`: CashDesk Handoff Package
+    - `export_to_cashdesk()`: 匯出並鎖定
+  - `add_anesthesia_billing_schema.sql`: 計費表結構
+    - `medication_usage_events`: 藥品使用計費事件
+    - `anesthesia_billing_events`: 麻醉處置費
+    - `surgical_billing_events`: 手術處置費
+    - `anesthesia_fee_schedule`: 費率表
+  - `add_anesthesia_billing_columns.sql`: 既有表擴充欄位
+
+- **Phase 7: 麻醉藥車管理 API**
+  - `GET/POST /api/anesthesia/carts`: 藥車 CRUD
+  - `GET /api/anesthesia/carts/{id}`: 藥車詳情+庫存
+  - `PUT /api/anesthesia/carts/{id}/inventory`: 設定庫存
+  - `POST /api/anesthesia/carts/{id}/inventory/check`: 清點
+  - `POST /api/anesthesia/cart-dispatch`: 建立調撥單
+  - `GET /api/anesthesia/cart-dispatch`: 列出調撥單
+  - `POST /cart-dispatch/{id}/transit`: 標記運送中
+  - `POST /cart-dispatch/{id}/receive`: 接收+更新庫存
+  - `POST /cart-dispatch/{id}/verify`: 藥師核對
+  - `GET /api/anesthesia/carts/{id}/low-stock`: 低庫存警示
+
+- **Anesthesia PWA 前端更新**
+  - `loadQuickDrugsWithInventory()`: 動態載入藥品+庫存
+  - 庫存狀態 Badge (庫存充足/低庫存/缺貨)
+  - 缺貨藥品自動停用
+
+- **Pharmacy PWA Context-Aware 模式**
+  - MIRS Mode: 衛星站 (收貨、本地稽核)
+  - CIRS Mode: 中央站 (調撥、全域稽核)
+  - 動態 Tab 切換 + 狀態持久化
+
+### 修復 (Fixed)
+- **單位換算 Bug**: 50 mcg / 0.1 mg = 500 → 0.5 (convert_to_base_unit)
+- **operator_role 約束**: 'ANESTHESIA' → 'DOCTOR'
+
+### 檔案變更
+| 檔案 | 說明 |
+|------|------|
+| `services/anesthesia_billing.py` | 新增計費核心服務 (620 行) |
+| `routes/anesthesia.py` | +580 行 (計費+藥車 API) |
+| `database/migrations/add_anesthesia_billing_schema.sql` | 計費 Schema |
+| `database/migrations/add_anesthesia_billing_columns.sql` | 欄位擴充 |
+| `frontend/anesthesia/index.html` | 庫存顯示更新 |
+| `frontend/pharmacy/index.html` | Context-Aware 模式 |
+| `docs/DEV_SPEC_ANESTHESIA_BILLING_INTEGRATION_v1.2.md` | Phase 1-7 checklist 更新 |
+
+---
+
 ## [Blood Bank PWA v2.8.2] - 2026-01-14
 
 ### 改進 (Improved)

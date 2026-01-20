@@ -1,4 +1,4 @@
-# MIRS - 醫療站庫存管理系統 v3.2.5
+# MIRS - 醫療站庫存管理系統 v3.3.0
 
 > 為醫療站、備援手術站(BORP)與物資中心設計的簡易庫存管理系統
 >
@@ -9,6 +9,8 @@
 > **v2.9 術式主檔**：健保手術碼 1,687 筆 + FTS5 全文搜尋 + 點數遞減計算
 >
 > **v3.2 EMT 轉送**：完整 Step 0 設定 + 物資自動計算 + ISBAR/MIST
+>
+> **v3.3 麻醉計費整合**：完整用藥計費 + 藥車管理 + CashDesk Handoff
 
 ---
 
@@ -57,6 +59,35 @@ export CIRS_HUB_URL=http://localhost:8090
 ```
 
 ---
+
+### v3.3.0 新功能 (2026-01-20) - 麻醉計費整合
+
+- **Anesthesia Billing Integration v1.2.0**：
+  - **完整用藥計費**：
+    - 單位換算 (mcg→mg→amp) + Decimal 精度
+    - 庫存自動扣減 + 計費項目生成
+    - 冪等鍵防重複 (SHA256)
+    - 價格凍結 + EXPORTED 鎖定
+    - VOID pattern 撤銷流程
+  - **麻醉處置費計算**：
+    - Base + Time + ASA + Technique + Emergency
+    - 費率表可設定 (anesthesia_fee_schedule)
+  - **CashDesk Handoff**：
+    - 完整 Handoff Package 匯出
+    - 自動鎖定已匯出記錄
+  - **Phase 7 藥車管理 API**：
+    - 藥車 CRUD + 庫存設定
+    - 調撥單流程 (PENDING→IN_TRANSIT→RECEIVED→VERIFIED)
+    - 藥師核對 + 差異報告
+    - 低庫存警示
+  - **Anesthesia PWA 前端更新**：
+    - 動態載入藥品+庫存 (`loadQuickDrugsWithInventory`)
+    - 庫存狀態 Badge (充足/低庫存/缺貨)
+    - 缺貨藥品自動停用
+  - **Pharmacy PWA Context-Aware 模式**：
+    - MIRS Mode: 衛星站 (收貨、本地稽核)
+    - CIRS Mode: 中央站 (調撥、全域稽核)
+    - 動態 Tab 切換 + localStorage 持久化
 
 ### v3.2.5 新功能 (2026-01-06) - Step 0 完整欄位
 

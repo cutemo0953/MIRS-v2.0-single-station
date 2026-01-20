@@ -5408,3 +5408,585 @@ async def get_billing_summary(case_id: str):
 
     finally:
         conn.close()
+
+
+# =============================================================================
+# Phase 7: Drug Cart Management APIs (藥車管理)
+# =============================================================================
+
+class CartStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    MAINTENANCE = "MAINTENANCE"
+
+
+class DispatchType(str, Enum):
+    REPLENISH = "REPLENISH"   # 藥局 → 藥車
+    RETURN = "RETURN"         # 藥車 → 藥局
+    HANDOFF = "HANDOFF"       # 藥車 → 藥車 (交班)
+
+
+class DispatchStatus(str, Enum):
+    PENDING = "PENDING"
+    IN_TRANSIT = "IN_TRANSIT"
+    RECEIVED = "RECEIVED"
+    VERIFIED = "VERIFIED"
+
+
+# --- Pydantic Models ---
+class CartCreate(BaseModel):
+    cart_id: str = Field(..., description="藥車編號")
+    cart_name: str = Field(..., description="藥車名稱")
+    cart_location: Optional[str] = None
+
+
+class CartUpdate(BaseModel):
+    cart_name: Optional[str] = None
+    cart_location: Optional[str] = None
+    status: Optional[CartStatus] = None
+    assigned_to: Optional[str] = None
+
+
+class CartInventoryItem(BaseModel):
+    medicine_code: str
+    quantity: int
+    min_quantity: int = 2
+    max_quantity: int = 10
+    batch_number: Optional[str] = None
+    expiry_date: Optional[str] = None
+
+
+class DispatchItem(BaseModel):
+    medicine_code: str
+    quantity: int
+
+
+class DispatchCreate(BaseModel):
+    dispatch_type: DispatchType
+    from_location: str = Field(..., description="來源: 'PHARMACY' 或 cart_id")
+    to_location: str = Field(..., description="目標: cart_id 或 'PHARMACY'")
+    items: List[DispatchItem]
+
+
+class DispatchReceive(BaseModel):
+    receiver_id: str
+    discrepancy_report: Optional[Dict] = None
+
+
+class DispatchVerify(BaseModel):
+    pharmacist_id: str
+
+
+# --- Cart CRUD ---
+@router.get("/carts")
+async def list_carts(
+    status: Optional[CartStatus] = None,
+    assigned_to: Optional[str] = None
+):
+    """列出所有藥車"""
+    if IS_VERCEL:
+        return {"carts": [
+            {"cart_id": "CART-001", "cart_name": "1號藥車", "status": "ACTIVE", "cart_location": "OR-1"},
+            {"cart_id": "CART-002", "cart_name": "2號藥車", "status": "ACTIVE", "cart_location": "OR-2"}
+        ]}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        sql = "SELECT * FROM anesthesia_carts WHERE 1=1"
+        params = []
+
+        if status:
+            sql += " AND status = ?"
+            params.append(status.value)
+        if assigned_to:
+            sql += " AND assigned_to = ?"
+            params.append(assigned_to)
+
+        sql += " ORDER BY cart_id"
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+
+        return {"carts": [dict(row) for row in rows]}
+    finally:
+        conn.close()
+
+
+@router.post("/carts")
+async def create_cart(
+    cart: CartCreate,
+    actor_id: str = Query(..., description="操作者 ID")
+):
+    """建立新藥車"""
+    if IS_VERCEL:
+        return {"cart_id": cart.cart_id, "status": "created"}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO anesthesia_carts (cart_id, cart_name, cart_location, status)
+            VALUES (?, ?, ?, 'ACTIVE')
+        """, (cart.cart_id, cart.cart_name, cart.cart_location))
+        conn.commit()
+
+        return {
+            "cart_id": cart.cart_id,
+            "cart_name": cart.cart_name,
+            "status": "ACTIVE",
+            "message": "藥車建立成功"
+        }
+    except Exception as e:
+        if "UNIQUE constraint" in str(e):
+            raise HTTPException(status_code=409, detail="藥車編號已存在")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.get("/carts/{cart_id}")
+async def get_cart(cart_id: str):
+    """取得藥車詳情與庫存"""
+    if IS_VERCEL:
+        return {
+            "cart": {"cart_id": cart_id, "cart_name": "示範藥車", "status": "ACTIVE"},
+            "inventory": []
+        }
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 藥車基本資訊
+        cursor.execute("SELECT * FROM anesthesia_carts WHERE cart_id = ?", (cart_id,))
+        cart = cursor.fetchone()
+        if not cart:
+            raise HTTPException(status_code=404, detail="藥車不存在")
+
+        # 藥車庫存
+        cursor.execute("""
+            SELECT ci.*, m.medicine_name, m.is_controlled
+            FROM cart_inventory ci
+            LEFT JOIN medicines m ON ci.medicine_code = m.medicine_code
+            WHERE ci.cart_id = ?
+            ORDER BY m.medicine_name
+        """, (cart_id,))
+        inventory = cursor.fetchall()
+
+        return {
+            "cart": dict(cart),
+            "inventory": [dict(row) for row in inventory]
+        }
+    finally:
+        conn.close()
+
+
+@router.patch("/carts/{cart_id}")
+async def update_cart(
+    cart_id: str,
+    update: CartUpdate,
+    actor_id: str = Query(..., description="操作者 ID")
+):
+    """更新藥車資訊"""
+    if IS_VERCEL:
+        return {"cart_id": cart_id, "status": "updated"}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        updates = []
+        params = []
+        if update.cart_name:
+            updates.append("cart_name = ?")
+            params.append(update.cart_name)
+        if update.cart_location is not None:
+            updates.append("cart_location = ?")
+            params.append(update.cart_location)
+        if update.status:
+            updates.append("status = ?")
+            params.append(update.status.value)
+        if update.assigned_to is not None:
+            updates.append("assigned_to = ?")
+            params.append(update.assigned_to)
+            updates.append("assigned_at = ?")
+            params.append(datetime.now().isoformat())
+
+        if not updates:
+            raise HTTPException(status_code=400, detail="無更新欄位")
+
+        updates.append("updated_at = ?")
+        params.append(datetime.now().isoformat())
+        params.append(cart_id)
+
+        cursor.execute(f"""
+            UPDATE anesthesia_carts SET {', '.join(updates)}
+            WHERE cart_id = ?
+        """, params)
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="藥車不存在")
+
+        return {"cart_id": cart_id, "message": "藥車更新成功"}
+    finally:
+        conn.close()
+
+
+# --- Cart Inventory Management ---
+@router.put("/carts/{cart_id}/inventory")
+async def set_cart_inventory(
+    cart_id: str,
+    items: List[CartInventoryItem],
+    actor_id: str = Query(..., description="操作者 ID")
+):
+    """設定藥車庫存 (批量)"""
+    if IS_VERCEL:
+        return {"cart_id": cart_id, "items_count": len(items)}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 檢查藥車存在
+        cursor.execute("SELECT 1 FROM anesthesia_carts WHERE cart_id = ?", (cart_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="藥車不存在")
+
+        for item in items:
+            cursor.execute("""
+                INSERT INTO cart_inventory (cart_id, medicine_code, quantity, min_quantity, max_quantity, batch_number, expiry_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(cart_id, medicine_code) DO UPDATE SET
+                    quantity = excluded.quantity,
+                    min_quantity = excluded.min_quantity,
+                    max_quantity = excluded.max_quantity,
+                    batch_number = excluded.batch_number,
+                    expiry_date = excluded.expiry_date,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (cart_id, item.medicine_code, item.quantity, item.min_quantity, item.max_quantity, item.batch_number, item.expiry_date))
+
+        conn.commit()
+        return {"cart_id": cart_id, "items_updated": len(items), "message": "藥車庫存已更新"}
+    finally:
+        conn.close()
+
+
+@router.post("/carts/{cart_id}/inventory/check")
+async def check_cart_inventory(
+    cart_id: str,
+    actor_id: str = Query(..., description="清點者 ID")
+):
+    """執行藥車庫存清點"""
+    if IS_VERCEL:
+        return {"cart_id": cart_id, "checked_at": datetime.now().isoformat()}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE anesthesia_carts
+            SET last_inventory_check = ?, last_checked_by = ?, updated_at = ?
+            WHERE cart_id = ?
+        """, (datetime.now().isoformat(), actor_id, datetime.now().isoformat(), cart_id))
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="藥車不存在")
+
+        return {
+            "cart_id": cart_id,
+            "checked_by": actor_id,
+            "checked_at": datetime.now().isoformat(),
+            "message": "藥車清點完成"
+        }
+    finally:
+        conn.close()
+
+
+# --- Cart Dispatch (調撥) ---
+@router.post("/cart-dispatch")
+async def create_dispatch(
+    dispatch: DispatchCreate,
+    actor_id: str = Query(..., description="調撥發起者 ID")
+):
+    """建立藥品調撥單"""
+    if IS_VERCEL:
+        return {"dispatch_id": f"DSP-{uuid.uuid4().hex[:8].upper()}", "status": "PENDING"}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        dispatch_id = f"DSP-{uuid.uuid4().hex[:8].upper()}"
+
+        items_json = json.dumps([{"medicine_code": i.medicine_code, "quantity": i.quantity} for i in dispatch.items])
+
+        cursor.execute("""
+            INSERT INTO cart_dispatch_records (
+                dispatch_id, dispatch_type, from_location, to_location, items, dispatcher_id, status
+            ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')
+        """, (dispatch_id, dispatch.dispatch_type.value, dispatch.from_location, dispatch.to_location, items_json, actor_id))
+        conn.commit()
+
+        return {
+            "dispatch_id": dispatch_id,
+            "dispatch_type": dispatch.dispatch_type.value,
+            "from_location": dispatch.from_location,
+            "to_location": dispatch.to_location,
+            "items_count": len(dispatch.items),
+            "status": "PENDING",
+            "message": "調撥單已建立"
+        }
+    finally:
+        conn.close()
+
+
+@router.get("/cart-dispatch")
+async def list_dispatches(
+    status: Optional[DispatchStatus] = None,
+    cart_id: Optional[str] = None,
+    limit: int = Query(20, le=100)
+):
+    """列出調撥單"""
+    if IS_VERCEL:
+        return {"dispatches": []}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        sql = "SELECT * FROM cart_dispatch_records WHERE 1=1"
+        params = []
+
+        if status:
+            sql += " AND status = ?"
+            params.append(status.value)
+        if cart_id:
+            sql += " AND (from_location = ? OR to_location = ?)"
+            params.extend([cart_id, cart_id])
+
+        sql += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+
+        dispatches = []
+        for row in rows:
+            d = dict(row)
+            d['items'] = json.loads(d['items']) if d['items'] else []
+            dispatches.append(d)
+
+        return {"dispatches": dispatches}
+    finally:
+        conn.close()
+
+
+@router.get("/cart-dispatch/{dispatch_id}")
+async def get_dispatch(dispatch_id: str):
+    """取得調撥單詳情"""
+    if IS_VERCEL:
+        return {"dispatch_id": dispatch_id, "status": "PENDING"}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM cart_dispatch_records WHERE dispatch_id = ?", (dispatch_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="調撥單不存在")
+
+        d = dict(row)
+        d['items'] = json.loads(d['items']) if d['items'] else []
+        return d
+    finally:
+        conn.close()
+
+
+@router.post("/cart-dispatch/{dispatch_id}/transit")
+async def mark_dispatch_in_transit(
+    dispatch_id: str,
+    actor_id: str = Query(..., description="操作者 ID")
+):
+    """標記調撥單為運送中"""
+    if IS_VERCEL:
+        return {"dispatch_id": dispatch_id, "status": "IN_TRANSIT"}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE cart_dispatch_records SET status = 'IN_TRANSIT'
+            WHERE dispatch_id = ? AND status = 'PENDING'
+        """, (dispatch_id,))
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=400, detail="調撥單狀態無法變更")
+
+        return {"dispatch_id": dispatch_id, "status": "IN_TRANSIT", "message": "已標記為運送中"}
+    finally:
+        conn.close()
+
+
+@router.post("/cart-dispatch/{dispatch_id}/receive")
+async def receive_dispatch(
+    dispatch_id: str,
+    receive: DispatchReceive
+):
+    """接收調撥單 - 更新藥車庫存"""
+    if IS_VERCEL:
+        return {"dispatch_id": dispatch_id, "status": "RECEIVED"}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 取得調撥單
+        cursor.execute("SELECT * FROM cart_dispatch_records WHERE dispatch_id = ?", (dispatch_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="調撥單不存在")
+
+        dispatch = dict(row)
+        if dispatch['status'] not in ('PENDING', 'IN_TRANSIT'):
+            raise HTTPException(status_code=400, detail="調撥單狀態無法接收")
+
+        items = json.loads(dispatch['items']) if dispatch['items'] else []
+        to_location = dispatch['to_location']
+        from_location = dispatch['from_location']
+        dispatch_type = dispatch['dispatch_type']
+
+        # 更新藥車庫存
+        if dispatch_type == 'REPLENISH':
+            # 藥局 → 藥車: 增加藥車庫存
+            for item in items:
+                cursor.execute("""
+                    UPDATE cart_inventory SET quantity = quantity + ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE cart_id = ? AND medicine_code = ?
+                """, (item['quantity'], to_location, item['medicine_code']))
+
+                # 如果不存在，則新增
+                if cursor.rowcount == 0:
+                    cursor.execute("""
+                        INSERT INTO cart_inventory (cart_id, medicine_code, quantity)
+                        VALUES (?, ?, ?)
+                    """, (to_location, item['medicine_code'], item['quantity']))
+
+        elif dispatch_type == 'RETURN':
+            # 藥車 → 藥局: 減少藥車庫存
+            for item in items:
+                cursor.execute("""
+                    UPDATE cart_inventory SET quantity = MAX(0, quantity - ?), updated_at = CURRENT_TIMESTAMP
+                    WHERE cart_id = ? AND medicine_code = ?
+                """, (item['quantity'], from_location, item['medicine_code']))
+
+        elif dispatch_type == 'HANDOFF':
+            # 藥車 → 藥車: 從來源減少，目標增加
+            for item in items:
+                # 來源減少
+                cursor.execute("""
+                    UPDATE cart_inventory SET quantity = MAX(0, quantity - ?), updated_at = CURRENT_TIMESTAMP
+                    WHERE cart_id = ? AND medicine_code = ?
+                """, (item['quantity'], from_location, item['medicine_code']))
+                # 目標增加
+                cursor.execute("""
+                    UPDATE cart_inventory SET quantity = quantity + ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE cart_id = ? AND medicine_code = ?
+                """, (item['quantity'], to_location, item['medicine_code']))
+                if cursor.rowcount == 0:
+                    cursor.execute("""
+                        INSERT INTO cart_inventory (cart_id, medicine_code, quantity)
+                        VALUES (?, ?, ?)
+                    """, (to_location, item['medicine_code'], item['quantity']))
+
+        # 更新調撥單狀態
+        discrepancy_json = json.dumps(receive.discrepancy_report) if receive.discrepancy_report else None
+        cursor.execute("""
+            UPDATE cart_dispatch_records
+            SET status = 'RECEIVED', receiver_id = ?, receiver_verified_at = ?, discrepancy_report = ?
+            WHERE dispatch_id = ?
+        """, (receive.receiver_id, datetime.now().isoformat(), discrepancy_json, dispatch_id))
+        conn.commit()
+
+        return {
+            "dispatch_id": dispatch_id,
+            "status": "RECEIVED",
+            "received_by": receive.receiver_id,
+            "items_processed": len(items),
+            "message": "調撥已接收，庫存已更新"
+        }
+    finally:
+        conn.close()
+
+
+@router.post("/cart-dispatch/{dispatch_id}/verify")
+async def verify_dispatch(
+    dispatch_id: str,
+    verify: DispatchVerify
+):
+    """藥師核對調撥單"""
+    if IS_VERCEL:
+        return {"dispatch_id": dispatch_id, "status": "VERIFIED"}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE cart_dispatch_records
+            SET status = 'VERIFIED', pharmacist_id = ?, pharmacist_verified_at = ?
+            WHERE dispatch_id = ? AND status = 'RECEIVED'
+        """, (verify.pharmacist_id, datetime.now().isoformat(), dispatch_id))
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=400, detail="調撥單狀態無法核對 (需先接收)")
+
+        return {
+            "dispatch_id": dispatch_id,
+            "status": "VERIFIED",
+            "verified_by": verify.pharmacist_id,
+            "message": "藥師核對完成"
+        }
+    finally:
+        conn.close()
+
+
+# --- Cart Low Stock Alert ---
+@router.get("/carts/{cart_id}/low-stock")
+async def get_cart_low_stock(cart_id: str):
+    """取得藥車低庫存警示"""
+    if IS_VERCEL:
+        return {"cart_id": cart_id, "alerts": []}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT ci.*, m.medicine_name, m.is_controlled
+            FROM cart_inventory ci
+            LEFT JOIN medicines m ON ci.medicine_code = m.medicine_code
+            WHERE ci.cart_id = ? AND ci.quantity <= ci.min_quantity
+            ORDER BY ci.quantity ASC
+        """, (cart_id,))
+        rows = cursor.fetchall()
+
+        alerts = []
+        for row in rows:
+            alerts.append({
+                "medicine_code": row['medicine_code'],
+                "medicine_name": row['medicine_name'],
+                "current_quantity": row['quantity'],
+                "min_quantity": row['min_quantity'],
+                "is_controlled": bool(row['is_controlled']),
+                "severity": "CRITICAL" if row['quantity'] == 0 else "WARNING"
+            })
+
+        return {
+            "cart_id": cart_id,
+            "alerts_count": len(alerts),
+            "alerts": alerts
+        }
+    finally:
+        conn.close()

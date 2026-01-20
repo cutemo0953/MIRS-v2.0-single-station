@@ -1277,23 +1277,23 @@ async def calculate_anesthesia_fee(case_id: str) -> dict:
 
 ### Phase 1: 後端基礎 - 藥品庫存
 
-- [ ] 新增 `medicines` 表擴充欄位 (content_per_unit, content_unit, billing_rounding)
-- [ ] 實作 `calculate_billing_quantity()` 函數
-- [ ] 修改 `/cases/{id}/medication` API 加入庫存扣減
-- [ ] 新增 `medication_usage_events` 表 (若不存在)
+- [x] 新增 `medicines` 表擴充欄位 (content_per_unit, content_unit, billing_rounding)
+- [x] 實作 `calculate_billing_quantity()` 函數 (services/anesthesia_billing.py)
+- [x] 修改 `/cases/{id}/medication` API 加入庫存扣減
+- [x] 新增 `medication_usage_events` 表 (add_anesthesia_billing_schema.sql)
 
 ### Phase 2: 管制藥處理
 
-- [ ] 實作管制藥驗證邏輯
+- [x] 實作管制藥驗證邏輯 (process_medication_admin)
 - [ ] Break-glass 流程
 - [ ] 事後補核准 API
 
 ### Phase 3: 前端整合 - 藥品
 
-- [ ] 藥品選擇顯示庫存
+- [x] 藥品選擇顯示庫存 (loadQuickDrugsWithInventory)
 - [ ] 管制藥見證人 UI
 - [ ] Break-glass 對話框
-- [ ] 扣庫結果顯示
+- [x] 扣庫結果顯示 (stock badge)
 
 ### Phase 4: 離線處理
 
@@ -1303,26 +1303,26 @@ async def calculate_anesthesia_fee(case_id: str) -> dict:
 
 ### Phase 5: 處置費計費 (v1.1 新增)
 
-- [ ] 建立 `anesthesia_billing_events` 表
-- [ ] 建立 `surgical_billing_events` 表
-- [ ] 實作 `calculate_anesthesia_fee()` 邏輯
+- [x] 建立 `anesthesia_billing_events` 表
+- [x] 建立 `surgical_billing_events` 表
+- [x] 實作 `calculate_anesthesia_fee()` 邏輯
 - [ ] 實作 `calculate_surgical_fee()` 邏輯
 - [ ] 整合手術結案觸發 (`on_case_closed`)
 
 ### Phase 6: CashDesk 整合 (v1.1 新增)
 
-- [ ] 實作 `CashDeskHandoffPackage` 資料結構
-- [ ] 實作 `/cases/{id}/billing/handoff` API
-- [ ] 實作 `/cases/{id}/billing/export-to-cashdesk` API
-- [ ] 費率表設定 (anesthesia_fee_schedule, surgical_fee_schedule)
+- [x] 實作 `CashDeskHandoffPackage` 資料結構 (generate_cashdesk_handoff)
+- [x] 實作 `/cases/{id}/billing/handoff` API
+- [x] 實作 `/cases/{id}/billing/export-to-cashdesk` API
+- [x] 費率表設定 (anesthesia_fee_schedule, surgical_fee_schedule)
 
 ### Phase 7: 麻醉藥車調撥 (v1.1 新增)
 
-- [ ] 建立 `anesthesia_carts` 表
-- [ ] 建立 `cart_inventory` 表
-- [ ] 實作藥車調撥 API (`MED_DISPATCH` to cart)
-- [ ] 實作交班清點 API
-- [ ] 差異報告與藥師核對流程
+- [x] 建立 `anesthesia_carts` 表
+- [x] 建立 `cart_inventory` 表
+- [x] 實作藥車調撥 API (`MED_DISPATCH` to cart)
+- [x] 實作交班清點 API (POST /carts/{id}/inventory/check)
+- [x] 差異報告與藥師核對流程 (DispatchReceive, DispatchVerify)
 - [ ] PWA 藥車選擇 UI
 
 ---
@@ -2176,16 +2176,16 @@ async def generate_handoff_package(case_id: str):
 
 ### 10.10 Phase 8: 審閱回饋實作 (v1.2 新增)
 
-- [ ] 管制藥殘餘量記錄 (`waste_amount`, `wastage_witnessed_by`)
+- [x] 管制藥殘餘量記錄 (`waste_amount`, `wastage_witnessed_by`) - schema added
 - [ ] 時間計費防呆 (MAX_DURATION_HOURS 檢查 + 通知)
 - [ ] 三帳本複合交易 (`medication_composite_txn` 表)
-- [ ] 冪等鍵產生規則 (`generate_idempotency_key`)
-- [ ] 單位換算 Decimal 修正
+- [x] 冪等鍵產生規則 (`generate_idempotency_key`) - SHA256(case_id:client_event_uuid)[:32]
+- [x] 單位換算 Decimal 修正 (convert_to_base_unit)
 - [ ] 交易類型分類 (`InventoryTransactionType` enum)
-- [ ] 管制藥 Server-side 強制驗證
-- [ ] 價格凍結 + EXPORTED 鎖定
-- [ ] VOID pattern 撤銷流程
-- [ ] Handoff Package 完整性驗證
+- [x] 管制藥 Server-side 強制驗證 (process_medication_admin)
+- [x] 價格凍結 + EXPORTED 鎖定 (is_locked trigger)
+- [x] VOID pattern 撤銷流程 (is_voided, voided_by, void_reference_id)
+- [x] Handoff Package 完整性驗證 (generate_cashdesk_handoff)
 
 ---
 
@@ -2389,8 +2389,8 @@ CREATE INDEX IF NOT EXISTS idx_medicines_content ON medicines(content_per_unit, 
 - [x] 複製 `resilience_formulary.json` 到 MIRS (`shared/data/`)
 - [x] 新增 `content_per_unit`, `content_unit`, `billing_rounding` 欄位到 medicines 表 (migration)
 - [x] 建立 `seeder_medications.py` 腳本
-- [ ] 執行 seeder 匯入藥品主檔
-- [ ] 驗證 Anesthesia PWA 可讀取藥品清單
+- [x] 執行 seeder 匯入藥品主檔 (44 medications, 7 controlled)
+- [x] 驗證 Anesthesia PWA 可讀取藥品清單 (GET /quick-drugs-with-inventory)
 
 ### 12.7 藥物流程架構說明 (Medication Flow Architecture)
 
@@ -2588,9 +2588,9 @@ function getContextFeatures(context: PharmacyPWAContext): string[] {
 
 **Phase 2: Context-Aware Pharmacy PWA**
 
-- [ ] 實作 `getContextFeatures()` 根據連線系統切換功能
-- [ ] MIRS Mode: 新增 `LocalAudit.vue` (可簽核)
-- [ ] CIRS Mode: 新增 `GlobalAuditReport.vue` (唯讀)
+- [x] 實作 `getContextFeatures()` 根據連線系統切換功能 (setContextMode)
+- [x] MIRS Mode: 新增 `LocalAudit` tab (本地稽核)
+- [x] CIRS Mode: 新增 `GlobalAudit` tab (全域稽核儀表板)
 - [ ] 新增 `WastageWitness.vue` (銷毀見證模組)
 
 **Phase 3: 同步與中央報表**
