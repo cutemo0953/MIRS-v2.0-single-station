@@ -1272,12 +1272,20 @@ async def get_case(case_id: str):
     return dict(row)
 
 
+class UpdateCaseRequest(BaseModel):
+    """v1.1: 更新案例請求 (支援 ASA)"""
+    primary_anesthesiologist_id: Optional[str] = None
+    primary_nurse_id: Optional[str] = None
+    planned_technique: Optional[str] = None
+    asa_classification: Optional[str] = None
+    is_emergency: Optional[bool] = None
+
+
 @router.patch("/cases/{case_id}")
+@router.put("/cases/{case_id}")
 async def update_case_metadata(
     case_id: str,
-    primary_anesthesiologist_id: Optional[str] = None,
-    primary_nurse_id: Optional[str] = None,
-    planned_technique: Optional[str] = None,
+    request: UpdateCaseRequest,
     actor_id: str = Query(...)
 ):
     """Update case metadata (non-event fields only)"""
@@ -1287,17 +1295,26 @@ async def update_case_metadata(
     updates = []
     params = []
 
-    if primary_anesthesiologist_id is not None:
+    if request.primary_anesthesiologist_id is not None:
         updates.append("primary_anesthesiologist_id = ?")
-        params.append(primary_anesthesiologist_id)
+        params.append(request.primary_anesthesiologist_id)
 
-    if primary_nurse_id is not None:
+    if request.primary_nurse_id is not None:
         updates.append("primary_nurse_id = ?")
-        params.append(primary_nurse_id)
+        params.append(request.primary_nurse_id)
 
-    if planned_technique is not None:
+    if request.planned_technique is not None:
         updates.append("planned_technique = ?")
-        params.append(planned_technique)
+        params.append(request.planned_technique)
+
+    # v1.1: ASA Classification
+    if request.asa_classification is not None:
+        updates.append("asa_classification = ?")
+        params.append(request.asa_classification)
+
+    if request.is_emergency is not None:
+        updates.append("is_emergency = ?")
+        params.append(1 if request.is_emergency else 0)
 
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
@@ -1312,7 +1329,16 @@ async def update_case_metadata(
         conn.commit()
 
         cursor.execute("SELECT * FROM anesthesia_cases WHERE id = ?", (case_id,))
-        return dict(cursor.fetchone())
+        row = cursor.fetchone()
+
+        # Return with proper ASA fields
+        result = dict(row)
+        if 'asa_classification' in row.keys():
+            result['asa_classification'] = row['asa_classification']
+        if 'is_emergency' in row.keys():
+            result['is_emergency'] = bool(row['is_emergency'])
+
+        return result
 
     except Exception as e:
         conn.rollback()

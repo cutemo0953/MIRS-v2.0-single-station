@@ -146,6 +146,32 @@
         .case-status.in_progress { background: #52525b; color: #fff; }
         .case-status.pacu { background: #64748b; color: #fff; }
         .case-status.closed { background: #3f3f46; color: #a1a1aa; }
+        /* v1.1: Case tags for technique and ASA */
+        .case-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .case-tag.technique {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        .case-tag.asa {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        .case-tag.asa.emergency {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .case-tag:hover {
+            filter: brightness(1.1);
+        }
 
         /* Quick Actions */
         .quick-actions {
@@ -1115,8 +1141,10 @@
                     </div>
                     <span class="case-status preop" id="caseStatus">PREOP</span>
                 </div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <span style="font-size: 0.875rem; color: var(--text-muted);" id="techniqueInfo">GA_ETT</span>
+                <!-- v1.1: 麻醉方式 + ASA 分級顯示 (可點擊編輯) -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                    <span class="case-tag technique" id="techniqueInfo" onclick="showEditCaseInfoModal()" style="cursor: pointer;">GA_ETT</span>
+                    <span class="case-tag asa" id="asaInfo" onclick="showEditCaseInfoModal()" style="cursor: pointer;">ASA II</span>
                 </div>
             </div>
 
@@ -2585,6 +2613,51 @@
         </div>
     </div>
 
+    <!-- Edit Case Info Modal (v1.1 - ASA/Technique editing) -->
+    <div class="modal" id="editCaseInfoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>編輯麻醉資訊</h3>
+                <button class="close-btn" onclick="closeModal('editCaseInfoModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">麻醉方式</label>
+                    <select class="form-input" id="editTechnique">
+                        <option value="GA">全身麻醉 (GA)</option>
+                        <option value="GA_ETT">全身麻醉 - 插管 (ETT)</option>
+                        <option value="GA_LMA">全身麻醉 - 喉罩 (LMA)</option>
+                        <option value="RA_SPINAL">脊椎麻醉 (Spinal)</option>
+                        <option value="RA_EPIDURAL">硬膜外麻醉 (Epidural)</option>
+                        <option value="RA_NERVE">神經阻斷 (Nerve Block)</option>
+                        <option value="MAC">監測麻醉照護 (MAC)</option>
+                        <option value="LA">局部麻醉 (Local)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ASA 分級</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select class="form-input" id="editAsaClass" style="flex: 1;">
+                            <option value="I">ASA I - 健康</option>
+                            <option value="II">ASA II - 輕度全身疾病</option>
+                            <option value="III">ASA III - 嚴重全身疾病</option>
+                            <option value="IV">ASA IV - 危及生命</option>
+                            <option value="V">ASA V - 瀕死</option>
+                        </select>
+                        <label style="display: flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 14px;">
+                            <input type="checkbox" id="editAsaEmergency" style="width: 18px; height: 18px;">
+                            <span style="color: var(--warning-color);">+E 急診</span>
+                        </label>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 12px;">
+                    <button class="btn btn-primary" onclick="saveEditCaseInfo()">儲存</button>
+                    <button class="btn" style="background: var(--card-hover);" onclick="closeModal('editCaseInfoModal')">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <style>
         /* Special Technique Modal Styles */
         .technique-toggle {
@@ -3567,7 +3640,9 @@
                 document.getElementById('patientName').textContent = currentCase.patient_name || currentCase.patient_id;
                 document.getElementById('caseStatus').textContent = currentCase.status;
                 document.getElementById('caseStatus').className = `case-status ${currentCase.status.toLowerCase()}`;
-                document.getElementById('techniqueInfo').textContent = currentCase.planned_technique || '';
+
+                // v1.1: Update technique and ASA display
+                updateCaseInfoDisplay();
 
                 if (currentCase.context_mode === 'BATTLEFIELD') {
                     document.getElementById('contextBadge').classList.remove('hidden');
@@ -5334,6 +5409,85 @@
                 }
             } catch (err) {
                 console.error('Failed to load techniques:', err);
+            }
+        }
+
+        // =================================================================
+        // Edit Case Info (v1.1 - ASA/Technique)
+        // =================================================================
+
+        function showEditCaseInfoModal() {
+            if (!currentCase) return;
+
+            // Populate current values
+            document.getElementById('editTechnique').value = currentCase.planned_technique || 'GA';
+            document.getElementById('editAsaClass').value = currentCase.asa_classification || 'II';
+            document.getElementById('editAsaEmergency').checked = currentCase.is_emergency || false;
+
+            document.getElementById('editCaseInfoModal').classList.add('active');
+        }
+
+        async function saveEditCaseInfo() {
+            if (!currentCase) return;
+
+            const technique = document.getElementById('editTechnique').value;
+            const asaClass = document.getElementById('editAsaClass').value;
+            const isEmergency = document.getElementById('editAsaEmergency').checked;
+
+            try {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}?actor_id=${actorId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        planned_technique: technique,
+                        asa_classification: asaClass,
+                        is_emergency: isEmergency
+                    })
+                });
+
+                if (!res.ok) throw new Error('Failed to update');
+
+                // Update local state
+                currentCase.planned_technique = technique;
+                currentCase.asa_classification = asaClass;
+                currentCase.is_emergency = isEmergency;
+
+                // Update UI
+                updateCaseInfoDisplay();
+
+                closeModal('editCaseInfoModal');
+                alert('✓ 麻醉資訊已更新');
+            } catch (err) {
+                alert('更新失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        function updateCaseInfoDisplay() {
+            if (!currentCase) return;
+
+            // Technique display
+            const techniqueLabels = {
+                'GA': 'GA', 'GA_ETT': 'GA-ETT', 'GA_LMA': 'GA-LMA',
+                'RA_SPINAL': 'Spinal', 'RA_EPIDURAL': 'Epidural', 'RA_NERVE': 'Nerve Block',
+                'MAC': 'MAC', 'LA': 'Local',
+                // Legacy values
+                'SEDATION': 'Sedation'
+            };
+            const techLabel = techniqueLabels[currentCase.planned_technique] || currentCase.planned_technique || 'N/A';
+            document.getElementById('techniqueInfo').textContent = techLabel;
+
+            // ASA display
+            const asa = currentCase.asa_classification || 'II';
+            const emergency = currentCase.is_emergency ? '+E' : '';
+            const asaText = `ASA ${asa}${emergency}`;
+            const asaEl = document.getElementById('asaInfo');
+            asaEl.textContent = asaText;
+
+            // Emergency styling
+            if (currentCase.is_emergency) {
+                asaEl.classList.add('emergency');
+            } else {
+                asaEl.classList.remove('emergency');
             }
         }
 
