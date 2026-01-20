@@ -2394,99 +2394,211 @@ CREATE INDEX IF NOT EXISTS idx_medicines_content ON medicines(content_per_unit, 
 
 ### 12.7 藥物流程架構說明 (Medication Flow Architecture)
 
-> **2026-01-20 架構決策**: 藥物進貨由 CIRS，調撥給 MIRS，實際消耗流程以 MIRS 為主體。
+> **2026-01-20 架構決策 (Gemini/ChatGPT 審閱確認)**:
+> - 使用「實體庫存層級 (Inventory Hierarchy)」觀點，非「軟體 PWA」觀點
+> - CIRS = Hub (權威庫存)，MIRS = Satellite (衛星庫)
+> - Anesthesia PWA = Consumer (消耗端點)，**直接扣 MIRS 庫存，非調撥對象**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    Medication Supply Chain Architecture                   │
+│              Inventory Hierarchy (實體庫存層級觀點)                       │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  ┌───────────────────────────────────────────────────────────────┐      │
-│  │  CIRS (Community IRS) - HUB                                   │      │
-│  │  ─────────────────────────────────────────────────────────    │      │
-│  │  • 進藥、採購驗收                                             │      │
-│  │  • 管制藥總帳 (符合法規)                                       │      │
-│  │  • 類似社區藥局角色                                           │      │
-│  └────────────────────────┬──────────────────────────────────────┘      │
-│                           │                                             │
-│                   MED_DISPATCH 調撥                                      │
-│                           │                                             │
-│                           ▼                                             │
-│  ┌───────────────────────────────────────────────────────────────┐      │
-│  │  MIRS (Medical IRS) - SATELLITE / BORP 備援緊急手術室          │      │
-│  │  ─────────────────────────────────────────────────────────    │      │
-│  │  • 接收調撥 (MED_RECEIPT)                                      │      │
-│  │  • 本地庫存管理 (Ground Truth when offline)                    │      │
-│  │  • 消耗端點調撥                                               │      │
-│  └────────────────────────┬──────────────────────────────────────┘      │
-│                           │                                             │
-│        ┌──────────────────┼──────────────────────┐                      │
-│        ▼                  ▼                      ▼                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐          │
-│  │ CIRS Pharmacy│  │ CIRS Nurse   │  │ MIRS Anesthesia PWA   │          │
-│  │ (藥局站)      │  │ (護理站)     │  │ + EMT (轉送急救)       │          │
-│  └──────────────┘  └──────────────┘  └───────────────────────┘          │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  LEVEL 1: CIRS Main Inventory (總庫/Hub)                        │    │
+│  │  ───────────────────────────────────────────────────────────    │    │
+│  │  • 權威庫存 (Authoritative Stock)                               │    │
+│  │  • 採購、驗收、總量治理                                          │    │
+│  │  • 管制藥總帳 (符合法規)                                         │    │
+│  │  • 操作者: CIRS Pharmacy PWA (Hub control-plane)                │    │
+│  └──────────────────────────┬──────────────────────────────────────┘    │
+│                             │                                           │
+│                     MED_DISPATCH (調撥發貨)                              │
+│                     • QR Code 調撥單                                    │
+│                     • 批號、效期追蹤                                     │
+│                             │                                           │
+│                             ▼                                           │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  LEVEL 2: MIRS Satellite Inventory (衛星庫)                     │    │
+│  │  ───────────────────────────────────────────────────────────    │    │
+│  │  • 本地庫存 (Ground Truth when offline)                         │    │
+│  │  • 接收調撥 (MED_RECEIPT)                                       │    │
+│  │  • 臨床消耗的庫存邊界 (Inventory Boundary)                       │    │
+│  │  • 操作者: MIRS Pharmacy PWA (Satellite control-plane)          │    │
+│  └──────────────────────────┬──────────────────────────────────────┘    │
+│                             │                                           │
+│                     DIRECT DEDUCTION (直接扣庫)                          │
+│                     ※ 非調撥！消耗端點直接扣減 MIRS 庫存                   │
+│                             │                                           │
+│                             ▼                                           │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  LEVEL 3: Consumption Endpoints (消耗端點)                      │    │
+│  │  ───────────────────────────────────────────────────────────    │    │
+│  │  • Anesthesia PWA: 臨床用藥記錄、觸發庫存扣減                    │    │
+│  │  • EMT PWA: 急救藥物使用                                        │    │
+│  │  • 產生事件: CTRL_WITHDRAW / USAGE / WASTE / RETURN             │    │
+│  │  ※ 這些不是庫存點，是消耗端                                      │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
 │                                                                         │
-│  NOTE: EMT 急救藥物從 MIRS 出去較方便 (急救藥物就近取用原則)               │
+│  ═══════════════════════════════════════════════════════════════════    │
+│  CANONICAL CHAIN (標準路徑):                                            │
+│  CIRS (Hub) ──[MED_DISPATCH]──▶ MIRS (Satellite) ◀──[DEDUCT]── PWA     │
+│  ═══════════════════════════════════════════════════════════════════    │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**角色分工**:
+**角色定義 (Role Definition)**:
 
-| 角色 | 系統 | 職責 |
-|------|------|------|
-| 進藥、採購 | CIRS Pharmacy | 從供應商採購，驗收入庫 |
-| 調撥發放 | CIRS → MIRS | QR Code 調撥單，批號效期追蹤 |
-| 消耗端供應 | MIRS | 發藥給 Anesthesia PWA, EMT |
-| 臨床用藥 | Anesthesia PWA | 記錄給藥、觸發庫存扣減 |
-| 急救藥物 | MIRS EMT | BORP 初步處理後轉送 |
+| 層級 | 實體 | 角色 | 操作者 | 職責 |
+|------|------|------|--------|------|
+| L1 | CIRS 總庫 | MEDICATION_HUB | CIRS Pharmacy PWA | 採購/驗收/調撥發貨/管制藥總帳 |
+| L2 | MIRS 衛星庫 | SATELLITE_PHARMACY | MIRS Pharmacy PWA | 接收調撥/本地庫存管理/扣庫 |
+| L3 | Anesthesia | CONSUMPTION_ENDPOINT | Anesthesia PWA | 臨床用藥記錄/觸發扣庫 |
+| L3 | EMT | CONSUMPTION_ENDPOINT | EMT PWA | 急救藥物使用/觸發扣庫 |
+
+**重要澄清**:
+- ❌ 錯誤理解：「MIRS 調撥給 Anesthesia PWA」
+- ✅ 正確理解：「Anesthesia PWA 直接扣減 MIRS 庫存」（無調撥，直接扣庫）
 
 ### 12.8 藥師稽核功能位置 (Pharmacist Audit Location)
 
-> **建議**: 稽核 UI 下放到 **Pharmacy PWA**，但稽核記錄同步到 **MIRS 主站** 做合規報表。
+> **核心原則 (Gemini/ChatGPT 審閱確認)**:
+> - **Capture locally; Audit centrally** (本地記錄，中央稽核)
+> - 現場產生不可否認證據，藥師集中複核
+> - Safety-II: 斷網時前線必須能獨立結案
 
-**理由**:
-
-1. **工作流程考量**: 藥師在藥局站工作，不應為了稽核而切換到主站
-2. **離線優先**: Pharmacy PWA 可離線稽核，符合 xGrid 韌性設計
-3. **一致性模式**: 類似 Blood PWA 的血品管理 - 站點操作 + 主站合規
-
-**架構**:
+#### 12.8.1 雙層稽核模型 (Two-Layer Audit Model)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    Pharmacist Audit Architecture                         │
+│                    Two-Layer Audit Architecture                          │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  ┌───────────────────────────────────────┐                              │
-│  │  Pharmacy PWA (稽核 UI)               │                              │
-│  │  ─────────────────────────────────    │                              │
-│  │  • 管制藥核對                          │                              │
-│  │  • 庫存盤點                           │                              │
-│  │  • 異常標記                           │                              │
-│  │  • 本地審核結果                        │                              │
-│  └───────────────────────┬───────────────┘                              │
-│                          │ sync                                          │
-│                          ▼                                              │
-│  ┌───────────────────────────────────────┐                              │
-│  │  MIRS 主站 (合規報表)                  │                              │
-│  │  ─────────────────────────────────    │                              │
-│  │  • 管制藥總帳彙總                      │                              │
-│  │  • 合規報表產出                        │                              │
-│  │  • 稽核軌跡歸檔                        │                              │
-│  │  • 跨站異常分析                        │                              │
-│  └───────────────────────────────────────┘                              │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  LAYER A: Point-of-Care Capture (現場證據記錄)                  │    │
+│  │  位置: MIRS / Anesthesia PWA                                    │    │
+│  │  ───────────────────────────────────────────────────────────    │    │
+│  │  • 產生不可否認的臨床/管制藥交易證據                             │    │
+│  │  • 雙人覆核 (Dual Signature)                                    │    │
+│  │  • 見證簽章 (Witness)                                           │    │
+│  │  • Break-glass 緊急授權                                         │    │
+│  │  • Case-end 對帳 (退回/銷毀)                                    │    │
+│  │  • ✓ 離線可運作                                                 │    │
+│  └──────────────────────────┬──────────────────────────────────────┘    │
+│                             │                                           │
+│                      SYNC (同步)                                         │
+│                      POST /api/audit/sync                               │
+│                             │                                           │
+│                             ▼                                           │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  LAYER B: Central Audit Review (中央稽核複核)                   │    │
+│  │  位置: CIRS Pharmacy PWA + CIRS Hub                             │    │
+│  │  ───────────────────────────────────────────────────────────    │    │
+│  │  • 藥師複核 (Pharmacist Review)                                 │    │
+│  │  • 例外處理 (Exception Handling)                                │    │
+│  │  • 跨站對帳 (Cross-Site Reconciliation)                         │    │
+│  │  • 合規報表輸出 (Compliance Export)                             │    │
+│  │  • ✗ 需網路連線                                                 │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**實作建議**:
+#### 12.8.2 Pharmacy PWA Context-Aware 模式
 
-- [ ] 在 Pharmacy PWA 中新增稽核模組 (controlled_drug_audit.vue)
-- [ ] 稽核記錄表新增欄位: `audit_source = 'PWA' | 'MAIN'`
-- [ ] 建立稽核記錄同步 API: `POST /api/audit/sync`
-- [ ] 主站僅保留「報表檢視」功能，移除「稽核操作」UI
+> **Universal Fleet 設計**: Pharmacy PWA 根據連線的系統自動切換功能。
+
+```typescript
+// Pharmacy PWA - Context-Aware Mode Switching
+interface PharmacyPWAContext {
+  connectedSystem: 'CIRS' | 'MIRS';
+  availableFeatures: string[];
+}
+
+function getContextFeatures(context: PharmacyPWAContext): string[] {
+  if (context.connectedSystem === 'CIRS') {
+    // ══════════════════════════════════════════════════════════
+    // CIRS MODE - Hub Operations (總庫操作)
+    // ══════════════════════════════════════════════════════════
+    return [
+      'MED_DISPATCH',              // 調撥發貨
+      'RECEIVING_VERIFICATION',    // 廠商進貨驗收
+      'CONTROLLED_DRUG_LEDGER',    // 管制藥總帳
+      'GLOBAL_AUDIT_REPORT',       // 全站稽核報表 (唯讀)
+      'CROSS_SITE_RECONCILIATION', // 跨站對帳
+      'COMPLIANCE_EXPORT',         // 合規報表輸出
+    ];
+  }
+
+  if (context.connectedSystem === 'MIRS') {
+    // ══════════════════════════════════════════════════════════
+    // MIRS MODE - Satellite Operations (衛星庫操作)
+    // ══════════════════════════════════════════════════════════
+    return [
+      'MED_RECEIPT',               // 接收調撥
+      'LOCAL_INVENTORY',           // 本地庫存管理
+      'LOCAL_AUDIT',               // 本地稽核 (可簽核)
+      'CONTROLLED_DRUG_SIGN',      // 管制藥雙簽
+      'WASTAGE_WITNESS',           // 銷毀見證
+      'CASE_END_RECONCILIATION',   // Case-end 對帳
+    ];
+  }
+
+  return [];
+}
+```
+
+**功能對照表**:
+
+| 功能 | CIRS Mode | MIRS Mode | 說明 |
+|------|:---------:|:---------:|------|
+| 調撥發貨 (MED_DISPATCH) | ✓ | ✗ | Hub 發貨給 Satellite |
+| 接收調撥 (MED_RECEIPT) | ✗ | ✓ | Satellite 接收 Hub 發貨 |
+| 廠商進貨驗收 | ✓ | ✗ | 只有 Hub 對外採購 |
+| 管制藥總帳 | ✓ | ✗ | Hub 維護權威總帳 |
+| 本地稽核 (可簽核) | ✗ | ✓ | 現場簽核、銷毀見證 |
+| 全站稽核報表 | ✓ (唯讀) | ✗ | 中央查看所有站點 |
+| 跨站對帳 | ✓ | ✗ | Hub 負責跨站 reconciliation |
+| Case-end 對帳 | ✗ | ✓ | 手術結束後現場對帳 |
+
+#### 12.8.3 責任切割矩陣 (Responsibility Matrix)
+
+| 職責 | 系統 | 操作者 | 離線支援 | 備註 |
+|------|------|--------|:--------:|------|
+| 採購/驗收/總量治理 | CIRS Hub | CIRS Pharmacy PWA | ✗ | Hub 職責 |
+| 調撥發貨 | CIRS Hub | CIRS Pharmacy PWA | ✗ | MED_DISPATCH |
+| 接收調撥 | MIRS Satellite | MIRS Pharmacy PWA | ✓ | MED_RECEIPT |
+| 臨床用藥記錄 | MIRS | Anesthesia PWA | ✓ | 直接扣庫 |
+| 管制藥雙簽 | MIRS | Anesthesia/Pharmacy PWA | ✓ | 現場雙人覆核 |
+| 銷毀見證 | MIRS | Pharmacy PWA (MIRS Mode) | ✓ | 現場見證簽章 |
+| 本地稽核簽核 | MIRS | Pharmacy PWA (MIRS Mode) | ✓ | 斷網可結案 |
+| 管制藥總帳 | CIRS Hub | CIRS Pharmacy PWA | ✗ | 權威帳本 |
+| 合規報表輸出 | CIRS Hub | CIRS Pharmacy PWA | ✗ | 法規報表 |
+| 跨站異常分析 | CIRS Hub | CIRS Pharmacy PWA | ✗ | 全域視圖 |
+
+#### 12.8.4 實作建議
+
+**Phase 1: 現場證據記錄 (MIRS Side)**
+
+- [ ] Anesthesia PWA 產生 `controlled_drug_event` 記錄
+- [ ] 新增欄位: `dual_signature`, `witness_id`, `break_glass_reason`
+- [ ] 實作 Case-end reconciliation UI (退回/銷毀確認)
+- [ ] 本地 SQLite 儲存，支援離線
+
+**Phase 2: Context-Aware Pharmacy PWA**
+
+- [ ] 實作 `getContextFeatures()` 根據連線系統切換功能
+- [ ] MIRS Mode: 新增 `LocalAudit.vue` (可簽核)
+- [ ] CIRS Mode: 新增 `GlobalAuditReport.vue` (唯讀)
+- [ ] 新增 `WastageWitness.vue` (銷毀見證模組)
+
+**Phase 3: 同步與中央報表**
+
+- [ ] 實作 `POST /api/audit/sync` 同步 API
+- [ ] 稽核記錄表新增欄位: `audit_source = 'MIRS_LOCAL' | 'CIRS_CENTRAL'`
+- [ ] CIRS Hub 接收同步後僅供「查看」，不重新簽核
+- [ ] 建立合規報表產生器 (Compliance Report Generator)
 
 ---
 
@@ -2513,6 +2625,7 @@ CREATE INDEX IF NOT EXISTS idx_medicines_content ON medicines(content_per_unit, 
 | v1.2 | 2026-01-20 | Section 12.7: 藥物流程架構說明 - CIRS進藥→MIRS調撥→消耗端點 |
 | v1.2 | 2026-01-20 | Section 12.8: 藥師稽核功能位置建議 - 稽核 UI 下放 Pharmacy PWA，主站做合規報表 |
 | v1.2 | 2026-01-20 | Migration: add_anesthesia_billing_columns.sql - 浪費追蹤、idempotency_key、VOID pattern |
+| v1.2 | 2026-01-20 | **Gemini/ChatGPT 二次審閱**: Section 12.7/12.8 重構 - Inventory Hierarchy 觀點、Context-Aware PWA、Two-Layer Audit、責任切割矩陣 |
 
 ---
 
