@@ -4827,8 +4827,12 @@
             setData(timelineData, caseStartTime) {
                 this.data = timelineData;
                 this.caseStartTime = new Date(caseStartTime).getTime();
+                // Always resize first to ensure canvas has proper dimensions
+                this.resize();
                 this.calculateHours();
-                this.currentHourIndex = this.hours.length - 1;
+                // Default to hour with most recent events, or last hour
+                const hourWithEvents = this.hours.findIndex(h => h.hasEvents);
+                this.currentHourIndex = hourWithEvents >= 0 ? hourWithEvents : Math.max(0, this.hours.length - 1);
                 this.setViewportToHour(this.currentHourIndex);
                 this.updateHourChips();
                 this.updateMilestones();
@@ -5216,13 +5220,14 @@
                         timelineChart.init();
                     }
                     if (timelineChart.canvas) {
-                        console.log('[Timeline] Updating chart with', data.vitals?.length || 0, 'vitals');
+                        const startTime = currentCase.started_at || currentCase.created_at;
+                        console.log('[Timeline] Updating chart with', data.vitals?.length || 0, 'vitals, caseStart:', startTime);
                         timelineChart.setData({
                             vitals: data.vitals || [],
                             medications: data.medications || [],
                             milestones: data.milestones || [],
                             events: data.all || []
-                        }, currentCase.started_at || currentCase.created_at);
+                        }, startTime);
                     }
                 }
             } catch (err) {
