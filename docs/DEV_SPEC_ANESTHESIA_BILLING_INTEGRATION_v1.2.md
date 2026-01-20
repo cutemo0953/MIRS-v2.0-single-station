@@ -1285,8 +1285,8 @@ async def calculate_anesthesia_fee(case_id: str) -> dict:
 ### Phase 2: 管制藥處理
 
 - [x] 實作管制藥驗證邏輯 (process_medication_admin)
-- [ ] Break-glass 流程
-- [ ] 事後補核准 API
+- [x] Break-glass 流程 (add_break_glass_columns.sql)
+- [x] 事後補核准 API (`/api/anesthesia/break-glass/{id}/approve`)
 
 ### Phase 3: 前端整合 - 藥品
 
@@ -1306,7 +1306,7 @@ async def calculate_anesthesia_fee(case_id: str) -> dict:
 - [x] 建立 `anesthesia_billing_events` 表
 - [x] 建立 `surgical_billing_events` 表
 - [x] 實作 `calculate_anesthesia_fee()` 邏輯
-- [ ] 實作 `calculate_surgical_fee()` 邏輯
+- [x] 實作 `calculate_surgical_fee()` 邏輯 (`/api/anesthesia/cases/{id}/billing/calculate-surgical-fee`)
 - [ ] 整合手術結案觸發 (`on_case_closed`)
 
 ### Phase 6: CashDesk 整合 (v1.1 新增)

@@ -660,6 +660,144 @@ def calculate_anesthesia_fee(
         conn.close()
 
 
+def calculate_surgical_fee(
+    case_id: str,
+    surgery_code: str,
+    surgery_name: str,
+    surgery_grade: str,  # A, B, C, D
+    surgeon_id: str,
+    start_time: datetime,
+    end_time: datetime,
+    assistant_ids: Optional[List[str]] = None,
+    db_path: str = "database/mirs.db"
+) -> Dict[str, Any]:
+    """
+    計算手術處置費 (Phase 5)
+
+    Args:
+        case_id: 案件 ID
+        surgery_code: 手術代碼 (NHI code)
+        surgery_name: 手術名稱
+        surgery_grade: 手術等級 (A, B, C, D)
+        surgeon_id: 主刀醫師 ID
+        start_time: 手術開始時間
+        end_time: 手術結束時間
+        assistant_ids: 助手醫師 ID 列表
+
+    Returns:
+        費用明細
+    """
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        # 取得費率表
+        cursor.execute("""
+            SELECT * FROM surgical_fee_schedule
+            WHERE is_active = 1
+            ORDER BY effective_date DESC
+            LIMIT 1
+        """)
+        schedule = cursor.fetchone()
+
+        if not schedule:
+            # Fallback to default values
+            schedule = {
+                'schedule_version': 'default',
+                'surgeon_fee_grade_a': 20000,
+                'surgeon_fee_grade_b': 12000,
+                'surgeon_fee_grade_c': 6000,
+                'surgeon_fee_grade_d': 3000,
+                'assistant_fee_ratio': 0.35,
+                'overtime_fee_per_30min': 1000,
+                'overtime_start_grade_a': 180,
+                'overtime_start_grade_b': 120,
+                'overtime_start_grade_c': 60,
+                'overtime_start_grade_d': 30,
+            }
+
+        # 計算時間 (分鐘)
+        duration_minutes = int((end_time - start_time).total_seconds() / 60)
+
+        # 1. 主刀費用 (依手術等級)
+        grade_upper = surgery_grade.upper() if surgery_grade else 'C'
+        surgeon_fee_map = {
+            'A': float(schedule['surgeon_fee_grade_a']),
+            'B': float(schedule['surgeon_fee_grade_b']),
+            'C': float(schedule['surgeon_fee_grade_c']),
+            'D': float(schedule['surgeon_fee_grade_d']),
+        }
+        surgeon_fee = surgeon_fee_map.get(grade_upper, surgeon_fee_map['C'])
+
+        # 2. 超時加成
+        overtime_fee = 0
+        overtime_start_map = {
+            'A': int(schedule['overtime_start_grade_a']),
+            'B': int(schedule['overtime_start_grade_b']),
+            'C': int(schedule['overtime_start_grade_c']),
+            'D': int(schedule['overtime_start_grade_d']),
+        }
+        overtime_threshold = overtime_start_map.get(grade_upper, 60)
+
+        if duration_minutes > overtime_threshold:
+            extra_periods = (duration_minutes - overtime_threshold) // 30
+            overtime_fee = extra_periods * float(schedule['overtime_fee_per_30min'])
+
+        # 3. 助手費用
+        assistant_fee = 0
+        assistant_count = len(assistant_ids) if assistant_ids else 0
+        if assistant_count > 0:
+            assistant_fee = surgeon_fee * float(schedule['assistant_fee_ratio']) * assistant_count
+
+        # 總計
+        total_fee = surgeon_fee + overtime_fee + assistant_fee
+
+        # 寫入計費事件
+        billing_id = f"SURG-BILL-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+
+        cursor.execute("""
+            INSERT INTO surgical_billing_events (
+                billing_id, case_id, surgery_code, surgery_name,
+                surgery_start_time, surgery_end_time, surgery_duration_minutes,
+                surgeon_id, assistant_ids,
+                surgeon_fee, assistant_fee, total_fee,
+                fee_schedule_version, billing_status, calculated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CALCULATED', ?)
+        """, (
+            billing_id, case_id, surgery_code, surgery_name,
+            start_time.isoformat(), end_time.isoformat(), duration_minutes,
+            surgeon_id, json.dumps(assistant_ids) if assistant_ids else None,
+            surgeon_fee, assistant_fee, total_fee,
+            schedule['schedule_version'] if isinstance(schedule, dict) else schedule.get('schedule_version', 'default'),
+            datetime.now().isoformat()
+        ))
+
+        conn.commit()
+
+        return {
+            "billing_id": billing_id,
+            "case_id": case_id,
+            "surgery_code": surgery_code,
+            "surgery_name": surgery_name,
+            "surgery_grade": grade_upper,
+            "duration_minutes": duration_minutes,
+            "surgeon_fee": surgeon_fee,
+            "overtime_fee": overtime_fee,
+            "assistant_fee": assistant_fee,
+            "assistant_count": assistant_count,
+            "total_fee": total_fee,
+            "fee_schedule_version": schedule['schedule_version'] if isinstance(schedule, dict) else schedule.get('schedule_version', 'default')
+        }
+
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"calculate_surgical_fee error: {e}")
+        raise
+
+    finally:
+        conn.close()
+
+
 # =============================================================================
 # CashDesk Handoff (Phase 6)
 # =============================================================================
@@ -912,6 +1050,282 @@ def get_quick_drugs_with_inventory(db_path: str = "database/mirs.db") -> List[Di
             })
 
         return drugs
+
+    finally:
+        conn.close()
+
+
+# =============================================================================
+# Break-Glass Approval (Phase 4)
+# =============================================================================
+
+# 允許的 Break-glass 理由 (Section 4.2)
+ALLOWED_BREAK_GLASS_REASONS = [
+    'MTP_ACTIVATED',              # 大量輸血啟動
+    'CARDIAC_ARREST',             # 心跳停止
+    'ANAPHYLAXIS',                # 過敏性休克
+    'AIRWAY_EMERGENCY',           # 呼吸道緊急
+    'EXSANGUINATING_HEMORRHAGE',  # 大量出血
+    'NO_SECOND_STAFF',            # 無第二人員可協助
+    'SYSTEM_OFFLINE',             # 系統離線
+    'OTHER',                      # 其他 (需說明)
+]
+
+
+@dataclass
+class BreakGlassApprovalRequest:
+    """Break-glass 事後核准請求"""
+    event_id: str
+    approver_id: str
+    notes: Optional[str] = None
+
+
+@dataclass
+class BreakGlassApprovalResponse:
+    """Break-glass 事後核准回應"""
+    success: bool
+    event_id: str
+    approved_by: str
+    approved_at: str
+    message: str
+
+
+def get_pending_break_glass_events(
+    db_path: str = "database/mirs.db",
+    hours_limit: int = 24
+) -> List[Dict[str, Any]]:
+    """
+    取得待核准的 Break-glass 事件清單
+
+    Args:
+        db_path: 資料庫路徑
+        hours_limit: 小時限制 (預設 24 小時內)
+
+    Returns:
+        待核准事件清單
+    """
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        # 查詢 controlled_drug_log 中待核准的記錄
+        cursor.execute("""
+            SELECT
+                cdl.id,
+                cdl.case_id,
+                cdl.medicine_code,
+                cdl.medicine_name,
+                cdl.administered_amount,
+                cdl.witness_status,
+                cdl.is_break_glass,
+                cdl.break_glass_reason,
+                cdl.break_glass_deadline,
+                cdl.operator_id,
+                cdl.event_timestamp,
+                cdl.created_at,
+                ac.patient_name
+            FROM controlled_drug_log cdl
+            LEFT JOIN anesthesia_cases ac ON cdl.case_id = ac.id
+            WHERE cdl.is_break_glass = 1
+              AND cdl.witness_status = 'PENDING'
+              AND cdl.break_glass_approved_by IS NULL
+              AND cdl.created_at >= datetime('now', '-{} hours')
+            ORDER BY cdl.created_at DESC
+        """.format(hours_limit))
+
+        events = []
+        for row in cursor.fetchall():
+            deadline = row['break_glass_deadline']
+            is_overdue = False
+            if deadline:
+                deadline_dt = datetime.fromisoformat(deadline.replace('Z', '+00:00'))
+                is_overdue = datetime.now() > deadline_dt
+
+            events.append({
+                "id": row['id'],
+                "case_id": row['case_id'],
+                "patient_name": row['patient_name'],
+                "medicine_code": row['medicine_code'],
+                "medicine_name": row['medicine_name'],
+                "administered_amount": row['administered_amount'],
+                "break_glass_reason": row['break_glass_reason'],
+                "operator_id": row['operator_id'],
+                "event_timestamp": row['event_timestamp'],
+                "deadline": deadline,
+                "is_overdue": is_overdue,
+                "hours_remaining": None if not deadline else max(0, (deadline_dt - datetime.now()).total_seconds() / 3600)
+            })
+
+        return events
+
+    finally:
+        conn.close()
+
+
+def approve_break_glass(
+    request: BreakGlassApprovalRequest,
+    db_path: str = "database/mirs.db"
+) -> BreakGlassApprovalResponse:
+    """
+    核准 Break-glass 事件
+
+    Args:
+        request: 核准請求
+        db_path: 資料庫路徑
+
+    Returns:
+        核准結果
+    """
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        # 確認記錄存在且待核准
+        cursor.execute("""
+            SELECT id, is_break_glass, witness_status, break_glass_approved_by
+            FROM controlled_drug_log
+            WHERE id = ?
+        """, (request.event_id,))
+
+        row = cursor.fetchone()
+        if not row:
+            return BreakGlassApprovalResponse(
+                success=False,
+                event_id=request.event_id,
+                approved_by="",
+                approved_at="",
+                message="找不到該事件記錄"
+            )
+
+        if not row['is_break_glass']:
+            return BreakGlassApprovalResponse(
+                success=False,
+                event_id=request.event_id,
+                approved_by="",
+                approved_at="",
+                message="該記錄不是 Break-glass 事件"
+            )
+
+        if row['break_glass_approved_by']:
+            return BreakGlassApprovalResponse(
+                success=False,
+                event_id=request.event_id,
+                approved_by=row['break_glass_approved_by'],
+                approved_at="",
+                message="該事件已經被核准"
+            )
+
+        # 執行核准
+        approved_at = datetime.now().isoformat()
+        cursor.execute("""
+            UPDATE controlled_drug_log
+            SET witness_status = 'COMPLETED',
+                break_glass_approved_by = ?,
+                break_glass_approved_at = ?
+            WHERE id = ?
+        """, (request.approver_id, approved_at, request.event_id))
+
+        # 記錄稽核日誌
+        cursor.execute("""
+            INSERT INTO audit_log (
+                action, table_name, record_id, actor_id, details, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            'BREAK_GLASS_APPROVED',
+            'controlled_drug_log',
+            request.event_id,
+            request.approver_id,
+            json.dumps({"notes": request.notes}),
+            approved_at
+        ))
+
+        conn.commit()
+
+        return BreakGlassApprovalResponse(
+            success=True,
+            event_id=request.event_id,
+            approved_by=request.approver_id,
+            approved_at=approved_at,
+            message="Break-glass 事件已核准"
+        )
+
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"approve_break_glass error: {e}")
+        return BreakGlassApprovalResponse(
+            success=False,
+            event_id=request.event_id,
+            approved_by="",
+            approved_at="",
+            message=f"核准失敗: {str(e)}"
+        )
+
+    finally:
+        conn.close()
+
+
+def get_break_glass_stats(
+    db_path: str = "database/mirs.db",
+    days: int = 30
+) -> Dict[str, Any]:
+    """
+    取得 Break-glass 統計資訊
+
+    Args:
+        db_path: 資料庫路徑
+        days: 統計天數
+
+    Returns:
+        統計資訊
+    """
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        # 總數與待核准數
+        cursor.execute("""
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN break_glass_approved_by IS NULL THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN break_glass_approved_by IS NOT NULL THEN 1 ELSE 0 END) as approved
+            FROM controlled_drug_log
+            WHERE is_break_glass = 1
+              AND created_at >= datetime('now', '-{} days')
+        """.format(days))
+
+        row = cursor.fetchone()
+
+        # 按原因分類
+        cursor.execute("""
+            SELECT break_glass_reason, COUNT(*) as count
+            FROM controlled_drug_log
+            WHERE is_break_glass = 1
+              AND created_at >= datetime('now', '-{} days')
+            GROUP BY break_glass_reason
+            ORDER BY count DESC
+        """.format(days))
+
+        by_reason = {r['break_glass_reason']: r['count'] for r in cursor.fetchall()}
+
+        # 逾期未核准數
+        cursor.execute("""
+            SELECT COUNT(*) as overdue
+            FROM controlled_drug_log
+            WHERE is_break_glass = 1
+              AND witness_status = 'PENDING'
+              AND break_glass_approved_by IS NULL
+              AND break_glass_deadline < datetime('now')
+        """)
+        overdue_row = cursor.fetchone()
+
+        return {
+            "period_days": days,
+            "total": row['total'] or 0,
+            "pending": row['pending'] or 0,
+            "approved": row['approved'] or 0,
+            "overdue": overdue_row['overdue'] or 0,
+            "by_reason": by_reason
+        }
 
     finally:
         conn.close()

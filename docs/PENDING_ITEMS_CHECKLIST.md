@@ -14,48 +14,50 @@
 - [ ] 主管簽核 UI - pending
 - [ ] Operational Dashboard - pending
 
-### Anesthesia Billing Integration v1.1
-> 檔案: `DEV_SPEC_ANESTHESIA_BILLING_INTEGRATION_v1.1.md`
+### Anesthesia Billing Integration v1.2 ✅ 大部分完成
+> 檔案: `DEV_SPEC_ANESTHESIA_BILLING_INTEGRATION_v1.2.md`
 
-**Phase 3: 藥品計費整合**
-- [ ] 新增 `medicines` 表擴充欄位 (content_per_unit, content_unit, billing_rounding)
-- [ ] 實作 `calculate_billing_quantity()` 函數
-- [ ] 修改 `/cases/{id}/medication` API 加入庫存扣減
-- [ ] 新增 `medication_usage_events` 表 (若不存在)
+**Phase 1-3: 基礎架構** ✅ 完成
+- [x] 新增 `medicines` 表擴充欄位 (content_per_unit, content_unit, billing_rounding)
+- [x] 實作 `calculate_billing_quantity()` 函數 (`services/anesthesia_billing.py`)
+- [x] 修改 `/cases/{id}/medication` API 加入庫存扣減
+- [x] 新增 `medication_usage_events` 表
+- [x] 實作管制藥驗證邏輯
+- [x] Anesthesia PWA 藥品選擇顯示庫存
 
-**Phase 4: 管制藥品流程**
-- [ ] 實作管制藥驗證邏輯
-- [ ] Break-glass 流程
-- [ ] 事後補核准 API
+**Phase 4: 管制藥品流程** ✅ 完成
+- [x] 管制藥驗證邏輯
+- [x] Break-glass 緊急流程 (`is_break_glass`, `break_glass_reason`)
+- [x] 事後補核准 API (`/api/anesthesia/break-glass/{id}/approve`)
 
-**Phase 5: Anesthesia PWA UI 整合**
-- [ ] 藥品選擇顯示庫存
+**Phase 5: Anesthesia PWA UI 整合** 🟡 部分完成
+- [x] 藥品選擇顯示庫存
 - [ ] 管制藥見證人 UI
 - [ ] Break-glass 對話框
-- [ ] 扣庫結果顯示
+- [x] 扣庫結果顯示
 
-**Phase 6: 離線支援**
+**Phase 6: 離線支援** ⏳ 待實作
 - [ ] 離線佇列機制
 - [ ] 上線後同步
 - [ ] 衝突處理
 
-**Phase 5 & 6: 完整計費整合**
-- [ ] 建立 `anesthesia_billing_events` 表
-- [ ] 建立 `surgical_billing_events` 表
-- [ ] 實作 `calculate_anesthesia_fee()` 邏輯
-- [ ] 實作 `calculate_surgical_fee()` 邏輯
+**Phase 5 & 6: 完整計費整合** ✅ 完成
+- [x] 建立 `anesthesia_billing_events` 表
+- [x] 建立 `surgical_billing_events` 表
+- [x] 實作 `calculate_anesthesia_fee()` 邏輯
+- [x] 實作 `calculate_surgical_fee()` 邏輯
 - [ ] 整合手術結案觸發 (`on_case_closed`)
-- [ ] 實作 `CashDeskHandoffPackage` 資料結構
-- [ ] 實作 `/cases/{id}/billing/handoff` API
-- [ ] 實作 `/cases/{id}/billing/export-to-cashdesk` API
-- [ ] 費率表設定 (anesthesia_fee_schedule, surgical_fee_schedule)
+- [x] 實作 `CashDeskHandoffPackage` 資料結構 (`generate_cashdesk_handoff()`)
+- [x] 實作 `/cases/{id}/billing/handoff` API
+- [x] 實作 `/cases/{id}/billing/export-to-cashdesk` API (`export_to_cashdesk()`)
+- [x] 費率表設定 (anesthesia_fee_schedule, surgical_fee_schedule)
 
-**Phase 7: 麻醉藥車調撥**
-- [ ] 建立 `anesthesia_carts` 表
-- [ ] 建立 `cart_inventory` 表
-- [ ] 實作藥車調撥 API (`MED_DISPATCH` to cart)
-- [ ] 實作交班清點 API
-- [ ] 差異報告與藥師核對流程
+**Phase 7: 麻醉藥車調撥** ✅ 完成
+- [x] 建立 `anesthesia_carts` 表
+- [x] 建立 `cart_inventory` 表
+- [x] 實作藥車調撥 API (`MED_DISPATCH` to cart)
+- [x] 實作交班清點 API
+- [x] 差異報告與藥師核對流程
 - [ ] PWA 藥車選擇 UI
 
 ### Blood Bank PWA v2.4 (P3 優先項目)

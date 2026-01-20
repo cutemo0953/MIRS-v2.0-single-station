@@ -216,6 +216,40 @@ INSERT OR IGNORE INTO anesthesia_fee_schedule (
 ) VALUES ('v1.0', '2026-01-01');
 
 -- ============================================================================
+-- 4.1 手術費率表 (Surgical Fee Schedule)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS surgical_fee_schedule (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    schedule_version TEXT NOT NULL,
+    effective_date DATE NOT NULL,
+
+    -- 主刀醫師費率 (依手術等級)
+    surgeon_fee_grade_a REAL DEFAULT 20000,    -- A 級手術 (大手術)
+    surgeon_fee_grade_b REAL DEFAULT 12000,    -- B 級手術 (中型手術)
+    surgeon_fee_grade_c REAL DEFAULT 6000,     -- C 級手術 (小手術)
+    surgeon_fee_grade_d REAL DEFAULT 3000,     -- D 級手術 (簡單手術)
+
+    -- 助手醫師費率 (主刀的百分比)
+    assistant_fee_ratio REAL DEFAULT 0.35,     -- 助手費 = 主刀費 * 0.35
+
+    -- 時間加成 (超時)
+    overtime_fee_per_30min REAL DEFAULT 1000,  -- 超時每 30 分鐘加成
+    overtime_start_grade_a INTEGER DEFAULT 180, -- A 級超過 3 小時開始計時
+    overtime_start_grade_b INTEGER DEFAULT 120, -- B 級超過 2 小時開始計時
+    overtime_start_grade_c INTEGER DEFAULT 60,  -- C 級超過 1 小時開始計時
+    overtime_start_grade_d INTEGER DEFAULT 30,  -- D 級超過 30 分鐘開始計時
+
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 插入預設手術費率
+INSERT OR IGNORE INTO surgical_fee_schedule (
+    schedule_version, effective_date
+) VALUES ('v1.0', '2026-01-01');
+
+-- ============================================================================
 -- 5. 麻醉藥車表 (Anesthesia Carts) - Phase 7
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS anesthesia_carts (

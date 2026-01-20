@@ -5076,9 +5076,16 @@ try:
         get_quick_drugs_with_inventory,
         process_medication_admin,
         calculate_anesthesia_fee,
+        calculate_surgical_fee,  # Phase 5 新增
         generate_cashdesk_handoff,
         export_to_cashdesk,
-        MedicationAdminRequest
+        MedicationAdminRequest,
+        # Break-glass approval (Phase 4)
+        get_pending_break_glass_events,
+        approve_break_glass,
+        get_break_glass_stats,
+        BreakGlassApprovalRequest,
+        ALLOWED_BREAK_GLASS_REASONS
     )
     BILLING_SERVICE_AVAILABLE = True
 except ImportError as e:
@@ -5279,6 +5286,58 @@ async def api_calculate_anesthesia_fee(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class CalculateSurgicalFeeRequest(BaseModel):
+    """計算手術處置費請求"""
+    surgery_code: str = Field(..., description="手術代碼 (NHI)")
+    surgery_name: str = Field(..., description="手術名稱")
+    surgery_grade: str = Field(..., description="手術等級 (A/B/C/D)")
+    surgeon_id: str = Field(..., description="主刀醫師 ID")
+    start_time: str = Field(..., description="手術開始時間 (ISO format)")
+    end_time: str = Field(..., description="手術結束時間 (ISO format)")
+    assistant_ids: Optional[List[str]] = None
+
+
+@router.post("/cases/{case_id}/billing/calculate-surgical-fee")
+async def api_calculate_surgical_fee(case_id: str, request: CalculateSurgicalFeeRequest):
+    """
+    計算手術處置費 (Phase 5)
+
+    Args:
+        case_id: 案件 ID
+        request: 手術計費參數
+
+    Returns:
+        - surgeon_fee: 主刀費
+        - assistant_fee: 助手費
+        - overtime_fee: 超時加成
+        - total_fee: 總計
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        start_time = datetime.fromisoformat(request.start_time.replace('Z', '+00:00'))
+        end_time = datetime.fromisoformat(request.end_time.replace('Z', '+00:00'))
+
+        result = calculate_surgical_fee(
+            case_id=case_id,
+            surgery_code=request.surgery_code,
+            surgery_name=request.surgery_name,
+            surgery_grade=request.surgery_grade,
+            surgeon_id=request.surgeon_id,
+            start_time=start_time,
+            end_time=end_time,
+            assistant_ids=request.assistant_ids
+        )
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"calculate_surgical_fee error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/cases/{case_id}/billing/handoff")
 async def api_get_billing_handoff(case_id: str):
     """
@@ -5408,6 +5467,139 @@ async def get_billing_summary(case_id: str):
 
     finally:
         conn.close()
+
+
+# =============================================================================
+# Phase 4: Break-Glass Approval APIs (緊急授權事後核准)
+# =============================================================================
+
+class BreakGlassApproveRequest(BaseModel):
+    """Break-glass 核准請求"""
+    approver_id: str = Field(..., description="核准人 ID")
+    notes: Optional[str] = None
+
+
+@router.get("/break-glass/pending")
+async def get_pending_break_glass():
+    """
+    取得待核准的 Break-glass 事件清單
+
+    Returns:
+        - events: 待核准事件清單
+        - total: 總數
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        events = get_pending_break_glass_events()
+        return {
+            "events": events,
+            "total": len(events)
+        }
+    except Exception as e:
+        logger.error(f"get_pending_break_glass error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/break-glass/{event_id}/approve")
+async def approve_break_glass_event(
+    event_id: str,
+    request: BreakGlassApproveRequest
+):
+    """
+    核准 Break-glass 事件
+
+    Args:
+        event_id: 事件 ID (controlled_drug_log.id)
+        request: 核准請求
+
+    Returns:
+        核准結果
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        approval_request = BreakGlassApprovalRequest(
+            event_id=event_id,
+            approver_id=request.approver_id,
+            notes=request.notes
+        )
+        result = approve_break_glass(approval_request)
+
+        if not result.success:
+            raise HTTPException(status_code=400, detail=result.message)
+
+        return {
+            "success": True,
+            "event_id": result.event_id,
+            "approved_by": result.approved_by,
+            "approved_at": result.approved_at,
+            "message": result.message
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"approve_break_glass_event error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/break-glass/stats")
+async def get_break_glass_statistics(days: int = Query(30, ge=1, le=365)):
+    """
+    取得 Break-glass 統計資訊
+
+    Args:
+        days: 統計天數 (預設 30 天)
+
+    Returns:
+        統計資訊
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        stats = get_break_glass_stats(days=days)
+        return stats
+    except Exception as e:
+        logger.error(f"get_break_glass_statistics error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/break-glass/reasons")
+async def get_break_glass_reasons():
+    """
+    取得允許的 Break-glass 原因清單
+
+    Returns:
+        原因清單 (用於前端下拉選單)
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        return {"reasons": [
+            {"code": "MTP_ACTIVATED", "label": "大量輸血啟動"},
+            {"code": "CARDIAC_ARREST", "label": "心跳停止"},
+            {"code": "ANAPHYLAXIS", "label": "過敏性休克"},
+            {"code": "AIRWAY_EMERGENCY", "label": "呼吸道緊急"},
+            {"code": "EXSANGUINATING_HEMORRHAGE", "label": "大量出血"},
+            {"code": "NO_SECOND_STAFF", "label": "無第二人員可協助"},
+            {"code": "SYSTEM_OFFLINE", "label": "系統離線"},
+            {"code": "OTHER", "label": "其他"},
+        ]}
+
+    return {"reasons": [
+        {"code": reason, "label": {
+            "MTP_ACTIVATED": "大量輸血啟動",
+            "CARDIAC_ARREST": "心跳停止",
+            "ANAPHYLAXIS": "過敏性休克",
+            "AIRWAY_EMERGENCY": "呼吸道緊急",
+            "EXSANGUINATING_HEMORRHAGE": "大量出血",
+            "NO_SECOND_STAFF": "無第二人員可協助",
+            "SYSTEM_OFFLINE": "系統離線",
+            "OTHER": "其他",
+        }.get(reason, reason)}
+        for reason in ALLOWED_BREAK_GLASS_REASONS
+    ]}
 
 
 # =============================================================================
