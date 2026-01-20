@@ -2214,6 +2214,282 @@ async def generate_handoff_package(case_id: str):
 
 ---
 
+## 12. 藥品主檔資料同步策略 (Medication Data Sync)
+
+> **v1.2 新增**: 定義 MIRS ↔ CIRS 藥品主檔資料的同步方式。
+
+### 12.1 資料架構
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    藥品主檔資料流向                                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌───────────────────────────────────────┐                              │
+│  │  resilience_formulary.json            │                              │
+│  │  (共用藥品主檔 - 急救 + 麻醉)          │                              │
+│  │  位置: CIRS/shared/data/              │                              │
+│  │       MIRS/shared/data/ (複製)        │                              │
+│  └───────────────────────────────────────┘                              │
+│                         │                                               │
+│          ┌──────────────┴──────────────┐                                │
+│          ▼                             ▼                                │
+│  ┌─────────────────────┐     ┌─────────────────────┐                    │
+│  │  MIRS                │     │  CIRS                │                   │
+│  │  medicines 表        │     │  medication_identity │                   │
+│  │  (權威庫存)          │────▶│  _snapshot (快照)    │                   │
+│  │                      │ 同步 │                     │                   │
+│  │  + current_stock     │     │  medication_billing  │                   │
+│  │  + pharmacy_txns     │     │  _snapshot (計價)    │                   │
+│  └─────────────────────┘     └─────────────────────┘                    │
+│          │                             │                                │
+│          ▼                             ▼                                │
+│  ┌─────────────────────┐     ┌─────────────────────┐                    │
+│  │  Anesthesia PWA     │     │  CashDesk PWA       │                    │
+│  │  (用藥記錄)          │     │  (計費查詢)          │                   │
+│  └─────────────────────┘     └─────────────────────┘                    │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 12.2 資料來源: resilience_formulary.json
+
+**位置**: `CIRS/shared/data/resilience_formulary.json`
+**格式**: JSON with 100+ medications (急救 + 麻醉)
+
+```json
+{
+  "medications": [
+    {
+      "nhi_code": "AC06775209",           // 健保碼 → medicine_code
+      "anesthesia_code": "EPI",           // 麻醉短碼 (可選)
+      "name_en": "Epinephrine Inj 1mg/1ml",
+      "name_zh": "腎上腺素注射液",
+      "spec": "1mg/1mL",
+      "dosage_form": "INJ",
+      "route": "IV/IM/SC",
+      "controlled_level": 0,               // 0=非管制, 1-4=管制等級
+      "category": "EMERGENCY",
+      "nhi_points": 18,                    // 健保點數 → nhi_price
+      "billing_unit": "支",                // → unit
+      "content_per_unit": 1.0,             // 每單位含量
+      "content_unit": "mg",                // 含量單位
+      "billing_rounding": "CEIL"           // 進位規則
+    }
+  ]
+}
+```
+
+### 12.3 MIRS Seeder 實作
+
+**檔案**: `seeder_medications.py`
+
+```python
+#!/usr/bin/env python3
+"""
+藥品主檔 Seeder - 從 resilience_formulary.json 匯入 MIRS medicines 表
+"""
+
+import json
+import sqlite3
+from pathlib import Path
+
+FORMULARY_PATH = Path(__file__).parent / "shared/data/resilience_formulary.json"
+DB_PATH = Path(__file__).parent / "database/mirs.db"
+
+
+def seed_medications():
+    """匯入藥品主檔"""
+
+    # 讀取 JSON
+    with open(FORMULARY_PATH, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    for med in data['medications']:
+        # 轉換欄位
+        medicine_code = med.get('nhi_code')  # 使用健保碼作為 medicine_code
+        controlled_level = None
+        if med.get('controlled_level', 0) > 0:
+            controlled_level = f"LEVEL_{med['controlled_level']}"
+
+        # 轉換 dosage_form
+        dosage_form_map = {
+            'INJ': 'INJECTION',
+            'TAB': 'TABLET',
+            'CAP': 'CAPSULE',
+            'SOL': 'SOLUTION',
+            'INFUSION': 'SOLUTION'
+        }
+        dosage_form = dosage_form_map.get(med.get('dosage_form'), 'INJECTION')
+
+        # 插入或更新
+        cursor.execute("""
+            INSERT OR REPLACE INTO medicines (
+                medicine_code, generic_name, brand_name,
+                dosage_form, strength, unit,
+                is_controlled_drug, controlled_level,
+                nhi_price,
+                content_per_unit, content_unit, billing_rounding,
+                current_stock, min_stock, is_active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            medicine_code,
+            med.get('name_zh'),
+            med.get('name_en'),
+            dosage_form,
+            med.get('spec'),
+            med.get('billing_unit', '支'),
+            1 if med.get('controlled_level', 0) > 0 else 0,
+            controlled_level,
+            med.get('nhi_points', 0),
+            med.get('content_per_unit'),
+            med.get('content_unit'),
+            med.get('billing_rounding', 'CEIL'),
+            10,  # 預設庫存
+            2,   # 最低庫存
+            1    # is_active
+        ))
+
+    conn.commit()
+    print(f"Seeded {len(data['medications'])} medications")
+    conn.close()
+
+
+if __name__ == "__main__":
+    seed_medications()
+```
+
+### 12.4 Schema 擴充 (v1.2 新增欄位)
+
+```sql
+-- 新增 medicines 表單位換算欄位
+ALTER TABLE medicines ADD COLUMN content_per_unit REAL;
+ALTER TABLE medicines ADD COLUMN content_unit TEXT;
+ALTER TABLE medicines ADD COLUMN billing_rounding TEXT DEFAULT 'CEIL';
+
+-- 新增索引
+CREATE INDEX IF NOT EXISTS idx_medicines_content ON medicines(content_per_unit, content_unit);
+```
+
+### 12.5 同步策略
+
+| 方向 | 觸發時機 | 內容 |
+|------|----------|------|
+| **JSON → MIRS** | 啟動時 / 手動 | 完整匯入 medicines 表 |
+| **JSON → CIRS** | 啟動時 / 手動 | 匯入 medication_identity_snapshot |
+| **MIRS → CIRS** | 定時 (5min) / 事件 | 庫存變動同步 (future) |
+
+### 12.6 實作步驟
+
+**Phase 0: 資料準備**
+
+- [x] 複製 `resilience_formulary.json` 到 MIRS (`shared/data/`)
+- [x] 新增 `content_per_unit`, `content_unit`, `billing_rounding` 欄位到 medicines 表 (migration)
+- [x] 建立 `seeder_medications.py` 腳本
+- [ ] 執行 seeder 匯入藥品主檔
+- [ ] 驗證 Anesthesia PWA 可讀取藥品清單
+
+### 12.7 藥物流程架構說明 (Medication Flow Architecture)
+
+> **2026-01-20 架構決策**: 藥物進貨由 CIRS，調撥給 MIRS，實際消耗流程以 MIRS 為主體。
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Medication Supply Chain Architecture                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────┐      │
+│  │  CIRS (Community IRS) - HUB                                   │      │
+│  │  ─────────────────────────────────────────────────────────    │      │
+│  │  • 進藥、採購驗收                                             │      │
+│  │  • 管制藥總帳 (符合法規)                                       │      │
+│  │  • 類似社區藥局角色                                           │      │
+│  └────────────────────────┬──────────────────────────────────────┘      │
+│                           │                                             │
+│                   MED_DISPATCH 調撥                                      │
+│                           │                                             │
+│                           ▼                                             │
+│  ┌───────────────────────────────────────────────────────────────┐      │
+│  │  MIRS (Medical IRS) - SATELLITE / BORP 備援緊急手術室          │      │
+│  │  ─────────────────────────────────────────────────────────    │      │
+│  │  • 接收調撥 (MED_RECEIPT)                                      │      │
+│  │  • 本地庫存管理 (Ground Truth when offline)                    │      │
+│  │  • 消耗端點調撥                                               │      │
+│  └────────────────────────┬──────────────────────────────────────┘      │
+│                           │                                             │
+│        ┌──────────────────┼──────────────────────┐                      │
+│        ▼                  ▼                      ▼                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐          │
+│  │ CIRS Pharmacy│  │ CIRS Nurse   │  │ MIRS Anesthesia PWA   │          │
+│  │ (藥局站)      │  │ (護理站)     │  │ + EMT (轉送急救)       │          │
+│  └──────────────┘  └──────────────┘  └───────────────────────┘          │
+│                                                                         │
+│  NOTE: EMT 急救藥物從 MIRS 出去較方便 (急救藥物就近取用原則)               │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**角色分工**:
+
+| 角色 | 系統 | 職責 |
+|------|------|------|
+| 進藥、採購 | CIRS Pharmacy | 從供應商採購，驗收入庫 |
+| 調撥發放 | CIRS → MIRS | QR Code 調撥單，批號效期追蹤 |
+| 消耗端供應 | MIRS | 發藥給 Anesthesia PWA, EMT |
+| 臨床用藥 | Anesthesia PWA | 記錄給藥、觸發庫存扣減 |
+| 急救藥物 | MIRS EMT | BORP 初步處理後轉送 |
+
+### 12.8 藥師稽核功能位置 (Pharmacist Audit Location)
+
+> **建議**: 稽核 UI 下放到 **Pharmacy PWA**，但稽核記錄同步到 **MIRS 主站** 做合規報表。
+
+**理由**:
+
+1. **工作流程考量**: 藥師在藥局站工作，不應為了稽核而切換到主站
+2. **離線優先**: Pharmacy PWA 可離線稽核，符合 xGrid 韌性設計
+3. **一致性模式**: 類似 Blood PWA 的血品管理 - 站點操作 + 主站合規
+
+**架構**:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Pharmacist Audit Architecture                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌───────────────────────────────────────┐                              │
+│  │  Pharmacy PWA (稽核 UI)               │                              │
+│  │  ─────────────────────────────────    │                              │
+│  │  • 管制藥核對                          │                              │
+│  │  • 庫存盤點                           │                              │
+│  │  • 異常標記                           │                              │
+│  │  • 本地審核結果                        │                              │
+│  └───────────────────────┬───────────────┘                              │
+│                          │ sync                                          │
+│                          ▼                                              │
+│  ┌───────────────────────────────────────┐                              │
+│  │  MIRS 主站 (合規報表)                  │                              │
+│  │  ─────────────────────────────────    │                              │
+│  │  • 管制藥總帳彙總                      │                              │
+│  │  • 合規報表產出                        │                              │
+│  │  • 稽核軌跡歸檔                        │                              │
+│  │  • 跨站異常分析                        │                              │
+│  └───────────────────────────────────────┘                              │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**實作建議**:
+
+- [ ] 在 Pharmacy PWA 中新增稽核模組 (controlled_drug_audit.vue)
+- [ ] 稽核記錄表新增欄位: `audit_source = 'PWA' | 'MAIN'`
+- [ ] 建立稽核記錄同步 API: `POST /api/audit/sync`
+- [ ] 主站僅保留「報表檢視」功能，移除「稽核操作」UI
+
+---
+
 ## 附錄
 
 ### A. 與 CIRS Spec 的關係
@@ -2233,6 +2509,10 @@ async def generate_handoff_package(case_id: str):
 | v1.1 | 2026-01-20 | 擴充計費範圍: 新增麻醉處置費、手術處置費、CashDesk Handoff |
 | v1.1 | 2026-01-20 | 新增 Section 9: 麻醉藥車調撥流程、交班清點、藥師核對機制 |
 | v1.2 | 2026-01-20 | Section 10: Gemini/ChatGPT 審閱回饋整合 - 管制藥殘餘量、時間防呆、三帳本綁定、VOID pattern |
+| v1.2 | 2026-01-20 | Section 12: 藥品主檔資料同步策略 - CIRS/MIRS formulary JSON 共用、seeder 實作 |
+| v1.2 | 2026-01-20 | Section 12.7: 藥物流程架構說明 - CIRS進藥→MIRS調撥→消耗端點 |
+| v1.2 | 2026-01-20 | Section 12.8: 藥師稽核功能位置建議 - 稽核 UI 下放 Pharmacy PWA，主站做合規報表 |
+| v1.2 | 2026-01-20 | Migration: add_anesthesia_billing_columns.sql - 浪費追蹤、idempotency_key、VOID pattern |
 
 ---
 
