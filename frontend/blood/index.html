@@ -605,6 +605,42 @@
                 </p>
             </div>
 
+            <!-- Phase 3: Dual Verification Section (雙人核對) -->
+            <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg shadow p-4 mb-4 border border-red-200">
+                <label class="block text-sm font-medium text-red-700 mb-3 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    雙人核對 (Chain of Custody)
+                </label>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">發血人員 (Actor 1)</label>
+                        <input type="text" x-model="issueFlow.actor1"
+                               placeholder="工號/Badge"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                        <div class="text-xs mt-1" :class="issueFlow.actor1 ? 'text-green-600' : 'text-gray-400'">
+                            <span x-show="issueFlow.actor1">✓ 已輸入</span>
+                            <span x-show="!issueFlow.actor1">未驗證</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">覆核人員 (Actor 2)</label>
+                        <input type="text" x-model="issueFlow.actor2"
+                               placeholder="工號/Badge"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                        <div class="text-xs mt-1" :class="issueFlow.actor2 ? 'text-green-600' : 'text-gray-400'">
+                            <span x-show="issueFlow.actor2">✓ 已輸入</span>
+                            <span x-show="!issueFlow.actor2">未驗證</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 p-2 rounded-lg text-center text-sm"
+                     :class="dualVerificationStatus.class">
+                    <span x-text="dualVerificationStatus.text"></span>
+                </div>
+            </div>
+
             <!-- Issue Button - 簡化配色 -->
             <button @click="processIssue()"
                     :disabled="!canProcessIssue"
@@ -1186,7 +1222,10 @@
                     quantity: 1,
                     selectedUnits: [],
                     orderId: '',
-                    verbalOrderNote: ''
+                    verbalOrderNote: '',
+                    // Phase 3: Dual Verification (雙人核對)
+                    actor1: '',  // 發血人員
+                    actor2: ''   // 覆核人員
                 },
 
                 issueResult: {
@@ -1757,8 +1796,37 @@
                 // v2.3: Issue Flow Methods
                 // ======================================================
 
+                // Phase 3: Dual Verification Status
+                get dualVerificationStatus() {
+                    const { actor1, actor2 } = this.issueFlow;
+                    if (!actor1 || !actor2) {
+                        return {
+                            text: '⚠️ 需要兩位人員確認才能發血',
+                            class: 'bg-gray-100 text-gray-600',
+                            valid: false
+                        };
+                    }
+                    if (actor1 === actor2) {
+                        return {
+                            text: '❌ 兩位人員不可相同',
+                            class: 'bg-red-100 text-red-600',
+                            valid: false
+                        };
+                    }
+                    return {
+                        text: '✓ 雙人核對完成',
+                        class: 'bg-green-100 text-green-600',
+                        valid: true
+                    };
+                },
+
                 get canProcessIssue() {
-                    const { tier, patientId, patientLocation, manualLocation, selectedUnits, bloodType, quantity, orderId, verbalOrderNote } = this.issueFlow;
+                    const { tier, patientId, patientLocation, manualLocation, selectedUnits, bloodType, quantity, orderId, verbalOrderNote, actor1, actor2 } = this.issueFlow;
+
+                    // Phase 3: Require dual verification for all tiers
+                    if (!actor1 || !actor2 || actor1 === actor2) {
+                        return false;
+                    }
 
                     // v2.6: 合併位置來源
                     const hasLocation = patientLocation || manualLocation;
@@ -1923,6 +1991,24 @@
                         }
 
                         if (issuedUnits.length > 0) {
+                            // Phase 3: Record custody chain events for all issued units
+                            const { actor1, actor2 } = this.issueFlow;
+                            for (const unit of issuedUnits) {
+                                try {
+                                    await xIRS.API.post(`/api/blood/units/${unit.id}/custody`, {
+                                        step: 'RELEASED',
+                                        patient_id: patientId,
+                                        actor1_id: actor1,
+                                        actor2_id: actor2,
+                                        location: 'BLOOD_BANK',
+                                        notes: tier === 2 ? verbalOrderNote : null
+                                    });
+                                    console.log(`[Blood] Custody RELEASED recorded for ${unit.id}`);
+                                } catch (e) {
+                                    console.error(`[Blood] Failed to record custody for ${unit.id}:`, e);
+                                }
+                            }
+
                             // Show success modal with Location-First Display
                             const unitTypeLabel = unitType ? this.getUnitTypeLabel(unitType) : '';
                             this.issueResult = {
@@ -1962,7 +2048,10 @@
                         quantity: 1,
                         selectedUnits: [],
                         orderId: '',
-                        verbalOrderNote: ''
+                        verbalOrderNote: '',
+                        // Phase 3: Reset dual verification
+                        actor1: '',
+                        actor2: ''
                     };
                 },
 

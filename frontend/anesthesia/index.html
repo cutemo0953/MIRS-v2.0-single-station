@@ -1925,7 +1925,53 @@
                 <!-- Blood Unit ID (manual entry or auto-filled) -->
                 <div class="form-group" style="margin: 16px 0;">
                     <label class="form-label">血袋編號 (Unit ID)</label>
-                    <input type="text" class="form-input" id="bloodUnitId" placeholder="點選上方庫存或手動輸入條碼" style="font-size: 1.1rem; padding: 12px;">
+                    <input type="text" class="form-input" id="bloodUnitId" placeholder="點選上方庫存或手動輸入條碼" style="font-size: 1.1rem; padding: 12px;" onchange="verifyBloodUnit()">
+                </div>
+
+                <!-- Phase 1: Verification Result Section -->
+                <div id="bloodVerificationSection" style="display: none; margin: 16px 0; padding: 12px; border-radius: 8px; background: var(--bg);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="font-weight: 600;">驗證結果</span>
+                        <span id="verificationStatusBadge" style="font-size: 12px; padding: 2px 8px; border-radius: 4px;">檢查中...</span>
+                    </div>
+                    <div id="verificationDetails" style="font-size: 14px;">
+                        <div id="verifyBloodType" style="display: flex; align-items: center; gap: 6px; margin: 4px 0;">
+                            <span class="verify-icon">⏳</span> 血型相符
+                        </div>
+                        <div id="verifyExpiry" style="display: flex; align-items: center; gap: 6px; margin: 4px 0;">
+                            <span class="verify-icon">⏳</span> 效期有效
+                        </div>
+                        <div id="verifyStatus" style="display: flex; align-items: center; gap: 6px; margin: 4px 0;">
+                            <span class="verify-icon">⏳</span> 狀態可用
+                        </div>
+                    </div>
+                    <div id="verificationWarnings" style="display: none; margin-top: 8px; padding: 8px; background: rgba(251, 191, 36, 0.1); border-radius: 6px; color: #f59e0b; font-size: 13px;"></div>
+                    <div id="verificationErrors" style="display: none; margin-top: 8px; padding: 8px; background: rgba(239, 68, 68, 0.1); border-radius: 6px; color: #ef4444; font-size: 13px;"></div>
+                </div>
+
+                <!-- Phase 2: Dual Verification Section (兩人核對) -->
+                <div id="dualVerificationSection" style="display: none; margin: 16px 0; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(220, 38, 38, 0.05)); border: 1px solid rgba(220, 38, 38, 0.3);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <svg width="20" height="20" fill="none" stroke="#dc2626" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        <span style="font-weight: 600; color: #dc2626;">雙人核對 (Chain of Custody)</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label" style="font-size: 12px;">執行人員 (Actor 1)</label>
+                            <input type="text" class="form-input" id="custodyActor1" placeholder="工號/Badge" style="padding: 10px;" onchange="checkDualVerification()">
+                            <div id="actor1Status" style="font-size: 11px; margin-top: 4px; color: var(--text-muted);">未驗證</div>
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label" style="font-size: 12px;">覆核人員 (Actor 2)</label>
+                            <input type="text" class="form-input" id="custodyActor2" placeholder="工號/Badge" style="padding: 10px;" onchange="checkDualVerification()">
+                            <div id="actor2Status" style="font-size: 11px; margin-top: 4px; color: var(--text-muted);">未驗證</div>
+                        </div>
+                    </div>
+                    <div id="dualVerificationStatus" style="margin-top: 12px; padding: 8px; text-align: center; border-radius: 6px; background: rgba(255,255,255,0.1); font-size: 13px;">
+                        ⚠️ 需要兩位人員確認才能記錄輸血
+                    </div>
                 </div>
 
                 <!-- Action Type -->
@@ -2001,6 +2047,43 @@
                     <button class="btn" style="background: var(--card-hover); flex: 1;" onclick="backToBloodStep1()">返回</button>
                     <button class="btn btn-primary" style="flex: 2; background: #b91c1c;" onclick="submitBloodProduct()">確認記錄</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blood Type Mismatch Warning Modal -->
+    <div class="modal" id="bloodMismatchModal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div style="padding: 20px;">
+                <div style="font-size: 64px; margin-bottom: 16px;">⛔</div>
+                <h2 style="color: #ef4444; margin-bottom: 16px;">血型不符警告！</h2>
+                <div id="mismatchDetails" style="background: rgba(239, 68, 68, 0.1); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                    <div style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">
+                        血袋血型: <span id="mismatchUnitType" style="color: #ef4444;">--</span>
+                    </div>
+                    <div style="font-size: 24px; font-weight: 600;">
+                        病人血型: <span id="mismatchPatientType" style="color: #22c55e;">--</span>
+                    </div>
+                </div>
+                <p style="color: #f59e0b; margin-bottom: 20px;">
+                    ⚠️ 請立即停止，確認是否拿錯血袋
+                </p>
+                <button class="btn" style="width: 100%; background: #ef4444; padding: 14px;" onclick="closeModal('bloodMismatchModal')">
+                    我了解，關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custody Chain Timeline Modal (Phase 3) -->
+    <div class="modal" id="custodyTimelineModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title">血袋追蹤</h2>
+                <button class="modal-close" onclick="closeModal('custodyTimelineModal')">&times;</button>
+            </div>
+            <div id="custodyTimelineContent" style="padding: 16px;">
+                <!-- Timeline will be populated dynamically -->
             </div>
         </div>
     </div>
@@ -4082,12 +4165,269 @@
                 el.style.borderColor = 'transparent';
             });
             event.target.closest('.blood-inventory-item').style.borderColor = '#dc2626';
+            // Trigger verification
+            verifyBloodUnit();
+        }
+
+        // ================================================================
+        // Phase 1-3: Blood Chain of Custody Functions
+        // ================================================================
+
+        let bloodVerificationResult = null;
+        let dualVerificationPassed = false;
+
+        async function verifyBloodUnit() {
+            const unitId = document.getElementById('bloodUnitId').value.trim();
+            if (!unitId) {
+                document.getElementById('bloodVerificationSection').style.display = 'none';
+                document.getElementById('dualVerificationSection').style.display = 'none';
+                bloodVerificationResult = null;
+                return;
+            }
+
+            // Show verification section
+            const verifySection = document.getElementById('bloodVerificationSection');
+            verifySection.style.display = 'block';
+
+            // Reset to loading state
+            const statusBadge = document.getElementById('verificationStatusBadge');
+            statusBadge.textContent = '檢查中...';
+            statusBadge.style.background = '#6b7280';
+            statusBadge.style.color = 'white';
+
+            document.getElementById('verifyBloodType').innerHTML = '<span class="verify-icon">⏳</span> 血型相符';
+            document.getElementById('verifyExpiry').innerHTML = '<span class="verify-icon">⏳</span> 效期有效';
+            document.getElementById('verifyStatus').innerHTML = '<span class="verify-icon">⏳</span> 狀態可用';
+            document.getElementById('verificationWarnings').style.display = 'none';
+            document.getElementById('verificationErrors').style.display = 'none';
+
+            try {
+                // Get patient blood type from current case if available
+                const patientBloodType = currentCase?.patient_blood_type || null;
+
+                const res = await apiFetch('/api/blood/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        blood_unit_id: unitId,
+                        patient_id: currentCase?.patient_id || 'UNKNOWN',
+                        patient_blood_type: patientBloodType
+                    })
+                });
+
+                const data = await res.json();
+                bloodVerificationResult = data;
+
+                // Update UI based on result
+                const details = data.details || {};
+
+                // Blood type
+                if (details.blood_type_compatible === true) {
+                    document.getElementById('verifyBloodType').innerHTML = `<span class="verify-icon">✅</span> 血型相符 (${details.unit_blood_type || '--'})`;
+                } else if (details.blood_type_compatible === false) {
+                    document.getElementById('verifyBloodType').innerHTML = `<span class="verify-icon">❌</span> 血型不符！(血袋: ${details.unit_blood_type}, 病人: ${details.patient_blood_type})`;
+                    // Show mismatch warning modal
+                    showBloodMismatchWarning(details.unit_blood_type, details.patient_blood_type);
+                } else {
+                    document.getElementById('verifyBloodType').innerHTML = `<span class="verify-icon">⚠️</span> 血型: ${details.unit_blood_type || '--'} (未提供病人血型)`;
+                }
+
+                // Expiry
+                if (details.not_expired === true) {
+                    const hours = details.hours_until_expiry || 0;
+                    if (hours < 24) {
+                        document.getElementById('verifyExpiry').innerHTML = `<span class="verify-icon">⚠️</span> 即將過期 (剩餘 ${hours} 小時)`;
+                    } else {
+                        document.getElementById('verifyExpiry').innerHTML = `<span class="verify-icon">✅</span> 效期有效 (${details.expiry_date})`;
+                    }
+                } else {
+                    document.getElementById('verifyExpiry').innerHTML = '<span class="verify-icon">❌</span> 已過期！';
+                }
+
+                // Status
+                if (details.status_valid === true) {
+                    document.getElementById('verifyStatus').innerHTML = `<span class="verify-icon">✅</span> 狀態可用 (${details.current_status || 'AVAILABLE'})`;
+                } else {
+                    document.getElementById('verifyStatus').innerHTML = `<span class="verify-icon">❌</span> 狀態不可用 (${details.current_status})`;
+                }
+
+                // Overall status
+                if (data.match) {
+                    statusBadge.textContent = '✓ 驗證通過';
+                    statusBadge.style.background = '#22c55e';
+                    // Show dual verification section for START action
+                    document.getElementById('dualVerificationSection').style.display = 'block';
+                    // Pre-fill actor1 with current user
+                    if (actorId && !document.getElementById('custodyActor1').value) {
+                        document.getElementById('custodyActor1').value = actorId;
+                        checkDualVerification();
+                    }
+                } else {
+                    statusBadge.textContent = '✗ 驗證失敗';
+                    statusBadge.style.background = '#ef4444';
+                    document.getElementById('dualVerificationSection').style.display = 'none';
+                }
+
+                // Warnings
+                if (data.warnings && data.warnings.length > 0) {
+                    const warningsDiv = document.getElementById('verificationWarnings');
+                    warningsDiv.innerHTML = '⚠️ ' + data.warnings.join('<br>⚠️ ');
+                    warningsDiv.style.display = 'block';
+                }
+
+                // Errors
+                if (data.errors && data.errors.length > 0) {
+                    const errorsDiv = document.getElementById('verificationErrors');
+                    errorsDiv.innerHTML = '❌ ' + data.errors.join('<br>❌ ');
+                    errorsDiv.style.display = 'block';
+                }
+
+            } catch (err) {
+                console.error('Blood verification failed:', err);
+                statusBadge.textContent = '驗證失敗';
+                statusBadge.style.background = '#6b7280';
+                bloodVerificationResult = null;
+            }
+        }
+
+        function showBloodMismatchWarning(unitType, patientType) {
+            document.getElementById('mismatchUnitType').textContent = unitType || '--';
+            document.getElementById('mismatchPatientType').textContent = patientType || '--';
+            document.getElementById('bloodMismatchModal').classList.add('active');
+        }
+
+        function checkDualVerification() {
+            const actor1 = document.getElementById('custodyActor1').value.trim();
+            const actor2 = document.getElementById('custodyActor2').value.trim();
+            const statusDiv = document.getElementById('dualVerificationStatus');
+
+            // Update individual status
+            document.getElementById('actor1Status').innerHTML = actor1 ? '✓ 已輸入' : '未驗證';
+            document.getElementById('actor1Status').style.color = actor1 ? '#22c55e' : 'var(--text-muted)';
+
+            document.getElementById('actor2Status').innerHTML = actor2 ? '✓ 已輸入' : '未驗證';
+            document.getElementById('actor2Status').style.color = actor2 ? '#22c55e' : 'var(--text-muted)';
+
+            // Check if both are filled
+            if (actor1 && actor2) {
+                if (actor1 === actor2) {
+                    statusDiv.innerHTML = '❌ 兩位人員不可相同';
+                    statusDiv.style.background = 'rgba(239, 68, 68, 0.2)';
+                    statusDiv.style.color = '#ef4444';
+                    dualVerificationPassed = false;
+                } else {
+                    statusDiv.innerHTML = '✓ 雙人核對完成';
+                    statusDiv.style.background = 'rgba(34, 197, 94, 0.2)';
+                    statusDiv.style.color = '#22c55e';
+                    dualVerificationPassed = true;
+                }
+            } else {
+                statusDiv.innerHTML = '⚠️ 需要兩位人員確認才能記錄輸血';
+                statusDiv.style.background = 'rgba(255,255,255,0.1)';
+                statusDiv.style.color = 'var(--text)';
+                dualVerificationPassed = false;
+            }
+        }
+
+        async function recordCustodyEvent(unitId, step, patientId) {
+            const actor1 = document.getElementById('custodyActor1').value.trim();
+            const actor2 = document.getElementById('custodyActor2').value.trim();
+
+            try {
+                const res = await apiFetch(`/api/blood/units/${unitId}/custody`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        step: step,
+                        patient_id: patientId,
+                        actor1_id: actor1 || actorId,
+                        actor2_id: actor2 || null,
+                        location: 'OR',  // TODO: Get from case or config
+                        notes: null
+                    })
+                });
+
+                const data = await res.json();
+                console.log('Custody event recorded:', data);
+                return data;
+            } catch (err) {
+                console.error('Failed to record custody event:', err);
+                return null;
+            }
+        }
+
+        async function showCustodyTimeline(unitId) {
+            try {
+                const res = await apiFetch(`/api/blood/units/${unitId}/custody`);
+                const data = await res.json();
+
+                const content = document.getElementById('custodyTimelineContent');
+                const chain = data.chain || [];
+
+                if (chain.length === 0) {
+                    content.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">尚無追蹤記錄</div>';
+                } else {
+                    content.innerHTML = `
+                        <div style="margin-bottom: 16px; padding: 12px; background: var(--bg); border-radius: 8px;">
+                            <div style="font-weight: 600;">血袋: ${unitId}</div>
+                            <div style="font-size: 14px; color: var(--text-muted);">血型: ${data.blood_type} | 病人: ${data.patient_id || '--'}</div>
+                        </div>
+                        <div class="custody-timeline">
+                            ${chain.map((event, idx) => `
+                                <div class="custody-event" style="display: flex; gap: 12px; margin-bottom: 16px;">
+                                    <div style="width: 40px; text-align: center;">
+                                        <div style="width: 12px; height: 12px; background: ${idx === chain.length - 1 ? '#22c55e' : '#6b7280'}; border-radius: 50%; margin: 4px auto;"></div>
+                                        ${idx < chain.length - 1 ? '<div style="width: 2px; height: 40px; background: #334155; margin: 0 auto;"></div>' : ''}
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600;">${getStepLabel(event.step)}</div>
+                                        <div style="font-size: 12px; color: var(--text-muted);">${event.timestamp ? new Date(event.timestamp).toLocaleString('zh-TW') : '--'}</div>
+                                        <div style="font-size: 12px; margin-top: 4px;">
+                                            ${event.actor1 ? `執行: ${event.actor1.name || event.actor1.id}` : ''}
+                                            ${event.actor2 ? ` | 覆核: ${event.actor2.name || event.actor2.id}` : ''}
+                                        </div>
+                                        <div style="font-size: 12px; color: var(--text-muted);">${event.location || ''}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div style="text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 16px;">
+                            總時間: ${data.elapsed_minutes || 0} 分鐘
+                        </div>
+                    `;
+                }
+
+                document.getElementById('custodyTimelineModal').classList.add('active');
+            } catch (err) {
+                console.error('Failed to load custody timeline:', err);
+            }
+        }
+
+        function getStepLabel(step) {
+            const labels = {
+                'RELEASED': '📦 血庫發血',
+                'TRANSPORT_PICKUP': '🚚 傳送取血',
+                'TRANSPORT_DELIVERY': '🚚 傳送送達',
+                'NURSING_RECEIVED': '📥 護理收血',
+                'TRANSFUSION_STARTED': '💉 開始輸血',
+                'TRANSFUSION_COMPLETED': '✅ 輸血完成',
+                'TRANSFUSION_STOPPED': '⚠️ 輸血中止',
+                'RETURNED': '↩️ 退血'
+            };
+            return labels[step] || step;
         }
 
         function backToBloodStep1() {
             document.getElementById('bloodStep1').style.display = 'block';
             document.getElementById('bloodStep2').style.display = 'none';
             selectedBloodProduct = null;
+            // Reset verification states
+            bloodVerificationResult = null;
+            dualVerificationPassed = false;
+            document.getElementById('bloodVerificationSection').style.display = 'none';
+            document.getElementById('dualVerificationSection').style.display = 'none';
+            document.getElementById('custodyActor1').value = '';
+            document.getElementById('custodyActor2').value = '';
         }
 
         function selectBloodAction(action) {
@@ -4134,6 +4474,22 @@
                 return;
             }
 
+            // Phase 2: Check dual verification for START action
+            if (selectedBloodAction === 'START') {
+                const actor1 = document.getElementById('custodyActor1').value.trim();
+                const actor2 = document.getElementById('custodyActor2').value.trim();
+
+                if (!actor1 || !actor2) {
+                    alert('開始輸血需要雙人核對，請填寫兩位人員工號');
+                    return;
+                }
+
+                if (actor1 === actor2) {
+                    alert('兩位核對人員不可相同');
+                    return;
+                }
+            }
+
             try {
                 // Get time offset data
                 const timeData = getTimeOffsetData('blood');
@@ -4175,7 +4531,22 @@
 
                 if (!res.ok) throw new Error('Failed');
 
+                // Phase 2-3: Record custody event
+                const custodyStepMap = {
+                    'START': 'TRANSFUSION_STARTED',
+                    'COMPLETE': 'TRANSFUSION_COMPLETED',
+                    'REACTION': 'TRANSFUSION_STOPPED'
+                };
+                const custodyStep = custodyStepMap[selectedBloodAction];
+                if (custodyStep) {
+                    await recordCustodyEvent(unitId, custodyStep, currentCase.patient_id);
+                }
+
                 closeModal('bloodModal');
+
+                // Reset verification states
+                bloodVerificationResult = null;
+                dualVerificationPassed = false;
 
                 // Show action-specific success message
                 const actionLabels = {

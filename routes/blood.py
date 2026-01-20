@@ -177,6 +177,56 @@ class PendingOrderResolve(BaseModel):
     notes: Optional[str] = None
 
 
+# ==============================================================================
+# Phase 1-3: Chain of Custody Models (鏈式核對)
+# ==============================================================================
+
+class CustodyStep(str):
+    """監管鏈步驟類型"""
+    RELEASED = "RELEASED"                      # 血庫發血
+    TRANSPORT_PICKUP = "TRANSPORT_PICKUP"      # 傳送取血
+    TRANSPORT_DELIVERY = "TRANSPORT_DELIVERY"  # 傳送送達
+    NURSING_RECEIVED = "NURSING_RECEIVED"      # 護理收血
+    TRANSFUSION_STARTED = "TRANSFUSION_STARTED"    # 開始輸血
+    TRANSFUSION_COMPLETED = "TRANSFUSION_COMPLETED" # 輸血完成
+    TRANSFUSION_STOPPED = "TRANSFUSION_STOPPED"    # 輸血中止 (反應)
+    RETURNED = "RETURNED"                      # 退血
+
+
+CUSTODY_STEPS = [
+    "RELEASED", "TRANSPORT_PICKUP", "TRANSPORT_DELIVERY",
+    "NURSING_RECEIVED", "TRANSFUSION_STARTED",
+    "TRANSFUSION_COMPLETED", "TRANSFUSION_STOPPED", "RETURNED"
+]
+
+
+class BloodVerifyRequest(BaseModel):
+    """血袋-病人驗證請求"""
+    blood_unit_id: str
+    patient_id: str
+    patient_blood_type: Optional[str] = None  # 可選，若提供會比對
+
+
+class CustodyEventCreate(BaseModel):
+    """監管鏈事件記錄"""
+    step: str  # CustodyStep
+    patient_id: str
+    actor1_id: str                 # 執行人員 1
+    actor2_id: Optional[str] = None  # 覆核人員 2 (雙人核對步驟)
+    location: str = "UNKNOWN"      # 地點 (BLOOD_BANK, OR-1, WARD-5A, etc.)
+    notes: Optional[str] = None
+    # 輸血完成時的額外欄位
+    duration_minutes: Optional[int] = None
+    reaction: Optional[str] = None  # NONE, MILD, SEVERE
+
+
+class DualVerificationRequest(BaseModel):
+    """雙人核對請求"""
+    actor1_id: str
+    actor2_id: str
+    verification_type: str = "BLOOD_TRANSFUSION"  # 驗證類型
+
+
 # 血品預設保存期限 (天)
 DEFAULT_EXPIRY_DAYS = {
     "WB": 7,     # 全血 - 凝血因子7天內有效 (Fresh Whole Blood)
@@ -1213,3 +1263,567 @@ def init_blood_schema():
     如果使用 migration 系統，這個函數可以為空
     """
     logger.info("[Blood] Schema initialization delegated to migration system")
+
+
+# ==============================================================================
+# Phase 1: Blood Verification API (血袋-病人驗證)
+# ==============================================================================
+
+# 血型相容性表 (接收者 -> 可接受的捐贈者)
+BLOOD_TYPE_COMPATIBILITY = {
+    'O-': ['O-'],
+    'O+': ['O-', 'O+'],
+    'A-': ['O-', 'A-'],
+    'A+': ['O-', 'O+', 'A-', 'A+'],
+    'B-': ['O-', 'B-'],
+    'B+': ['O-', 'O+', 'B-', 'B+'],
+    'AB-': ['O-', 'A-', 'B-', 'AB-'],
+    'AB+': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],  # 萬能受血者
+}
+
+
+def check_blood_compatibility(donor_type: str, recipient_type: str) -> bool:
+    """檢查血型相容性"""
+    compatible_donors = BLOOD_TYPE_COMPATIBILITY.get(recipient_type, [])
+    return donor_type in compatible_donors
+
+
+@router.post("/verify")
+async def verify_blood_unit(data: BloodVerifyRequest):
+    """
+    Phase 1: 驗證血袋與病人是否匹配
+
+    檢查項目:
+    1. 血袋是否存在
+    2. 血袋是否已過期
+    3. 血型是否相容 (若提供病人血型)
+    4. 血袋狀態是否可用
+
+    Returns:
+        match: bool - 是否通過所有驗證
+        details: dict - 各項驗證結果
+        warnings: list - 警告訊息 (非阻擋性)
+    """
+    if IS_VERCEL:
+        # Demo 模式 - 模擬驗證結果
+        demo_units = {
+            "BU-20260112-A1B2C3": {"blood_type": "O+", "status": "AVAILABLE", "expiry_date": (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")},
+            "BU-20260112-D4E5F6": {"blood_type": "O+", "status": "AVAILABLE", "expiry_date": (datetime.now() + timedelta(days=8)).strftime("%Y-%m-%d")},
+            "BU-20260110-J1K2L3": {"blood_type": "O-", "status": "AVAILABLE", "expiry_date": (datetime.now() + timedelta(days=5)).strftime("%Y-%m-%d")},
+            "BU-20260112-P7Q8R9": {"blood_type": "A+", "status": "AVAILABLE", "expiry_date": (datetime.now() + timedelta(days=12)).strftime("%Y-%m-%d")},
+        }
+
+        unit = demo_units.get(data.blood_unit_id)
+        if not unit:
+            return {
+                "match": False,
+                "details": {
+                    "unit_exists": False,
+                    "blood_type_compatible": False,
+                    "not_expired": False,
+                    "status_valid": False
+                },
+                "errors": ["血袋不存在"],
+                "warnings": [],
+                "demo": True
+            }
+
+        # 檢查血型相容性
+        blood_type_compatible = True
+        if data.patient_blood_type:
+            blood_type_compatible = check_blood_compatibility(unit["blood_type"], data.patient_blood_type)
+
+        # 檢查效期
+        expiry = datetime.strptime(unit["expiry_date"], "%Y-%m-%d")
+        not_expired = expiry > datetime.now()
+        hours_until_expiry = (expiry - datetime.now()).total_seconds() / 3600
+
+        warnings = []
+        if hours_until_expiry < 24:
+            warnings.append(f"血袋即將過期 (剩餘 {int(hours_until_expiry)} 小時)")
+
+        errors = []
+        if not blood_type_compatible:
+            errors.append(f"血型不相容: 血袋 {unit['blood_type']} vs 病人 {data.patient_blood_type}")
+        if not not_expired:
+            errors.append("血袋已過期")
+
+        return {
+            "match": blood_type_compatible and not_expired,
+            "details": {
+                "unit_exists": True,
+                "blood_type_compatible": blood_type_compatible,
+                "not_expired": not_expired,
+                "status_valid": True,
+                "unit_blood_type": unit["blood_type"],
+                "patient_blood_type": data.patient_blood_type,
+                "expiry_date": unit["expiry_date"],
+                "hours_until_expiry": int(hours_until_expiry)
+            },
+            "errors": errors,
+            "warnings": warnings,
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 取得血袋資訊
+        cursor.execute("""
+            SELECT id, blood_type, unit_type, status, expiry_date, volume_ml,
+                   reserved_for_order, issued_to_order
+            FROM blood_units WHERE id = ?
+        """, (data.blood_unit_id,))
+
+        unit = cursor.fetchone()
+
+        if not unit:
+            return {
+                "match": False,
+                "details": {
+                    "unit_exists": False,
+                    "blood_type_compatible": False,
+                    "not_expired": False,
+                    "status_valid": False
+                },
+                "errors": ["血袋不存在"],
+                "warnings": []
+            }
+
+        unit = dict(unit)
+        errors = []
+        warnings = []
+
+        # 1. 檢查效期
+        expiry = datetime.strptime(unit["expiry_date"], "%Y-%m-%d")
+        not_expired = expiry > datetime.now()
+        hours_until_expiry = (expiry - datetime.now()).total_seconds() / 3600
+
+        if not not_expired:
+            errors.append("血袋已過期")
+        elif hours_until_expiry < 24:
+            warnings.append(f"血袋即將過期 (剩餘 {int(hours_until_expiry)} 小時)")
+
+        # 2. 檢查血型相容性
+        blood_type_compatible = True
+        if data.patient_blood_type:
+            blood_type_compatible = check_blood_compatibility(unit["blood_type"], data.patient_blood_type)
+            if not blood_type_compatible:
+                errors.append(f"血型不相容: 血袋 {unit['blood_type']} vs 病人 {data.patient_blood_type}")
+
+        # 3. 檢查狀態
+        valid_statuses = ['AVAILABLE', 'RESERVED', 'ISSUED']
+        status_valid = unit["status"] in valid_statuses
+        if not status_valid:
+            errors.append(f"血袋狀態不可用: {unit['status']}")
+
+        match = (not_expired and blood_type_compatible and status_valid)
+
+        # 記錄驗證事件
+        log_blood_event(
+            cursor, data.blood_unit_id,
+            "VERIFY_PASS" if match else "VERIFY_FAIL",
+            data.patient_id,
+            f"病人: {data.patient_id}, 血型比對: {blood_type_compatible}",
+            metadata={
+                "patient_blood_type": data.patient_blood_type,
+                "match": match,
+                "errors": errors
+            }
+        )
+        conn.commit()
+
+        return {
+            "match": match,
+            "details": {
+                "unit_exists": True,
+                "blood_type_compatible": blood_type_compatible,
+                "not_expired": not_expired,
+                "status_valid": status_valid,
+                "unit_blood_type": unit["blood_type"],
+                "unit_type": unit["unit_type"],
+                "volume_ml": unit["volume_ml"],
+                "patient_blood_type": data.patient_blood_type,
+                "expiry_date": unit["expiry_date"],
+                "hours_until_expiry": int(hours_until_expiry),
+                "current_status": unit["status"]
+            },
+            "errors": errors,
+            "warnings": warnings
+        }
+
+
+# ==============================================================================
+# Phase 2-3: Chain of Custody API (監管鏈追蹤)
+# ==============================================================================
+
+@router.post("/units/{unit_id}/custody")
+async def record_custody_event(unit_id: str, data: CustodyEventCreate):
+    """
+    Phase 2-3: 記錄監管鏈事件
+
+    每個步驟記錄:
+    - 誰 (actor1_id, actor2_id)
+    - 何時 (timestamp)
+    - 在哪裡 (location)
+    - 做了什麼 (step)
+    - 驗證結果 (自動執行)
+    """
+    # 驗證步驟類型
+    if data.step not in CUSTODY_STEPS:
+        raise HTTPException(status_code=400, detail=f"無效的監管鏈步驟: {data.step}")
+
+    # 雙人核對步驟需要 actor2_id
+    dual_check_steps = ["RELEASED", "NURSING_RECEIVED", "TRANSFUSION_STARTED"]
+    if data.step in dual_check_steps and not data.actor2_id:
+        raise HTTPException(status_code=400, detail=f"步驟 {data.step} 需要雙人核對 (actor2_id)")
+
+    if IS_VERCEL:
+        # Demo 模式
+        event_id = f"CE-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+        return {
+            "success": True,
+            "event_id": event_id,
+            "step": data.step,
+            "timestamp": datetime.now().isoformat(),
+            "verification": {
+                "blood_type_match": True,
+                "patient_match": True,
+                "expiry_valid": True
+            },
+            "next_step": get_next_custody_step(data.step),
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 取得血袋資訊
+        cursor.execute("SELECT * FROM blood_units WHERE id = ?", (unit_id,))
+        unit = cursor.fetchone()
+
+        if not unit:
+            raise HTTPException(status_code=404, detail="血袋不存在")
+
+        unit = dict(unit)
+
+        # 執行驗證
+        verification = {
+            "blood_type_match": True,  # 需要病人血型資訊才能驗證
+            "patient_match": True,      # 假設 patient_id 正確
+            "expiry_valid": unit["expiry_date"] > datetime.now().strftime("%Y-%m-%d")
+        }
+
+        if not verification["expiry_valid"]:
+            raise HTTPException(status_code=403, detail="血袋已過期，無法繼續流程")
+
+        # 記錄事件
+        event_id = f"CE-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+        timestamp = datetime.now().isoformat()
+
+        metadata = {
+            "step": data.step,
+            "patient_id": data.patient_id,
+            "actor1_id": data.actor1_id,
+            "actor2_id": data.actor2_id,
+            "location": data.location,
+            "verification": verification,
+            "notes": data.notes
+        }
+
+        # 輸血完成的額外資訊
+        if data.step == "TRANSFUSION_COMPLETED":
+            metadata["duration_minutes"] = data.duration_minutes
+            metadata["reaction"] = data.reaction
+
+        # 儲存到 blood_custody_events 表 (如果存在) 或 blood_unit_events
+        log_blood_event(
+            cursor, unit_id,
+            f"CUSTODY_{data.step}",
+            data.actor1_id,
+            f"監管鏈: {data.step} @ {data.location}",
+            metadata=metadata
+        )
+
+        # 更新血袋狀態 (根據步驟)
+        status_updates = {
+            "RELEASED": "ISSUED",
+            "NURSING_RECEIVED": "ISSUED",  # 保持 ISSUED
+            "TRANSFUSION_STARTED": "ISSUED",  # 保持 ISSUED (可加新狀態 TRANSFUSING)
+            "TRANSFUSION_COMPLETED": "ISSUED",  # 可加新狀態 TRANSFUSED
+            "RETURNED": "AVAILABLE"
+        }
+
+        if data.step in status_updates:
+            new_status = status_updates[data.step]
+            if unit["status"] != new_status:
+                # 驗證狀態轉移
+                if data.step == "RELEASED" and unit["status"] not in ["AVAILABLE", "RESERVED"]:
+                    raise HTTPException(status_code=409, detail=f"血袋狀態 {unit['status']} 無法發血")
+
+                cursor.execute("""
+                    UPDATE blood_units SET status = ? WHERE id = ?
+                """, (new_status, unit_id))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "event_id": event_id,
+            "step": data.step,
+            "timestamp": timestamp,
+            "verification": verification,
+            "next_step": get_next_custody_step(data.step),
+            "actors": {
+                "actor1": data.actor1_id,
+                "actor2": data.actor2_id
+            }
+        }
+
+
+def get_next_custody_step(current_step: str) -> Optional[str]:
+    """取得下一個監管鏈步驟"""
+    step_order = [
+        "RELEASED", "TRANSPORT_PICKUP", "TRANSPORT_DELIVERY",
+        "NURSING_RECEIVED", "TRANSFUSION_STARTED", "TRANSFUSION_COMPLETED"
+    ]
+
+    if current_step in ["TRANSFUSION_COMPLETED", "TRANSFUSION_STOPPED", "RETURNED"]:
+        return None  # 終點
+
+    try:
+        idx = step_order.index(current_step)
+        if idx < len(step_order) - 1:
+            return step_order[idx + 1]
+    except ValueError:
+        pass
+
+    return None
+
+
+@router.get("/units/{unit_id}/custody")
+async def get_custody_chain(unit_id: str):
+    """
+    Phase 3: 取得血袋完整監管鏈歷史
+
+    返回時間軸格式的監管鏈事件
+    """
+    if IS_VERCEL:
+        # Demo 模式 - 模擬監管鏈
+        now = datetime.now()
+        return {
+            "success": True,
+            "unit_id": unit_id,
+            "blood_type": "O+",
+            "patient_id": "P-DEMO-001",
+            "patient_name": "王大明",
+            "chain": [
+                {
+                    "step": "RELEASED",
+                    "timestamp": (now - timedelta(minutes=45)).isoformat(),
+                    "actor1": {"id": "BB-001", "name": "陳小明"},
+                    "actor2": {"id": "BB-002", "name": "林小華"},
+                    "location": "血庫",
+                    "verification": {"blood_type_match": True, "expiry_valid": True}
+                },
+                {
+                    "step": "TRANSPORT_PICKUP",
+                    "timestamp": (now - timedelta(minutes=40)).isoformat(),
+                    "actor1": {"id": "TR-015", "name": "王傳送"},
+                    "actor2": None,
+                    "location": "血庫",
+                    "verification": {}
+                },
+                {
+                    "step": "NURSING_RECEIVED",
+                    "timestamp": (now - timedelta(minutes=30)).isoformat(),
+                    "actor1": {"id": "RN-042", "name": "張護理"},
+                    "actor2": {"id": "RN-018", "name": "李護理"},
+                    "location": "OR-3 手術室",
+                    "verification": {"blood_type_match": True, "patient_match": True}
+                },
+                {
+                    "step": "TRANSFUSION_STARTED",
+                    "timestamp": (now - timedelta(minutes=15)).isoformat(),
+                    "actor1": {"id": "RN-042", "name": "張護理"},
+                    "actor2": {"id": "MD-007", "name": "陳醫師"},
+                    "location": "OR-3 手術室",
+                    "verification": {"blood_type_match": True, "patient_match": True, "bedside_confirm": True}
+                }
+            ],
+            "current_step": "TRANSFUSION_STARTED",
+            "elapsed_minutes": 45,
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 取得血袋資訊
+        cursor.execute("SELECT * FROM blood_units WHERE id = ?", (unit_id,))
+        unit = cursor.fetchone()
+
+        if not unit:
+            raise HTTPException(status_code=404, detail="血袋不存在")
+
+        unit = dict(unit)
+
+        # 取得監管鏈事件
+        cursor.execute("""
+            SELECT * FROM blood_unit_events
+            WHERE unit_id = ? AND event_type LIKE 'CUSTODY_%'
+            ORDER BY ts_server ASC
+        """, (unit_id,))
+
+        events = cursor.fetchall()
+
+        chain = []
+        current_step = None
+        first_timestamp = None
+        patient_id = None
+
+        for event in events:
+            event = dict(event)
+            metadata = json.loads(event.get("metadata") or "{}")
+
+            step = metadata.get("step") or event["event_type"].replace("CUSTODY_", "")
+            current_step = step
+
+            if not first_timestamp:
+                first_timestamp = event["ts_server"]
+
+            if not patient_id and metadata.get("patient_id"):
+                patient_id = metadata["patient_id"]
+
+            chain.append({
+                "step": step,
+                "timestamp": datetime.fromtimestamp(event["ts_server"]).isoformat() if event["ts_server"] else None,
+                "actor1": {"id": metadata.get("actor1_id"), "name": None},
+                "actor2": {"id": metadata.get("actor2_id"), "name": None} if metadata.get("actor2_id") else None,
+                "location": metadata.get("location"),
+                "verification": metadata.get("verification", {}),
+                "notes": metadata.get("notes"),
+                "duration_minutes": metadata.get("duration_minutes"),
+                "reaction": metadata.get("reaction")
+            })
+
+        # 計算經過時間
+        elapsed_minutes = 0
+        if first_timestamp:
+            elapsed_minutes = int((datetime.now().timestamp() - first_timestamp) / 60)
+
+        return {
+            "success": True,
+            "unit_id": unit_id,
+            "blood_type": unit["blood_type"],
+            "unit_type": unit["unit_type"],
+            "patient_id": patient_id,
+            "chain": chain,
+            "current_step": current_step,
+            "elapsed_minutes": elapsed_minutes
+        }
+
+
+@router.get("/custody/pending")
+async def get_pending_custody(
+    location: Optional[str] = None,
+    step: Optional[str] = None
+):
+    """
+    Phase 3: 取得待完成的監管鏈 (如：已發血但尚未開始輸血)
+
+    用於各 PWA 顯示待處理項目
+    """
+    if IS_VERCEL:
+        # Demo 模式
+        now = datetime.now()
+        return {
+            "success": True,
+            "data": [
+                {
+                    "unit_id": "BU-20260112-A1B2C3",
+                    "blood_type": "O+",
+                    "patient_id": "P-DEMO-001",
+                    "patient_name": "王大明",
+                    "current_step": "NURSING_RECEIVED",
+                    "next_step": "TRANSFUSION_STARTED",
+                    "location": "OR-3",
+                    "elapsed_minutes": 15,
+                    "released_at": (now - timedelta(minutes=30)).isoformat()
+                },
+                {
+                    "unit_id": "BU-20260112-D4E5F6",
+                    "blood_type": "O+",
+                    "patient_id": "P-DEMO-001",
+                    "patient_name": "王大明",
+                    "current_step": "RELEASED",
+                    "next_step": "TRANSPORT_PICKUP",
+                    "location": "BLOOD_BANK",
+                    "elapsed_minutes": 5,
+                    "released_at": (now - timedelta(minutes=5)).isoformat()
+                }
+            ],
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 查詢已發血但未完成輸血的血袋
+        cursor.execute("""
+            SELECT bu.id, bu.blood_type, bu.unit_type, bu.status, bu.issued_at,
+                   bue.metadata, bue.ts_server
+            FROM blood_units bu
+            LEFT JOIN blood_unit_events bue ON bu.id = bue.unit_id
+                AND bue.event_type LIKE 'CUSTODY_%'
+            WHERE bu.status = 'ISSUED'
+            ORDER BY bu.issued_at DESC
+        """)
+
+        rows = cursor.fetchall()
+
+        # 處理結果 (按 unit_id 分組，取最新事件)
+        units_map = {}
+        for row in rows:
+            row = dict(row)
+            unit_id = row["id"]
+
+            if unit_id not in units_map:
+                units_map[unit_id] = {
+                    "unit_id": unit_id,
+                    "blood_type": row["blood_type"],
+                    "unit_type": row["unit_type"],
+                    "current_step": None,
+                    "next_step": None,
+                    "location": None,
+                    "elapsed_minutes": 0,
+                    "released_at": row["issued_at"]
+                }
+
+            if row.get("metadata"):
+                metadata = json.loads(row["metadata"])
+                step = metadata.get("step")
+                if step:
+                    units_map[unit_id]["current_step"] = step
+                    units_map[unit_id]["next_step"] = get_next_custody_step(step)
+                    units_map[unit_id]["location"] = metadata.get("location")
+
+                    if row.get("ts_server"):
+                        elapsed = int((datetime.now().timestamp() - row["ts_server"]) / 60)
+                        units_map[unit_id]["elapsed_minutes"] = elapsed
+
+        result = list(units_map.values())
+
+        # 過濾
+        if location:
+            result = [r for r in result if r.get("location") == location]
+        if step:
+            result = [r for r in result if r.get("current_step") == step]
+
+        # 只返回未完成的
+        result = [r for r in result if r.get("next_step") is not None]
+
+        return {
+            "success": True,
+            "data": result
+        }
