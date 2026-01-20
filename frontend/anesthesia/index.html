@@ -1199,6 +1199,12 @@
                     </svg>
                     <span>姿勢</span>
                 </button>
+                <button class="quick-btn" onclick="showTechniqueModal()" style="background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                    </svg>
+                    <span>特殊技術</span>
+                </button>
             </div>
 
             <!-- Timeline v1.4 - Default to Chart View (horizontal scroll like traditional anesthesia record) -->
@@ -1352,13 +1358,31 @@
                 <div class="form-group">
                     <label class="form-label">麻醉方式</label>
                     <select class="form-input" id="newTechnique">
-                        <option value="GA_ETT">全身麻醉 (ETT)</option>
-                        <option value="GA_LMA">全身麻醉 (LMA)</option>
-                        <option value="RA_SPINAL">脊椎麻醉</option>
-                        <option value="RA_EPIDURAL">硬膜外麻醉</option>
-                        <option value="LA">局部麻醉</option>
-                        <option value="SEDATION">鎮靜</option>
+                        <option value="GA">全身麻醉 (GA)</option>
+                        <option value="GA_ETT">全身麻醉 - 插管 (ETT)</option>
+                        <option value="GA_LMA">全身麻醉 - 喉罩 (LMA)</option>
+                        <option value="RA_SPINAL">脊椎麻醉 (Spinal)</option>
+                        <option value="RA_EPIDURAL">硬膜外麻醉 (Epidural)</option>
+                        <option value="RA_NERVE">神經阻斷 (Nerve Block)</option>
+                        <option value="MAC">監測麻醉照護 (MAC)</option>
+                        <option value="LA">局部麻醉 (Local)</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ASA 分級</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select class="form-input" id="newAsaClass" style="flex: 1;">
+                            <option value="I">ASA I - 健康</option>
+                            <option value="II">ASA II - 輕度全身疾病</option>
+                            <option value="III">ASA III - 嚴重全身疾病</option>
+                            <option value="IV">ASA IV - 危及生命</option>
+                            <option value="V">ASA V - 瀕死</option>
+                        </select>
+                        <label style="display: flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 14px;">
+                            <input type="checkbox" id="newAsaEmergency" style="width: 18px; height: 18px;">
+                            <span style="color: var(--warning-color);">+E 急診</span>
+                        </label>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">模式</label>
@@ -2485,6 +2509,119 @@
             </div>
         </div>
     </div>
+
+    <!-- Special Technique Modal (v1.1 Billing Integration) -->
+    <div class="modal" id="techniqueModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>特殊技術記錄</h3>
+                <button class="close-btn" onclick="closeModal('techniqueModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">選擇已執行的特殊技術 (可複選，用於計費)</p>
+                <div class="technique-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <label class="technique-toggle" id="techCVP">
+                        <input type="checkbox" value="CVP" onchange="toggleTechnique(this)">
+                        <div class="technique-card">
+                            <div class="technique-name">CVP</div>
+                            <div class="technique-desc">中央靜脈導管</div>
+                        </div>
+                    </label>
+                    <label class="technique-toggle" id="techART">
+                        <input type="checkbox" value="ART" onchange="toggleTechnique(this)">
+                        <div class="technique-card">
+                            <div class="technique-name">A-Line</div>
+                            <div class="technique-desc">動脈導管</div>
+                        </div>
+                    </label>
+                    <label class="technique-toggle" id="techTEE">
+                        <input type="checkbox" value="TEE" onchange="toggleTechnique(this)">
+                        <div class="technique-card">
+                            <div class="technique-name">TEE</div>
+                            <div class="technique-desc">經食道心超</div>
+                        </div>
+                    </label>
+                    <label class="technique-toggle" id="techBIS">
+                        <input type="checkbox" value="BIS" onchange="toggleTechnique(this)">
+                        <div class="technique-card">
+                            <div class="technique-name">BIS</div>
+                            <div class="technique-desc">腦電雙頻指數</div>
+                        </div>
+                    </label>
+                    <label class="technique-toggle" id="techULTRASOUND">
+                        <input type="checkbox" value="ULTRASOUND" onchange="toggleTechnique(this)">
+                        <div class="technique-card">
+                            <div class="technique-name">超音波導引</div>
+                            <div class="technique-desc">Ultrasound-guided</div>
+                        </div>
+                    </label>
+                    <label class="technique-toggle" id="techFIBER">
+                        <input type="checkbox" value="FIBER_INTUB" onchange="toggleTechnique(this)">
+                        <div class="technique-card">
+                            <div class="technique-name">纖維插管</div>
+                            <div class="technique-desc">Fiberoptic Intub.</div>
+                        </div>
+                    </label>
+                    <label class="technique-toggle" id="techDLT">
+                        <input type="checkbox" value="DLT" onchange="toggleTechnique(this)">
+                        <div class="technique-card">
+                            <div class="technique-name">DLT</div>
+                            <div class="technique-desc">雙腔氣管內管</div>
+                        </div>
+                    </label>
+                    <label class="technique-toggle" id="techNERVE">
+                        <input type="checkbox" value="NERVE_BLOCK" onchange="toggleTechnique(this)">
+                        <div class="technique-card">
+                            <div class="technique-name">神經阻斷</div>
+                            <div class="technique-desc">Nerve Block</div>
+                        </div>
+                    </label>
+                </div>
+                <div style="margin-top: 16px; display: flex; gap: 12px;">
+                    <button class="btn btn-primary" onclick="saveTechniques()">儲存記錄</button>
+                    <button class="btn" style="background: var(--card-hover);" onclick="closeModal('techniqueModal')">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Special Technique Modal Styles */
+        .technique-toggle {
+            display: block;
+            cursor: pointer;
+        }
+        .technique-toggle input[type="checkbox"] {
+            display: none;
+        }
+        .technique-card {
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .technique-card:hover {
+            background: var(--card-hover);
+        }
+        .technique-toggle input:checked + .technique-card {
+            background: rgba(124, 58, 237, 0.15);
+            border-color: #7c3aed;
+        }
+        .technique-toggle input:checked + .technique-card .technique-name {
+            color: #7c3aed;
+        }
+        .technique-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .technique-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+    </style>
 
     <style>
         /* Phase C: O2 Modal Styles */
@@ -3728,6 +3865,8 @@
                 patient_id: document.getElementById('newPatientId').value,
                 patient_name: document.getElementById('newPatientName').value || null,
                 planned_technique: document.getElementById('newTechnique').value,
+                asa_classification: document.getElementById('newAsaClass').value,
+                is_emergency: document.getElementById('newAsaEmergency').checked,
                 context_mode: document.getElementById('newContextMode').value,
                 cirs_registration_ref: cirsRef || null,
                 patient_snapshot: patientSnapshot
@@ -5111,6 +5250,90 @@
                 loadTimeline(currentCase.id);
             } catch (err) {
                 alert('記錄失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        // =================================================================
+        // Special Techniques (v1.1 Billing Integration)
+        // =================================================================
+
+        let selectedTechniques = [];
+
+        function showTechniqueModal() {
+            if (!currentCase) {
+                alert('請先選擇或建立一個麻醉案例');
+                return;
+            }
+            // Reset checkboxes and load existing techniques
+            document.querySelectorAll('.technique-toggle input[type="checkbox"]').forEach(cb => {
+                cb.checked = selectedTechniques.includes(cb.value);
+            });
+            document.getElementById('techniqueModal').classList.add('active');
+        }
+
+        function toggleTechnique(checkbox) {
+            // Visual feedback is handled by CSS
+        }
+
+        async function saveTechniques() {
+            // Collect checked techniques
+            const techniques = [];
+            document.querySelectorAll('.technique-toggle input[type="checkbox"]:checked').forEach(cb => {
+                techniques.push(cb.value);
+            });
+
+            try {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/events?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_type: 'SPECIAL_TECHNIQUE',
+                        payload: {
+                            techniques: techniques,
+                            action: 'UPDATE'
+                        }
+                    })
+                });
+                if (!res.ok) throw new Error('Failed');
+
+                selectedTechniques = techniques;
+                closeModal('techniqueModal');
+
+                const techLabels = {
+                    'CVP': '中央靜脈導管',
+                    'ART': '動脈導管',
+                    'TEE': '經食道心超',
+                    'BIS': '腦電雙頻指數',
+                    'ULTRASOUND': '超音波導引',
+                    'FIBER_INTUB': '纖維插管',
+                    'DLT': '雙腔氣管內管',
+                    'NERVE_BLOCK': '神經阻斷'
+                };
+                const techNames = techniques.map(t => techLabels[t] || t).join(', ');
+                alert(`✓ 特殊技術已記錄: ${techNames || '無'}`);
+                loadTimeline(currentCase.id);
+            } catch (err) {
+                alert('記錄失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        // Load existing techniques when case is loaded
+        async function loadCaseTechniques(caseId) {
+            try {
+                const res = await apiFetch(`${API_BASE}/cases/${caseId}/events`);
+                if (res.ok) {
+                    const data = await res.json();
+                    // Find the latest SPECIAL_TECHNIQUE event
+                    const techEvent = data.events?.filter(e => e.event_type === 'SPECIAL_TECHNIQUE')
+                        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+                    if (techEvent && techEvent.payload?.techniques) {
+                        selectedTechniques = techEvent.payload.techniques;
+                    } else {
+                        selectedTechniques = [];
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load techniques:', err);
             }
         }
 

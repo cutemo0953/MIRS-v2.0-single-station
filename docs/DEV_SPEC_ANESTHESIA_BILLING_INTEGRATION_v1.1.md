@@ -1,0 +1,1365 @@
+# Anesthesia PWA ↔ Billing Integration DEV SPEC v1.1
+
+**版本**: 1.1.0
+**日期**: 2026-01-20
+**狀態**: DRAFT
+**關聯**: schema_pharmacy.sql, DEV_SPEC_MEDICATION_FORMULARY_v1.2.md (CIRS), CashDesk Handoff
+**審閱整合**: Gemini, ChatGPT feedback
+
+> **v1.1 變更**: 擴充計費範圍，從「藥品計費」擴展為「完整麻醉計費」，包含麻醉處置費、藥品費、耗材費。
+
+---
+
+## 修訂背景
+
+經 Gemini 與 ChatGPT 審閱後，發現以下問題：
+
+| 問題 | 現況 | 修正 |
+|------|------|------|
+| **Anesthesia PWA 不扣庫** | 只記錄 timeline event | 新增 inventory transaction |
+| **Hub/Satellite 定義反轉** | 模糊不清 | 明確定義 CIRS=Hub, MIRS=Satellite |
+| **臨床/庫存事件未分離** | 混在一起 | 分離：臨床先落地，庫存 ACK 後 commit |
+| **單位換算未實作** | mg 直接記錄 | 換算為 vial/amp (ceiling) |
+| **管制藥 break-glass 規則不清** | 只有 flag | 枚舉允許的 action types |
+
+---
+
+## 1. 架構定義
+
+### 1.1 角色定義 (Role Definition)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    xIRS Medication Supply Chain                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  CIRS (Community IRS)                                        │    │
+│  │  Role: MEDICATION_HUB                                        │    │
+│  │  ─────────────────────────────────────────────────────────   │    │
+│  │  • 權威庫存 (Authoritative Stock)                            │    │
+│  │  • 採購、驗收、總量管理                                       │    │
+│  │  • 發補給衛星站 (MED_DISPATCH)                                │    │
+│  │  • 管制藥總帳管理                                            │    │
+│  └──────────────────────────┬──────────────────────────────────┘    │
+│                             │                                        │
+│                    MED_DISPATCH (補給)                               │
+│                    ─────────────────                                 │
+│                    • QR Code 調撥單                                  │
+│                    • 批號、效期追蹤                                  │
+│                             │                                        │
+│                             ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  MIRS (Medical IRS) / BORP Station                           │    │
+│  │  Role: SATELLITE_PHARMACY                                    │    │
+│  │  ─────────────────────────────────────────────────────────   │    │
+│  │  • 本地庫存 (Local Stock)                                    │    │
+│  │  • 接收補給 (MED_RECEIPT)                                    │    │
+│  │  • 供應消耗端點 (Anesthesia, Emergency)                       │    │
+│  │  • 管制藥本地審計                                            │    │
+│  └──────────────────────────┬──────────────────────────────────┘    │
+│                             │                                        │
+│                    DISPENSE (調劑)                                   │
+│                    ───────────────                                   │
+│                    • 直接從本地庫存扣減                              │
+│                    • 離線可運作                                      │
+│                             │                                        │
+│                             ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  Anesthesia PWA                                              │    │
+│  │  Role: CONSUMPTION_ENDPOINT                                  │    │
+│  │  ─────────────────────────────────────────────────────────   │    │
+│  │  • 臨床用藥記錄                                              │    │
+│  │  • 觸發庫存扣減                                              │    │
+│  │  • 管制藥審計來源                                            │    │
+│  │  • 產生計費項目                                              │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 1.2 關鍵原則
+
+| 原則 | 說明 |
+|------|------|
+| **Offline-First** | 斷網時手術繼續進行，庫存允許扣至負數 |
+| **Event Separation** | 臨床事件立即落地，庫存事件可延遲 ACK |
+| **Local Authority** | MIRS 本地庫存為 ground truth (offline 時) |
+| **Eventual Consistency** | 上線後與 Hub 對帳同步 |
+| **Audit Trail** | 所有操作可追溯，管制藥雙重審計 |
+
+---
+
+## 2. 資料流設計
+
+### 2.1 用藥記錄流程 (Medication Administration Flow)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Medication Administration Flow                    │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  1. 麻醉醫師選擇藥物                                                 │
+│     ────────────────────                                            │
+│     Input: Propofol 150mg IV                                        │
+│                                                                      │
+│  2. 單位換算 (Unit Conversion)                                       │
+│     ────────────────────────                                        │
+│     • 查詢 medicines.content_per_unit = 200mg/vial                  │
+│     • 計算: 150mg ÷ 200mg = 0.75 vial                               │
+│     • 進位 (CEIL): 1 vial (開封即消耗)                               │
+│                                                                      │
+│  3. 事件分離 (Event Separation)                                      │
+│     ────────────────────────                                        │
+│     ┌─────────────────────┐     ┌─────────────────────┐            │
+│     │ Clinical Event      │     │ Inventory Event     │            │
+│     │ (立即寫入)          │     │ (ACK 後 commit)     │            │
+│     ├─────────────────────┤     ├─────────────────────┤            │
+│     │ case_events         │     │ pharmacy_transactions│            │
+│     │ • event_type: MED   │     │ • type: DISPENSE    │            │
+│     │ • drug_code         │     │ • quantity: 1       │            │
+│     │ • clinical_dose     │     │ • unit: vial        │            │
+│     │ • timestamp         │     │ • medicines -= 1    │            │
+│     └─────────────────────┘     └─────────────────────┘            │
+│              │                            │                         │
+│              │                            │                         │
+│              ▼                            ▼                         │
+│     ┌─────────────────────┐     ┌─────────────────────┐            │
+│     │ Timeline Display    │     │ Stock Update        │            │
+│     │ (即時顯示)          │     │ (可能延遲)          │            │
+│     └─────────────────────┘     └─────────────────────┘            │
+│                                                                      │
+│  4. 管制藥額外處理 (Controlled Drug)                                 │
+│     ────────────────────────────────────                            │
+│     If is_controlled_drug:                                          │
+│       → INSERT controlled_drug_log                                  │
+│       → Require witness_id (or mark PENDING_WITNESS)                │
+│                                                                      │
+│  5. 計費連動 (Billing Linkage)                                       │
+│     ────────────────────────                                        │
+│     → CREATE medication_usage_event (append-only)                   │
+│     → billing_status = PENDING                                      │
+│     → CashDesk 稍後讀取                                             │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.2 離線處理策略
+
+```python
+# 離線優先策略
+
+class MedicationAdminStrategy:
+    """
+    臨床事件：立即落地 (local SQLite)
+    庫存事件：本地扣減 + 同步佇列
+    管制藥：本地審計 + 上線後對帳
+    """
+
+    CLINICAL_EVENT = "IMMEDIATE"      # 立即寫入，不等 ACK
+    INVENTORY_EVENT = "LOCAL_FIRST"   # 本地扣減，佇列同步
+    CONTROLLED_AUDIT = "DUAL_WRITE"   # 本地 + 同步佇列
+
+    # 離線時允許庫存扣至負數
+    ALLOW_NEGATIVE_STOCK = True
+
+    # 負庫存警告閾值
+    NEGATIVE_STOCK_ALERT_THRESHOLD = -5
+```
+
+---
+
+## 3. 單位換算邏輯
+
+### 3.1 換算規則
+
+```python
+# services/unit_conversion.py
+
+import math
+from typing import Tuple, Optional
+from decimal import Decimal
+
+# 單位轉換表
+UNIT_CONVERSIONS = {
+    ('mcg', 'mg'): 0.001,
+    ('mg', 'mcg'): 1000,
+    ('mg', 'g'): 0.001,
+    ('g', 'mg'): 1000,
+    ('mL', 'L'): 0.001,
+    ('L', 'mL'): 1000,
+}
+
+# 進位規則
+class RoundingMode:
+    CEIL = 'CEIL'      # 開封即消耗 (麻醉藥預設)
+    FLOOR = 'FLOOR'    # 向下取整 (特殊情境)
+    EXACT = 'EXACT'    # 精確計算 (輸液等可分割)
+
+
+def calculate_billing_quantity(
+    clinical_dose: float,
+    clinical_unit: str,
+    content_per_unit: float,
+    content_unit: str,
+    billing_rounding: str = RoundingMode.CEIL
+) -> Tuple[int, str]:
+    """
+    將臨床劑量換算為計費數量
+
+    Args:
+        clinical_dose: 臨床劑量 (如 150)
+        clinical_unit: 臨床單位 (如 'mg')
+        content_per_unit: 每單位含量 (如 200)
+        content_unit: 含量單位 (如 'mg')
+        billing_rounding: 進位規則
+
+    Returns:
+        (billing_quantity, billing_unit)
+
+    Example:
+        calculate_billing_quantity(150, 'mg', 200, 'mg', 'CEIL')
+        → (1, 'vial')  # 0.75 vial 進位為 1 vial
+    """
+
+    # 單位轉換
+    if clinical_unit != content_unit:
+        conversion = UNIT_CONVERSIONS.get((clinical_unit, content_unit))
+        if conversion:
+            clinical_dose = clinical_dose * conversion
+        else:
+            raise ValueError(f"Cannot convert {clinical_unit} to {content_unit}")
+
+    # 計算所需單位數
+    raw_quantity = clinical_dose / content_per_unit
+
+    # 依據進位規則處理
+    if billing_rounding == RoundingMode.CEIL:
+        billing_quantity = math.ceil(raw_quantity)
+    elif billing_rounding == RoundingMode.FLOOR:
+        billing_quantity = math.floor(raw_quantity)
+    else:  # EXACT
+        billing_quantity = round(raw_quantity, 2)
+
+    return int(billing_quantity), 'unit'  # unit 從 medicines 表取得
+```
+
+### 3.2 常見麻醉藥換算範例
+
+| 藥品 | 臨床輸入 | 規格 | 換算結果 | 計費 |
+|------|----------|------|----------|------|
+| Propofol | 150mg | 200mg/vial | 0.75 → 1 vial | 1 vial |
+| Fentanyl | 75mcg | 100mcg/amp | 0.75 → 1 amp | 1 amp |
+| Midazolam | 3mg | 5mg/amp | 0.6 → 1 amp | 1 amp |
+| Rocuronium | 40mg | 50mg/vial | 0.8 → 1 vial | 1 vial |
+| Ketamine | 80mg | 500mg/vial | 0.16 → 1 vial | 1 vial |
+
+---
+
+## 4. 管制藥 Break-Glass 政策
+
+### 4.1 Action Type 與 Break-Glass 允許矩陣
+
+| Action Type | 常態需雙人覆核 | 允許 Break-Glass | 事後補核時限 |
+|-------------|----------------|------------------|--------------|
+| `DISPENSE` | ✅ 一二級必須 | ❌ 不允許 | - |
+| `ADMINISTER` | ✅ 一二級必須 | ✅ 救命情境 | 24 小時 |
+| `WASTE` | ✅ 必須見證 | ❌ 不允許 | - |
+| `RETURN` | ✅ 必須 | ❌ 不允許 | - |
+| `TRANSFER` | ✅ 必須 | ❌ 不允許 | - |
+
+### 4.2 Break-Glass 觸發條件
+
+```python
+class BreakGlassCondition:
+    """允許 Break-Glass 的情境"""
+
+    ALLOWED_REASONS = [
+        'MTP_ACTIVATED',           # 大量輸血啟動
+        'CARDIAC_ARREST',          # 心跳停止
+        'ANAPHYLAXIS',             # 過敏性休克
+        'AIRWAY_EMERGENCY',        # 呼吸道緊急
+        'EXSANGUINATING_HEMORRHAGE', # 大量出血
+        'NO_SECOND_STAFF',         # 無第二人員可協助
+        'SYSTEM_OFFLINE',          # 系統離線
+    ]
+
+    ALLOWED_ACTIONS = ['ADMINISTER']  # 只允許給藥
+
+    FORBIDDEN_ACTIONS = ['DISPENSE', 'WASTE', 'RETURN', 'TRANSFER']
+```
+
+### 4.3 審計記錄結構
+
+```sql
+-- controlled_drug_log 擴充欄位 (v1.0)
+
+-- Break-glass 相關
+is_break_glass BOOLEAN DEFAULT 0,
+break_glass_reason TEXT,           -- 必填 if is_break_glass
+break_glass_approved_by TEXT,      -- 事後補核准人
+break_glass_approved_at TIMESTAMP, -- 補核准時間
+break_glass_deadline TIMESTAMP,    -- 24hr 截止時間
+
+-- 狀態
+witness_status TEXT DEFAULT 'REQUIRED',
+-- 'REQUIRED'       - 需要見證人
+-- 'COMPLETED'      - 已完成見證
+-- 'PENDING'        - 待補見證 (break-glass)
+-- 'WAIVED'         - 免除 (三四級管制)
+
+CHECK (is_break_glass = 0 OR break_glass_reason IS NOT NULL)
+```
+
+---
+
+## 5. API 設計
+
+### 5.1 Anesthesia 用藥 API (修訂版)
+
+```python
+# routes/anesthesia.py
+
+class MedicationAdminRequest(BaseModel):
+    """用藥記錄請求 (v1.0 擴充)"""
+    drug_code: str
+    drug_name: str
+    dose: float
+    unit: str                      # 臨床單位 (mg, mcg, mL)
+    route: str                     # IV, IM, SC, PO, SL
+    is_controlled: Optional[bool] = False
+
+    # v1.0 新增
+    witness_id: Optional[str] = None  # 管制藥見證人
+    is_break_glass: Optional[bool] = False
+    break_glass_reason: Optional[str] = None
+
+    # 時間偏移 (既有)
+    clinical_time: Optional[str] = None
+    clinical_time_offset_seconds: Optional[int] = None
+
+
+class MedicationAdminResponse(BaseModel):
+    """用藥記錄回應 (v1.0 擴充)"""
+    success: bool
+    event_id: str                  # 臨床事件 ID
+
+    # v1.0 新增
+    inventory_txn_id: Optional[str] = None  # 庫存交易 ID
+    billing_quantity: int          # 計費數量
+    billing_unit: str              # 計費單位
+    estimated_price: Optional[float] = None
+
+    # 警告
+    warnings: List[str] = []       # 如: "庫存不足", "效期將近"
+
+    # 管制藥
+    controlled_log_id: Optional[str] = None
+    witness_status: Optional[str] = None  # COMPLETED, PENDING
+
+
+@router.post("/cases/{case_id}/medication", response_model=MedicationAdminResponse)
+async def add_medication_v2(
+    case_id: str,
+    request: MedicationAdminRequest,
+    actor_id: str = Query(...)
+):
+    """
+    用藥記錄 v1.0 - 整合庫存扣減
+
+    Flow:
+    1. 查詢藥品資訊 (medicines 表)
+    2. 單位換算 (clinical dose → billing quantity)
+    3. 寫入臨床事件 (case_events)
+    4. 扣減庫存 (pharmacy_transactions + medicines)
+    5. 管制藥審計 (controlled_drug_log)
+    6. 產生計費項目 (medication_usage_events)
+    """
+    pass  # 實作見下方
+```
+
+### 5.2 實作邏輯
+
+```python
+@router.post("/cases/{case_id}/medication")
+async def add_medication_v2(case_id: str, request: MedicationAdminRequest, actor_id: str = Query(...)):
+    """用藥記錄 v1.0 - 整合庫存扣減"""
+
+    warnings = []
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 1. 查詢藥品資訊
+        cursor.execute("""
+            SELECT medicine_code, generic_name, brand_name, unit,
+                   is_controlled_drug, controlled_level,
+                   current_stock, nhi_price,
+                   -- v1.0 新增欄位 (若存在)
+                   COALESCE(content_per_unit, 1) as content_per_unit,
+                   COALESCE(content_unit, unit) as content_unit,
+                   COALESCE(billing_rounding, 'CEIL') as billing_rounding
+            FROM medicines
+            WHERE medicine_code = ?
+        """, (request.drug_code,))
+
+        med = cursor.fetchone()
+        if not med:
+            # Fallback: 藥品不在主檔，仍記錄臨床事件 (離線容錯)
+            med = {
+                'medicine_code': request.drug_code,
+                'generic_name': request.drug_name,
+                'unit': request.unit,
+                'is_controlled_drug': request.is_controlled,
+                'content_per_unit': 1,
+                'content_unit': request.unit,
+                'billing_rounding': 'CEIL',
+                'current_stock': 0,
+                'nhi_price': 0
+            }
+            warnings.append("藥品不在主檔，僅記錄臨床事件")
+        else:
+            med = dict(med)
+
+        # 2. 單位換算
+        billing_qty, billing_unit = calculate_billing_quantity(
+            clinical_dose=request.dose,
+            clinical_unit=request.unit,
+            content_per_unit=med['content_per_unit'],
+            content_unit=med['content_unit'],
+            billing_rounding=med['billing_rounding']
+        )
+        billing_unit = med['unit']  # 使用主檔單位
+
+        # 3. 寫入臨床事件 (立即)
+        event_id = f"MED-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+
+        payload = {
+            "drug_code": request.drug_code,
+            "drug_name": request.drug_name,
+            "clinical_dose": request.dose,
+            "clinical_unit": request.unit,
+            "billing_quantity": billing_qty,
+            "billing_unit": billing_unit,
+            "route": request.route,
+            "is_controlled": med['is_controlled_drug']
+        }
+
+        cursor.execute("""
+            INSERT INTO case_events (case_id, event_type, payload, actor_id, timestamp)
+            VALUES (?, 'MEDICATION_ADMIN', ?, ?, ?)
+        """, (case_id, json.dumps(payload), actor_id, datetime.now().isoformat()))
+
+        # 4. 扣減庫存
+        inventory_txn_id = None
+        if med['medicine_code'] != request.drug_code or 'nhi_price' not in med:
+            # 藥品不在主檔，跳過庫存扣減
+            pass
+        else:
+            inventory_txn_id = f"TXN-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+
+            # 檢查庫存
+            new_stock = med['current_stock'] - billing_qty
+            if new_stock < 0:
+                warnings.append(f"庫存不足 (剩餘: {med['current_stock']}, 扣減: {billing_qty})")
+
+            # 寫入交易記錄
+            cursor.execute("""
+                INSERT INTO pharmacy_transactions (
+                    transaction_id, transaction_type, medicine_code, generic_name,
+                    quantity, unit, station_code,
+                    is_controlled_drug, controlled_level,
+                    patient_id, prescription_id,
+                    operator, operator_role, verified_by,
+                    reason, status
+                ) VALUES (?, 'DISPENSE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED')
+            """, (
+                inventory_txn_id, med['medicine_code'], med['generic_name'],
+                billing_qty, billing_unit, 'MIRS-OR',
+                med['is_controlled_drug'], med.get('controlled_level'),
+                None,  # patient_id from case
+                None,  # prescription_id
+                actor_id, 'NURSE',
+                request.witness_id,
+                f"Anesthesia admin: {request.dose}{request.unit} {request.route}"
+            ))
+
+            # 更新庫存
+            cursor.execute("""
+                UPDATE medicines SET current_stock = current_stock - ? WHERE medicine_code = ?
+            """, (billing_qty, med['medicine_code']))
+
+        # 5. 管制藥審計
+        controlled_log_id = None
+        witness_status = None
+
+        if med['is_controlled_drug']:
+            controlled_log_id = f"CTRL-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+
+            # 判斷見證狀態
+            if request.witness_id:
+                witness_status = 'COMPLETED'
+            elif request.is_break_glass:
+                witness_status = 'PENDING'
+                warnings.append("Break-glass: 需在 24 小時內補核准")
+            else:
+                witness_status = 'REQUIRED'
+                warnings.append("管制藥需要見證人")
+
+            # 注意: controlled_drug_log 由 trigger 自動寫入
+            # 這裡只需確保 pharmacy_transactions 有正確的 verified_by
+
+        # 6. 產生計費項目 (append-only)
+        usage_event_id = f"USAGE-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+
+        cursor.execute("""
+            INSERT INTO medication_usage_events (
+                idempotency_key, event_type, medicine_code,
+                clinical_dose, clinical_unit,
+                billing_quantity, billing_unit,
+                route, patient_id, operator_id, station_id,
+                source_system, source_record_id,
+                billing_status, event_timestamp
+            ) VALUES (?, 'ANESTHESIA_ADMIN', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ANESTHESIA_PWA', ?, 'PENDING', ?)
+        """, (
+            usage_event_id, med['medicine_code'],
+            request.dose, request.unit,
+            billing_qty, billing_unit,
+            request.route, None, actor_id, 'MIRS-OR',
+            event_id, datetime.now().isoformat()
+        ))
+
+        conn.commit()
+
+    # 計算預估價格
+    estimated_price = None
+    if med.get('nhi_price'):
+        estimated_price = float(med['nhi_price']) * billing_qty
+
+    return MedicationAdminResponse(
+        success=True,
+        event_id=event_id,
+        inventory_txn_id=inventory_txn_id,
+        billing_quantity=billing_qty,
+        billing_unit=billing_unit,
+        estimated_price=estimated_price,
+        warnings=warnings,
+        controlled_log_id=controlled_log_id,
+        witness_status=witness_status
+    )
+```
+
+---
+
+## 6. 前端修改
+
+### 6.1 Anesthesia PWA 藥品選擇 UI 擴充
+
+```javascript
+// 顯示庫存狀態
+async function loadMedicationInventory() {
+    const medications = await apiFetch('/api/pharmacy/medications/quick-picks');
+
+    return medications.map(med => ({
+        ...med,
+        stockDisplay: med.current_stock <= 0
+            ? '⚠️ 缺貨'
+            : med.current_stock <= med.min_stock
+                ? `⚠️ ${med.current_stock}`
+                : `${med.current_stock}`,
+        stockClass: med.current_stock <= 0
+            ? 'stock-out'
+            : med.current_stock <= med.min_stock
+                ? 'stock-low'
+                : 'stock-ok'
+    }));
+}
+
+// 藥品按鈕顯示庫存
+function renderMedButton(med) {
+    return `
+        <button class="med-btn ${med.is_controlled ? 'controlled-drug' : ''}"
+                onclick="selectMed('${med.medicine_code}', '${med.generic_name}', ${med.default_dose}, '${med.unit}', ${med.is_controlled})">
+            <span class="med-name">${med.generic_name}</span>
+            <span class="med-dose">${med.default_dose}${med.unit}</span>
+            <span class="med-stock ${med.stockClass}">${med.stockDisplay}</span>
+        </button>
+    `;
+}
+```
+
+### 6.2 管制藥見證人 UI
+
+```html
+<!-- 管制藥見證人區塊 (在確認給藥前顯示) -->
+<div id="controlledDrugWitnessSection" style="display: none;">
+    <div class="warning-banner">
+        <span>⚠️ 管制藥品需要雙人覆核</span>
+    </div>
+
+    <div class="form-group">
+        <label>見證人工號 *</label>
+        <input type="text" id="witnessId" placeholder="掃描或輸入工號">
+    </div>
+
+    <div class="or-divider">或</div>
+
+    <button class="btn btn-warning" onclick="showBreakGlassDialog()">
+        ⚡ 緊急模式 (Break-Glass)
+    </button>
+</div>
+```
+
+### 6.3 ASA 分級與麻醉類型 (v1.1 已實作)
+
+> **狀態**: ✅ 已實作 (2026-01-20)
+
+#### 新增案例 Modal 擴充
+
+```html
+<!-- 麻醉方式下拉 (已更新) -->
+<select id="newTechnique">
+    <option value="GA">全身麻醉 (GA)</option>
+    <option value="GA_ETT">全身麻醉 - 插管 (ETT)</option>
+    <option value="GA_LMA">全身麻醉 - 喉罩 (LMA)</option>
+    <option value="RA_SPINAL">脊椎麻醉 (Spinal)</option>
+    <option value="RA_EPIDURAL">硬膜外麻醉 (Epidural)</option>
+    <option value="RA_NERVE">神經阻斷 (Nerve Block)</option>
+    <option value="MAC">監測麻醉照護 (MAC)</option>
+    <option value="LA">局部麻醉 (Local)</option>
+</select>
+
+<!-- ASA 分級下拉 (新增) -->
+<div style="display: flex; gap: 8px;">
+    <select id="newAsaClass">
+        <option value="I">ASA I - 健康</option>
+        <option value="II">ASA II - 輕度全身疾病</option>
+        <option value="III">ASA III - 嚴重全身疾病</option>
+        <option value="IV">ASA IV - 危及生命</option>
+        <option value="V">ASA V - 瀕死</option>
+    </select>
+    <label>
+        <input type="checkbox" id="newAsaEmergency">
+        <span style="color: var(--warning);">+E 急診</span>
+    </label>
+</div>
+```
+
+### 6.4 特殊技術記錄 Modal (v1.1 已實作)
+
+> **狀態**: ✅ 已實作 (2026-01-20)
+
+進階事件區塊新增「特殊技術」按鈕，點擊後展開可複選的技術清單：
+
+```html
+<!-- 特殊技術 Modal -->
+<div class="technique-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+    <label class="technique-toggle">
+        <input type="checkbox" value="CVP">
+        <div class="technique-card">
+            <div class="technique-name">CVP</div>
+            <div class="technique-desc">中央靜脈導管</div>
+        </div>
+    </label>
+    <label class="technique-toggle">
+        <input type="checkbox" value="ART">
+        <div class="technique-card">
+            <div class="technique-name">A-Line</div>
+            <div class="technique-desc">動脈導管</div>
+        </div>
+    </label>
+    <!-- ... TEE, BIS, ULTRASOUND, FIBER_INTUB, DLT, NERVE_BLOCK ... -->
+</div>
+```
+
+#### 後端 API
+
+```python
+# EventType 新增
+SPECIAL_TECHNIQUE = "SPECIAL_TECHNIQUE"  # v1.1: 特殊技術 (計費用)
+
+# 事件 payload
+{
+    "event_type": "SPECIAL_TECHNIQUE",
+    "payload": {
+        "techniques": ["CVP", "ART", "BIS"],  # 可複選
+        "action": "UPDATE"
+    }
+}
+```
+
+#### 資料庫欄位擴充
+
+```sql
+-- anesthesia_cases 新增欄位
+ALTER TABLE anesthesia_cases ADD COLUMN asa_classification TEXT DEFAULT 'II';
+ALTER TABLE anesthesia_cases ADD COLUMN is_emergency INTEGER DEFAULT 0;
+```
+
+---
+
+## 7. 完整計費項目 (Complete Billing Items)
+
+> **v1.1 新增**: 擴充計費範圍，從藥品延伸至麻醉處置、手術處置、耗材等完整計費項目。
+
+### 7.1 計費項目類型
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    MIRS 手術計費項目全覽                                  │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  1. 麻醉處置費 (Anesthesia Procedure Fees)                       │   │
+│  │  ─────────────────────────────────────────────────────────────  │   │
+│  │  • 麻醉基本費 (Base Fee)                                        │   │
+│  │  • 麻醉時間費 (Time-Based Fee)                                  │   │
+│  │  • ASA 分級加成 (ASA Classification Modifier)                   │   │
+│  │  • 特殊技術加成 (Special Technique Modifier)                    │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  2. 手術處置費 (Surgical Procedure Fees)                         │   │
+│  │  ─────────────────────────────────────────────────────────────  │   │
+│  │  • 手術費 (Surgeon Fee)                                         │   │
+│  │  • 助手費 (Assistant Fee)                                       │   │
+│  │  • 特殊技術加成                                                  │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  3. 藥品費 (Medication Fees) - 已涵蓋於 Section 2-5              │   │
+│  │  ─────────────────────────────────────────────────────────────  │   │
+│  │  • 麻醉用藥                                                      │   │
+│  │  • 急救用藥                                                      │   │
+│  │  • 術中用藥                                                      │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  4. 耗材費 (Supply/Material Fees)                                │   │
+│  │  ─────────────────────────────────────────────────────────────  │   │
+│  │  • 手術耗材 (套包、縫線、植入物)                                  │   │
+│  │  • 麻醉耗材 (氣管管、IV套件)                                     │   │
+│  │  • 特殊材料 (骨科植入物、骨水泥)                                  │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  5. 血品費 (Blood Product Fees)                                  │   │
+│  │  ─────────────────────────────────────────────────────────────  │   │
+│  │  • 紅血球濃厚液                                                  │   │
+│  │  • 新鮮冷凍血漿                                                  │   │
+│  │  • 血小板濃厚液                                                  │   │
+│  │  • (已整合至 Blood Chain of Custody)                            │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.2 麻醉處置費結構 (Anesthesia Fee Structure)
+
+#### 7.2.1 費用組成公式
+
+```
+麻醉總費 = 基本費 + (時間費 × 時間單位) + ASA加成 + 特殊技術加成
+
+其中:
+- 基本費: 依麻醉類型 (全身/區域/局部/鎮靜)
+- 時間費: 每 15 分鐘一單位
+- ASA加成: ASA III-V 有額外加成
+- 特殊技術: 如侵入性監測、神經阻斷等
+```
+
+#### 7.2.2 麻醉類型與基本費
+
+| 代碼 | 麻醉類型 | 英文 | 基本費等級 | 說明 |
+|------|----------|------|------------|------|
+| `GA` | 全身麻醉 | General Anesthesia | A | 插管/喉罩 |
+| `RA-S` | 脊椎麻醉 | Spinal Anesthesia | B | 腰椎穿刺 |
+| `RA-E` | 硬膜外麻醉 | Epidural Anesthesia | B | 連續輸注 |
+| `RA-N` | 神經阻斷 | Nerve Block | C | 超音波導引 |
+| `MAC` | 監測麻醉 | Monitored Anesthesia Care | D | 鎮靜監測 |
+| `LA` | 局部麻醉 | Local Anesthesia | E | 局部浸潤 |
+
+#### 7.2.3 ASA 分級加成
+
+| ASA 等級 | 定義 | 加成比例 |
+|----------|------|----------|
+| ASA I | 健康病人 | 0% (基準) |
+| ASA II | 輕度全身性疾病 | 0% |
+| ASA III | 嚴重全身性疾病 | +20% |
+| ASA IV | 持續危及生命的全身性疾病 | +40% |
+| ASA V | 不手術預期無法存活 | +50% |
+| +E | 急診手術 | +10% (累加) |
+
+#### 7.2.4 特殊技術加成
+
+| 代碼 | 技術項目 | 加成 |
+|------|----------|------|
+| `CVP` | 中央靜脈導管 | 定額 |
+| `ART` | 動脈導管 | 定額 |
+| `TEE` | 經食道心臟超音波 | 定額 |
+| `BIS` | 腦電雙頻指數監測 | 定額 |
+| `ULTRASOUND` | 超音波導引穿刺 | 定額 |
+| `FIBER_INTUB` | 纖維支氣管鏡插管 | 定額 |
+| `DLT` | 雙腔氣管內管 | 定額 |
+
+### 7.3 資料結構
+
+#### 7.3.1 麻醉計費事件表
+
+```sql
+-- anesthesia_billing_events (麻醉計費事件)
+CREATE TABLE IF NOT EXISTS anesthesia_billing_events (
+    id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL,
+    patient_id TEXT,
+
+    -- 麻醉資訊
+    anesthesia_type TEXT NOT NULL,        -- GA, RA-S, RA-E, RA-N, MAC, LA
+    asa_classification TEXT NOT NULL,     -- I, II, III, IV, V
+    is_emergency BOOLEAN DEFAULT 0,       -- +E 標記
+
+    -- 時間
+    anesthesia_start_time TEXT,           -- 麻醉開始時間
+    anesthesia_end_time TEXT,             -- 麻醉結束時間
+    total_minutes INTEGER,                -- 總時間 (分鐘)
+    billable_time_units INTEGER,          -- 計費時間單位 (每15分鐘)
+
+    -- 人員
+    anesthesiologist_id TEXT NOT NULL,    -- 主麻醫師
+    anesthesiologist_name TEXT,
+    assistant_id TEXT,                    -- 麻醉護理師/助手
+
+    -- 特殊技術 (JSON array)
+    special_techniques TEXT,              -- ["CVP", "ART", "BIS"]
+
+    -- 計費
+    base_fee REAL,                        -- 基本費
+    time_fee REAL,                        -- 時間費
+    asa_modifier_fee REAL,                -- ASA 加成
+    technique_fees REAL,                  -- 特殊技術費
+    total_anesthesia_fee REAL,            -- 麻醉總費
+
+    -- 狀態
+    billing_status TEXT DEFAULT 'PENDING', -- PENDING, CALCULATED, EXPORTED, BILLED
+    exported_at TEXT,                      -- 匯出至 CashDesk 時間
+    cashdesk_reference TEXT,               -- CashDesk 收據號
+
+    -- 審計
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    created_by TEXT,
+
+    FOREIGN KEY (case_id) REFERENCES cases(case_id)
+);
+
+CREATE INDEX idx_anesthesia_billing_case ON anesthesia_billing_events(case_id);
+CREATE INDEX idx_anesthesia_billing_status ON anesthesia_billing_events(billing_status);
+```
+
+#### 7.3.2 手術計費事件表
+
+```sql
+-- surgical_billing_events (手術計費事件)
+CREATE TABLE IF NOT EXISTS surgical_billing_events (
+    id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL,
+    patient_id TEXT,
+
+    -- 手術資訊
+    procedure_code TEXT NOT NULL,         -- 手術代碼
+    procedure_name TEXT,                  -- 手術名稱
+    procedure_category TEXT,              -- 手術分類
+
+    -- 時間
+    surgery_start_time TEXT,              -- 手術開始 (劃刀)
+    surgery_end_time TEXT,                -- 手術結束 (關刀)
+    total_minutes INTEGER,
+
+    -- 人員
+    surgeon_id TEXT NOT NULL,             -- 主刀醫師
+    surgeon_name TEXT,
+    assistant_surgeon_id TEXT,            -- 助手醫師
+    assistant_surgeon_name TEXT,
+
+    -- 計費
+    surgeon_fee REAL,                     -- 手術費
+    assistant_fee REAL,                   -- 助手費
+    special_technique_fee REAL,           -- 特殊技術費
+    total_surgical_fee REAL,              -- 手術總費
+
+    -- 狀態
+    billing_status TEXT DEFAULT 'PENDING',
+    exported_at TEXT,
+    cashdesk_reference TEXT,
+
+    -- 審計
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    created_by TEXT,
+
+    FOREIGN KEY (case_id) REFERENCES cases(case_id)
+);
+
+CREATE INDEX idx_surgical_billing_case ON surgical_billing_events(case_id);
+```
+
+### 7.4 計費事件產生流程
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    手術計費事件產生流程                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  手術進行中 (Timeline Events)                                           │
+│  ────────────────────────────                                          │
+│                                                                         │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐           │
+│  │ ANESTHESIA   │     │ MEDICATION   │     │ INCISION     │           │
+│  │ _START       │────▶│ _ADMIN       │────▶│ _START       │──── ...   │
+│  └──────────────┘     └──────────────┘     └──────────────┘           │
+│                              │                                         │
+│                              ▼                                         │
+│                    medication_usage_events                             │
+│                    (藥品計費 - 即時產生)                                 │
+│                                                                         │
+│  ────────────────────────────────────────────────────────────────────  │
+│                                                                         │
+│  手術結束 (Case Closed)                                                 │
+│  ─────────────────────                                                 │
+│                                                                         │
+│  ┌──────────────┐     ┌──────────────┐                                │
+│  │ SURGERY_END  │────▶│ ANESTHESIA   │                                │
+│  │              │     │ _END         │                                │
+│  └──────────────┘     └──────────────┘                                │
+│          │                    │                                        │
+│          ▼                    ▼                                        │
+│  ┌────────────────┐  ┌────────────────┐                               │
+│  │ 計算手術處置費  │  │ 計算麻醉處置費  │                               │
+│  │ surgical_      │  │ anesthesia_    │                               │
+│  │ billing_events │  │ billing_events │                               │
+│  └────────────────┘  └────────────────┘                               │
+│          │                    │                                        │
+│          └──────────┬─────────┘                                        │
+│                     ▼                                                  │
+│          ┌─────────────────────┐                                       │
+│          │ CashDesk Handoff    │                                       │
+│          │ Package             │                                       │
+│          └─────────────────────┘                                       │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.5 CashDesk Handoff Package
+
+#### 7.5.1 整合介面
+
+```python
+# routes/billing.py
+
+class CashDeskHandoffPackage(BaseModel):
+    """CashDesk 收費系統交接包"""
+    case_id: str
+    patient_id: str
+    patient_name: str
+
+    # 手術基本資訊
+    surgery_date: str
+    procedure_name: str
+    surgeon_name: str
+    anesthesiologist_name: str
+
+    # 分項明細
+    items: List[BillingItem]
+
+    # 小計
+    subtotals: BillingSubtotals
+
+    # 總計
+    grand_total: float
+
+    # 中繼資料
+    generated_at: str
+    generated_by: str
+    mirs_version: str
+
+
+class BillingItem(BaseModel):
+    """計費項目"""
+    category: str            # ANESTHESIA, SURGERY, MEDICATION, SUPPLY, BLOOD
+    item_code: str
+    item_name: str
+    quantity: float
+    unit: str
+    unit_price: float
+    subtotal: float
+    nhi_code: Optional[str]  # 健保碼
+    notes: Optional[str]
+
+
+class BillingSubtotals(BaseModel):
+    """分類小計"""
+    anesthesia_fee: float    # 麻醉處置費
+    surgery_fee: float       # 手術處置費
+    medication_fee: float    # 藥品費
+    supply_fee: float        # 耗材費
+    blood_fee: float         # 血品費
+```
+
+#### 7.5.2 Handoff API
+
+```python
+@router.get("/cases/{case_id}/billing/handoff")
+async def generate_cashdesk_handoff(
+    case_id: str,
+    include_details: bool = True
+) -> CashDeskHandoffPackage:
+    """
+    產生 CashDesk 收費系統交接包
+
+    觸發條件:
+    - 手術結案 (Case Status = COMPLETED)
+    - 手動觸發 (管理員)
+
+    回傳:
+    - 完整計費明細
+    - 可直接匯入 CashDesk
+    """
+    pass
+
+
+@router.post("/cases/{case_id}/billing/export-to-cashdesk")
+async def export_to_cashdesk(
+    case_id: str,
+    actor_id: str = Query(...)
+) -> dict:
+    """
+    匯出計費資料至 CashDesk
+
+    Actions:
+    1. 產生 Handoff Package
+    2. 呼叫 CashDesk API (若整合)
+    3. 更新 billing_status = EXPORTED
+    4. 記錄 cashdesk_reference
+    """
+    pass
+```
+
+#### 7.5.3 Handoff Package 範例
+
+```json
+{
+  "case_id": "CASE-20260120-001",
+  "patient_id": "P12345",
+  "patient_name": "王大明",
+  "surgery_date": "2026-01-20",
+  "procedure_name": "右膝全人工關節置換術",
+  "surgeon_name": "李醫師",
+  "anesthesiologist_name": "陳醫師",
+
+  "items": [
+    {
+      "category": "ANESTHESIA",
+      "item_code": "ANES-GA-001",
+      "item_name": "全身麻醉基本費",
+      "quantity": 1,
+      "unit": "次",
+      "unit_price": 5000,
+      "subtotal": 5000,
+      "nhi_code": "96001A"
+    },
+    {
+      "category": "ANESTHESIA",
+      "item_code": "ANES-TIME-15",
+      "item_name": "麻醉時間費 (每15分鐘)",
+      "quantity": 8,
+      "unit": "單位",
+      "unit_price": 300,
+      "subtotal": 2400,
+      "nhi_code": "96002A"
+    },
+    {
+      "category": "ANESTHESIA",
+      "item_code": "ANES-ASA3",
+      "item_name": "ASA III 加成 (20%)",
+      "quantity": 1,
+      "unit": "次",
+      "unit_price": 1480,
+      "subtotal": 1480,
+      "notes": "基本費+時間費之20%"
+    },
+    {
+      "category": "ANESTHESIA",
+      "item_code": "ANES-ART",
+      "item_name": "動脈導管置入",
+      "quantity": 1,
+      "unit": "次",
+      "unit_price": 800,
+      "subtotal": 800,
+      "nhi_code": "96021A"
+    },
+    {
+      "category": "SURGERY",
+      "item_code": "SURG-TKA-001",
+      "item_name": "全人工膝關節置換術 - 主刀",
+      "quantity": 1,
+      "unit": "次",
+      "unit_price": 35000,
+      "subtotal": 35000,
+      "nhi_code": "64164B"
+    },
+    {
+      "category": "SURGERY",
+      "item_code": "SURG-ASST-001",
+      "item_name": "手術助手費",
+      "quantity": 1,
+      "unit": "次",
+      "unit_price": 7000,
+      "subtotal": 7000
+    },
+    {
+      "category": "MEDICATION",
+      "item_code": "MED-PROP-200",
+      "item_name": "Propofol 200mg/vial",
+      "quantity": 3,
+      "unit": "vial",
+      "unit_price": 450,
+      "subtotal": 1350,
+      "nhi_code": "BC26328100"
+    },
+    {
+      "category": "MEDICATION",
+      "item_code": "MED-FENT-100",
+      "item_name": "Fentanyl 100mcg/amp",
+      "quantity": 5,
+      "unit": "amp",
+      "unit_price": 85,
+      "subtotal": 425,
+      "nhi_code": "N01AH01"
+    },
+    {
+      "category": "SUPPLY",
+      "item_code": "SUP-ETT-75",
+      "item_name": "氣管內管 7.5mm",
+      "quantity": 1,
+      "unit": "支",
+      "unit_price": 250,
+      "subtotal": 250
+    },
+    {
+      "category": "SUPPLY",
+      "item_code": "SUP-TKA-IMP",
+      "item_name": "膝關節假體系統",
+      "quantity": 1,
+      "unit": "組",
+      "unit_price": 85000,
+      "subtotal": 85000
+    },
+    {
+      "category": "BLOOD",
+      "item_code": "BLOOD-PRBC",
+      "item_name": "紅血球濃厚液 (Leukocyte-reduced)",
+      "quantity": 2,
+      "unit": "U",
+      "unit_price": 950,
+      "subtotal": 1900
+    }
+  ],
+
+  "subtotals": {
+    "anesthesia_fee": 9680,
+    "surgery_fee": 42000,
+    "medication_fee": 1775,
+    "supply_fee": 85250,
+    "blood_fee": 1900
+  },
+
+  "grand_total": 140605,
+
+  "generated_at": "2026-01-20T18:30:00+08:00",
+  "generated_by": "SYSTEM",
+  "mirs_version": "2.0.0"
+}
+```
+
+### 7.6 自動計費觸發
+
+```python
+# services/billing_calculator.py
+
+async def on_case_closed(case_id: str, actor_id: str):
+    """
+    案例結案時自動計算處置費
+
+    Trigger: Case Status → COMPLETED
+    """
+
+    # 1. 計算麻醉處置費
+    anesthesia_billing = await calculate_anesthesia_fee(case_id)
+
+    # 2. 計算手術處置費
+    surgical_billing = await calculate_surgical_fee(case_id)
+
+    # 3. 彙總藥品費 (已在用藥時產生)
+    medication_total = await sum_medication_fees(case_id)
+
+    # 4. 彙總耗材費
+    supply_total = await sum_supply_fees(case_id)
+
+    # 5. 彙總血品費
+    blood_total = await sum_blood_fees(case_id)
+
+    # 6. 產生 Handoff Package (待匯出)
+    await create_handoff_package(
+        case_id=case_id,
+        anesthesia=anesthesia_billing,
+        surgical=surgical_billing,
+        medication=medication_total,
+        supply=supply_total,
+        blood=blood_total
+    )
+
+    logger.info(f"Case {case_id} billing calculated, ready for CashDesk export")
+
+
+async def calculate_anesthesia_fee(case_id: str) -> dict:
+    """計算麻醉處置費"""
+
+    with get_db() as conn:
+        # 取得麻醉時間
+        events = conn.execute("""
+            SELECT event_type, timestamp, payload
+            FROM case_events
+            WHERE case_id = ? AND event_type IN ('ANESTHESIA_START', 'ANESTHESIA_END')
+            ORDER BY timestamp
+        """, (case_id,)).fetchall()
+
+        # 計算時間
+        start_time = None
+        end_time = None
+        for e in events:
+            if e['event_type'] == 'ANESTHESIA_START':
+                start_time = datetime.fromisoformat(e['timestamp'])
+            elif e['event_type'] == 'ANESTHESIA_END':
+                end_time = datetime.fromisoformat(e['timestamp'])
+
+        if not start_time or not end_time:
+            return None
+
+        total_minutes = (end_time - start_time).total_seconds() / 60
+        time_units = math.ceil(total_minutes / 15)  # 每 15 分鐘一單位
+
+        # 取得 case 資訊 (ASA, 麻醉類型)
+        case = conn.execute("""
+            SELECT asa_classification, anesthesia_type
+            FROM cases WHERE case_id = ?
+        """, (case_id,)).fetchone()
+
+        # 計算費用 (lookup fee schedule)
+        base_fee = get_base_fee(case['anesthesia_type'])
+        time_fee = get_time_fee() * time_units
+        asa_modifier = get_asa_modifier(case['asa_classification'])
+
+        total = (base_fee + time_fee) * (1 + asa_modifier)
+
+        return {
+            'base_fee': base_fee,
+            'time_fee': time_fee,
+            'time_units': time_units,
+            'asa_modifier': asa_modifier,
+            'total': total
+        }
+```
+
+---
+
+## 8. 實作計劃
+
+### Phase 1: 後端基礎 - 藥品庫存
+
+- [ ] 新增 `medicines` 表擴充欄位 (content_per_unit, content_unit, billing_rounding)
+- [ ] 實作 `calculate_billing_quantity()` 函數
+- [ ] 修改 `/cases/{id}/medication` API 加入庫存扣減
+- [ ] 新增 `medication_usage_events` 表 (若不存在)
+
+### Phase 2: 管制藥處理
+
+- [ ] 實作管制藥驗證邏輯
+- [ ] Break-glass 流程
+- [ ] 事後補核准 API
+
+### Phase 3: 前端整合 - 藥品
+
+- [ ] 藥品選擇顯示庫存
+- [ ] 管制藥見證人 UI
+- [ ] Break-glass 對話框
+- [ ] 扣庫結果顯示
+
+### Phase 4: 離線處理
+
+- [ ] 離線佇列機制
+- [ ] 上線後同步
+- [ ] 衝突處理
+
+### Phase 5: 處置費計費 (v1.1 新增)
+
+- [ ] 建立 `anesthesia_billing_events` 表
+- [ ] 建立 `surgical_billing_events` 表
+- [ ] 實作 `calculate_anesthesia_fee()` 邏輯
+- [ ] 實作 `calculate_surgical_fee()` 邏輯
+- [ ] 整合手術結案觸發 (`on_case_closed`)
+
+### Phase 6: CashDesk 整合 (v1.1 新增)
+
+- [ ] 實作 `CashDeskHandoffPackage` 資料結構
+- [ ] 實作 `/cases/{id}/billing/handoff` API
+- [ ] 實作 `/cases/{id}/billing/export-to-cashdesk` API
+- [ ] 費率表設定 (anesthesia_fee_schedule, surgical_fee_schedule)
+
+---
+
+## 9. 驗收標準
+
+| 項目 | 驗收條件 |
+|------|----------|
+| **藥品庫存** | |
+| 用藥記錄 | 點擊藥品 → 記錄 timeline + 扣庫存 |
+| 單位換算 | 150mg Propofol → 計費 1 vial |
+| 庫存顯示 | 藥品選擇時顯示剩餘數量 |
+| 負庫存 | 庫存不足仍可記錄，顯示警告 |
+| 管制藥 | 一二級需見證人或 break-glass |
+| Break-glass | 可單人操作，24hr 內需補核准 |
+| 藥品計費 | 產生 medication_usage_events |
+| 離線 | 斷網時可操作，上線後同步 |
+| **處置費 (v1.1)** | |
+| 麻醉處置費 | 手術結案 → 自動計算麻醉費 (基本費+時間費+ASA加成) |
+| 手術處置費 | 手術結案 → 自動計算手術費 (主刀+助手) |
+| 時間計算 | ANESTHESIA_START → ANESTHESIA_END → 計算時間單位 |
+| ASA 加成 | ASA III +20%, ASA IV +40%, +E +10% |
+| **CashDesk 整合 (v1.1)** | |
+| Handoff Package | `/billing/handoff` 回傳完整計費明細 JSON |
+| 分項小計 | 正確顯示 anesthesia/surgery/medication/supply/blood 小計 |
+| 匯出功能 | `export-to-cashdesk` 更新 billing_status = EXPORTED |
+
+---
+
+## 附錄
+
+### A. 與 CIRS Spec 的關係
+
+| 項目 | CIRS Spec (v1.2) | 本 Spec (MIRS v1.0) |
+|------|------------------|---------------------|
+| 架構 | 分佈式 (Hub → Satellite) | 單站 (直接扣庫) |
+| 同步 | Event-driven sync | 離線佇列 + 上線同步 |
+| Snapshot | 5 分鐘同步 | 不需要 (直接讀本地) |
+| 價格解析 | 3-tier precedence | 直接讀 nhi_price |
+
+### B. 修訂歷史
+
+| 版本 | 日期 | 變更 |
+|------|------|------|
+| v1.0 | 2026-01-20 | 初版 - 整合 Gemini/ChatGPT 審閱回饋 |
+| v1.1 | 2026-01-20 | 擴充計費範圍: 新增麻醉處置費、手術處置費、CashDesk Handoff |
+
+---
+
+*De Novo Orthopedics Inc. © 2026*

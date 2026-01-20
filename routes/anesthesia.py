@@ -126,6 +126,7 @@ class EventType(str, Enum):
     LAB_RESULT_POINT = "LAB_RESULT_POINT"          # POC 檢驗
     PROCEDURE_NOTE = "PROCEDURE_NOTE"              # 術中短註記
     POSITION_CHANGE = "POSITION_CHANGE"            # 姿勢調整
+    SPECIAL_TECHNIQUE = "SPECIAL_TECHNIQUE"        # v1.1: 特殊技術 (計費用)
     NOTE = "NOTE"
 
     # === 生命週期 ===
@@ -248,6 +249,9 @@ class CreateCaseRequest(BaseModel):
     patient_name: Optional[str] = None
     context_mode: ContextMode = ContextMode.STANDARD
     planned_technique: Optional[AnesthesiaTechnique] = None
+    # v1.1: ASA Classification for billing
+    asa_classification: Optional[str] = "II"  # I, II, III, IV, V
+    is_emergency: Optional[bool] = False  # +E flag
     primary_anesthesiologist_id: Optional[str] = None
     primary_nurse_id: Optional[str] = None
     # Hub-Satellite sync fields
@@ -262,6 +266,9 @@ class CaseResponse(BaseModel):
     patient_name: Optional[str]
     context_mode: str
     planned_technique: Optional[str]
+    # v1.1: ASA Classification for billing
+    asa_classification: Optional[str] = None
+    is_emergency: Optional[bool] = None
     primary_anesthesiologist_id: Optional[str]
     primary_nurse_id: Optional[str]
     oxygen_source_type: Optional[str]
@@ -822,6 +829,16 @@ def init_anesthesia_schema(cursor):
     except:
         pass
 
+    # v1.1: Add ASA classification columns for billing integration
+    try:
+        cursor.execute("ALTER TABLE anesthesia_cases ADD COLUMN asa_classification TEXT DEFAULT 'II'")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE anesthesia_cases ADD COLUMN is_emergency INTEGER DEFAULT 0")
+    except:
+        pass
+
     # Phase A-6: WAL Sync Queue for offline-first operations
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS anesthesia_sync_queue (
@@ -1107,10 +1124,11 @@ async def create_case(request: CreateCaseRequest, actor_id: str = Query(...)):
             INSERT INTO anesthesia_cases (
                 id, surgery_case_id, patient_id, patient_name,
                 context_mode, planned_technique,
+                asa_classification, is_emergency,
                 primary_anesthesiologist_id, primary_nurse_id,
                 cirs_registration_ref, patient_snapshot,
                 created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             case_id,
             request.surgery_case_id,
@@ -1118,6 +1136,8 @@ async def create_case(request: CreateCaseRequest, actor_id: str = Query(...)):
             request.patient_name,
             request.context_mode.value,
             request.planned_technique.value if request.planned_technique else None,
+            request.asa_classification,
+            1 if request.is_emergency else 0,
             request.primary_anesthesiologist_id,
             request.primary_nurse_id,
             request.cirs_registration_ref,
@@ -1162,6 +1182,8 @@ async def create_case(request: CreateCaseRequest, actor_id: str = Query(...)):
             patient_name=row['patient_name'],
             context_mode=row['context_mode'],
             planned_technique=row['planned_technique'],
+            asa_classification=row['asa_classification'] if 'asa_classification' in row.keys() else None,
+            is_emergency=bool(row['is_emergency']) if 'is_emergency' in row.keys() else None,
             primary_anesthesiologist_id=row['primary_anesthesiologist_id'],
             primary_nurse_id=row['primary_nurse_id'],
             oxygen_source_type=row['oxygen_source_type'],
