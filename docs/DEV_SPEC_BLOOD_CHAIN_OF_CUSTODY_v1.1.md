@@ -642,27 +642,28 @@ POST /api/blood/custody/batch
 
 ## 10. 實作優先級
 
-### Phase 1 (MVP - 1 週)
-- [x] 基礎驗證 API
-- [x] 監管鏈事件 API
-- [ ] **選單範圍限縮 (後端)**
-- [ ] **Select → Scan 兩段式 UI**
+### Phase 1 (MVP) ✅ 完成
+- [x] 基礎驗證 API (`/api/blood/verify`)
+- [x] 監管鏈事件 API (`/api/blood/custody`)
+- [x] **選單範圍限縮 (後端)** - `/units/for-transfusion?patient_id=&location=`
+- [x] **Select → Scan 兩段式 UI** - `scanConfirmSection` in Anesthesia PWA
 
-### Phase 2 (Safety - 1 週)
-- [ ] 狀態機驗證 (server-side)
-- [ ] Emergency Mode 基礎 (EMERGENCY_* 步驟)
-- [ ] 離線同步 + Idempotency
+### Phase 2 (Safety) ✅ 完成
+- [x] 狀態機驗證 (server-side) - `STATUS_TRANSITIONS` dict
+- [x] Emergency Mode 基礎 (EMERGENCY_* 步驟) - `EMERGENCY_RELEASED`, `EMERGENCY_RECEIVED`, `EMERGENCY_TRANSFUSION_STARTED`
+- [x] 離線同步 + Idempotency - `client_event_id` dedup check
 
-### Phase 3 (Complete - 1 週)
-- [ ] TRANSPORT_DELIVERY 步驟
-- [ ] Ad-hoc 輸血自動補齊
-- [ ] 事後對帳流程
-- [ ] 差異/缺漏處理
+### Phase 3 (Complete) ✅ 完成
+- [x] TRANSPORT_DELIVERY 步驟 - `CustodyStep.TRANSPORT_DELIVERY`
+- [x] Ad-hoc 輸血自動補齊 - `/units/{id}/emergency-transfusion` auto-fills missing steps
+- [x] 事後對帳流程 - `/custody/{event_id}/late-verify`, `/custody/{event_id}/supervisor-signoff`
+- [x] 差異/缺漏處理 - `UNIT_QUARANTINED`, `DELIVERY_DISCREPANCY` steps defined
 
-### Phase 4 (Polish - 1 週)
-- [ ] 稽核報表 (Emergency 高亮)
-- [ ] 主管簽核 UI
-- [ ] Operational Dashboard
+### Phase 4 (Polish) ⏳ 部分完成
+- [ ] 稽核報表 (Emergency 高亮) - API ready, UI pending
+- [x] 主管簽核 API - `/custody/{event_id}/supervisor-signoff`
+- [ ] 主管簽核 UI - pending
+- [ ] Operational Dashboard - pending
 
 ---
 
@@ -672,6 +673,7 @@ POST /api/blood/custody/batch
 |------|------|------|
 | v1.0.0 | 2026-01-20 | 初版 |
 | v1.1.0 | 2026-01-20 | 根據 ChatGPT/Gemini 回饋大幅更新 |
+| v1.1.1 | 2026-01-20 | 更新實作 checklist - Phase 1-3 完成，Phase 4 部分完成 |
 
 ---
 
