@@ -1922,10 +1922,33 @@
                     </div>
                 </div>
 
-                <!-- Blood Unit ID (manual entry or auto-filled) -->
+                <!-- v1.1: Scan Confirm Section (Select → Scan 兩段式) -->
+                <div id="scanConfirmSection" style="display: none; margin: 16px 0; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border: 2px solid #f59e0b;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <svg width="24" height="24" fill="none" stroke="#f59e0b" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                        </svg>
+                        <span style="font-weight: 600; color: #f59e0b;">Step 2: 掃碼確認</span>
+                    </div>
+                    <div style="margin-bottom: 12px; font-size: 14px;">
+                        已選擇: <span id="selectedUnitDisplay" style="font-family: monospace; font-weight: 600; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 4px;">--</span>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <input type="text" class="form-input" id="scanConfirmInput"
+                               placeholder="掃描血袋條碼..."
+                               style="font-size: 1.2rem; padding: 14px; text-align: center; font-family: monospace; border: 2px solid #f59e0b;"
+                               onchange="verifyScanConfirm()"
+                               oninput="verifyScanConfirm()">
+                    </div>
+                    <div id="scanConfirmStatus" style="margin-top: 12px; padding: 10px; text-align: center; border-radius: 6px; font-size: 14px; font-weight: 600; background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+                        請掃描血袋條碼確認
+                    </div>
+                </div>
+
+                <!-- Blood Unit ID (manual entry or auto-filled from scan confirm) -->
                 <div class="form-group" style="margin: 16px 0;">
                     <label class="form-label">血袋編號 (Unit ID)</label>
-                    <input type="text" class="form-input" id="bloodUnitId" placeholder="點選上方庫存或手動輸入條碼" style="font-size: 1.1rem; padding: 12px;" onchange="verifyBloodUnit()">
+                    <input type="text" class="form-input" id="bloodUnitId" placeholder="由上方掃碼確認自動填入，或手動輸入" style="font-size: 1.1rem; padding: 12px;" onchange="verifyBloodUnit()">
                 </div>
 
                 <!-- Phase 1: Verification Result Section -->
@@ -2046,6 +2069,81 @@
                 <div style="display: flex; gap: 12px; margin-top: 20px;">
                     <button class="btn" style="background: var(--card-hover); flex: 1;" onclick="backToBloodStep1()">返回</button>
                     <button class="btn btn-primary" style="flex: 2; background: #b91c1c;" onclick="submitBloodProduct()">確認記錄</button>
+                </div>
+
+                <!-- v1.1: Emergency Mode Button -->
+                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border);">
+                    <button class="btn" style="width: 100%; background: #7c2d12; border: 2px dashed #f97316; color: #fed7aa;" onclick="showEmergencyModeModal()">
+                        <span style="font-size: 18px;">⚡</span> 緊急模式 (Emergency Mode)
+                    </button>
+                    <div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 4px;">
+                        無法等待雙人核對或清單查詢時使用，事後需補登
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- v1.1: Emergency Mode Modal -->
+    <div class="modal" id="emergencyModeModal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #7c2d12, #991b1b);">
+                <h2 class="modal-title">
+                    <span style="font-size: 24px;">⚡</span> 緊急模式
+                </h2>
+                <button class="modal-close" onclick="closeModal('emergencyModeModal')">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <div style="background: rgba(249, 115, 22, 0.1); border: 1px solid #f97316; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <div style="font-weight: 600; color: #f97316; margin-bottom: 4px;">⚠️ 緊急模式說明</div>
+                    <div style="font-size: 13px; color: var(--text-muted);">
+                        緊急模式允許在無法完成標準雙人核對時快速輸血。<br>
+                        使用後 <strong>24 小時內</strong> 必須完成事後覆核。
+                    </div>
+                </div>
+
+                <!-- Emergency Reason -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label">緊急原因 *</label>
+                    <select id="emergencyReason" class="form-input" style="padding: 12px;">
+                        <option value="">-- 選擇原因 --</option>
+                        <option value="MTP_ACTIVATED">MTP 大量輸血啟動</option>
+                        <option value="EXSANGUINATING_HEMORRHAGE">出血性休克</option>
+                        <option value="NO_SECOND_STAFF">無第二人員可協助</option>
+                        <option value="SYSTEM_OFFLINE">系統離線</option>
+                        <option value="EQUIPMENT_FAILURE">設備故障</option>
+                        <option value="OTHER">其他</option>
+                    </select>
+                </div>
+
+                <!-- Emergency Reason Note (shown when OTHER selected) -->
+                <div id="emergencyReasonNoteSection" class="form-group" style="display: none; margin-bottom: 16px;">
+                    <label class="form-label">其他原因說明 *</label>
+                    <input type="text" id="emergencyReasonNote" class="form-input" placeholder="請說明緊急原因">
+                </div>
+
+                <!-- Blood Unit Scan -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label">血袋條碼 (掃描或輸入)</label>
+                    <input type="text" id="emergencyUnitId" class="form-input" placeholder="掃描血袋條碼..." style="font-size: 1.1rem; font-family: monospace; padding: 12px;">
+                </div>
+
+                <!-- Actor ID -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label">執行人員工號 *</label>
+                    <input type="text" id="emergencyActorId" class="form-input" placeholder="您的工號/Badge">
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button class="btn" style="background: var(--card-hover); flex: 1;" onclick="closeModal('emergencyModeModal')">取消</button>
+                    <button class="btn" style="flex: 2; background: #dc2626; font-weight: 600;" onclick="submitEmergencyTransfusion()">
+                        ⚡ 啟動緊急輸血
+                    </button>
+                </div>
+
+                <div style="font-size: 11px; color: #f97316; text-align: center; margin-top: 12px; padding: 8px; background: rgba(249, 115, 22, 0.1); border-radius: 6px;">
+                    📋 緊急輸血將自動補齊缺失的發血、傳送步驟<br>
+                    事後覆核提醒將在 24 小時後發送
                 </div>
             </div>
         </div>
@@ -4104,6 +4202,11 @@
             await loadBloodInventory(type);
         }
 
+        // v1.1: 追蹤選擇 → 掃描狀態
+        let selectedBloodUnitId = null;  // 從清單選擇的血袋
+        let scannedBloodUnitId = null;   // 掃碼確認的血袋
+        let scanConfirmPassed = false;   // 掃碼確認是否通過
+
         async function loadBloodInventory(productType) {
             const statusEl = document.getElementById('bloodInventoryStatus');
             const listEl = document.getElementById('bloodInventoryList');
@@ -4111,26 +4214,67 @@
             statusEl.textContent = '載入中...';
             listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">載入中...</div>';
 
+            // v1.1: 重置 Select → Scan 狀態
+            selectedBloodUnitId = null;
+            scannedBloodUnitId = null;
+            scanConfirmPassed = false;
+            document.getElementById('scanConfirmSection').style.display = 'none';
+
             try {
                 const unitType = bloodProductToUnitType[productType] || productType;
-                const res = await apiFetch(`/api/blood/units?unit_type=${unitType}&status=AVAILABLE`);
-                const data = await res.json();
 
-                const units = data.data || data.units || [];
-                const availableUnits = units.filter(u => u.status === 'AVAILABLE' && u.display_status !== 'EXPIRED');
+                // v1.1: 使用限縮範圍 API (僅顯示已發給此病人、已送達此地點的血袋)
+                const patientId = currentCase?.patient_id || 'UNKNOWN';
+                const location = currentCase?.or_room || currentCase?.id || 'OR-1';
+
+                let res;
+                try {
+                    // 先嘗試 v1.1 限縮範圍 API
+                    res = await apiFetch(`/api/blood/units/for-transfusion?patient_id=${encodeURIComponent(patientId)}&location=${encodeURIComponent(location)}`);
+                } catch (e) {
+                    // Fallback 到舊 API
+                    console.warn('v1.1 API not available, falling back to legacy API');
+                    res = await apiFetch(`/api/blood/units?unit_type=${unitType}&status=AVAILABLE`);
+                }
+
+                const data = await res.json();
+                let units = data.data || data.units || [];
+
+                // 過濾血品類型
+                units = units.filter(u => {
+                    const uType = (u.unit_type || '').toUpperCase();
+                    return uType === unitType || unitType === 'PRBC' && uType === 'RBC';
+                });
+
+                // 進一步過濾可用的
+                const availableUnits = units.filter(u =>
+                    (u.status === 'AVAILABLE' || u.status === 'ISSUED' || u.status === 'IN_CLINICAL_AREA') &&
+                    u.display_status !== 'EXPIRED'
+                );
 
                 if (availableUnits.length === 0) {
-                    statusEl.textContent = '無可用庫存';
-                    statusEl.style.color = '#ef4444';
-                    listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">目前無此類型可用血品<br><small>請手動輸入血袋條碼</small></div>';
+                    statusEl.textContent = '無已發血袋';
+                    statusEl.style.color = '#f59e0b';
+                    listEl.innerHTML = `
+                        <div style="text-align: center; color: var(--text-secondary); padding: 16px;">
+                            <div style="margin-bottom: 8px;">目前無已發給此病人的 ${productType} 血品</div>
+                            <small>請先向血庫申請發血，或使用下方掃碼輸入</small>
+                        </div>
+                    `;
                     return;
                 }
 
-                statusEl.textContent = `${availableUnits.length} 袋可用`;
+                statusEl.textContent = `${availableUnits.length} 袋已發`;
                 statusEl.style.color = '#10b981';
 
-                listEl.innerHTML = availableUnits.map(u => `
-                    <div class="blood-inventory-item" onclick="selectBloodUnit('${u.id}', '${u.blood_type}')"
+                // v1.1: 顯示已發血袋清單 (Step 1: Select)
+                listEl.innerHTML = `
+                    <div style="font-size: 12px; color: #f59e0b; padding: 6px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px;">
+                        📋 Step 1: 選擇血袋 → Step 2: 掃碼確認
+                    </div>
+                ` + availableUnits.map(u => `
+                    <div class="blood-inventory-item" onclick="selectBloodUnitForScan('${u.id}', '${u.blood_type}')"
+                         data-unit-id="${u.id}"
                          style="padding: 10px; margin-bottom: 6px; background: var(--bg-secondary); border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
@@ -4145,6 +4289,7 @@
                         </div>
                         <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
                             ${u.volume_ml}ml ${u.hours_until_expiry ? `(${Math.round(u.hours_until_expiry/24)}天後到期)` : ''}
+                            ${u.custody_status ? `| 狀態: ${u.custody_status}` : ''}
                         </div>
                     </div>
                 `).join('');
@@ -4157,15 +4302,116 @@
             }
         }
 
-        function selectBloodUnit(unitId, bloodType) {
-            // Fill in the unit ID
-            document.getElementById('bloodUnitId').value = unitId;
+        // v1.1: Step 1 - 從清單選擇血袋
+        function selectBloodUnitForScan(unitId, bloodType) {
+            selectedBloodUnitId = unitId;
+            scannedBloodUnitId = null;
+            scanConfirmPassed = false;
+
             // Highlight selected item
             document.querySelectorAll('.blood-inventory-item').forEach(el => {
                 el.style.borderColor = 'transparent';
             });
-            event.target.closest('.blood-inventory-item').style.borderColor = '#dc2626';
-            // Trigger verification
+            const selectedEl = document.querySelector(`.blood-inventory-item[data-unit-id="${unitId}"]`);
+            if (selectedEl) {
+                selectedEl.style.borderColor = '#f59e0b';
+            }
+
+            // 顯示掃碼確認區塊
+            const scanSection = document.getElementById('scanConfirmSection');
+            scanSection.style.display = 'block';
+            document.getElementById('selectedUnitDisplay').textContent = unitId;
+            document.getElementById('scanConfirmInput').value = '';
+            document.getElementById('scanConfirmInput').focus();
+
+            // 隱藏後續區塊直到掃碼確認
+            document.getElementById('bloodUnitId').value = '';
+            document.getElementById('bloodVerificationSection').style.display = 'none';
+            document.getElementById('dualVerificationSection').style.display = 'none';
+
+            updateScanConfirmStatus('waiting');
+        }
+
+        // v1.1: Step 2 - 掃碼確認
+        async function verifyScanConfirm() {
+            const scannedId = document.getElementById('scanConfirmInput').value.trim();
+            if (!scannedId) {
+                updateScanConfirmStatus('waiting');
+                return;
+            }
+
+            scannedBloodUnitId = scannedId;
+
+            if (scannedId === selectedBloodUnitId) {
+                // 掃碼確認成功！
+                scanConfirmPassed = true;
+                updateScanConfirmStatus('success');
+
+                // 填入血袋編號並觸發驗證
+                document.getElementById('bloodUnitId').value = scannedId;
+
+                // Highlight 確認的項目
+                document.querySelectorAll('.blood-inventory-item').forEach(el => {
+                    el.style.borderColor = 'transparent';
+                });
+                const selectedEl = document.querySelector(`.blood-inventory-item[data-unit-id="${scannedId}"]`);
+                if (selectedEl) {
+                    selectedEl.style.borderColor = '#10b981';
+                }
+
+                // 呼叫後端確認 API
+                try {
+                    const patientId = currentCase?.patient_id || 'UNKNOWN';
+                    await apiFetch('/api/blood/scan-confirm', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            selected_unit_id: selectedBloodUnitId,
+                            scanned_unit_id: scannedBloodUnitId,
+                            patient_id: patientId
+                        })
+                    });
+                } catch (err) {
+                    console.warn('Scan confirm API call failed (non-blocking):', err);
+                }
+
+                // 觸發血袋驗證
+                verifyBloodUnit();
+            } else {
+                // 掃碼不符！
+                scanConfirmPassed = false;
+                updateScanConfirmStatus('mismatch');
+            }
+        }
+
+        function updateScanConfirmStatus(status) {
+            const statusEl = document.getElementById('scanConfirmStatus');
+            const statusMap = {
+                'waiting': { text: '請掃描血袋條碼確認', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
+                'success': { text: '✅ 掃碼確認成功！', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
+                'mismatch': { text: '❌ 條碼不符！請確認拿對血袋', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' }
+            };
+            const s = statusMap[status] || statusMap['waiting'];
+            statusEl.textContent = s.text;
+            statusEl.style.color = s.color;
+            statusEl.style.background = s.bg;
+        }
+
+        // 原本的 selectBloodUnit (保留向後相容，直接跳過掃碼確認)
+        function selectBloodUnit(unitId, bloodType) {
+            // 直接使用 (用於緊急模式或手動輸入)
+            selectedBloodUnitId = unitId;
+            scannedBloodUnitId = unitId;
+            scanConfirmPassed = true;
+
+            document.getElementById('bloodUnitId').value = unitId;
+            document.querySelectorAll('.blood-inventory-item').forEach(el => {
+                el.style.borderColor = 'transparent';
+            });
+            const selectedEl = document.querySelector(`.blood-inventory-item[data-unit-id="${unitId}"]`);
+            if (selectedEl) {
+                selectedEl.style.borderColor = '#dc2626';
+            }
             verifyBloodUnit();
         }
 
@@ -4412,9 +4658,121 @@
                 'TRANSFUSION_STARTED': '💉 開始輸血',
                 'TRANSFUSION_COMPLETED': '✅ 輸血完成',
                 'TRANSFUSION_STOPPED': '⚠️ 輸血中止',
-                'RETURNED': '↩️ 退血'
+                'RETURNED': '↩️ 退血',
+                // v1.1: Emergency steps
+                'EMERGENCY_RELEASED': '⚡ 緊急發血',
+                'EMERGENCY_RECEIVED': '⚡ 緊急收血',
+                'EMERGENCY_TRANSFUSION_STARTED': '⚡ 緊急輸血',
+                'LATE_VERIFICATION': '📝 事後覆核',
+                'SUPERVISOR_SIGNOFF': '✍️ 主管簽核'
             };
             return labels[step] || step;
+        }
+
+        // ================================================================
+        // v1.1: Emergency Mode Functions
+        // ================================================================
+
+        function showEmergencyModeModal() {
+            // Reset form
+            document.getElementById('emergencyReason').value = '';
+            document.getElementById('emergencyReasonNote').value = '';
+            document.getElementById('emergencyUnitId').value = '';
+            document.getElementById('emergencyActorId').value = actorId || '';
+            document.getElementById('emergencyReasonNoteSection').style.display = 'none';
+
+            document.getElementById('emergencyModeModal').classList.add('active');
+
+            // Focus on unit ID input
+            setTimeout(() => {
+                document.getElementById('emergencyUnitId').focus();
+            }, 100);
+        }
+
+        // Show/hide reason note field based on reason selection
+        document.addEventListener('DOMContentLoaded', function() {
+            const reasonSelect = document.getElementById('emergencyReason');
+            if (reasonSelect) {
+                reasonSelect.addEventListener('change', function() {
+                    const noteSection = document.getElementById('emergencyReasonNoteSection');
+                    if (this.value === 'OTHER') {
+                        noteSection.style.display = 'block';
+                    } else {
+                        noteSection.style.display = 'none';
+                    }
+                });
+            }
+        });
+
+        async function submitEmergencyTransfusion() {
+            const reason = document.getElementById('emergencyReason').value;
+            const reasonNote = document.getElementById('emergencyReasonNote').value.trim();
+            const unitId = document.getElementById('emergencyUnitId').value.trim();
+            const actorIdValue = document.getElementById('emergencyActorId').value.trim();
+
+            // Validation
+            if (!reason) {
+                alert('請選擇緊急原因');
+                return;
+            }
+
+            if (reason === 'OTHER' && !reasonNote) {
+                alert('請說明緊急原因');
+                return;
+            }
+
+            if (!actorIdValue) {
+                alert('請輸入執行人員工號');
+                return;
+            }
+
+            // Confirm action
+            const confirmMsg = unitId
+                ? `確定要以緊急模式開始輸血？\n\n血袋: ${unitId}\n原因: ${reason}\n執行人員: ${actorIdValue}`
+                : `確定要以緊急模式開始輸血？\n\n⚠️ 未指定血袋 (將建立 Ad-hoc 記錄)\n原因: ${reason}\n執行人員: ${actorIdValue}`;
+
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            try {
+                const patientId = currentCase?.patient_id || 'UNKNOWN';
+                const location = currentCase?.or_room || currentCase?.id || 'OR-1';
+
+                // Call emergency transfusion API
+                const res = await apiFetch('/api/blood/units/' + (unitId || 'adhoc') + '/emergency-transfusion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_id: patientId,
+                        actor_id: actorIdValue,
+                        location: location,
+                        emergency_reason: reason,
+                        emergency_reason_note: reason === 'OTHER' ? reasonNote : null,
+                        scanned_unit_id: unitId || null
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    closeModal('emergencyModeModal');
+                    closeModal('bloodModal');
+
+                    // Show success message
+                    alert(`⚡ 緊急輸血已記錄！\n\n事件 ID: ${data.event_id || '--'}\n\n📋 請記得在 24 小時內完成事後覆核`);
+
+                    // Refresh case timeline
+                    if (currentCase) {
+                        await loadCaseTimeline(currentCase.id);
+                    }
+                } else {
+                    throw new Error(data.detail || data.message || '緊急輸血記錄失敗');
+                }
+            } catch (err) {
+                console.error('Emergency transfusion failed:', err);
+                alert('緊急輸血記錄失敗: ' + (err.message || '未知錯誤'));
+            }
         }
 
         function backToBloodStep1() {
@@ -4424,6 +4782,11 @@
             // Reset verification states
             bloodVerificationResult = null;
             dualVerificationPassed = false;
+            // v1.1: Reset scan confirm states
+            selectedBloodUnitId = null;
+            scannedBloodUnitId = null;
+            scanConfirmPassed = false;
+            document.getElementById('scanConfirmSection').style.display = 'none';
             document.getElementById('bloodVerificationSection').style.display = 'none';
             document.getElementById('dualVerificationSection').style.display = 'none';
             document.getElementById('custodyActor1').value = '';

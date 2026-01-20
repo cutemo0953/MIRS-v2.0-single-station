@@ -118,6 +118,16 @@
                 <span x-text="pendingOrdersSummary.overdue_count"></span>
             </span>
         </button>
+        <!-- v1.1: 傳送追蹤 Tab -->
+        <button @click="activeTab = 'delivery'; loadPendingCustody()"
+                :class="activeTab === 'delivery' ? 'border-blood-600 text-blood-600' : 'border-transparent text-gray-500'"
+                class="flex-1 py-3 text-sm font-medium border-b-2 transition relative">
+            傳送
+            <span x-show="pendingCustodyCount > 0"
+                  class="absolute -top-1 -right-1 bg-orange-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                <span x-text="pendingCustodyCount"></span>
+            </span>
+        </button>
     </nav>
 
     <!-- Main Content -->
@@ -775,6 +785,136 @@
             </div>
         </div>
 
+        <!-- v1.1: Delivery Tracking Tab (傳送追蹤) -->
+        <div x-show="activeTab === 'delivery'" x-cloak class="max-w-3xl mx-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">傳送追蹤</h2>
+                <button @click="loadPendingCustody()"
+                        class="text-blood-600 text-sm flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    重新整理
+                </button>
+            </div>
+
+            <!-- Info Banner -->
+            <div class="bg-orange-50 border-l-4 border-orange-500 p-3 mb-4">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="font-medium text-orange-700">已發血待送達追蹤</span>
+                </div>
+                <p class="text-sm text-orange-600 mt-1">
+                    顯示已發血但尚未送達臨床區域的血袋，追蹤冷鏈時間
+                </p>
+            </div>
+
+            <!-- Empty State -->
+            <div x-show="!pendingCustodyLoading && pendingCustodyItems.length === 0"
+                 class="text-center py-12 text-gray-500">
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="font-medium">所有發血都已送達！</p>
+                <p class="text-sm">沒有待處理的傳送項目</p>
+            </div>
+
+            <!-- Loading State -->
+            <div x-show="pendingCustodyLoading" class="text-center py-8 text-gray-500">
+                <svg class="animate-spin w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                載入中...
+            </div>
+
+            <!-- Pending Delivery Items List -->
+            <div x-show="!pendingCustodyLoading" class="space-y-3">
+                <template x-for="item in pendingCustodyItems" :key="item.unit_id">
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <!-- Header -->
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <div class="font-mono text-sm font-bold text-gray-800" x-text="item.unit_id"></div>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="px-2 py-0.5 rounded text-xs font-bold"
+                                          :class="'unit-type-' + (item.unit_type || 'prbc').toLowerCase()"
+                                          x-text="item.unit_type || 'PRBC'"></span>
+                                    <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-bold"
+                                          x-text="item.blood_type"></span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-medium"
+                                     :class="item.elapsed_minutes > 20 ? 'text-red-600' : item.elapsed_minutes > 10 ? 'text-amber-600' : 'text-green-600'">
+                                    <span x-text="item.elapsed_minutes"></span> 分鐘
+                                </div>
+                                <div class="text-xs text-gray-500">冷鏈時間</div>
+                            </div>
+                        </div>
+
+                        <!-- Status Info -->
+                        <div class="bg-gray-50 rounded p-3 mb-3 space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">目前狀態</span>
+                                <span class="font-medium" x-text="getCustodyStepLabel(item.current_step)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">下一步驟</span>
+                                <span class="font-medium text-orange-600" x-text="getCustodyStepLabel(item.next_step)"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">目的地</span>
+                                <span class="font-medium" x-text="item.location || '--'"></span>
+                            </div>
+                            <div x-show="item.patient_id" class="flex justify-between">
+                                <span class="text-gray-600">病人</span>
+                                <span class="font-medium" x-text="item.patient_id"></span>
+                            </div>
+                        </div>
+
+                        <!-- Cold Chain Warning -->
+                        <div x-show="item.elapsed_minutes > 20"
+                             class="bg-red-50 border border-red-200 rounded p-2 mb-3 text-sm text-red-700 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            冷鏈時間超過 20 分鐘，請儘速送達！
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex gap-2">
+                            <button @click="recordDeliveryStep(item, 'TRANSPORT_PICKUP')"
+                                    x-show="item.current_step === 'RELEASED'"
+                                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-medium text-sm flex items-center justify-center gap-1 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                確認取血
+                            </button>
+                            <button @click="recordDeliveryStep(item, 'TRANSPORT_DELIVERY')"
+                                    x-show="item.current_step === 'TRANSPORT_PICKUP'"
+                                    class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded font-medium text-sm flex items-center justify-center gap-1 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                確認送達
+                            </button>
+                            <button @click="viewCustodyTimeline(item.unit_id)"
+                                    class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-medium text-sm transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
         <!-- Emergency Tab -->
         <div x-show="activeTab === 'emergency'" x-cloak>
             <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
@@ -1270,6 +1410,10 @@
                     overdue_count: 0,
                     oldest_overdue_hours: 0
                 },
+                // v1.1: Delivery tracking (傳送追蹤)
+                pendingCustodyItems: [],
+                pendingCustodyLoading: false,
+                pendingCustodyCount: 0,
                 showResolveModal: false,
                 resolvingOrder: null,
                 resolveForm: {
@@ -1740,6 +1884,111 @@
                         this.showToast('載入待補單失敗', 'error');
                     }
                     this.pendingOrdersLoading = false;
+                },
+
+                // ================================================================
+                // v1.1: Delivery Tracking (傳送追蹤) Functions
+                // ================================================================
+
+                async loadPendingCustody() {
+                    this.pendingCustodyLoading = true;
+                    try {
+                        const result = await xIRS.API.get('/api/blood/custody/pending');
+                        if (result.ok && result.data.success) {
+                            this.pendingCustodyItems = result.data.data || [];
+                            this.pendingCustodyCount = this.pendingCustodyItems.length;
+                        }
+                    } catch (e) {
+                        console.error('Failed to load pending custody:', e);
+                        this.showToast('載入傳送追蹤失敗', 'error');
+                    }
+                    this.pendingCustodyLoading = false;
+                },
+
+                getCustodyStepLabel(step) {
+                    const labels = {
+                        'RELEASED': '已發血',
+                        'TRANSPORT_PICKUP': '已取血',
+                        'TRANSPORT_DELIVERY': '已送達',
+                        'NURSING_RECEIVED': '護理已收',
+                        'TRANSFUSION_STARTED': '輸血中',
+                        'TRANSFUSION_COMPLETED': '已完成',
+                        'EMERGENCY_RELEASED': '緊急發血',
+                        'EMERGENCY_RECEIVED': '緊急收血',
+                        null: '待處理'
+                    };
+                    return labels[step] || step || '--';
+                },
+
+                async recordDeliveryStep(item, step) {
+                    if (!confirm(`確認記錄「${this.getCustodyStepLabel(step)}」？\n\n血袋: ${item.unit_id}`)) {
+                        return;
+                    }
+
+                    try {
+                        const result = await xIRS.API.post(`/api/blood/units/${item.unit_id}/custody`, {
+                            step: step,
+                            patient_id: item.patient_id || 'UNKNOWN',
+                            actor1_id: 'TRANSPORT',  // TODO: Get from login
+                            actor2_id: null,
+                            location: item.location || 'IN_TRANSIT',
+                            notes: null
+                        });
+
+                        if (result.ok && result.data.success) {
+                            this.showToast(`已記錄: ${this.getCustodyStepLabel(step)}`, 'success');
+                            await this.loadPendingCustody();
+                        } else {
+                            this.showToast(result.data?.detail || '操作失敗', 'error');
+                        }
+                    } catch (e) {
+                        console.error('Failed to record delivery step:', e);
+                        this.showToast('記錄失敗', 'error');
+                    }
+                },
+
+                async viewCustodyTimeline(unitId) {
+                    try {
+                        const result = await xIRS.API.get(`/api/blood/units/${unitId}/custody`);
+                        if (result.ok && result.data.success !== false) {
+                            const data = result.data;
+                            const chain = data.chain || [];
+                            let timelineHtml = `<div class="p-4">
+                                <h3 class="font-bold text-lg mb-2">血袋: ${unitId}</h3>
+                                <p class="text-sm text-gray-600 mb-4">血型: ${data.blood_type || '--'} | 病人: ${data.patient_id || '--'}</p>`;
+
+                            if (chain.length === 0) {
+                                timelineHtml += '<p class="text-gray-500 text-center py-4">尚無追蹤記錄</p>';
+                            } else {
+                                timelineHtml += '<div class="space-y-3">';
+                                chain.forEach((event, idx) => {
+                                    const isLast = idx === chain.length - 1;
+                                    timelineHtml += `
+                                        <div class="flex gap-3">
+                                            <div class="flex flex-col items-center">
+                                                <div class="w-3 h-3 rounded-full ${isLast ? 'bg-green-500' : 'bg-gray-400'}"></div>
+                                                ${!isLast ? '<div class="w-0.5 h-8 bg-gray-300"></div>' : ''}
+                                            </div>
+                                            <div>
+                                                <div class="font-medium">${this.getCustodyStepLabel(event.step)}</div>
+                                                <div class="text-xs text-gray-500">${event.timestamp ? new Date(event.timestamp).toLocaleString('zh-TW') : '--'}</div>
+                                                <div class="text-xs text-gray-500">${event.location || ''}</div>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                                timelineHtml += '</div>';
+                            }
+
+                            timelineHtml += `<p class="text-sm text-gray-500 text-center mt-4">總時間: ${data.elapsed_minutes || 0} 分鐘</p></div>`;
+
+                            // Simple alert-style display (could be enhanced with modal)
+                            alert(`血袋追蹤: ${unitId}\n\n${chain.map(e => `${this.getCustodyStepLabel(e.step)} - ${e.timestamp ? new Date(e.timestamp).toLocaleTimeString('zh-TW') : '--'}`).join('\n') || '尚無記錄'}\n\n總時間: ${data.elapsed_minutes || 0} 分鐘`);
+                        }
+                    } catch (e) {
+                        console.error('Failed to load custody timeline:', e);
+                        this.showToast('載入追蹤記錄失敗', 'error');
+                    }
                 },
 
                 openResolveModal(order) {

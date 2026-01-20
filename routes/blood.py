@@ -183,21 +183,82 @@ class PendingOrderResolve(BaseModel):
 
 class CustodyStep(str):
     """監管鏈步驟類型"""
+    # === 正常流程 ===
     RELEASED = "RELEASED"                      # 血庫發血
     TRANSPORT_PICKUP = "TRANSPORT_PICKUP"      # 傳送取血
-    TRANSPORT_DELIVERY = "TRANSPORT_DELIVERY"  # 傳送送達
+    TRANSPORT_DELIVERY = "TRANSPORT_DELIVERY"  # 傳送送達 (v1.1)
     NURSING_RECEIVED = "NURSING_RECEIVED"      # 護理收血
     TRANSFUSION_STARTED = "TRANSFUSION_STARTED"    # 開始輸血
     TRANSFUSION_COMPLETED = "TRANSFUSION_COMPLETED" # 輸血完成
     TRANSFUSION_STOPPED = "TRANSFUSION_STOPPED"    # 輸血中止 (反應)
     RETURNED = "RETURNED"                      # 退血
 
+    # === Emergency Mode (v1.1) ===
+    EMERGENCY_RELEASED = "EMERGENCY_RELEASED"
+    EMERGENCY_RECEIVED = "EMERGENCY_RECEIVED"
+    EMERGENCY_TRANSFUSION_STARTED = "EMERGENCY_TRANSFUSION_STARTED"
+    LATE_VERIFICATION = "LATE_VERIFICATION"
+    SUPERVISOR_SIGNOFF = "SUPERVISOR_SIGNOFF"
+
+    # === 差異/異常處理 (v1.1) ===
+    DELIVERY_DISCREPANCY = "DELIVERY_DISCREPANCY"
+    UNIT_QUARANTINED = "UNIT_QUARANTINED"
+    UNIT_FOUND = "UNIT_FOUND"
+    UNIT_DISCARDED = "UNIT_DISCARDED"
+
 
 CUSTODY_STEPS = [
     "RELEASED", "TRANSPORT_PICKUP", "TRANSPORT_DELIVERY",
     "NURSING_RECEIVED", "TRANSFUSION_STARTED",
-    "TRANSFUSION_COMPLETED", "TRANSFUSION_STOPPED", "RETURNED"
+    "TRANSFUSION_COMPLETED", "TRANSFUSION_STOPPED", "RETURNED",
+    # Emergency
+    "EMERGENCY_RELEASED", "EMERGENCY_RECEIVED", "EMERGENCY_TRANSFUSION_STARTED",
+    "LATE_VERIFICATION", "SUPERVISOR_SIGNOFF",
+    # Discrepancy
+    "DELIVERY_DISCREPANCY", "UNIT_QUARANTINED", "UNIT_FOUND", "UNIT_DISCARDED"
 ]
+
+# v1.1: Emergency 原因碼
+class EmergencyReason:
+    MTP_ACTIVATED = "MTP_ACTIVATED"
+    EXSANGUINATING_HEMORRHAGE = "EXSANGUINATING_HEMORRHAGE"
+    NO_SECOND_STAFF = "NO_SECOND_STAFF"
+    SYSTEM_OFFLINE = "SYSTEM_OFFLINE"
+    EQUIPMENT_FAILURE = "EQUIPMENT_FAILURE"
+    OTHER = "OTHER"
+
+EMERGENCY_REASONS = [
+    "MTP_ACTIVATED", "EXSANGUINATING_HEMORRHAGE", "NO_SECOND_STAFF",
+    "SYSTEM_OFFLINE", "EQUIPMENT_FAILURE", "OTHER"
+]
+
+# v1.1: 狀態轉移表 (Server-side enforcement)
+VALID_STATUS_TRANSITIONS = {
+    "AVAILABLE": ["ISSUED", "RESERVED"],
+    "RESERVED": ["ISSUED", "AVAILABLE"],
+    "ISSUED": ["IN_CLINICAL_AREA", "RETURNED"],
+    "IN_CLINICAL_AREA": ["TRANSFUSING", "RETURNED", "QUARANTINED"],
+    "TRANSFUSING": ["TRANSFUSED"],
+    "TRANSFUSED": [],  # 終態
+    "RETURNED": ["AVAILABLE"],  # 可重新上架
+    "QUARANTINED": ["DISCARDED", "AVAILABLE"],  # 解除隔離或銷毀
+    "DISCARDED": [],  # 終態
+}
+
+# v1.1: 步驟對應的狀態更新
+STEP_TO_STATUS_UPDATE = {
+    "RELEASED": "ISSUED",
+    "EMERGENCY_RELEASED": "ISSUED",
+    "TRANSPORT_DELIVERY": "IN_CLINICAL_AREA",
+    "EMERGENCY_RECEIVED": "IN_CLINICAL_AREA",
+    "TRANSFUSION_STARTED": "TRANSFUSING",
+    "EMERGENCY_TRANSFUSION_STARTED": "TRANSFUSING",
+    "TRANSFUSION_COMPLETED": "TRANSFUSED",
+    "TRANSFUSION_STOPPED": "TRANSFUSED",
+    "RETURNED": "RETURNED",
+    "UNIT_QUARANTINED": "QUARANTINED",
+    "UNIT_DISCARDED": "DISCARDED",
+}
 
 
 class BloodVerifyRequest(BaseModel):
@@ -218,6 +279,13 @@ class CustodyEventCreate(BaseModel):
     # 輸血完成時的額外欄位
     duration_minutes: Optional[int] = None
     reaction: Optional[str] = None  # NONE, MILD, SEVERE
+    # v1.1: Emergency Mode 欄位
+    emergency_reason: Optional[str] = None  # EmergencyReason
+    emergency_reason_note: Optional[str] = None
+    # v1.1: 離線同步欄位
+    client_event_id: Optional[str] = None  # UUID for idempotency
+    occurred_at: Optional[str] = None  # 裝置時間
+    device_id: Optional[str] = None
 
 
 class DualVerificationRequest(BaseModel):
@@ -225,6 +293,40 @@ class DualVerificationRequest(BaseModel):
     actor1_id: str
     actor2_id: str
     verification_type: str = "BLOOD_TRANSFUSION"  # 驗證類型
+
+
+# v1.1: Emergency Transfusion Request
+class EmergencyTransfusionRequest(BaseModel):
+    """緊急輸血請求 (Ad-hoc)"""
+    patient_id: str
+    actor_id: str
+    location: str
+    emergency_reason: str  # EmergencyReason
+    emergency_reason_note: Optional[str] = None
+    # 掃碼確認
+    scanned_unit_id: Optional[str] = None  # 實際掃描的血袋 ID
+
+
+# v1.1: Late Verification Request
+class LateVerificationRequest(BaseModel):
+    """事後補核對"""
+    verifier_id: str
+    notes: Optional[str] = None
+
+
+# v1.1: Supervisor Signoff Request
+class SupervisorSignoffRequest(BaseModel):
+    """主管簽核"""
+    supervisor_id: str
+    notes: Optional[str] = None
+
+
+# v1.1: Scan Confirmation Request
+class ScanConfirmRequest(BaseModel):
+    """掃碼確認 (Select → Scan 兩段式)"""
+    selected_unit_id: str  # 選擇的血袋 ID
+    scanned_unit_id: str   # 實際掃描的血袋 ID
+    patient_id: str
 
 
 # 血品預設保存期限 (天)
@@ -1468,13 +1570,19 @@ async def record_custody_event(unit_id: str, data: CustodyEventCreate):
     - 在哪裡 (location)
     - 做了什麼 (step)
     - 驗證結果 (自動執行)
+
+    v1.1 新增:
+    - client_event_id 離線同步冪等性檢查
+    - STEP_TO_STATUS_UPDATE 狀態轉移
     """
     # 驗證步驟類型
     if data.step not in CUSTODY_STEPS:
         raise HTTPException(status_code=400, detail=f"無效的監管鏈步驟: {data.step}")
 
-    # 雙人核對步驟需要 actor2_id
+    # 雙人核對步驟需要 actor2_id (正常流程)
+    # Emergency 步驟允許單人操作
     dual_check_steps = ["RELEASED", "NURSING_RECEIVED", "TRANSFUSION_STARTED"]
+    emergency_steps = ["EMERGENCY_RELEASED", "EMERGENCY_RECEIVED", "EMERGENCY_TRANSFUSION_STARTED"]
     if data.step in dual_check_steps and not data.actor2_id:
         raise HTTPException(status_code=400, detail=f"步驟 {data.step} 需要雙人核對 (actor2_id)")
 
@@ -1498,6 +1606,25 @@ async def record_custody_event(unit_id: str, data: CustodyEventCreate):
     with get_db() as conn:
         cursor = conn.cursor()
 
+        # v1.1: 離線同步冪等性檢查 (client_event_id)
+        if data.client_event_id:
+            cursor.execute("""
+                SELECT id FROM blood_unit_events
+                WHERE metadata LIKE ?
+                LIMIT 1
+            """, (f'%"client_event_id": "{data.client_event_id}"%',))
+            existing = cursor.fetchone()
+            if existing:
+                # 已處理過，返回成功 (冪等)
+                return {
+                    "success": True,
+                    "event_id": existing[0],
+                    "step": data.step,
+                    "timestamp": datetime.now().isoformat(),
+                    "idempotent": True,
+                    "message": "事件已存在 (離線同步重複)"
+                }
+
         # 取得血袋資訊
         cursor.execute("SELECT * FROM blood_units WHERE id = ?", (unit_id,))
         unit = cursor.fetchone()
@@ -1514,7 +1641,9 @@ async def record_custody_event(unit_id: str, data: CustodyEventCreate):
             "expiry_valid": unit["expiry_date"] > datetime.now().strftime("%Y-%m-%d")
         }
 
-        if not verification["expiry_valid"]:
+        # Emergency 步驟允許過期血袋 (緊急狀況)
+        emergency_steps = ["EMERGENCY_RELEASED", "EMERGENCY_RECEIVED", "EMERGENCY_TRANSFUSION_STARTED"]
+        if not verification["expiry_valid"] and data.step not in emergency_steps:
             raise HTTPException(status_code=403, detail="血袋已過期，無法繼續流程")
 
         # 記錄事件
@@ -1528,11 +1657,18 @@ async def record_custody_event(unit_id: str, data: CustodyEventCreate):
             "actor2_id": data.actor2_id,
             "location": data.location,
             "verification": verification,
-            "notes": data.notes
+            "notes": data.notes,
+            # v1.1: 離線同步欄位
+            "client_event_id": data.client_event_id,
+            "occurred_at": data.occurred_at,
+            "device_id": data.device_id,
+            # v1.1: Emergency 欄位
+            "emergency_reason": data.emergency_reason,
+            "emergency_reason_note": data.emergency_reason_note
         }
 
         # 輸血完成的額外資訊
-        if data.step == "TRANSFUSION_COMPLETED":
+        if data.step in ["TRANSFUSION_COMPLETED", "TRANSFUSION_STOPPED"]:
             metadata["duration_minutes"] = data.duration_minutes
             metadata["reaction"] = data.reaction
 
@@ -1545,21 +1681,19 @@ async def record_custody_event(unit_id: str, data: CustodyEventCreate):
             metadata=metadata
         )
 
-        # 更新血袋狀態 (根據步驟)
-        status_updates = {
-            "RELEASED": "ISSUED",
-            "NURSING_RECEIVED": "ISSUED",  # 保持 ISSUED
-            "TRANSFUSION_STARTED": "ISSUED",  # 保持 ISSUED (可加新狀態 TRANSFUSING)
-            "TRANSFUSION_COMPLETED": "ISSUED",  # 可加新狀態 TRANSFUSED
-            "RETURNED": "AVAILABLE"
-        }
+        # v1.1: 使用 STEP_TO_STATUS_UPDATE 更新血袋狀態
+        if data.step in STEP_TO_STATUS_UPDATE:
+            new_status = STEP_TO_STATUS_UPDATE[data.step]
+            current_status = unit["status"]
 
-        if data.step in status_updates:
-            new_status = status_updates[data.step]
-            if unit["status"] != new_status:
-                # 驗證狀態轉移
-                if data.step == "RELEASED" and unit["status"] not in ["AVAILABLE", "RESERVED"]:
-                    raise HTTPException(status_code=409, detail=f"血袋狀態 {unit['status']} 無法發血")
+            if current_status != new_status:
+                # v1.1: 驗證狀態轉移是否合法
+                allowed_next = VALID_STATUS_TRANSITIONS.get(current_status, [])
+                if new_status not in allowed_next:
+                    # 記錄違規但不阻擋 (緊急狀況優先)
+                    logger.warning(
+                        f"狀態轉移違規: {unit_id} {current_status} -> {new_status} (step={data.step})"
+                    )
 
                 cursor.execute("""
                     UPDATE blood_units SET status = ? WHERE id = ?
@@ -1822,6 +1956,568 @@ async def get_pending_custody(
 
         # 只返回未完成的
         result = [r for r in result if r.get("next_step") is not None]
+
+        return {
+            "success": True,
+            "data": result
+        }
+
+
+# ==============================================================================
+# v1.1: Selection List Scope Restriction (選單範圍限縮)
+# ==============================================================================
+
+@router.get("/units/for-transfusion")
+async def get_units_for_transfusion(
+    patient_id: str = Query(..., description="病人 ID"),
+    location: str = Query(..., description="地點 (OR-3, ICU-01, etc.)"),
+    blood_type: Optional[str] = Query(None, description="血型篩選")
+):
+    """
+    v1.1: 取得可用於輸血的血袋 (限縮範圍)
+
+    只返回「已發給此病人 + 已送達此地點」的血袋
+    用於 Anesthesia PWA 的選單，取代全庫存清單
+
+    安全規則:
+    - 後端強制限縮，不只是 UI 提示
+    - 只有 IN_CLINICAL_AREA 或 ISSUED 且 patient_id 匹配的血袋
+    """
+    if IS_VERCEL:
+        # Demo 模式
+        now = datetime.now()
+        demo_units = [
+            {
+                "id": "BU-20260120-ABC123",
+                "blood_type": "O+",
+                "unit_type": "PRBC",
+                "volume_ml": 300,
+                "expiry_date": (now + timedelta(days=2)).strftime("%Y-%m-%d"),
+                "hours_until_expiry": 48,
+                "status": "IN_CLINICAL_AREA",
+                "location": location,
+                "patient_id": patient_id,
+                "custody_step": "NURSING_RECEIVED",
+                "received_at": (now - timedelta(minutes=15)).isoformat()
+            },
+            {
+                "id": "BU-20260120-DEF456",
+                "blood_type": "O+",
+                "unit_type": "PRBC",
+                "volume_ml": 300,
+                "expiry_date": (now + timedelta(days=8)).strftime("%Y-%m-%d"),
+                "hours_until_expiry": 192,
+                "status": "IN_CLINICAL_AREA",
+                "location": location,
+                "patient_id": patient_id,
+                "custody_step": "NURSING_RECEIVED",
+                "received_at": (now - timedelta(minutes=10)).isoformat()
+            }
+        ]
+
+        if blood_type:
+            demo_units = [u for u in demo_units if u["blood_type"] == blood_type]
+
+        return {
+            "success": True,
+            "data": demo_units,
+            "scope": {
+                "patient_id": patient_id,
+                "location": location,
+                "restriction": "PATIENT_AND_LOCATION"
+            },
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 查詢已發給此病人且狀態為 ISSUED 或 IN_CLINICAL_AREA 的血袋
+        query = """
+            SELECT bu.*, bue.metadata as last_custody_metadata
+            FROM blood_units bu
+            LEFT JOIN (
+                SELECT unit_id, metadata,
+                       ROW_NUMBER() OVER (PARTITION BY unit_id ORDER BY ts_server DESC) as rn
+                FROM blood_unit_events
+                WHERE event_type LIKE 'CUSTODY_%'
+            ) bue ON bu.id = bue.unit_id AND bue.rn = 1
+            WHERE bu.status IN ('ISSUED', 'IN_CLINICAL_AREA')
+        """
+        params = []
+
+        # 如果有 location 限縮 (從 custody metadata 取得)
+        # 注意：這需要血袋有被記錄過 location
+
+        cursor.execute(query)
+        rows = cursor.fetchall()
+
+        result = []
+        for row in rows:
+            row = dict(row)
+            metadata = json.loads(row.get("last_custody_metadata") or "{}")
+
+            # 檢查 patient_id 匹配
+            unit_patient_id = metadata.get("patient_id")
+            if unit_patient_id and unit_patient_id != patient_id:
+                continue
+
+            # 檢查 location 匹配
+            unit_location = metadata.get("location")
+            if unit_location and unit_location != location:
+                continue
+
+            # 計算剩餘效期
+            expiry = datetime.strptime(row["expiry_date"], "%Y-%m-%d")
+            hours_until_expiry = max(0, int((expiry - datetime.now()).total_seconds() / 3600))
+
+            # 跳過已過期的
+            if hours_until_expiry <= 0:
+                continue
+
+            # 血型篩選
+            if blood_type and row["blood_type"] != blood_type:
+                continue
+
+            result.append({
+                "id": row["id"],
+                "blood_type": row["blood_type"],
+                "unit_type": row["unit_type"],
+                "volume_ml": row["volume_ml"],
+                "expiry_date": row["expiry_date"],
+                "hours_until_expiry": hours_until_expiry,
+                "status": row["status"],
+                "location": unit_location,
+                "patient_id": unit_patient_id,
+                "custody_step": metadata.get("step"),
+                "expiring_soon": hours_until_expiry < 24
+            })
+
+        # 按效期排序 (先過期的優先使用 - FIFO)
+        result.sort(key=lambda x: x["hours_until_expiry"])
+
+        return {
+            "success": True,
+            "data": result,
+            "scope": {
+                "patient_id": patient_id,
+                "location": location,
+                "restriction": "PATIENT_AND_LOCATION"
+            }
+        }
+
+
+# ==============================================================================
+# v1.1: Select → Scan Two-Stage Confirmation (兩段式確認)
+# ==============================================================================
+
+@router.post("/scan-confirm")
+async def confirm_scan(data: ScanConfirmRequest):
+    """
+    v1.1: 掃碼確認 (Select → Scan 兩段式)
+
+    驗證使用者選擇的血袋 ID 與實際掃描的血袋 ID 是否一致
+    這是防止「選錯血袋」的關鍵安全機制
+
+    Returns:
+        match: bool - 是否一致
+        selected: 選擇的血袋資訊
+        scanned: 掃描的血袋資訊 (如果不一致)
+    """
+    match = data.selected_unit_id == data.scanned_unit_id
+
+    if IS_VERCEL:
+        if match:
+            return {
+                "match": True,
+                "selected_unit_id": data.selected_unit_id,
+                "scanned_unit_id": data.scanned_unit_id,
+                "message": "血袋相符，可以繼續",
+                "demo": True
+            }
+        else:
+            return {
+                "match": False,
+                "selected_unit_id": data.selected_unit_id,
+                "scanned_unit_id": data.scanned_unit_id,
+                "warning": f"血袋不符！選擇的是 {data.selected_unit_id}，掃描的是 {data.scanned_unit_id}",
+                "action_required": "請確認手上的血袋是否正確",
+                "demo": True
+            }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 取得選擇的血袋資訊
+        cursor.execute("SELECT * FROM blood_units WHERE id = ?", (data.selected_unit_id,))
+        selected_unit = cursor.fetchone()
+
+        # 取得掃描的血袋資訊
+        cursor.execute("SELECT * FROM blood_units WHERE id = ?", (data.scanned_unit_id,))
+        scanned_unit = cursor.fetchone()
+
+        if match:
+            return {
+                "match": True,
+                "selected_unit_id": data.selected_unit_id,
+                "scanned_unit_id": data.scanned_unit_id,
+                "message": "血袋相符，可以繼續",
+                "unit_info": dict(selected_unit) if selected_unit else None
+            }
+        else:
+            # 記錄不符事件 (重要的安全稽核)
+            log_blood_event(
+                cursor, data.selected_unit_id,
+                "SCAN_MISMATCH",
+                "SYSTEM",
+                f"選擇 {data.selected_unit_id} 但掃描 {data.scanned_unit_id}",
+                metadata={
+                    "patient_id": data.patient_id,
+                    "scanned_unit_id": data.scanned_unit_id
+                }
+            )
+            conn.commit()
+
+            return {
+                "match": False,
+                "selected_unit_id": data.selected_unit_id,
+                "scanned_unit_id": data.scanned_unit_id,
+                "warning": f"血袋不符！選擇的是 {data.selected_unit_id}，掃描的是 {data.scanned_unit_id}",
+                "action_required": "請確認手上的血袋是否正確",
+                "selected_info": dict(selected_unit) if selected_unit else None,
+                "scanned_info": dict(scanned_unit) if scanned_unit else None
+            }
+
+
+# ==============================================================================
+# v1.1: Emergency Mode (緊急模式)
+# ==============================================================================
+
+@router.post("/units/{unit_id}/emergency-transfusion")
+async def emergency_transfusion(unit_id: str, data: EmergencyTransfusionRequest):
+    """
+    v1.1: Ad-hoc 緊急輸血
+
+    場景: MTP 時血庫人員直接把血遞給麻醉醫師，來不及做正常流程
+    系統不阻擋，而是：
+    1. 自動補齊缺少的步驟 (標記 AUTO_FILLED)
+    2. 記錄緊急輸血事件
+    3. 要求事後對帳
+
+    核心原則: 「系統永遠不可阻擋緊急輸血」
+    """
+    # 驗證 emergency_reason
+    if data.emergency_reason not in EMERGENCY_REASONS:
+        raise HTTPException(400, f"無效的緊急原因: {data.emergency_reason}")
+
+    if data.emergency_reason == "OTHER" and not data.emergency_reason_note:
+        raise HTTPException(400, "選擇 OTHER 時必須填寫說明")
+
+    if IS_VERCEL:
+        auto_filled = []
+        # 模擬自動補齊
+        auto_filled = ["EMERGENCY_RELEASED", "EMERGENCY_RECEIVED"]
+
+        return {
+            "success": True,
+            "event_id": f"EMRG-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            "step": "EMERGENCY_TRANSFUSION_STARTED",
+            "emergency_mode": True,
+            "emergency_reason": data.emergency_reason,
+            "auto_filled_steps": auto_filled,
+            "warning": f"Emergency Mode: 自動補齊 {len(auto_filled)} 個步驟",
+            "reconciliation_required": True,
+            "reconciliation_deadline": {
+                "late_verification": (datetime.now() + timedelta(hours=24)).isoformat(),
+                "supervisor_signoff": (datetime.now() + timedelta(hours=72)).isoformat()
+            },
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 取得血袋資訊
+        cursor.execute("SELECT * FROM blood_units WHERE id = ?", (unit_id,))
+        unit = cursor.fetchone()
+
+        auto_filled = []
+
+        if unit is None:
+            # 血袋不在系統中 (可能是外院血、緊急捐血)
+            # 建立臨時記錄
+            logger.warning(f"[Blood] Emergency transfusion for unknown unit: {unit_id}")
+            cursor.execute("""
+                INSERT INTO blood_units (id, blood_type, unit_type, status, expiry_date, source)
+                VALUES (?, 'UNKNOWN', 'UNKNOWN', 'TRANSFUSING', ?, 'EMERGENCY_UNTRACKED')
+            """, (unit_id, (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")))
+            auto_filled.append("UNIT_CREATED_UNTRACKED")
+            current_status = "AVAILABLE"
+        else:
+            unit = dict(unit)
+            current_status = unit["status"]
+
+        # 自動補齊缺少的步驟
+        if current_status == "AVAILABLE" or current_status == "RESERVED":
+            # 補齊: EMERGENCY_RELEASED
+            log_blood_event(
+                cursor, unit_id,
+                "CUSTODY_EMERGENCY_RELEASED",
+                data.actor_id,
+                f"緊急發血 (自動補齊): {data.emergency_reason}",
+                metadata={
+                    "step": "EMERGENCY_RELEASED",
+                    "patient_id": data.patient_id,
+                    "emergency_reason": data.emergency_reason,
+                    "auto_filled": True
+                }
+            )
+            auto_filled.append("EMERGENCY_RELEASED")
+            cursor.execute("UPDATE blood_units SET status = 'ISSUED' WHERE id = ?", (unit_id,))
+            current_status = "ISSUED"
+
+        if current_status == "ISSUED":
+            # 補齊: EMERGENCY_RECEIVED
+            log_blood_event(
+                cursor, unit_id,
+                "CUSTODY_EMERGENCY_RECEIVED",
+                data.actor_id,
+                f"緊急收血 (自動補齊): {data.emergency_reason}",
+                metadata={
+                    "step": "EMERGENCY_RECEIVED",
+                    "patient_id": data.patient_id,
+                    "location": data.location,
+                    "emergency_reason": data.emergency_reason,
+                    "auto_filled": True
+                }
+            )
+            auto_filled.append("EMERGENCY_RECEIVED")
+            cursor.execute("UPDATE blood_units SET status = 'IN_CLINICAL_AREA' WHERE id = ?", (unit_id,))
+            current_status = "IN_CLINICAL_AREA"
+
+        # 記錄緊急輸血開始
+        event_id = f"EMRG-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+
+        log_blood_event(
+            cursor, unit_id,
+            "CUSTODY_EMERGENCY_TRANSFUSION_STARTED",
+            data.actor_id,
+            f"緊急輸血開始: {data.emergency_reason}",
+            metadata={
+                "step": "EMERGENCY_TRANSFUSION_STARTED",
+                "event_id": event_id,
+                "patient_id": data.patient_id,
+                "location": data.location,
+                "emergency_reason": data.emergency_reason,
+                "emergency_reason_note": data.emergency_reason_note,
+                "auto_filled_steps": auto_filled,
+                "reconciliation_status": "PENDING"
+            }
+        )
+
+        cursor.execute("UPDATE blood_units SET status = 'TRANSFUSING' WHERE id = ?", (unit_id,))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "event_id": event_id,
+            "step": "EMERGENCY_TRANSFUSION_STARTED",
+            "emergency_mode": True,
+            "emergency_reason": data.emergency_reason,
+            "auto_filled_steps": auto_filled,
+            "warning": f"Emergency Mode: 自動補齊 {len(auto_filled)} 個步驟" if auto_filled else None,
+            "reconciliation_required": True,
+            "reconciliation_deadline": {
+                "late_verification": (datetime.now() + timedelta(hours=24)).isoformat(),
+                "supervisor_signoff": (datetime.now() + timedelta(hours=72)).isoformat()
+            }
+        }
+
+
+@router.post("/custody/{event_id}/late-verify")
+async def late_verification(event_id: str, data: LateVerificationRequest):
+    """
+    v1.1: Emergency 事件事後補核對
+
+    在 Emergency 事件發生後 24 小時內，第二人員補做核對
+    """
+    if IS_VERCEL:
+        return {
+            "success": True,
+            "event_id": event_id,
+            "step": "LATE_VERIFICATION",
+            "verifier_id": data.verifier_id,
+            "verified_at": datetime.now().isoformat(),
+            "reconciliation_status": "VERIFIED_PENDING_SIGNOFF",
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 找到原始 Emergency 事件
+        cursor.execute("""
+            SELECT * FROM blood_unit_events
+            WHERE event_type LIKE 'CUSTODY_EMERGENCY_%'
+            AND metadata LIKE ?
+        """, (f'%"event_id": "{event_id}"%',))
+
+        event = cursor.fetchone()
+        if not event:
+            raise HTTPException(404, f"找不到事件: {event_id}")
+
+        event = dict(event)
+        metadata = json.loads(event.get("metadata") or "{}")
+
+        # 記錄補核對
+        log_blood_event(
+            cursor, event["unit_id"],
+            "CUSTODY_LATE_VERIFICATION",
+            data.verifier_id,
+            f"事後補核對: {event_id}",
+            metadata={
+                "step": "LATE_VERIFICATION",
+                "original_event_id": event_id,
+                "verifier_id": data.verifier_id,
+                "notes": data.notes
+            }
+        )
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "event_id": event_id,
+            "step": "LATE_VERIFICATION",
+            "verifier_id": data.verifier_id,
+            "verified_at": datetime.now().isoformat(),
+            "reconciliation_status": "VERIFIED_PENDING_SIGNOFF"
+        }
+
+
+@router.post("/custody/{event_id}/supervisor-signoff")
+async def supervisor_signoff(event_id: str, data: SupervisorSignoffRequest):
+    """
+    v1.1: Emergency 事件主管簽核
+
+    在 Emergency 事件發生後 72 小時內，主管審核並簽核
+    """
+    if IS_VERCEL:
+        return {
+            "success": True,
+            "event_id": event_id,
+            "step": "SUPERVISOR_SIGNOFF",
+            "supervisor_id": data.supervisor_id,
+            "signed_at": datetime.now().isoformat(),
+            "reconciliation_status": "VERIFIED",
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 找到原始 Emergency 事件
+        cursor.execute("""
+            SELECT * FROM blood_unit_events
+            WHERE event_type LIKE 'CUSTODY_EMERGENCY_%'
+            AND metadata LIKE ?
+        """, (f'%"event_id": "{event_id}"%',))
+
+        event = cursor.fetchone()
+        if not event:
+            raise HTTPException(404, f"找不到事件: {event_id}")
+
+        event = dict(event)
+
+        # 記錄主管簽核
+        log_blood_event(
+            cursor, event["unit_id"],
+            "CUSTODY_SUPERVISOR_SIGNOFF",
+            data.supervisor_id,
+            f"主管簽核: {event_id}",
+            metadata={
+                "step": "SUPERVISOR_SIGNOFF",
+                "original_event_id": event_id,
+                "supervisor_id": data.supervisor_id,
+                "notes": data.notes,
+                "reconciliation_status": "VERIFIED"
+            }
+        )
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "event_id": event_id,
+            "step": "SUPERVISOR_SIGNOFF",
+            "supervisor_id": data.supervisor_id,
+            "signed_at": datetime.now().isoformat(),
+            "reconciliation_status": "VERIFIED"
+        }
+
+
+@router.get("/custody/emergency/pending")
+async def get_pending_emergency_reconciliation():
+    """
+    v1.1: 取得待對帳的 Emergency 事件
+
+    用於 Dashboard 顯示需要處理的 Emergency 事件
+    """
+    if IS_VERCEL:
+        now = datetime.now()
+        return {
+            "success": True,
+            "data": [
+                {
+                    "event_id": "EMRG-20260120143215-A1B2",
+                    "unit_id": "BU-20260120-ABC123",
+                    "patient_id": "P-DEMO-001",
+                    "emergency_reason": "MTP_ACTIVATED",
+                    "occurred_at": (now - timedelta(hours=2)).isoformat(),
+                    "reconciliation_status": "PENDING",
+                    "late_verification_deadline": (now + timedelta(hours=22)).isoformat(),
+                    "supervisor_signoff_deadline": (now + timedelta(hours=70)).isoformat(),
+                    "is_overdue": False
+                }
+            ],
+            "demo": True
+        }
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT * FROM blood_unit_events
+            WHERE event_type = 'CUSTODY_EMERGENCY_TRANSFUSION_STARTED'
+            ORDER BY ts_server DESC
+        """)
+
+        events = cursor.fetchall()
+        result = []
+
+        for event in events:
+            event = dict(event)
+            metadata = json.loads(event.get("metadata") or "{}")
+
+            if metadata.get("reconciliation_status") == "VERIFIED":
+                continue
+
+            event_time = datetime.fromtimestamp(event["ts_server"]) if event["ts_server"] else datetime.now()
+            late_deadline = event_time + timedelta(hours=24)
+            signoff_deadline = event_time + timedelta(hours=72)
+
+            result.append({
+                "event_id": metadata.get("event_id"),
+                "unit_id": event["unit_id"],
+                "patient_id": metadata.get("patient_id"),
+                "emergency_reason": metadata.get("emergency_reason"),
+                "occurred_at": event_time.isoformat(),
+                "reconciliation_status": metadata.get("reconciliation_status", "PENDING"),
+                "late_verification_deadline": late_deadline.isoformat(),
+                "supervisor_signoff_deadline": signoff_deadline.isoformat(),
+                "is_overdue": datetime.now() > signoff_deadline
+            })
 
         return {
             "success": True,

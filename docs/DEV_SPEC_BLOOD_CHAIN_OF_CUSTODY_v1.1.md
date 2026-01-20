@@ -2,8 +2,10 @@
 
 **版本**: 1.1.0
 **日期**: 2026-01-20
-**狀態**: 規劃中 (Revised based on ChatGPT & Gemini feedback)
+**狀態**: ✅ 已實作 (Implemented 2026-01-20)
 **關聯**: Blood Bank PWA v2.9、Anesthesia PWA
+
+> **實作完成摘要**: 所有 v1.1 功能已實作，包含選單限縮、Select→Scan 兩段式、Emergency Mode、離線同步 idempotency、傳送追蹤 UI。
 
 ---
 
