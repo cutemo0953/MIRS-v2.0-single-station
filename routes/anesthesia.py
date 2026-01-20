@@ -5063,3 +5063,348 @@ async def get_case_summary(case_id: str):
             "anesthesia_end_at": case_info.get('anesthesia_end_at')
         }
     }
+
+
+# =============================================================================
+# v1.2: Billing Integration APIs (Phase 1-6)
+# Reference: DEV_SPEC_ANESTHESIA_BILLING_INTEGRATION_v1.2.md
+# =============================================================================
+
+# Try to import billing service
+try:
+    from services.anesthesia_billing import (
+        get_quick_drugs_with_inventory,
+        process_medication_admin,
+        calculate_anesthesia_fee,
+        generate_cashdesk_handoff,
+        export_to_cashdesk,
+        MedicationAdminRequest
+    )
+    BILLING_SERVICE_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Billing service not available: {e}")
+    BILLING_SERVICE_AVAILABLE = False
+
+
+class MedicationWithBillingRequest(BaseModel):
+    """用藥記錄請求 (含計費)"""
+    drug_code: str
+    drug_name: str
+    dose: float
+    unit: str
+    route: str
+    is_controlled: bool = False
+    witness_id: Optional[str] = None
+    is_break_glass: bool = False
+    break_glass_reason: Optional[str] = None
+    device_id: Optional[str] = None
+    client_event_uuid: Optional[str] = None
+
+
+class CalculateAnesthesiaFeeRequest(BaseModel):
+    """計算麻醉處置費請求"""
+    asa_class: int = Field(..., ge=1, le=6)
+    asa_emergency: bool = False
+    technique: str
+    start_time: str  # ISO format
+    end_time: str    # ISO format
+    special_techniques: Optional[List[str]] = None
+
+
+@router.get("/quick-drugs-with-inventory")
+async def get_quick_drugs_inventory():
+    """
+    取得快速用藥清單含庫存資訊 (Phase 3)
+
+    Returns:
+        藥品清單含庫存狀態 (current_stock, stock_status)
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        # Fallback: 返回基本清單
+        return {"drugs": QUICK_DRUGS, "inventory_available": False}
+
+    try:
+        drugs = get_quick_drugs_with_inventory()
+        return {"drugs": drugs, "inventory_available": True}
+    except Exception as e:
+        logger.error(f"get_quick_drugs_inventory error: {e}")
+        return {"drugs": QUICK_DRUGS, "inventory_available": False, "error": str(e)}
+
+
+@router.post("/cases/{case_id}/medication/with-billing")
+async def add_medication_with_billing(
+    case_id: str,
+    request: MedicationWithBillingRequest,
+    actor_id: str = Query(...)
+):
+    """
+    用藥記錄含計費整合 (Phase 3-4)
+
+    功能:
+    1. 記錄臨床事件
+    2. 單位換算
+    3. 管制藥驗證
+    4. 扣減庫存
+    5. 產生計費項目
+
+    Returns:
+        - event_id: 臨床事件 ID
+        - inventory_txn_id: 庫存交易 ID
+        - billing_quantity: 計費數量
+        - estimated_price: 預估價格
+        - warnings: 警告訊息
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        # Fallback: 只記錄事件，不扣庫存
+        return await add_medication(case_id, QuickMedicationRequest(
+            drug_code=request.drug_code,
+            drug_name=request.drug_name,
+            dose=request.dose,
+            unit=request.unit,
+            route=request.route,
+            is_controlled=request.is_controlled,
+            device_id=request.device_id
+        ), actor_id)
+
+    try:
+        # 使用 billing service
+        admin_request = MedicationAdminRequest(
+            drug_code=request.drug_code,
+            drug_name=request.drug_name,
+            dose=request.dose,
+            unit=request.unit,
+            route=request.route,
+            is_controlled=request.is_controlled,
+            witness_id=request.witness_id,
+            is_break_glass=request.is_break_glass,
+            break_glass_reason=request.break_glass_reason,
+            case_id=case_id,
+            actor_id=actor_id,
+            device_id=request.device_id,
+            client_event_uuid=request.client_event_uuid
+        )
+
+        result = process_medication_admin(admin_request)
+
+        if not result.success:
+            raise HTTPException(status_code=422, detail=result.warnings[0] if result.warnings else "Validation failed")
+
+        # 同時記錄到 anesthesia_events 表 (保持相容性)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        payload = {
+            "drug_code": request.drug_code,
+            "drug_name": request.drug_name,
+            "dose": request.dose,
+            "unit": request.unit,
+            "route": request.route,
+            "is_controlled": request.is_controlled,
+            "billing_quantity": result.billing_quantity,
+            "billing_unit": result.billing_unit,
+            "estimated_price": result.estimated_price,
+            "inventory_txn_id": result.inventory_txn_id
+        }
+
+        if result.controlled_log_id:
+            payload["controlled_log_id"] = result.controlled_log_id
+            payload["witness_status"] = result.witness_status
+
+        cursor.execute("""
+            INSERT INTO anesthesia_events (
+                id, case_id, event_type, clinical_time, payload, actor_id
+            ) VALUES (?, ?, 'MEDICATION_ADMIN', datetime('now'), ?, ?)
+        """, (result.event_id, case_id, json.dumps(payload), actor_id))
+
+        conn.commit()
+        conn.close()
+
+        return {
+            "success": True,
+            "event_id": result.event_id,
+            "inventory_txn_id": result.inventory_txn_id,
+            "billing_quantity": result.billing_quantity,
+            "billing_unit": result.billing_unit,
+            "estimated_price": result.estimated_price,
+            "warnings": result.warnings,
+            "controlled_log_id": result.controlled_log_id,
+            "witness_status": result.witness_status
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"add_medication_with_billing error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cases/{case_id}/billing/calculate-anesthesia-fee")
+async def api_calculate_anesthesia_fee(
+    case_id: str,
+    request: CalculateAnesthesiaFeeRequest
+):
+    """
+    計算麻醉處置費 (Phase 5)
+
+    Args:
+        case_id: 案件 ID
+        request: 計算參數 (ASA, 技術, 時間, 特殊技術)
+
+    Returns:
+        費用明細 (base_fee, time_fee, asa_fee, technique_fee, total_fee)
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        start_time = datetime.fromisoformat(request.start_time.replace('Z', '+00:00'))
+        end_time = datetime.fromisoformat(request.end_time.replace('Z', '+00:00'))
+
+        result = calculate_anesthesia_fee(
+            case_id=case_id,
+            asa_class=request.asa_class,
+            asa_emergency=request.asa_emergency,
+            technique=request.technique,
+            start_time=start_time,
+            end_time=end_time,
+            special_techniques=request.special_techniques
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"calculate_anesthesia_fee error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cases/{case_id}/billing/handoff")
+async def api_get_billing_handoff(case_id: str):
+    """
+    取得 CashDesk Handoff Package (Phase 6)
+
+    返回完整計費封包:
+    - medication_items: 藥品費明細
+    - anesthesia_fee: 麻醉處置費
+    - surgical_fee: 手術處置費
+    - grand_total: 總計
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        handoff = generate_cashdesk_handoff(case_id)
+        return handoff
+
+    except Exception as e:
+        logger.error(f"get_billing_handoff error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cases/{case_id}/billing/export-to-cashdesk")
+async def api_export_to_cashdesk(case_id: str):
+    """
+    匯出到 CashDesk 並鎖定記錄 (Phase 6)
+
+    WARNING: 匯出後記錄將被鎖定，無法修改
+    如需修改，必須使用 VOID pattern
+
+    Returns:
+        匯出結果 (exported counts)
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        result = export_to_cashdesk(case_id)
+        return result
+
+    except Exception as e:
+        logger.error(f"export_to_cashdesk error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cases/{case_id}/billing/summary")
+async def get_billing_summary(case_id: str):
+    """
+    取得案件計費摘要
+
+    Returns:
+        - medication_count: 藥品筆數
+        - medication_total: 藥品總費用
+        - anesthesia_fee_calculated: 是否已計算麻醉費
+        - surgical_fee_calculated: 是否已計算手術費
+        - export_status: 匯出狀態
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        # 藥品統計
+        cursor.execute("""
+            SELECT
+                COUNT(*) as count,
+                SUM(billing_quantity * COALESCE(unit_price_at_event, 0)) as total
+            FROM medication_usage_events
+            WHERE case_id = ? AND billing_status != 'VOIDED' AND is_voided = 0
+        """, (case_id,))
+        med_row = cursor.fetchone()
+        medication_count = med_row['count'] or 0
+        medication_total = float(med_row['total'] or 0)
+
+        # 麻醉費
+        cursor.execute("""
+            SELECT billing_status, total_fee FROM anesthesia_billing_events
+            WHERE case_id = ? ORDER BY calculated_at DESC LIMIT 1
+        """, (case_id,))
+        anes_row = cursor.fetchone()
+        anesthesia_fee = float(anes_row['total_fee']) if anes_row else 0
+        anesthesia_status = anes_row['billing_status'] if anes_row else 'NOT_CALCULATED'
+
+        # 手術費
+        cursor.execute("""
+            SELECT billing_status, total_fee FROM surgical_billing_events
+            WHERE case_id = ? ORDER BY calculated_at DESC LIMIT 1
+        """, (case_id,))
+        surg_row = cursor.fetchone()
+        surgical_fee = float(surg_row['total_fee']) if surg_row else 0
+        surgical_status = surg_row['billing_status'] if surg_row else 'NOT_CALCULATED'
+
+        # 總計
+        grand_total = medication_total + anesthesia_fee + surgical_fee
+
+        # 匯出狀態
+        cursor.execute("""
+            SELECT COUNT(*) as exported FROM medication_usage_events
+            WHERE case_id = ? AND billing_status = 'EXPORTED'
+        """, (case_id,))
+        exported_count = cursor.fetchone()['exported']
+
+        export_status = 'NOT_EXPORTED'
+        if exported_count > 0:
+            if exported_count == medication_count:
+                export_status = 'FULLY_EXPORTED'
+            else:
+                export_status = 'PARTIALLY_EXPORTED'
+
+        return {
+            "case_id": case_id,
+            "medication": {
+                "count": medication_count,
+                "total": medication_total
+            },
+            "anesthesia_fee": {
+                "status": anesthesia_status,
+                "total": anesthesia_fee
+            },
+            "surgical_fee": {
+                "status": surgical_status,
+                "total": surgical_fee
+            },
+            "grand_total": grand_total,
+            "export_status": export_status
+        }
+
+    finally:
+        conn.close()
