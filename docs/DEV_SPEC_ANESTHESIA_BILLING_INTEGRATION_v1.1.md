@@ -1315,9 +1315,400 @@ async def calculate_anesthesia_fee(case_id: str) -> dict:
 - [ ] 實作 `/cases/{id}/billing/export-to-cashdesk` API
 - [ ] 費率表設定 (anesthesia_fee_schedule, surgical_fee_schedule)
 
+### Phase 7: 麻醉藥車調撥 (v1.1 新增)
+
+- [ ] 建立 `anesthesia_carts` 表
+- [ ] 建立 `cart_inventory` 表
+- [ ] 實作藥車調撥 API (`MED_DISPATCH` to cart)
+- [ ] 實作交班清點 API
+- [ ] 差異報告與藥師核對流程
+- [ ] PWA 藥車選擇 UI
+
 ---
 
-## 9. 驗收標準
+## 9. 麻醉藥車調撥流程 (Anesthesia Drug Cart)
+
+> **v1.1 新增**: 定義 MIRS 藥庫與麻醉藥車之間的藥品調撥、使用、交班清點流程。
+
+### 9.1 流程概覽
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    麻醉藥車調撥工作流程                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  【每日/每班開始】                                                       │
+│  ┌─────────────────┐         ┌─────────────────────┐                   │
+│  │  MIRS Pharmacy  │ ──────▶ │  Anesthesia Cart    │                   │
+│  │  (權威庫存)      │  調撥    │  (麻醉藥車/托盤)    │                   │
+│  └─────────────────┘         └─────────────────────┘                   │
+│         │                              │                               │
+│         │ MED_DISPATCH                 │ 藥師清點簽收                   │
+│         │ (類似 MIRS→CIRS)             │ 麻醉護理師接收                  │
+│         ▼                              ▼                               │
+│  ┌─────────────────┐         ┌─────────────────────┐                   │
+│  │ 調撥記錄:        │         │ 藥車內容:           │                   │
+│  │ - Fentanyl x10  │         │ - Fentanyl 10 amp   │                   │
+│  │ - Midazolam x5  │         │ - Midazolam 5 amp   │                   │
+│  │ - Propofol x20  │         │ - Propofol 20 vial  │                   │
+│  │ - Ketamine x5   │         │ - Ketamine 5 vial   │                   │
+│  └─────────────────┘         └─────────────────────┘                   │
+│                                       │                                │
+│  【術中使用】                          ▼                                │
+│                              ┌─────────────────────┐                   │
+│                              │ Anesthesia PWA      │                   │
+│                              │ 記錄用藥             │                   │
+│                              │ - case A: Fent 3amp │                   │
+│                              │ - case B: Fent 2amp │                   │
+│                              │ - case B: Mida 1amp │                   │
+│                              └─────────────────────┘                   │
+│                                       │                                │
+│  【每日/每班結束】                      ▼                                │
+│                              ┌─────────────────────┐                   │
+│                              │ 交班清點 (Reconcile) │                   │
+│                              │                     │                   │
+│                              │ 預期剩餘: Fent 5 amp│                   │
+│                              │ 實際清點: Fent 5 amp ✓│                  │
+│                              │                     │                   │
+│                              │ 預期剩餘: Mida 4 amp│                   │
+│                              │ 實際清點: Mida 3 amp ⚠️│                 │
+│                              │ → 差異需藥師複核    │                   │
+│                              └─────────────────────┘                   │
+│                                       │                                │
+│                        ┌──────────────┴──────────────┐                 │
+│                        ▼                             ▼                 │
+│               ┌─────────────────┐         ┌─────────────────┐          │
+│               │ 退還 Pharmacy   │         │ 差異報告        │          │
+│               │ (未用完歸庫)    │         │ → 藥師核對      │          │
+│               └─────────────────┘         └─────────────────┘          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 9.2 資料結構
+
+#### 9.2.1 麻醉藥車表
+
+```sql
+-- anesthesia_carts (麻醉藥車)
+CREATE TABLE IF NOT EXISTS anesthesia_carts (
+    id TEXT PRIMARY KEY,                    -- CART-OR1-001
+    cart_name TEXT NOT NULL,                -- OR1 麻醉藥車
+    location TEXT,                          -- OR1
+
+    -- 狀態
+    status TEXT DEFAULT 'AVAILABLE',        -- AVAILABLE, IN_USE, MAINTENANCE
+    current_shift_id TEXT,                  -- 當前班次 ID
+    assigned_nurse_id TEXT,                 -- 負責的麻醉護理師
+
+    -- 審計
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+
+    CHECK(status IN ('AVAILABLE', 'IN_USE', 'MAINTENANCE'))
+);
+
+-- cart_inventory (藥車庫存)
+CREATE TABLE IF NOT EXISTS cart_inventory (
+    id TEXT PRIMARY KEY,
+    cart_id TEXT NOT NULL,
+    medicine_code TEXT NOT NULL,
+    medicine_name TEXT,
+
+    -- 數量
+    quantity INTEGER NOT NULL DEFAULT 0,
+    unit TEXT NOT NULL,                     -- amp, vial, etc.
+
+    -- 管制藥
+    is_controlled BOOLEAN DEFAULT 0,
+    controlled_level INTEGER,               -- 1-4 級
+
+    -- 批號效期 (選填，管制藥必填)
+    lot_number TEXT,
+    expiry_date TEXT,
+
+    -- 審計
+    last_count_at TEXT,
+    last_count_by TEXT,
+    updated_at TEXT DEFAULT (datetime('now')),
+
+    FOREIGN KEY (cart_id) REFERENCES anesthesia_carts(id),
+    UNIQUE(cart_id, medicine_code, lot_number)
+);
+
+CREATE INDEX idx_cart_inventory_cart ON cart_inventory(cart_id);
+CREATE INDEX idx_cart_inventory_controlled ON cart_inventory(is_controlled);
+```
+
+#### 9.2.2 藥車調撥記錄表
+
+```sql
+-- cart_dispatch_records (藥車調撥記錄)
+CREATE TABLE IF NOT EXISTS cart_dispatch_records (
+    id TEXT PRIMARY KEY,
+    cart_id TEXT NOT NULL,
+    shift_id TEXT,                          -- 班次 ID
+
+    -- 調撥類型
+    dispatch_type TEXT NOT NULL,            -- DISPATCH (調出), RETURN (歸還), ADJUST (調整)
+
+    -- 時間
+    dispatched_at TEXT DEFAULT (datetime('now')),
+
+    -- 人員
+    pharmacist_id TEXT NOT NULL,            -- 調撥藥師
+    pharmacist_name TEXT,
+    receiver_id TEXT,                       -- 接收人 (麻醉護理師)
+    receiver_name TEXT,
+
+    -- 明細 (JSON array)
+    items TEXT NOT NULL,                    -- [{"medicine_code": "...", "quantity": 10, ...}]
+
+    -- 狀態
+    status TEXT DEFAULT 'PENDING',          -- PENDING, RECEIVED, VERIFIED
+    received_at TEXT,
+    verified_at TEXT,
+    verified_by TEXT,
+
+    -- 備註
+    notes TEXT,
+
+    FOREIGN KEY (cart_id) REFERENCES anesthesia_carts(id),
+    CHECK(dispatch_type IN ('DISPATCH', 'RETURN', 'ADJUST')),
+    CHECK(status IN ('PENDING', 'RECEIVED', 'VERIFIED'))
+);
+```
+
+#### 9.2.3 班次清點記錄表
+
+```sql
+-- cart_shift_reconciliation (班次清點記錄)
+CREATE TABLE IF NOT EXISTS cart_shift_reconciliation (
+    id TEXT PRIMARY KEY,
+    cart_id TEXT NOT NULL,
+    shift_id TEXT NOT NULL,
+
+    -- 班次時間
+    shift_start TEXT NOT NULL,
+    shift_end TEXT,
+
+    -- 人員
+    nurse_id TEXT NOT NULL,                 -- 負責護理師
+    nurse_name TEXT,
+    handover_to_id TEXT,                    -- 交班給
+    handover_to_name TEXT,
+
+    -- 清點結果
+    reconciliation_status TEXT DEFAULT 'PENDING',  -- PENDING, MATCHED, DISCREPANCY, REVIEWED
+
+    -- 初始庫存 (班次開始時)
+    initial_inventory TEXT,                 -- JSON snapshot
+
+    -- 用藥記錄彙總
+    usage_summary TEXT,                     -- JSON: [{"medicine_code": "...", "total_used": 5}]
+
+    -- 預期剩餘
+    expected_remaining TEXT,                -- JSON: calculated from initial - usage
+
+    -- 實際清點
+    actual_count TEXT,                      -- JSON: from physical count
+    counted_at TEXT,
+
+    -- 差異
+    discrepancies TEXT,                     -- JSON: [{medicine_code, expected, actual, diff}]
+
+    -- 藥師核對 (如有差異)
+    pharmacist_review_required BOOLEAN DEFAULT 0,
+    pharmacist_id TEXT,
+    pharmacist_reviewed_at TEXT,
+    pharmacist_notes TEXT,
+    resolution TEXT,                        -- APPROVED, INVESTIGATED, LOSS_REPORTED
+
+    -- 審計
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+
+    FOREIGN KEY (cart_id) REFERENCES anesthesia_carts(id),
+    CHECK(reconciliation_status IN ('PENDING', 'MATCHED', 'DISCREPANCY', 'REVIEWED'))
+);
+```
+
+### 9.3 API 設計
+
+#### 9.3.1 藥車管理
+
+```python
+# 取得可用藥車
+@router.get("/carts")
+async def list_carts(status: Optional[str] = None) -> List[CartResponse]:
+    pass
+
+# 取得藥車庫存
+@router.get("/carts/{cart_id}/inventory")
+async def get_cart_inventory(cart_id: str) -> CartInventoryResponse:
+    pass
+
+# 認領藥車 (班次開始)
+@router.post("/carts/{cart_id}/claim")
+async def claim_cart(cart_id: str, nurse_id: str = Query(...)) -> CartResponse:
+    """麻醉護理師認領藥車開始班次"""
+    pass
+```
+
+#### 9.3.2 藥品調撥
+
+```python
+class DispatchItem(BaseModel):
+    medicine_code: str
+    medicine_name: str
+    quantity: int
+    unit: str
+    lot_number: Optional[str] = None
+    expiry_date: Optional[str] = None
+    is_controlled: bool = False
+    controlled_level: Optional[int] = None
+
+
+class CartDispatchRequest(BaseModel):
+    cart_id: str
+    dispatch_type: str  # DISPATCH, RETURN
+    items: List[DispatchItem]
+    notes: Optional[str] = None
+
+
+@router.post("/pharmacy/cart-dispatch")
+async def dispatch_to_cart(
+    request: CartDispatchRequest,
+    pharmacist_id: str = Query(...)
+) -> DispatchRecordResponse:
+    """
+    藥師調撥藥品到藥車
+
+    1. 從 MIRS pharmacy 扣減庫存
+    2. 增加藥車庫存
+    3. 記錄 controlled_drug_log (管制藥)
+    4. 產生調撥單待接收
+    """
+    pass
+
+
+@router.post("/carts/{cart_id}/receive-dispatch/{dispatch_id}")
+async def receive_dispatch(
+    cart_id: str,
+    dispatch_id: str,
+    receiver_id: str = Query(...)
+) -> DispatchRecordResponse:
+    """麻醉護理師確認接收調撥藥品"""
+    pass
+```
+
+#### 9.3.3 交班清點
+
+```python
+class CountItem(BaseModel):
+    medicine_code: str
+    actual_quantity: int
+
+
+class ReconciliationRequest(BaseModel):
+    cart_id: str
+    counted_items: List[CountItem]
+    handover_to_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.post("/carts/{cart_id}/reconcile")
+async def reconcile_shift(
+    cart_id: str,
+    request: ReconciliationRequest,
+    nurse_id: str = Query(...)
+) -> ReconciliationResponse:
+    """
+    交班清點流程:
+
+    1. 計算預期剩餘 = 初始庫存 - 用藥記錄
+    2. 比對實際清點
+    3. 無差異 → 狀態 = MATCHED, 自動關閉班次
+    4. 有差異 → 狀態 = DISCREPANCY, 需藥師核對
+    """
+    pass
+
+
+@router.post("/carts/reconciliation/{recon_id}/pharmacist-review")
+async def pharmacist_review_reconciliation(
+    recon_id: str,
+    pharmacist_id: str = Query(...),
+    resolution: str = Query(...),  # APPROVED, INVESTIGATED, LOSS_REPORTED
+    notes: str = Query(None)
+) -> ReconciliationResponse:
+    """藥師核對差異"""
+    pass
+```
+
+### 9.4 Anesthesia PWA 用藥流程修改
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    用藥流程 (含藥車概念)                                  │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  1. 班次開始                                                            │
+│     ├─ 麻醉護理師認領藥車 (claim cart)                                   │
+│     ├─ 確認接收藥師調撥的藥品                                           │
+│     └─ PWA 顯示當前藥車庫存                                             │
+│                                                                         │
+│  2. 術中用藥                                                            │
+│     ├─ 從藥車庫存選擇藥品                                               │
+│     ├─ 記錄用藥 → 扣減藥車庫存 (非 pharmacy)                            │
+│     ├─ 管制藥需見證人 / break-glass                                     │
+│     └─ 產生 medication_usage_event (計費用)                             │
+│                                                                         │
+│  3. 班次結束                                                            │
+│     ├─ 執行「交班清點」                                                 │
+│     ├─ 逐項清點藥車剩餘數量                                             │
+│     ├─ 系統比對預期 vs 實際                                             │
+│     │   ├─ 相符 → 自動關閉班次                                          │
+│     │   └─ 差異 → 標記待藥師核對                                        │
+│     └─ 未用完藥品可選擇歸還或留置                                       │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 9.5 管制藥特殊處理
+
+| 操作 | 管制藥要求 |
+|------|-----------|
+| **調撥出庫** | 藥師 + 見證人雙簽 |
+| **接收** | 麻醉護理師確認清點 |
+| **術中使用** | 一二級需見證人或 break-glass |
+| **交班清點** | 逐瓶/逐 amp 核對 |
+| **差異處理** | 必須藥師核對 + 調查報告 |
+| **歸還** | 藥師確認入庫 + 雙簽 |
+
+### 9.6 離線支援
+
+```python
+class OfflineCartStrategy:
+    """
+    離線時藥車操作策略
+    """
+
+    # 用藥記錄: 允許離線操作
+    MEDICATION_USAGE = "ALLOWED_OFFLINE"
+
+    # 藥車認領: 需上線 (初始化藥車庫存)
+    CART_CLAIM = "ONLINE_REQUIRED"
+
+    # 交班清點: 允許離線清點，上線後同步
+    RECONCILIATION = "ALLOWED_OFFLINE_SYNC_LATER"
+
+    # 調撥接收: 允許離線確認，上線後同步
+    DISPATCH_RECEIVE = "ALLOWED_OFFLINE_SYNC_LATER"
+```
+
+---
+
+## 10. 驗收標準
 
 | 項目 | 驗收條件 |
 |------|----------|
@@ -1359,6 +1750,7 @@ async def calculate_anesthesia_fee(case_id: str) -> dict:
 |------|------|------|
 | v1.0 | 2026-01-20 | 初版 - 整合 Gemini/ChatGPT 審閱回饋 |
 | v1.1 | 2026-01-20 | 擴充計費範圍: 新增麻醉處置費、手術處置費、CashDesk Handoff |
+| v1.1 | 2026-01-20 | 新增 Section 9: 麻醉藥車調撥流程、交班清點、藥師核對機制 |
 
 ---
 
