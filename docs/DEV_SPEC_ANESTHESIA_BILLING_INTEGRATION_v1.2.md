@@ -1,11 +1,12 @@
-# Anesthesia PWA ↔ Billing Integration DEV SPEC v1.1
+# Anesthesia PWA ↔ Billing Integration DEV SPEC v1.2
 
-**版本**: 1.1.0
+**版本**: 1.2.0
 **日期**: 2026-01-20
 **狀態**: DRAFT
 **關聯**: schema_pharmacy.sql, DEV_SPEC_MEDICATION_FORMULARY_v1.2.md (CIRS), CashDesk Handoff
-**審閱整合**: Gemini, ChatGPT feedback
+**審閱整合**: Gemini, ChatGPT feedback (v1.2 回饋整合完成)
 
+> **v1.2 變更**: 整合 Gemini/ChatGPT 審閱回饋 - 管制藥殘餘量銷毀、時間計費防呆、三帳本強制綁定、VOID pattern 撤銷。
 > **v1.1 變更**: 擴充計費範圍，從「藥品計費」擴展為「完整麻醉計費」，包含麻醉處置費、藥品費、耗材費。
 
 ---
@@ -1708,7 +1709,487 @@ class OfflineCartStrategy:
 
 ---
 
-## 10. 驗收標準
+## 10. v1.2 審閱回饋整合 (Gemini + ChatGPT)
+
+> **2026-01-20 更新**: 整合 Gemini 與 ChatGPT 的審閱回饋，補充 Critical 缺漏項目。
+
+### 10.1 管制藥「殘餘量銷毀」記錄 (Wastage Tracking)
+
+**問題**: 醫師打了 150mg Propofol (200mg/vial)，系統只記錄使用 1 vial，剩下 50mg「流向不明」。在法律上可能被懷疑私吞。
+
+**修正**: 明確記錄 `administered_amount` 與 `waste_amount`：
+
+```sql
+-- controlled_drug_log 新增欄位
+ALTER TABLE controlled_drug_log ADD COLUMN administered_amount REAL;  -- 實際給藥量 (150mg)
+ALTER TABLE controlled_drug_log ADD COLUMN waste_amount REAL;         -- 銷毀量 (50mg)
+ALTER TABLE controlled_drug_log ADD COLUMN wastage_witnessed_by TEXT; -- 銷毀見證人
+ALTER TABLE controlled_drug_log ADD COLUMN wastage_timestamp TEXT;    -- 銷毀時間
+
+-- 計算邏輯
+-- waste_amount = (unit_size × billing_quantity) - administered_amount
+-- 例: (200mg × 1 vial) - 150mg = 50mg 待銷毀
+```
+
+**UI 修正**: 見證人簽名提示改為：
+```
+「見證給藥 150mg 並銷毀 50mg」
+"Witnessing administration of 150mg AND wastage of 50mg"
+```
+
+### 10.2 時間計費防呆 (Max Duration Guard)
+
+**問題**: 醫師忘記按 `ANESTHESIA_END`，系統持續計費至天價。
+
+**修正**: 實作「逾時保護 (Sanity Check)」：
+
+```python
+# 配置
+MAX_ANESTHESIA_DURATION_HOURS = 12  # 可設定閾值
+
+async def check_open_anesthesia_cases():
+    """
+    排程任務: 每小時檢查未結案麻醉案例
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # 找出有 ANESTHESIA_START 但無 ANESTHESIA_END 的案例
+        cursor.execute("""
+            SELECT c.case_id, ce.timestamp as start_time
+            FROM anesthesia_cases c
+            JOIN case_events ce ON c.case_id = ce.case_id
+            WHERE ce.event_type = 'ANESTHESIA_START'
+              AND c.case_id NOT IN (
+                SELECT case_id FROM case_events WHERE event_type = 'ANESTHESIA_END'
+              )
+              AND c.case_status NOT IN ('CANCELLED', 'BILLING_REVIEW_NEEDED')
+        """)
+
+        for row in cursor.fetchall():
+            start_time = datetime.fromisoformat(row['start_time'])
+            elapsed_hours = (datetime.now() - start_time).total_seconds() / 3600
+
+            if elapsed_hours > MAX_ANESTHESIA_DURATION_HOURS:
+                # 標記需審查，暫停自動計費
+                cursor.execute("""
+                    UPDATE anesthesia_cases
+                    SET case_status = 'BILLING_REVIEW_NEEDED',
+                        billing_review_reason = 'DURATION_EXCEEDED'
+                    WHERE case_id = ?
+                """, (row['case_id'],))
+
+                # 發送通知
+                await notify_anesthesiologist(row['case_id'],
+                    f"麻醉時間超過 {MAX_ANESTHESIA_DURATION_HOURS} 小時，請確認是否結案")
+```
+
+### 10.3 三帳本強制綁定 (Three-Ledger Binding)
+
+**問題**: 臨床記錄、庫存、計費三套帳本可能因重試/離線導致不一致。
+
+**修正**: 定義「複合交易 ID」(Composite Transaction ID) 綁定三帳本：
+
+```python
+from dataclasses import dataclass
+from typing import Optional
+import hashlib
+
+@dataclass
+class MedicationCompositeTransaction:
+    """
+    一次用藥產生三個關聯記錄
+    """
+    # 共享識別碼 (Deterministic)
+    idempotency_key: str  # hash(case_id + client_event_uuid)
+
+    # 三帳本記錄 ID
+    timeline_event_id: str           # case_events.event_id
+    inventory_txn_id: Optional[str]  # pharmacy_transactions.transaction_id
+    billing_item_id: str             # medication_usage_events.id
+
+    # 關聯
+    source_record_id: str            # 原始來源 (client_event_uuid)
+
+
+def generate_idempotency_key(case_id: str, client_event_uuid: str) -> str:
+    """
+    決定性產生冪等鍵 (Deterministic Idempotency Key)
+
+    規則: hash(case_id + client_event_uuid)
+
+    客戶端必須在 enqueue 前先 persist client_event_uuid，
+    確保重送時 key 不變。
+    """
+    raw = f"{case_id}:{client_event_uuid}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:32]
+```
+
+**Server-Side Atomic Operation**:
+
+```python
+@router.post("/cases/{case_id}/medication")
+async def add_medication_atomic(case_id: str, request: MedicationAdminRequest):
+    """
+    原子性用藥記錄 - 確保三帳本同步
+    """
+    idempotency_key = generate_idempotency_key(case_id, request.client_event_uuid)
+
+    # 1. 冪等性檢查
+    existing = get_by_idempotency_key(idempotency_key)
+    if existing:
+        return existing  # 返回已存在記錄，不重複建立
+
+    # 2. 原子交易
+    with get_db() as conn:
+        conn.execute("BEGIN TRANSACTION")
+        try:
+            # 2a. 臨床事件
+            timeline_event_id = insert_timeline_event(conn, ...)
+
+            # 2b. 庫存扣減
+            inventory_txn_id = insert_inventory_txn(conn, ...)
+
+            # 2c. 計費項目
+            billing_item_id = insert_billing_item(conn, ...)
+
+            # 2d. 寫入複合交易記錄
+            conn.execute("""
+                INSERT INTO medication_composite_txn
+                (idempotency_key, timeline_event_id, inventory_txn_id, billing_item_id)
+                VALUES (?, ?, ?, ?)
+            """, (idempotency_key, timeline_event_id, inventory_txn_id, billing_item_id))
+
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise
+```
+
+### 10.4 單位換算修正 (Decimal Precision)
+
+**問題**: `int(billing_quantity)` 會截斷小數，輸液、infusion 會算錯。
+
+**修正**: 使用 `Decimal`，分離 `billing_quantity` 與 `inventory_deduct_quantity`：
+
+```python
+from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
+
+def calculate_billing_quantity_v2(
+    clinical_dose: Decimal,
+    clinical_unit: str,
+    content_per_unit: Decimal,
+    content_unit: str,
+    billing_rounding: str
+) -> tuple[Decimal, Decimal]:
+    """
+    Returns:
+        (billing_quantity, inventory_deduct_quantity)
+
+    Note: 這兩個值可能不同
+    - billing_quantity: 計費用 (可能是小數，如 2.5 units)
+    - inventory_deduct_quantity: 庫存扣減用 (通常是整數，開封即消耗)
+    """
+    # 單位轉換
+    dose_normalized = normalize_unit(clinical_dose, clinical_unit, content_unit)
+
+    # 計算原始數量
+    raw_quantity = dose_normalized / content_per_unit
+
+    # 計費數量 (保留小數)
+    if billing_rounding == 'CEIL':
+        billing_quantity = raw_quantity.quantize(Decimal('0.01'), rounding=ROUND_CEILING)
+    elif billing_rounding == 'EXACT':
+        billing_quantity = raw_quantity.quantize(Decimal('0.01'))
+    else:
+        billing_quantity = raw_quantity.quantize(Decimal('1'), rounding=ROUND_CEILING)
+
+    # 庫存扣減 (通常向上取整，開封即消耗)
+    inventory_deduct_quantity = raw_quantity.quantize(Decimal('1'), rounding=ROUND_CEILING)
+
+    return billing_quantity, inventory_deduct_quantity
+```
+
+### 10.5 交易類型分類 (Transaction Taxonomy)
+
+**問題**: 需明確定義哪些操作產生計費、哪些只是庫存移動。
+
+**修正**: 定義標準交易類型：
+
+```python
+class InventoryTransactionType(str, Enum):
+    """
+    庫存交易類型 (統一定義)
+    """
+    # === 產生計費 ===
+    ADMINISTER = "ADMINISTER"      # 臨床給藥 → 計費
+
+    # === 不產生計費 ===
+    WITHDRAW = "WITHDRAW"          # 從藥櫃取出 (到藥車/case)
+    WASTE = "WASTE"                # 銷毀 (管制藥需見證)
+    RETURN = "RETURN"              # 歸還未用完
+    TRANSFER = "TRANSFER"          # 站點間調撥 (DISPATCH/RECEIPT)
+    ADJUST = "ADJUST"              # 盤點調整
+    EXPIRED = "EXPIRED"            # 過期報廢
+
+
+# 計費規則
+BILLABLE_TRANSACTIONS = {InventoryTransactionType.ADMINISTER}
+
+def should_create_billing_item(txn_type: InventoryTransactionType) -> bool:
+    return txn_type in BILLABLE_TRANSACTIONS
+```
+
+### 10.6 管制藥 Server-Side 強制
+
+**問題**: 雙人覆核只在 UI 層，可被繞過。
+
+**修正**: Server-side 強制驗證：
+
+```python
+@router.post("/cases/{case_id}/medication")
+async def add_medication_with_validation(case_id: str, request: MedicationAdminRequest):
+    """
+    管制藥 Server-Side 驗證
+    """
+    med = get_medicine(request.drug_code)
+
+    if med.is_controlled_drug and med.controlled_level in (1, 2):
+        # 一二級管制藥必須有見證人或 break-glass
+        if not request.witness_id and not request.is_break_glass:
+            raise HTTPException(
+                status_code=422,
+                detail="一二級管制藥需見證人 (witness_id) 或 break-glass 授權"
+            )
+
+        # Break-glass 必須有原因
+        if request.is_break_glass and not request.break_glass_reason:
+            raise HTTPException(
+                status_code=422,
+                detail="Break-glass 必須提供原因 (break_glass_reason)"
+            )
+
+    # 驗證通過後才執行
+    return await execute_medication_admin(case_id, request)
+
+
+# 結案時強制檢查
+async def validate_case_closure(case_id: str):
+    """
+    結案前驗證: 管制藥 reconciliation 必須完成
+    """
+    pending_controlled = get_pending_controlled_reconciliation(case_id)
+
+    if pending_controlled:
+        raise HTTPException(
+            status_code=422,
+            detail=f"管制藥 reconciliation 未完成: {pending_controlled}"
+        )
+```
+
+### 10.7 價格凍結與 EXPORTED 鎖定
+
+**問題**: 計費後價格變動可能導致帳務不一致。
+
+**修正**: 計費時凍結價格版本，EXPORTED 後鎖定：
+
+```sql
+-- medication_usage_events 新增欄位
+ALTER TABLE medication_usage_events ADD COLUMN pricebook_version_id TEXT;
+ALTER TABLE medication_usage_events ADD COLUMN effective_price_date TEXT;
+ALTER TABLE medication_usage_events ADD COLUMN is_locked BOOLEAN DEFAULT 0;
+
+-- EXPORTED 後自動鎖定
+CREATE TRIGGER lock_on_export
+AFTER UPDATE ON medication_usage_events
+WHEN NEW.billing_status = 'EXPORTED' AND OLD.billing_status != 'EXPORTED'
+BEGIN
+    UPDATE medication_usage_events
+    SET is_locked = 1
+    WHERE id = NEW.id;
+END;
+
+-- 禁止修改已鎖定記錄 (需用 VOID + 補償)
+CREATE TRIGGER prevent_locked_update
+BEFORE UPDATE ON medication_usage_events
+WHEN OLD.is_locked = 1 AND NEW.is_locked = 1
+BEGIN
+    SELECT RAISE(ABORT, 'Cannot modify locked billing record. Use VOID + compensating transaction.');
+END;
+```
+
+### 10.8 撤銷操作 = 反向事件 (VOID Pattern)
+
+**問題**: 直接刪除會破壞審計軌跡。
+
+**修正**: 撤銷操作產生反向事件：
+
+```python
+@router.delete("/cases/{case_id}/medication/{event_id}")
+async def void_medication_event(case_id: str, event_id: str, reason: str, actor_id: str):
+    """
+    撤銷用藥記錄 (VOID Pattern)
+
+    不真正刪除，而是:
+    1. 保留原事件
+    2. 新增 MEDICATION_ADMIN_VOID 反向事件
+    3. 新增庫存補償交易
+    4. 新增計費補償項目
+    """
+    original_event = get_medication_event(event_id)
+
+    if original_event.billing_status == 'EXPORTED':
+        raise HTTPException(400, "已匯出 CashDesk 的記錄無法撤銷，請聯繫財務處理")
+
+    with get_db() as conn:
+        conn.execute("BEGIN TRANSACTION")
+
+        # 1. 標記原事件為 VOIDED
+        conn.execute("""
+            UPDATE case_events SET voided = 1, voided_reason = ?, voided_by = ?, voided_at = ?
+            WHERE event_id = ?
+        """, (reason, actor_id, datetime.now().isoformat(), event_id))
+
+        # 2. 新增 VOID 事件 (審計用)
+        void_event_id = f"VOID-{event_id}"
+        conn.execute("""
+            INSERT INTO case_events (event_id, case_id, event_type, payload, actor_id, timestamp)
+            VALUES (?, ?, 'MEDICATION_ADMIN_VOID', ?, ?, ?)
+        """, (void_event_id, case_id, json.dumps({
+            "original_event_id": event_id,
+            "reason": reason
+        }), actor_id, datetime.now().isoformat()))
+
+        # 3. 庫存補償 (回補)
+        conn.execute("""
+            INSERT INTO pharmacy_transactions (transaction_type, medicine_code, quantity, reason)
+            VALUES ('VOID_REVERSAL', ?, ?, ?)
+        """, (original_event.drug_code, original_event.billing_quantity,
+              f"Void reversal for {event_id}"))
+
+        conn.execute("""
+            UPDATE medicines SET current_stock = current_stock + ? WHERE medicine_code = ?
+        """, (original_event.billing_quantity, original_event.drug_code))
+
+        # 4. 計費補償
+        conn.execute("""
+            INSERT INTO medication_usage_events (case_id, medicine_code, quantity, billing_status, reference_event_id)
+            VALUES (?, ?, ?, 'VOIDED', ?)
+        """, (case_id, original_event.drug_code, -original_event.billing_quantity, event_id))
+
+        conn.commit()
+
+    return {"voided_event_id": event_id, "void_reference": void_event_id}
+```
+
+### 10.9 Handoff Package 完整性
+
+**問題**: Handoff 只包含藥品費，漏掉麻醉/手術處置費 (這是最大筆的款項！)。
+
+**修正**: 明確定義 Handoff 必須包含所有計費類別：
+
+```python
+@router.get("/cases/{case_id}/billing/handoff")
+async def generate_handoff_package(case_id: str):
+    """
+    產生 CashDesk Handoff Package
+
+    CRITICAL: 必須包含所有計費類別
+    - anesthesia_fees: 麻醉處置費 (Base + Time + ASA)
+    - surgical_fees: 手術處置費 (主刀 + 助手)
+    - medication_fees: 藥品費
+    - supply_fees: 耗材費
+    - blood_fees: 血品費
+    """
+
+    # 1. 麻醉處置費 (最重要!)
+    anesthesia = await calculate_anesthesia_fee(case_id)
+    if not anesthesia:
+        raise HTTPException(400, "麻醉處置費計算失敗，請確認 ANESTHESIA_START/END 已記錄")
+
+    # 2. 手術處置費
+    surgical = await calculate_surgical_fee(case_id)
+
+    # 3. 藥品費 (from medication_usage_events)
+    medications = await get_medication_billing_items(case_id)
+
+    # 4. 耗材費
+    supplies = await get_supply_billing_items(case_id)
+
+    # 5. 血品費
+    blood = await get_blood_billing_items(case_id)
+
+    # 組合 Handoff Package
+    handoff = CashDeskHandoffPackage(
+        case_id=case_id,
+        generated_at=datetime.now().isoformat(),
+
+        # 所有計費項目
+        billable_items=[
+            # 麻醉處置費
+            BillableItem(
+                code=anesthesia['nhi_code'],  # 如 96005C
+                name=anesthesia['name'],       # 全身麻醉
+                qty=1,
+                unit_price=anesthesia['total'],
+                category='ANESTHESIA_FEE'
+            ),
+            # 手術處置費
+            *[BillableItem(
+                code=s['nhi_code'],
+                name=s['name'],
+                qty=1,
+                unit_price=s['fee'],
+                category='SURGICAL_FEE'
+            ) for s in surgical['items']],
+            # 藥品
+            *[BillableItem(
+                code=m['medicine_code'],
+                name=m['generic_name'],
+                qty=m['quantity'],
+                unit_price=m['unit_price'],
+                category='MEDICATION'
+            ) for m in medications],
+            # 耗材
+            *supplies,
+            # 血品
+            *blood
+        ],
+
+        # 分項小計
+        subtotals={
+            'anesthesia': anesthesia['total'],
+            'surgical': sum(s['fee'] for s in surgical['items']),
+            'medication': sum(m['total'] for m in medications),
+            'supply': sum(s.unit_price * s.qty for s in supplies),
+            'blood': sum(b.unit_price * b.qty for b in blood)
+        },
+
+        grand_total=...,
+
+        # 驗證簽章
+        checksum=calculate_checksum(...)
+    )
+
+    return handoff
+```
+
+### 10.10 Phase 8: 審閱回饋實作 (v1.2 新增)
+
+- [ ] 管制藥殘餘量記錄 (`waste_amount`, `wastage_witnessed_by`)
+- [ ] 時間計費防呆 (MAX_DURATION_HOURS 檢查 + 通知)
+- [ ] 三帳本複合交易 (`medication_composite_txn` 表)
+- [ ] 冪等鍵產生規則 (`generate_idempotency_key`)
+- [ ] 單位換算 Decimal 修正
+- [ ] 交易類型分類 (`InventoryTransactionType` enum)
+- [ ] 管制藥 Server-side 強制驗證
+- [ ] 價格凍結 + EXPORTED 鎖定
+- [ ] VOID pattern 撤銷流程
+- [ ] Handoff Package 完整性驗證
+
+---
+
+## 11. 驗收標準
 
 | 項目 | 驗收條件 |
 |------|----------|
@@ -1751,6 +2232,7 @@ class OfflineCartStrategy:
 | v1.0 | 2026-01-20 | 初版 - 整合 Gemini/ChatGPT 審閱回饋 |
 | v1.1 | 2026-01-20 | 擴充計費範圍: 新增麻醉處置費、手術處置費、CashDesk Handoff |
 | v1.1 | 2026-01-20 | 新增 Section 9: 麻醉藥車調撥流程、交班清點、藥師核對機制 |
+| v1.2 | 2026-01-20 | Section 10: Gemini/ChatGPT 審閱回饋整合 - 管制藥殘餘量、時間防呆、三帳本綁定、VOID pattern |
 
 ---
 
