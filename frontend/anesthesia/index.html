@@ -1911,10 +1911,21 @@
                     <span id="selectedBloodLabel">紅血球濃厚液</span>
                 </div>
 
-                <!-- Blood Unit ID -->
+                <!-- Available Blood Units from Blood Bank -->
+                <div class="form-group" style="margin: 16px 0;">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>血庫可用庫存</span>
+                        <span id="bloodInventoryStatus" style="font-size: 12px; color: var(--text-muted);">載入中...</span>
+                    </label>
+                    <div id="bloodInventoryList" style="max-height: 150px; overflow-y: auto; background: var(--bg-tertiary); border-radius: 8px; padding: 8px;">
+                        <div style="text-align: center; color: var(--text-secondary); padding: 16px;">載入中...</div>
+                    </div>
+                </div>
+
+                <!-- Blood Unit ID (manual entry or auto-filled) -->
                 <div class="form-group" style="margin: 16px 0;">
                     <label class="form-label">血袋編號 (Unit ID)</label>
-                    <input type="text" class="form-input" id="bloodUnitId" placeholder="掃描或輸入血袋條碼" style="font-size: 1.1rem; padding: 12px;">
+                    <input type="text" class="form-input" id="bloodUnitId" placeholder="點選上方庫存或手動輸入條碼" style="font-size: 1.1rem; padding: 12px;">
                 </div>
 
                 <!-- Action Type -->
@@ -3979,7 +3990,16 @@
             document.getElementById('bloodModal').classList.add('active');
         }
 
-        function selectBloodType(type) {
+        // Map blood product types to blood API unit types
+        const bloodProductToUnitType = {
+            'PRBC': 'PRBC',
+            'FFP': 'FFP',
+            'PLATELET': 'PLT',
+            'CRYO': 'CRYO',
+            'WHOLE_BLOOD': 'WB'
+        };
+
+        async function selectBloodType(type) {
             selectedBloodProduct = type;
             // Update step 2 header
             document.getElementById('selectedBloodType').textContent = type;
@@ -3997,6 +4017,71 @@
             // Reset and update time display
             resetTimeSelector('blood');
             updateComputedTime('blood');
+            // Load available blood inventory
+            await loadBloodInventory(type);
+        }
+
+        async function loadBloodInventory(productType) {
+            const statusEl = document.getElementById('bloodInventoryStatus');
+            const listEl = document.getElementById('bloodInventoryList');
+
+            statusEl.textContent = '載入中...';
+            listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">載入中...</div>';
+
+            try {
+                const unitType = bloodProductToUnitType[productType] || productType;
+                const res = await apiFetch(`/api/blood/units?unit_type=${unitType}&status=AVAILABLE`);
+                const data = await res.json();
+
+                const units = data.data || data.units || [];
+                const availableUnits = units.filter(u => u.status === 'AVAILABLE' && u.display_status !== 'EXPIRED');
+
+                if (availableUnits.length === 0) {
+                    statusEl.textContent = '無可用庫存';
+                    statusEl.style.color = '#ef4444';
+                    listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">目前無此類型可用血品<br><small>請手動輸入血袋條碼</small></div>';
+                    return;
+                }
+
+                statusEl.textContent = `${availableUnits.length} 袋可用`;
+                statusEl.style.color = '#10b981';
+
+                listEl.innerHTML = availableUnits.map(u => `
+                    <div class="blood-inventory-item" onclick="selectBloodUnit('${u.id}', '${u.blood_type}')"
+                         style="padding: 10px; margin-bottom: 6px; background: var(--bg-secondary); border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-weight: 600; font-family: monospace;">${u.id}</span>
+                                <span style="margin-left: 8px; padding: 2px 6px; background: #dc2626; color: white; border-radius: 4px; font-size: 12px;">${u.blood_type}</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="font-size: 12px; color: ${u.display_status === 'EXPIRING_SOON' ? '#f59e0b' : 'var(--text-muted)'};">
+                                    ${u.display_status === 'EXPIRING_SOON' ? '⚠️ ' : ''}到期: ${u.expiry_date}
+                                </span>
+                            </div>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                            ${u.volume_ml}ml ${u.hours_until_expiry ? `(${Math.round(u.hours_until_expiry/24)}天後到期)` : ''}
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                console.error('Failed to load blood inventory:', err);
+                statusEl.textContent = '載入失敗';
+                statusEl.style.color = '#ef4444';
+                listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 16px;">無法連接血庫<br><small>請手動輸入血袋條碼</small></div>';
+            }
+        }
+
+        function selectBloodUnit(unitId, bloodType) {
+            // Fill in the unit ID
+            document.getElementById('bloodUnitId').value = unitId;
+            // Highlight selected item
+            document.querySelectorAll('.blood-inventory-item').forEach(el => {
+                el.style.borderColor = 'transparent';
+            });
+            event.target.closest('.blood-inventory-item').style.borderColor = '#dc2626';
         }
 
         function backToBloodStep1() {
