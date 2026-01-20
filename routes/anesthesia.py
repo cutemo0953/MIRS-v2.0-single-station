@@ -1313,6 +1313,18 @@ async def add_event(case_id: str, request: AddEventRequest, actor_id: str = Quer
       - 30-60分鐘: 必填 late_entry_reason
       - > 60分鐘: 必填 late_entry_reason + 標記需 PIN 確認
     """
+    # Vercel demo mode: return fake success for demo cases
+    if IS_VERCEL and case_id.startswith("ANES-DEMO"):
+        return {
+            "id": f"EVT-DEMO-{uuid.uuid4().hex[:8].upper()}",
+            "case_id": case_id,
+            "event_type": request.event_type.value,
+            "clinical_time": datetime.now().isoformat(),
+            "payload": request.payload,
+            "actor_id": actor_id,
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
