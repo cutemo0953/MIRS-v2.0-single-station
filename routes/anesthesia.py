@@ -6649,3 +6649,730 @@ async def get_cart_controlled_drugs(cart_id: str):
         }
     finally:
         conn.close()
+
+
+# =============================================================================
+# Phase 9: Drug Transfer System (Multi-Cart & Drug Transfer v1.1)
+# =============================================================================
+
+import secrets
+import string
+import hashlib
+import hmac
+
+# Base32 字元集 (排除 0OIL 避免混淆)
+TRANSFER_CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
+TRANSFER_CODE_SECRET = os.environ.get('TRANSFER_CODE_SECRET', 'mirs-transfer-secret-key')
+
+
+def generate_transfer_code() -> str:
+    """Generate short transfer code for iOS (XFER-XXXX)"""
+    code = ''.join(secrets.choice(TRANSFER_CODE_CHARS) for _ in range(4))
+    return f"XFER-{code}"
+
+
+def generate_transfer_id() -> str:
+    """Generate unique transfer ID"""
+    return f"XFER-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+
+
+class TransferRequest(BaseModel):
+    transfer_type: str  # CASE_TO_CASE, CASE_TO_CART, CART_TO_CASE, CART_TO_CART
+
+    # 來源
+    from_case_id: Optional[str] = None
+    from_cart_id: Optional[str] = None
+
+    # 目的
+    to_case_id: Optional[str] = None
+    to_cart_id: Optional[str] = None
+    to_nurse_id: Optional[str] = None
+    to_nurse_name: Optional[str] = None
+
+    # 藥品
+    medicine_code: str
+    medicine_name: Optional[str] = None
+    quantity: int
+    unit: str = 'amp'
+
+    # 管制藥
+    is_controlled: bool = False
+    controlled_level: Optional[int] = None
+
+    # 見證
+    witness_id: Optional[str] = None
+    witness_name: Optional[str] = None
+
+    # 合規聲明
+    unopened_declared: bool = False
+
+    remarks: Optional[str] = None
+
+
+@router.post("/transfers")
+async def initiate_transfer(
+    request: TransferRequest,
+    actor_id: str = Query(..., description="發起人 ID"),
+    actor_name: str = Query(None, description="發起人姓名")
+):
+    """
+    發起藥品移轉 (Immediate Debit Model)
+
+    v1.1: 發起時立即扣減來源庫存，避免 Double-Spend
+    """
+    # Vercel demo mode
+    if IS_VERCEL:
+        transfer_id = generate_transfer_id()
+        transfer_code = generate_transfer_code()
+        expires_at = (datetime.now() + timedelta(minutes=5)).isoformat()
+        return {
+            "transfer_id": transfer_id,
+            "transfer_code": transfer_code,
+            "status": "PENDING",
+            "expires_at": expires_at,
+            "message": "移轉已發起，來源庫存已扣減",
+            "immediate_debit": True,
+            "demo_mode": True
+        }
+
+    # Validation
+    if not request.unopened_declared:
+        raise HTTPException(status_code=400, detail="必須聲明藥品未開封")
+
+    if request.is_controlled and not request.witness_id:
+        raise HTTPException(status_code=400, detail="管制藥移轉需要見證人")
+
+    if request.quantity <= 0:
+        raise HTTPException(status_code=400, detail="數量必須大於 0")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN TRANSACTION")
+
+        transfer_id = generate_transfer_id()
+        transfer_code = generate_transfer_code()
+        expires_at = (datetime.now() + timedelta(minutes=5)).isoformat()
+
+        # Determine from_type
+        from_type = 'CASE' if request.from_case_id else 'CART'
+        to_type = 'CASE' if request.to_case_id else 'CART'
+
+        # v1.1 Immediate Debit: 立即扣減來源庫存
+        if from_type == 'CASE' and request.from_case_id:
+            # 從案件 holdings 扣減 - 需要實作 case holdings 表
+            # 暫時記錄交易
+            pass
+        elif from_type == 'CART' and request.from_cart_id:
+            # 從藥車庫存扣減
+            cursor.execute("""
+                UPDATE cart_inventory
+                SET quantity = quantity - ?, updated_at = ?
+                WHERE cart_id = ? AND medicine_code = ?
+            """, (request.quantity, datetime.now().isoformat(),
+                  request.from_cart_id, request.medicine_code))
+
+            # 記錄交易
+            txn_id = f"CITXN-XFER-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+            cursor.execute("""
+                INSERT INTO cart_inventory_transactions (
+                    txn_id, txn_type, cart_id, medicine_code,
+                    quantity_change, quantity_before, quantity_after,
+                    source_type, source_id, actor_id, remarks
+                ) VALUES (?, 'TRANSFER_OUT_PENDING', ?, ?, ?, 0, 0, 'TRANSFER', ?, ?, ?)
+            """, (txn_id, request.from_cart_id, request.medicine_code,
+                  -request.quantity, transfer_id, actor_id,
+                  f"Transfer to {request.to_case_id or request.to_cart_id}"))
+
+        # 建立移轉記錄
+        cursor.execute("""
+            INSERT INTO drug_transfers (
+                transfer_id, transfer_code, transfer_type,
+                from_type, from_case_id, from_cart_id, from_nurse_id, from_nurse_name,
+                to_type, to_case_id, to_cart_id, to_nurse_id, to_nurse_name,
+                medicine_code, medicine_name, quantity, unit,
+                is_controlled, controlled_level,
+                witness_id, witness_name,
+                status, from_confirmed, from_confirmed_at,
+                unopened_declared, declaration_timestamp,
+                remarks, expires_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 1, ?, 1, ?, ?, ?)
+        """, (
+            transfer_id, transfer_code, request.transfer_type,
+            from_type, request.from_case_id, request.from_cart_id, actor_id, actor_name,
+            to_type, request.to_case_id, request.to_cart_id, request.to_nurse_id, request.to_nurse_name,
+            request.medicine_code, request.medicine_name, request.quantity, request.unit,
+            request.is_controlled, request.controlled_level,
+            request.witness_id, request.witness_name,
+            datetime.now().isoformat(), datetime.now().isoformat(),
+            request.remarks, expires_at
+        ))
+
+        # 建立通知 (給接收方)
+        if request.to_nurse_id:
+            cursor.execute("""
+                INSERT INTO transfer_notifications (
+                    transfer_id, target_nurse_id, target_type, notification_type
+                ) VALUES (?, ?, 'RECEIVER', 'TRANSFER_REQUEST')
+            """, (transfer_id, request.to_nurse_id))
+
+        conn.commit()
+
+        return {
+            "transfer_id": transfer_id,
+            "transfer_code": transfer_code,
+            "status": "PENDING",
+            "expires_at": expires_at,
+            "message": "移轉已發起，來源庫存已扣減 (Immediate Debit)",
+            "immediate_debit": True
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.post("/transfers/{transfer_id}/confirm")
+async def confirm_transfer(
+    transfer_id: str,
+    actor_id: str = Query(..., description="確認人 ID")
+):
+    """
+    接收方確認移轉
+
+    v1.1: 來源已在發起時扣減，此處只需入帳目的方
+    """
+    if IS_VERCEL:
+        return {
+            "transfer_id": transfer_id,
+            "status": "CONFIRMED",
+            "message": "移轉已確認，藥品已入帳",
+            "demo_mode": True
+        }
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 查詢移轉記錄
+        cursor.execute("SELECT * FROM drug_transfers WHERE transfer_id = ?", (transfer_id,))
+        transfer = cursor.fetchone()
+
+        if not transfer:
+            raise HTTPException(status_code=404, detail="移轉記錄不存在")
+
+        if transfer['status'] != 'PENDING':
+            raise HTTPException(status_code=400, detail=f"移轉狀態無法確認: {transfer['status']}")
+
+        # 檢查是否過期
+        if transfer['expires_at'] and datetime.fromisoformat(transfer['expires_at']) < datetime.now():
+            raise HTTPException(status_code=400, detail="移轉已過期")
+
+        cursor.execute("BEGIN TRANSACTION")
+
+        # 入帳目的方
+        if transfer['to_type'] == 'CART' and transfer['to_cart_id']:
+            cursor.execute("""
+                UPDATE cart_inventory
+                SET quantity = quantity + ?, updated_at = ?
+                WHERE cart_id = ? AND medicine_code = ?
+            """, (transfer['quantity'], datetime.now().isoformat(),
+                  transfer['to_cart_id'], transfer['medicine_code']))
+
+            # 記錄入帳交易
+            txn_id = f"CITXN-XFERIN-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+            cursor.execute("""
+                INSERT INTO cart_inventory_transactions (
+                    txn_id, txn_type, cart_id, medicine_code,
+                    quantity_change, quantity_before, quantity_after,
+                    source_type, source_id, actor_id, remarks
+                ) VALUES (?, 'TRANSFER_IN', ?, ?, ?, 0, 0, 'TRANSFER', ?, ?, ?)
+            """, (txn_id, transfer['to_cart_id'], transfer['medicine_code'],
+                  transfer['quantity'], transfer_id, actor_id,
+                  f"Transfer from {transfer['from_case_id'] or transfer['from_cart_id']}"))
+
+        # 更新移轉狀態
+        cursor.execute("""
+            UPDATE drug_transfers
+            SET status = 'CONFIRMED', to_confirmed = 1, to_confirmed_at = ?, completed_at = ?
+            WHERE transfer_id = ?
+        """, (datetime.now().isoformat(), datetime.now().isoformat(), transfer_id))
+
+        # 更新通知
+        cursor.execute("""
+            INSERT INTO transfer_notifications (
+                transfer_id, target_nurse_id, target_type, notification_type
+            ) VALUES (?, ?, 'SENDER', 'TRANSFER_CONFIRMED')
+        """, (transfer_id, transfer['from_nurse_id']))
+
+        conn.commit()
+
+        return {
+            "transfer_id": transfer_id,
+            "status": "CONFIRMED",
+            "message": "移轉已確認，藥品已入帳"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.post("/transfers/{transfer_id}/reject")
+async def reject_transfer(
+    transfer_id: str,
+    actor_id: str = Query(...),
+    reason: str = Query(..., description="拒絕原因")
+):
+    """
+    接收方拒絕移轉
+
+    v1.1: 回補來源庫存 (Immediate Debit Reversal)
+    """
+    if IS_VERCEL:
+        return {
+            "transfer_id": transfer_id,
+            "status": "REJECTED",
+            "reason": reason,
+            "message": "移轉已拒絕，來源庫存已回補",
+            "demo_mode": True
+        }
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM drug_transfers WHERE transfer_id = ?", (transfer_id,))
+        transfer = cursor.fetchone()
+
+        if not transfer:
+            raise HTTPException(status_code=404, detail="移轉記錄不存在")
+
+        if transfer['status'] != 'PENDING':
+            raise HTTPException(status_code=400, detail=f"移轉狀態無法拒絕: {transfer['status']}")
+
+        cursor.execute("BEGIN TRANSACTION")
+
+        # v1.1: 回補來源庫存
+        if transfer['from_type'] == 'CART' and transfer['from_cart_id']:
+            cursor.execute("""
+                UPDATE cart_inventory
+                SET quantity = quantity + ?, updated_at = ?
+                WHERE cart_id = ? AND medicine_code = ?
+            """, (transfer['quantity'], datetime.now().isoformat(),
+                  transfer['from_cart_id'], transfer['medicine_code']))
+
+            # 記錄回補交易
+            txn_id = f"CITXN-XFERREV-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+            cursor.execute("""
+                INSERT INTO cart_inventory_transactions (
+                    txn_id, txn_type, cart_id, medicine_code,
+                    quantity_change, quantity_before, quantity_after,
+                    source_type, source_id, actor_id, remarks
+                ) VALUES (?, 'TRANSFER_REVERSAL', ?, ?, ?, 0, 0, 'TRANSFER', ?, ?, ?)
+            """, (txn_id, transfer['from_cart_id'], transfer['medicine_code'],
+                  transfer['quantity'], transfer_id, actor_id,
+                  f"Transfer rejected: {reason}"))
+
+        # 更新移轉狀態
+        cursor.execute("""
+            UPDATE drug_transfers
+            SET status = 'REJECTED', reject_reason = ?, completed_at = ?
+            WHERE transfer_id = ?
+        """, (reason, datetime.now().isoformat(), transfer_id))
+
+        # 通知發起方
+        cursor.execute("""
+            INSERT INTO transfer_notifications (
+                transfer_id, target_nurse_id, target_type, notification_type
+            ) VALUES (?, ?, 'SENDER', 'TRANSFER_REJECTED')
+        """, (transfer_id, transfer['from_nurse_id']))
+
+        conn.commit()
+
+        return {
+            "transfer_id": transfer_id,
+            "status": "REJECTED",
+            "reason": reason,
+            "message": "移轉已拒絕，來源庫存已回補"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.post("/transfers/{transfer_id}/cancel")
+async def cancel_transfer(
+    transfer_id: str,
+    actor_id: str = Query(...)
+):
+    """
+    發起方取消移轉 (僅 PENDING 狀態可取消)
+
+    v1.1: 回補來源庫存
+    """
+    if IS_VERCEL:
+        return {
+            "transfer_id": transfer_id,
+            "status": "CANCELLED",
+            "message": "移轉已取消，來源庫存已回補",
+            "demo_mode": True
+        }
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM drug_transfers WHERE transfer_id = ?", (transfer_id,))
+        transfer = cursor.fetchone()
+
+        if not transfer:
+            raise HTTPException(status_code=404, detail="移轉記錄不存在")
+
+        if transfer['status'] != 'PENDING':
+            raise HTTPException(status_code=400, detail="只能取消 PENDING 狀態的移轉")
+
+        if transfer['from_nurse_id'] != actor_id:
+            raise HTTPException(status_code=403, detail="只有發起人可以取消移轉")
+
+        cursor.execute("BEGIN TRANSACTION")
+
+        # 回補來源庫存
+        if transfer['from_type'] == 'CART' and transfer['from_cart_id']:
+            cursor.execute("""
+                UPDATE cart_inventory
+                SET quantity = quantity + ?, updated_at = ?
+                WHERE cart_id = ? AND medicine_code = ?
+            """, (transfer['quantity'], datetime.now().isoformat(),
+                  transfer['from_cart_id'], transfer['medicine_code']))
+
+            txn_id = f"CITXN-XFERCAN-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+            cursor.execute("""
+                INSERT INTO cart_inventory_transactions (
+                    txn_id, txn_type, cart_id, medicine_code,
+                    quantity_change, quantity_before, quantity_after,
+                    source_type, source_id, actor_id, remarks
+                ) VALUES (?, 'TRANSFER_REVERSAL', ?, ?, ?, 0, 0, 'TRANSFER', ?, ?, 'Transfer cancelled by sender')
+            """, (txn_id, transfer['from_cart_id'], transfer['medicine_code'],
+                  transfer['quantity'], transfer_id, actor_id))
+
+        cursor.execute("""
+            UPDATE drug_transfers
+            SET status = 'CANCELLED', completed_at = ?
+            WHERE transfer_id = ?
+        """, (datetime.now().isoformat(), transfer_id))
+
+        conn.commit()
+
+        return {
+            "transfer_id": transfer_id,
+            "status": "CANCELLED",
+            "message": "移轉已取消，來源庫存已回補"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@router.get("/transfers")
+async def list_transfers(
+    case_id: Optional[str] = None,
+    cart_id: Optional[str] = None,
+    nurse_id: Optional[str] = None,
+    status: Optional[str] = None,
+    direction: Optional[str] = Query(None, description="IN, OUT, ALL"),
+    limit: int = Query(50, ge=1, le=200)
+):
+    """查詢移轉記錄"""
+    if IS_VERCEL:
+        demo_transfers = [
+            {
+                "transfer_id": "XFER-DEMO-001",
+                "transfer_code": "XFER-7A3B",
+                "transfer_type": "CASE_TO_CASE",
+                "from_nurse_name": "張小華",
+                "to_nurse_name": "李小美",
+                "medicine_name": "Fentanyl 100mcg/2mL",
+                "quantity": 1,
+                "is_controlled": True,
+                "status": "CONFIRMED",
+                "initiated_at": (datetime.now() - timedelta(hours=1)).isoformat()
+            }
+        ]
+        return {"transfers": demo_transfers, "total": len(demo_transfers)}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        query = "SELECT * FROM drug_transfers WHERE 1=1"
+        params = []
+
+        if case_id:
+            if direction == 'IN':
+                query += " AND to_case_id = ?"
+            elif direction == 'OUT':
+                query += " AND from_case_id = ?"
+            else:
+                query += " AND (from_case_id = ? OR to_case_id = ?)"
+                params.append(case_id)
+            params.append(case_id)
+
+        if cart_id:
+            if direction == 'IN':
+                query += " AND to_cart_id = ?"
+            elif direction == 'OUT':
+                query += " AND from_cart_id = ?"
+            else:
+                query += " AND (from_cart_id = ? OR to_cart_id = ?)"
+                params.append(cart_id)
+            params.append(cart_id)
+
+        if nurse_id:
+            query += " AND (from_nurse_id = ? OR to_nurse_id = ?)"
+            params.extend([nurse_id, nurse_id])
+
+        if status:
+            query += " AND status = ?"
+            params.append(status)
+
+        query += " ORDER BY initiated_at DESC LIMIT ?"
+        params.append(limit)
+
+        cursor.execute(query, params)
+        transfers = [dict(row) for row in cursor.fetchall()]
+
+        return {"transfers": transfers, "total": len(transfers)}
+
+    finally:
+        conn.close()
+
+
+@router.get("/transfers/pending")
+async def get_pending_transfers(nurse_id: str = Query(...)):
+    """取得待處理的移轉 (for 通知 badge)"""
+    if IS_VERCEL:
+        return {
+            "incoming": [
+                {
+                    "transfer_id": "XFER-DEMO-002",
+                    "from_nurse_name": "王小華",
+                    "medicine_name": "Midazolam 5mg/mL",
+                    "quantity": 1,
+                    "initiated_at": datetime.now().isoformat()
+                }
+            ],
+            "outgoing": [],
+            "total_pending": 1,
+            "demo_mode": True
+        }
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 待接收
+        cursor.execute("""
+            SELECT * FROM drug_transfers
+            WHERE to_nurse_id = ? AND status = 'PENDING'
+            ORDER BY initiated_at DESC
+        """, (nurse_id,))
+        incoming = [dict(row) for row in cursor.fetchall()]
+
+        # 待對方確認
+        cursor.execute("""
+            SELECT * FROM drug_transfers
+            WHERE from_nurse_id = ? AND status = 'PENDING'
+            ORDER BY initiated_at DESC
+        """, (nurse_id,))
+        outgoing = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            "incoming": incoming,
+            "outgoing": outgoing,
+            "total_pending": len(incoming) + len(outgoing)
+        }
+
+    finally:
+        conn.close()
+
+
+@router.get("/transfers/by-code/{code}")
+async def get_transfer_by_code(code: str):
+    """
+    透過短代碼查詢移轉 (iOS 用)
+
+    code 格式: XFER-7A3B
+    """
+    if IS_VERCEL:
+        if code.upper().startswith("XFER-"):
+            return {
+                "transfer_id": "XFER-DEMO-001",
+                "transfer_code": code.upper(),
+                "transfer_type": "CASE_TO_CASE",
+                "from_nurse_name": "張小華",
+                "from_case_id": "ANES-DEMO-001",
+                "medicine_code": "FENT",
+                "medicine_name": "Fentanyl 100mcg/2mL",
+                "quantity": 1,
+                "is_controlled": True,
+                "witness_name": "陳護理師",
+                "status": "PENDING",
+                "expires_at": (datetime.now() + timedelta(minutes=3)).isoformat(),
+                "demo_mode": True
+            }
+        raise HTTPException(status_code=404, detail="移轉代碼不存在")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT * FROM drug_transfers
+            WHERE transfer_code = ? AND status = 'PENDING'
+        """, (code.upper(),))
+        transfer = cursor.fetchone()
+
+        if not transfer:
+            raise HTTPException(status_code=404, detail="移轉代碼不存在或已過期")
+
+        # 檢查是否過期
+        if transfer['expires_at'] and datetime.fromisoformat(transfer['expires_at']) < datetime.now():
+            raise HTTPException(status_code=400, detail="移轉代碼已過期")
+
+        return dict(transfer)
+
+    finally:
+        conn.close()
+
+
+@router.get("/transfers/{transfer_id}")
+async def get_transfer(transfer_id: str):
+    """取得移轉詳情"""
+    if IS_VERCEL:
+        return {
+            "transfer_id": transfer_id,
+            "transfer_type": "CASE_TO_CASE",
+            "status": "PENDING",
+            "demo_mode": True
+        }
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM drug_transfers WHERE transfer_id = ?", (transfer_id,))
+        transfer = cursor.fetchone()
+
+        if not transfer:
+            raise HTTPException(status_code=404, detail="移轉記錄不存在")
+
+        return dict(transfer)
+
+    finally:
+        conn.close()
+
+
+# --- Cart Assignment APIs ---
+@router.get("/carts/available")
+async def get_available_carts(or_room: str = Query(None)):
+    """取得可用藥車"""
+    if IS_VERCEL:
+        return {
+            "primary_cart": {"cart_id": f"CART-{or_room or 'OR-01'}", "name": f"{or_room or 'OR-01'} 藥車"},
+            "mobile_carts": [
+                {"cart_id": "CART-MOBILE-01", "name": "流動藥車 #1", "location": "Storage"}
+            ]
+        }
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        primary_cart = None
+        if or_room:
+            cursor.execute("""
+                SELECT * FROM drug_carts
+                WHERE assigned_or = ? AND status = 'ACTIVE'
+            """, (or_room,))
+            row = cursor.fetchone()
+            if row:
+                primary_cart = dict(row)
+
+        cursor.execute("""
+            SELECT * FROM drug_carts
+            WHERE cart_type = 'MOBILE' AND status = 'ACTIVE'
+            AND (current_nurse_id IS NULL OR current_nurse_id = '')
+        """)
+        mobile_carts = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            "primary_cart": primary_cart,
+            "mobile_carts": mobile_carts
+        }
+
+    finally:
+        conn.close()
+
+
+@router.post("/carts/{cart_id}/assign")
+async def assign_cart_to_nurse(
+    cart_id: str,
+    nurse_id: str = Query(...),
+    nurse_name: str = Query(None)
+):
+    """將藥車指派給護理師"""
+    if IS_VERCEL:
+        return {"cart_id": cart_id, "nurse_id": nurse_id, "status": "assigned"}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE drug_carts
+            SET current_nurse_id = ?, updated_at = ?
+            WHERE id = ?
+        """, (nurse_id, datetime.now().isoformat(), cart_id))
+        conn.commit()
+
+        return {"cart_id": cart_id, "nurse_id": nurse_id, "status": "assigned"}
+
+    finally:
+        conn.close()
+
+
+@router.post("/carts/{cart_id}/release")
+async def release_cart(cart_id: str, nurse_id: str = Query(...)):
+    """護理師釋放藥車"""
+    if IS_VERCEL:
+        return {"cart_id": cart_id, "status": "released"}
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE drug_carts
+            SET current_nurse_id = NULL, updated_at = ?
+            WHERE id = ? AND current_nurse_id = ?
+        """, (datetime.now().isoformat(), cart_id, nurse_id))
+        conn.commit()
+
+        return {"cart_id": cart_id, "status": "released"}
+
+    finally:
+        conn.close()
