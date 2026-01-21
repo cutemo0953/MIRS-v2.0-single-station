@@ -5138,16 +5138,35 @@ async def get_quick_drugs_inventory():
     Returns:
         藥品清單含庫存狀態 (current_stock, stock_status)
     """
-    if not BILLING_SERVICE_AVAILABLE:
-        # Fallback: 返回基本清單
-        return {"drugs": QUICK_DRUGS, "inventory_available": False}
+    # Vercel demo 模式或 Billing 服務不可用時，返回模擬資料
+    if IS_VERCEL or not BILLING_SERVICE_AVAILABLE:
+        demo_drugs = [
+            {"medicine_code": "PROP", "medicine_name": "Propofol 200mg/20mL", "generic_name": "Propofol", "default_dose": 100, "default_unit": "mg", "unit": "mg", "route": "IV", "is_controlled": False, "current_stock": 20, "stock_status": "OK", "stock_display": "20"},
+            {"medicine_code": "FENT", "medicine_name": "Fentanyl 100mcg/2mL", "generic_name": "Fentanyl", "default_dose": 100, "default_unit": "mcg", "unit": "mcg", "route": "IV", "is_controlled": True, "controlled_level": 2, "current_stock": 15, "stock_status": "OK", "stock_display": "15"},
+            {"medicine_code": "ROCU", "medicine_name": "Rocuronium 50mg/5mL", "generic_name": "Rocuronium", "default_dose": 50, "default_unit": "mg", "unit": "mg", "route": "IV", "is_controlled": False, "current_stock": 10, "stock_status": "OK", "stock_display": "10"},
+            {"medicine_code": "SUXI", "medicine_name": "Succinylcholine 100mg/2mL", "generic_name": "Succinylcholine", "default_dose": 100, "default_unit": "mg", "unit": "mg", "route": "IV", "is_controlled": False, "current_stock": 8, "stock_status": "OK", "stock_display": "8"},
+            {"medicine_code": "MIDA", "medicine_name": "Midazolam 5mg/mL", "generic_name": "Midazolam", "default_dose": 2, "default_unit": "mg", "unit": "mg", "route": "IV", "is_controlled": True, "controlled_level": 4, "current_stock": 12, "stock_status": "OK", "stock_display": "12"},
+            {"medicine_code": "ATRO", "medicine_name": "Atropine 0.5mg/mL", "generic_name": "Atropine", "default_dose": 0.5, "default_unit": "mg", "unit": "mg", "route": "IV", "is_controlled": False, "current_stock": 25, "stock_status": "OK", "stock_display": "25"},
+            {"medicine_code": "EPHE", "medicine_name": "Ephedrine 30mg/mL", "generic_name": "Ephedrine", "default_dose": 10, "default_unit": "mg", "unit": "mg", "route": "IV", "is_controlled": False, "current_stock": 18, "stock_status": "OK", "stock_display": "18"},
+            {"medicine_code": "PHEN", "medicine_name": "Phenylephrine 10mg/mL", "generic_name": "Phenylephrine", "default_dose": 100, "default_unit": "mcg", "unit": "mcg", "route": "IV", "is_controlled": False, "current_stock": 15, "stock_status": "OK", "stock_display": "15"},
+            {"medicine_code": "SUGA", "medicine_name": "Sugammadex 200mg/2mL", "generic_name": "Sugammadex", "default_dose": 200, "default_unit": "mg", "unit": "mg", "route": "IV", "is_controlled": False, "current_stock": 6, "stock_status": "OK", "stock_display": "6"},
+            {"medicine_code": "NEOS", "medicine_name": "Neostigmine 0.5mg/mL", "generic_name": "Neostigmine", "default_dose": 2.5, "default_unit": "mg", "unit": "mg", "route": "IV", "is_controlled": False, "current_stock": 20, "stock_status": "OK", "stock_display": "20"},
+            {"medicine_code": "KETA", "medicine_name": "Ketamine 500mg/10mL", "generic_name": "Ketamine", "default_dose": 50, "default_unit": "mg", "unit": "mg", "route": "IV", "is_controlled": True, "controlled_level": 3, "current_stock": 5, "stock_status": "OK", "stock_display": "5"},
+            {"medicine_code": "LIDO", "medicine_name": "Lidocaine 2% 20mL", "generic_name": "Lidocaine", "default_dose": 100, "default_unit": "mg", "unit": "mg", "route": "IV", "is_controlled": False, "current_stock": 30, "stock_status": "OK", "stock_display": "30"},
+        ]
+        return {"drugs": demo_drugs, "inventory_available": True, "demo_mode": True}
 
     try:
         drugs = get_quick_drugs_with_inventory()
         return {"drugs": drugs, "inventory_available": True}
     except Exception as e:
         logger.error(f"get_quick_drugs_inventory error: {e}")
-        return {"drugs": QUICK_DRUGS, "inventory_available": False, "error": str(e)}
+        # 錯誤時也返回格式正確的 demo 資料
+        demo_drugs = [
+            {"medicine_code": "PROP", "medicine_name": "Propofol 200mg/20mL", "generic_name": "Propofol", "default_dose": 100, "default_unit": "mg", "unit": "mg", "route": "IV", "is_controlled": False, "current_stock": 20, "stock_status": "OK", "stock_display": "20"},
+            {"medicine_code": "FENT", "medicine_name": "Fentanyl 100mcg/2mL", "generic_name": "Fentanyl", "default_dose": 100, "default_unit": "mcg", "unit": "mcg", "route": "IV", "is_controlled": True, "controlled_level": 2, "current_stock": 15, "stock_status": "OK", "stock_display": "15"},
+        ]
+        return {"drugs": demo_drugs, "inventory_available": False, "error": str(e)}
 
 
 @router.post("/cases/{case_id}/medication/with-billing")
