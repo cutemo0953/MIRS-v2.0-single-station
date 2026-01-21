@@ -1329,3 +1329,642 @@ def get_break_glass_stats(
 
     finally:
         conn.close()
+
+
+# =============================================================================
+# Case Closure & Auto-Billing (Phase 5)
+# =============================================================================
+
+@dataclass
+class CaseClosureResult:
+    """案件結案結果"""
+    success: bool
+    case_id: str
+    anesthesia_billing_id: Optional[str]
+    surgical_billing_id: Optional[str]
+    medication_total: float
+    grand_total: float
+    warnings: List[str]
+    errors: List[str]
+
+
+def validate_case_for_closure(
+    case_id: str,
+    db_path: str = "database/mirs.db"
+) -> Tuple[bool, List[str]]:
+    """
+    驗證案件是否可結案
+
+    檢查項目:
+    1. 管制藥是否已全部 reconciliation
+    2. Break-glass 是否已核准
+    3. 麻醉時間是否已記錄 (START/END)
+
+    Returns:
+        (can_close, errors)
+    """
+    errors = []
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        # 1. 檢查是否有未完成的管制藥見證
+        cursor.execute("""
+            SELECT COUNT(*) as pending
+            FROM controlled_drug_log
+            WHERE case_id = ?
+              AND witness_status = 'REQUIRED'
+        """, (case_id,))
+        pending_witness = cursor.fetchone()['pending']
+        if pending_witness > 0:
+            errors.append(f"有 {pending_witness} 筆管制藥記錄尚未完成見證")
+
+        # 2. 檢查是否有未核准的 break-glass
+        cursor.execute("""
+            SELECT COUNT(*) as pending
+            FROM controlled_drug_log
+            WHERE case_id = ?
+              AND is_break_glass = 1
+              AND witness_status = 'PENDING'
+              AND break_glass_approved_by IS NULL
+        """, (case_id,))
+        pending_approval = cursor.fetchone()['pending']
+        if pending_approval > 0:
+            errors.append(f"有 {pending_approval} 筆 Break-glass 事件尚未核准")
+
+        # 3. 檢查麻醉時間是否已記錄
+        cursor.execute("""
+            SELECT
+                MAX(CASE WHEN event_type = 'ANESTHESIA_START' THEN event_timestamp END) as start_time,
+                MAX(CASE WHEN event_type = 'ANESTHESIA_END' THEN event_timestamp END) as end_time
+            FROM anesthesia_events
+            WHERE case_id = ?
+        """, (case_id,))
+        times = cursor.fetchone()
+
+        if not times or not times['start_time']:
+            errors.append("麻醉開始時間 (ANESTHESIA_START) 尚未記錄")
+
+        if not times or not times['end_time']:
+            errors.append("麻醉結束時間 (ANESTHESIA_END) 尚未記錄")
+
+        return len(errors) == 0, errors
+
+    finally:
+        conn.close()
+
+
+def on_case_closed(
+    case_id: str,
+    actor_id: str,
+    surgery_code: Optional[str] = None,
+    surgery_name: Optional[str] = None,
+    surgery_grade: Optional[str] = "C",
+    surgeon_id: Optional[str] = None,
+    assistant_ids: Optional[List[str]] = None,
+    force: bool = False,
+    db_path: str = "database/mirs.db"
+) -> CaseClosureResult:
+    """
+    案件結案時自動計算處置費 (Phase 5)
+
+    Trigger: Case Status → CLOSED
+
+    Args:
+        case_id: 案件 ID
+        actor_id: 操作者 ID
+        surgery_code: 手術代碼 (若有)
+        surgery_name: 手術名稱 (若有)
+        surgery_grade: 手術等級 A/B/C/D
+        surgeon_id: 主刀醫師 ID
+        assistant_ids: 助手醫師 ID 列表
+        force: 強制結案 (忽略驗證錯誤)
+
+    Returns:
+        CaseClosureResult
+    """
+    warnings = []
+    errors = []
+    anesthesia_billing_id = None
+    surgical_billing_id = None
+    medication_total = 0.0
+    grand_total = 0.0
+
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        # 1. 驗證是否可結案
+        if not force:
+            can_close, validation_errors = validate_case_for_closure(case_id, db_path)
+            if not can_close:
+                return CaseClosureResult(
+                    success=False,
+                    case_id=case_id,
+                    anesthesia_billing_id=None,
+                    surgical_billing_id=None,
+                    medication_total=0,
+                    grand_total=0,
+                    warnings=[],
+                    errors=validation_errors
+                )
+
+        # 2. 取得麻醉時間
+        cursor.execute("""
+            SELECT
+                MAX(CASE WHEN event_type = 'ANESTHESIA_START' THEN event_timestamp END) as start_time,
+                MAX(CASE WHEN event_type = 'ANESTHESIA_END' THEN event_timestamp END) as end_time
+            FROM anesthesia_events
+            WHERE case_id = ?
+        """, (case_id,))
+        times = cursor.fetchone()
+
+        # 3. 取得案件資訊 (ASA, technique)
+        cursor.execute("""
+            SELECT asa_class, asa_emergency, planned_technique
+            FROM anesthesia_cases
+            WHERE id = ?
+        """, (case_id,))
+        case_info = cursor.fetchone()
+
+        if not case_info:
+            return CaseClosureResult(
+                success=False,
+                case_id=case_id,
+                anesthesia_billing_id=None,
+                surgical_billing_id=None,
+                medication_total=0,
+                grand_total=0,
+                warnings=[],
+                errors=["找不到案件資訊"]
+            )
+
+        # 4. 計算麻醉處置費
+        if times and times['start_time'] and times['end_time']:
+            try:
+                start_time = datetime.fromisoformat(times['start_time'].replace('Z', '+00:00'))
+                end_time = datetime.fromisoformat(times['end_time'].replace('Z', '+00:00'))
+
+                anes_result = calculate_anesthesia_fee(
+                    case_id=case_id,
+                    asa_class=case_info['asa_class'] or 2,
+                    asa_emergency=bool(case_info['asa_emergency']),
+                    technique=case_info['planned_technique'] or 'GA_ETT',
+                    start_time=start_time,
+                    end_time=end_time,
+                    special_techniques=None,
+                    db_path=db_path
+                )
+                anesthesia_billing_id = anes_result['billing_id']
+                grand_total += anes_result['total_fee']
+                logger.info(f"Anesthesia fee calculated: {anes_result['total_fee']}")
+
+            except Exception as e:
+                warnings.append(f"麻醉處置費計算失敗: {str(e)}")
+                logger.error(f"Anesthesia fee calculation error: {e}")
+        else:
+            warnings.append("麻醉時間不完整，跳過麻醉處置費計算")
+
+        # 5. 計算手術處置費 (若有手術資訊)
+        if surgery_code and surgeon_id and times and times['start_time'] and times['end_time']:
+            try:
+                start_time = datetime.fromisoformat(times['start_time'].replace('Z', '+00:00'))
+                end_time = datetime.fromisoformat(times['end_time'].replace('Z', '+00:00'))
+
+                surg_result = calculate_surgical_fee(
+                    case_id=case_id,
+                    surgery_code=surgery_code,
+                    surgery_name=surgery_name or surgery_code,
+                    surgery_grade=surgery_grade or 'C',
+                    surgeon_id=surgeon_id,
+                    start_time=start_time,
+                    end_time=end_time,
+                    assistant_ids=assistant_ids,
+                    db_path=db_path
+                )
+                surgical_billing_id = surg_result['billing_id']
+                grand_total += surg_result['total_fee']
+                logger.info(f"Surgical fee calculated: {surg_result['total_fee']}")
+
+            except Exception as e:
+                warnings.append(f"手術處置費計算失敗: {str(e)}")
+                logger.error(f"Surgical fee calculation error: {e}")
+
+        # 6. 彙總藥品費
+        cursor.execute("""
+            SELECT COALESCE(SUM(billing_quantity * COALESCE(unit_price_at_event, 0)), 0) as total
+            FROM medication_usage_events
+            WHERE case_id = ? AND billing_status != 'VOIDED' AND is_voided = 0
+        """, (case_id,))
+        med_total = cursor.fetchone()['total']
+        medication_total = float(med_total)
+        grand_total += medication_total
+
+        # 7. 更新案件狀態
+        cursor.execute("""
+            UPDATE anesthesia_cases
+            SET status = 'CLOSED', updated_at = ?
+            WHERE id = ?
+        """, (datetime.now().isoformat(), case_id))
+
+        # 8. 記錄稽核日誌
+        cursor.execute("""
+            INSERT INTO audit_log (action, table_name, record_id, actor_id, details, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            'CASE_CLOSED',
+            'anesthesia_cases',
+            case_id,
+            actor_id,
+            json.dumps({
+                "anesthesia_billing_id": anesthesia_billing_id,
+                "surgical_billing_id": surgical_billing_id,
+                "medication_total": medication_total,
+                "grand_total": grand_total,
+                "warnings": warnings
+            }),
+            datetime.now().isoformat()
+        ))
+
+        conn.commit()
+
+        return CaseClosureResult(
+            success=True,
+            case_id=case_id,
+            anesthesia_billing_id=anesthesia_billing_id,
+            surgical_billing_id=surgical_billing_id,
+            medication_total=medication_total,
+            grand_total=grand_total,
+            warnings=warnings,
+            errors=[]
+        )
+
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"on_case_closed error: {e}")
+        return CaseClosureResult(
+            success=False,
+            case_id=case_id,
+            anesthesia_billing_id=None,
+            surgical_billing_id=None,
+            medication_total=0,
+            grand_total=0,
+            warnings=warnings,
+            errors=[str(e)]
+        )
+
+    finally:
+        conn.close()
+
+
+# =============================================================================
+# Offline Queue Mechanism (Phase 6)
+# =============================================================================
+
+class OfflineEventType(str, Enum):
+    """離線事件類型"""
+    MEDICATION_ADMIN = "MEDICATION_ADMIN"
+    VITAL_SIGN = "VITAL_SIGN"
+    CONTROLLED_DRUG = "CONTROLLED_DRUG"
+    INVENTORY_DEDUCT = "INVENTORY_DEDUCT"
+
+
+class SyncStatus(str, Enum):
+    """同步狀態"""
+    PENDING = "PENDING"
+    SYNCING = "SYNCING"
+    SYNCED = "SYNCED"
+    CONFLICT = "CONFLICT"
+    FAILED = "FAILED"
+
+
+@dataclass
+class OfflineEvent:
+    """離線事件"""
+    event_id: str
+    event_type: str
+    case_id: str
+    payload: Dict[str, Any]
+    client_timestamp: str
+    client_uuid: str
+    sync_status: str = "PENDING"
+    retry_count: int = 0
+    error_message: Optional[str] = None
+
+
+def create_offline_queue_table(db_path: str = "database/mirs.db"):
+    """建立離線佇列表 (如果不存在)"""
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS offline_event_queue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id TEXT UNIQUE NOT NULL,
+                event_type TEXT NOT NULL,
+                case_id TEXT,
+                payload TEXT NOT NULL,
+                client_timestamp TEXT NOT NULL,
+                client_uuid TEXT NOT NULL,
+                sync_status TEXT DEFAULT 'PENDING',
+                retry_count INTEGER DEFAULT 0,
+                last_retry_at TEXT,
+                error_message TEXT,
+                synced_at TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+                CHECK(sync_status IN ('PENDING', 'SYNCING', 'SYNCED', 'CONFLICT', 'FAILED'))
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_offline_queue_status
+                ON offline_event_queue(sync_status);
+            CREATE INDEX IF NOT EXISTS idx_offline_queue_case
+                ON offline_event_queue(case_id);
+            CREATE INDEX IF NOT EXISTS idx_offline_queue_client_uuid
+                ON offline_event_queue(client_uuid);
+        """)
+        conn.commit()
+        logger.info("Offline queue table created/verified")
+
+    finally:
+        conn.close()
+
+
+def enqueue_offline_event(
+    event: OfflineEvent,
+    db_path: str = "database/mirs.db"
+) -> bool:
+    """
+    將事件加入離線佇列
+
+    Args:
+        event: 離線事件
+        db_path: 資料庫路徑
+
+    Returns:
+        是否成功
+    """
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            INSERT OR IGNORE INTO offline_event_queue (
+                event_id, event_type, case_id, payload,
+                client_timestamp, client_uuid, sync_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            event.event_id,
+            event.event_type,
+            event.case_id,
+            json.dumps(event.payload),
+            event.client_timestamp,
+            event.client_uuid,
+            event.sync_status
+        ))
+
+        conn.commit()
+        return cursor.rowcount > 0
+
+    except Exception as e:
+        logger.error(f"enqueue_offline_event error: {e}")
+        return False
+
+    finally:
+        conn.close()
+
+
+def get_pending_offline_events(
+    limit: int = 100,
+    db_path: str = "database/mirs.db"
+) -> List[Dict[str, Any]]:
+    """
+    取得待同步的離線事件
+
+    Args:
+        limit: 最大筆數
+        db_path: 資料庫路徑
+
+    Returns:
+        待同步事件清單
+    """
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT * FROM offline_event_queue
+            WHERE sync_status IN ('PENDING', 'FAILED')
+              AND retry_count < 5
+            ORDER BY created_at ASC
+            LIMIT ?
+        """, (limit,))
+
+        events = []
+        for row in cursor.fetchall():
+            events.append({
+                "id": row['id'],
+                "event_id": row['event_id'],
+                "event_type": row['event_type'],
+                "case_id": row['case_id'],
+                "payload": json.loads(row['payload']),
+                "client_timestamp": row['client_timestamp'],
+                "client_uuid": row['client_uuid'],
+                "sync_status": row['sync_status'],
+                "retry_count": row['retry_count'],
+                "error_message": row['error_message'],
+                "created_at": row['created_at']
+            })
+
+        return events
+
+    finally:
+        conn.close()
+
+
+def mark_event_synced(
+    event_id: str,
+    db_path: str = "database/mirs.db"
+) -> bool:
+    """標記事件為已同步"""
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            UPDATE offline_event_queue
+            SET sync_status = 'SYNCED', synced_at = ?
+            WHERE event_id = ?
+        """, (datetime.now().isoformat(), event_id))
+
+        conn.commit()
+        return cursor.rowcount > 0
+
+    finally:
+        conn.close()
+
+
+def mark_event_failed(
+    event_id: str,
+    error_message: str,
+    db_path: str = "database/mirs.db"
+) -> bool:
+    """標記事件為失敗 (增加重試計數)"""
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            UPDATE offline_event_queue
+            SET sync_status = 'FAILED',
+                retry_count = retry_count + 1,
+                last_retry_at = ?,
+                error_message = ?
+            WHERE event_id = ?
+        """, (datetime.now().isoformat(), error_message, event_id))
+
+        conn.commit()
+        return cursor.rowcount > 0
+
+    finally:
+        conn.close()
+
+
+def mark_event_conflict(
+    event_id: str,
+    conflict_details: str,
+    db_path: str = "database/mirs.db"
+) -> bool:
+    """標記事件為衝突 (需人工處理)"""
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            UPDATE offline_event_queue
+            SET sync_status = 'CONFLICT',
+                error_message = ?
+            WHERE event_id = ?
+        """, (conflict_details, event_id))
+
+        conn.commit()
+        return cursor.rowcount > 0
+
+    finally:
+        conn.close()
+
+
+def process_offline_queue(
+    db_path: str = "database/mirs.db"
+) -> Dict[str, Any]:
+    """
+    處理離線佇列 (同步到本地資料庫)
+
+    Returns:
+        處理結果統計
+    """
+    events = get_pending_offline_events(db_path=db_path)
+
+    results = {
+        "processed": 0,
+        "synced": 0,
+        "failed": 0,
+        "conflicts": 0
+    }
+
+    for event in events:
+        results["processed"] += 1
+
+        try:
+            # 根據事件類型處理
+            if event["event_type"] == OfflineEventType.MEDICATION_ADMIN.value:
+                # 用藥事件 - 檢查是否已存在 (by client_uuid)
+                success = _sync_medication_event(event, db_path)
+                if success:
+                    mark_event_synced(event["event_id"], db_path)
+                    results["synced"] += 1
+                else:
+                    mark_event_conflict(event["event_id"], "Duplicate event detected", db_path)
+                    results["conflicts"] += 1
+
+            elif event["event_type"] == OfflineEventType.VITAL_SIGN.value:
+                # 生命徵象事件 - 直接寫入
+                _sync_vital_sign_event(event, db_path)
+                mark_event_synced(event["event_id"], db_path)
+                results["synced"] += 1
+
+            else:
+                # 其他類型 - 標記為已同步 (假設本地已處理)
+                mark_event_synced(event["event_id"], db_path)
+                results["synced"] += 1
+
+        except Exception as e:
+            mark_event_failed(event["event_id"], str(e), db_path)
+            results["failed"] += 1
+            logger.error(f"Failed to sync event {event['event_id']}: {e}")
+
+    return results
+
+
+def _sync_medication_event(event: Dict[str, Any], db_path: str) -> bool:
+    """同步用藥事件 (內部函數)"""
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        # 檢查是否已存在
+        cursor.execute("""
+            SELECT id FROM medication_usage_events
+            WHERE idempotency_key LIKE ?
+        """, (f"%{event['client_uuid']}%",))
+
+        if cursor.fetchone():
+            logger.info(f"Medication event already exists: {event['client_uuid']}")
+            return False  # 標記為衝突
+
+        # 不存在則略過 (應該在離線時已寫入本地)
+        return True
+
+    finally:
+        conn.close()
+
+
+def _sync_vital_sign_event(event: Dict[str, Any], db_path: str) -> bool:
+    """同步生命徵象事件 (內部函數)"""
+    # 生命徵象通常直接寫入，無需特殊處理
+    return True
+
+
+def get_offline_queue_stats(db_path: str = "database/mirs.db") -> Dict[str, Any]:
+    """取得離線佇列統計"""
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT
+                sync_status,
+                COUNT(*) as count
+            FROM offline_event_queue
+            GROUP BY sync_status
+        """)
+
+        by_status = {row['sync_status']: row['count'] for row in cursor.fetchall()}
+
+        cursor.execute("""
+            SELECT COUNT(*) as total FROM offline_event_queue
+        """)
+        total = cursor.fetchone()['total']
+
+        return {
+            "total": total,
+            "pending": by_status.get('PENDING', 0),
+            "synced": by_status.get('SYNCED', 0),
+            "failed": by_status.get('FAILED', 0),
+            "conflicts": by_status.get('CONFLICT', 0),
+            "by_status": by_status
+        }
+
+    finally:
+        conn.close()

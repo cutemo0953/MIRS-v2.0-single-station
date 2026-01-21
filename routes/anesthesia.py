@@ -5085,7 +5085,19 @@ try:
         approve_break_glass,
         get_break_glass_stats,
         BreakGlassApprovalRequest,
-        ALLOWED_BREAK_GLASS_REASONS
+        ALLOWED_BREAK_GLASS_REASONS,
+        # Case closure (Phase 5)
+        on_case_closed,
+        validate_case_for_closure,
+        CaseClosureResult,
+        # Offline queue (Phase 6)
+        create_offline_queue_table,
+        enqueue_offline_event,
+        get_pending_offline_events,
+        process_offline_queue,
+        get_offline_queue_stats,
+        OfflineEvent,
+        OfflineEventType
     )
     BILLING_SERVICE_AVAILABLE = True
 except ImportError as e:
@@ -5600,6 +5612,296 @@ async def get_break_glass_reasons():
         }.get(reason, reason)}
         for reason in ALLOWED_BREAK_GLASS_REASONS
     ]}
+
+
+# =============================================================================
+# Phase 5: Case Closure APIs (案件關帳)
+# =============================================================================
+
+class CaseCloseRequest(BaseModel):
+    """案件關帳請求"""
+    actor_id: str = Field(..., description="執行者 ID")
+    surgery_code: Optional[str] = Field(None, description="手術代碼")
+    surgery_name: Optional[str] = Field(None, description="手術名稱")
+    surgery_grade: Optional[str] = Field("C", description="手術等級 (A/B/C/D)")
+    surgeon_id: Optional[str] = Field(None, description="主刀醫師 ID")
+    assistant_ids: Optional[List[str]] = Field(None, description="助手醫師 IDs")
+    force: bool = Field(False, description="強制關帳 (忽略驗證警告)")
+
+
+@router.get("/cases/{case_id}/close/validate")
+async def validate_case_closure(case_id: str):
+    """
+    驗證案件是否可以關帳
+
+    檢查項目:
+    - 案件狀態是否允許關帳
+    - 是否有未處理的 Break-glass 事件
+    - 是否有未同步的離線事件
+    - 管制藥品用量是否配平
+
+    Returns:
+        - can_close: 是否可以關帳
+        - warnings: 警告清單 (可忽略)
+        - errors: 錯誤清單 (必須解決)
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        result = validate_case_for_closure(case_id)
+        return result
+    except Exception as e:
+        logger.error(f"validate_case_closure error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cases/{case_id}/close")
+async def close_case_and_calculate_billing(
+    case_id: str,
+    request: CaseCloseRequest
+):
+    """
+    關閉案件並自動計算計費
+
+    此 API 會:
+    1. 驗證案件狀態
+    2. 計算麻醉費用 (根據時間和技術)
+    3. 計算手術費用 (如提供手術資訊)
+    4. 計算藥品總費用
+    5. 更新案件狀態為 CLOSED
+
+    Args:
+        case_id: 案件 ID
+        request: 關帳請求 (包含手術資訊)
+
+    Returns:
+        CaseClosureResult - 包含所有計費結果和警告
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        result: CaseClosureResult = on_case_closed(
+            case_id=case_id,
+            actor_id=request.actor_id,
+            surgery_code=request.surgery_code,
+            surgery_name=request.surgery_name,
+            surgery_grade=request.surgery_grade,
+            surgeon_id=request.surgeon_id,
+            assistant_ids=request.assistant_ids,
+            force=request.force
+        )
+
+        if not result.success and result.errors:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message": "案件關帳失敗",
+                    "errors": result.errors,
+                    "warnings": result.warnings
+                }
+            )
+
+        return {
+            "success": result.success,
+            "case_id": result.case_id,
+            "billing": {
+                "anesthesia_billing_id": result.anesthesia_billing_id,
+                "surgical_billing_id": result.surgical_billing_id,
+                "medication_total": result.medication_total,
+                "grand_total": result.grand_total
+            },
+            "warnings": result.warnings,
+            "message": "案件已關帳，計費完成"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"close_case_and_calculate_billing error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Phase 6: Offline Queue APIs (離線佇列)
+# =============================================================================
+
+class OfflineEventRequest(BaseModel):
+    """離線事件入列請求"""
+    event_type: str = Field(..., description="事件類型: MEDICATION_ADMIN, VITAL_SIGN, CONTROLLED_DRUG, INVENTORY_DEDUCT")
+    case_id: Optional[str] = Field(None, description="關聯案件 ID")
+    payload: Dict[str, Any] = Field(..., description="事件內容")
+    client_timestamp: str = Field(..., description="客戶端時間戳 (ISO 8601)")
+    client_uuid: str = Field(..., description="客戶端產生的 UUID (用於冪等性)")
+
+
+@router.post("/offline-queue/enqueue")
+async def enqueue_offline_event_api(request: OfflineEventRequest):
+    """
+    將事件加入離線佇列
+
+    當裝置離線時，前端應將事件暫存並在恢復連線後透過此 API 同步
+
+    Args:
+        request: 離線事件請求
+
+    Returns:
+        - success: 是否成功入列
+        - event_id: 產生的事件 ID
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        # 驗證 event_type
+        try:
+            event_type = OfflineEventType(request.event_type)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid event_type: {request.event_type}. Must be one of: {[e.value for e in OfflineEventType]}"
+            )
+
+        event = OfflineEvent(
+            event_type=event_type,
+            case_id=request.case_id,
+            payload=request.payload,
+            client_timestamp=request.client_timestamp,
+            client_uuid=request.client_uuid
+        )
+
+        success = enqueue_offline_event(event)
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to enqueue event")
+
+        return {
+            "success": True,
+            "event_id": event.event_id,
+            "client_uuid": event.client_uuid,
+            "message": "事件已加入離線佇列"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"enqueue_offline_event error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/offline-queue")
+async def get_offline_queue(
+    status: Optional[str] = Query(None, description="篩選狀態: PENDING, SYNCING, SYNCED, CONFLICT, FAILED"),
+    case_id: Optional[str] = Query(None, description="篩選案件 ID"),
+    limit: int = Query(100, ge=1, le=500)
+):
+    """
+    取得離線佇列事件清單
+
+    Args:
+        status: 篩選狀態
+        case_id: 篩選案件
+        limit: 最多回傳筆數
+
+    Returns:
+        - events: 事件清單
+        - total: 總數
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        events = get_pending_offline_events(limit=limit)
+
+        # 額外篩選
+        if status:
+            events = [e for e in events if e.get('sync_status') == status]
+        if case_id:
+            events = [e for e in events if e.get('case_id') == case_id]
+
+        return {
+            "events": events,
+            "total": len(events)
+        }
+
+    except Exception as e:
+        logger.error(f"get_offline_queue error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/offline-queue/process")
+async def process_offline_queue_api():
+    """
+    處理離線佇列中的待同步事件
+
+    此 API 會:
+    1. 取得所有 PENDING 狀態的事件
+    2. 依序處理每個事件
+    3. 更新同步狀態
+    4. 記錄處理結果
+
+    Returns:
+        處理結果統計
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        result = process_offline_queue()
+        return result
+
+    except Exception as e:
+        logger.error(f"process_offline_queue error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/offline-queue/stats")
+async def get_offline_queue_statistics():
+    """
+    取得離線佇列統計資訊
+
+    Returns:
+        - total: 總事件數
+        - by_status: 依狀態統計
+        - by_type: 依類型統計
+        - oldest_pending: 最早的待處理事件時間
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        stats = get_offline_queue_stats()
+        return stats
+
+    except Exception as e:
+        logger.error(f"get_offline_queue_stats error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/offline-queue/init")
+async def initialize_offline_queue_table():
+    """
+    初始化離線佇列表 (建立資料表)
+
+    首次使用離線功能前需要呼叫此 API 確保資料表存在
+
+    Returns:
+        - success: 是否成功
+    """
+    if not BILLING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Billing service not available")
+
+    try:
+        create_offline_queue_table()
+        return {
+            "success": True,
+            "message": "離線佇列表已初始化"
+        }
+
+    except Exception as e:
+        logger.error(f"initialize_offline_queue_table error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # =============================================================================

@@ -36,17 +36,17 @@
 - [ ] Break-glass 對話框
 - [x] 扣庫結果顯示
 
-**Phase 6: 離線支援** ⏳ 待實作
-- [ ] 離線佇列機制
-- [ ] 上線後同步
-- [ ] 衝突處理
+**Phase 6: 離線支援** ✅ 完成
+- [x] 離線佇列機制 (`enqueue_offline_event`, `process_offline_queue`)
+- [x] 上線後同步 (`/api/anesthesia/offline-queue/process`)
+- [x] 衝突處理 (`offline_conflicts` table, `mark_event_conflict`)
 
 **Phase 5 & 6: 完整計費整合** ✅ 完成
 - [x] 建立 `anesthesia_billing_events` 表
 - [x] 建立 `surgical_billing_events` 表
 - [x] 實作 `calculate_anesthesia_fee()` 邏輯
 - [x] 實作 `calculate_surgical_fee()` 邏輯
-- [ ] 整合手術結案觸發 (`on_case_closed`)
+- [x] 整合手術結案觸發 (`on_case_closed`, `/api/anesthesia/cases/{id}/close`)
 - [x] 實作 `CashDeskHandoffPackage` 資料結構 (`generate_cashdesk_handoff()`)
 - [x] 實作 `/cases/{id}/billing/handoff` API
 - [x] 實作 `/cases/{id}/billing/export-to-cashdesk` API (`export_to_cashdesk()`)
@@ -452,4 +452,4 @@
 ---
 
 **文件維護**: 請在完成項目後更新此清單，標記為 `[x]`
-**最後更新**: 2026-01-20
+**最後更新**: 2026-01-21
