@@ -1,13 +1,21 @@
-# DEV_SPEC: Multi-Cart & Drug Transfer v1.0
+# DEV_SPEC: Multi-Cart & Drug Transfer v1.1
 
 ## Document Info
 | Field | Value |
 |-------|-------|
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Date** | 2026-01-21 |
 | **Author** | Claude Opus 4.5 |
 | **Status** | Draft |
 | **Depends On** | DEV_SPEC_ANESTHESIA_BILLING_INTEGRATION_v1.3.md, DEV_SPEC_ANESTHESIA_INVENTORY_INTEGRATION_v1.1.md |
+| **Reviewed By** | Gemini, ChatGPT |
+
+> **v1.1 變更 (Critical Fixes)**:
+> - 修正 PENDING 狀態 Double-Spend 漏洞：採用 Immediate Debit Model
+> - 新增 DB-level 強制約束 (SQLite Triggers) 確保管制藥見證人
+> - 新增 QR Code 快速移轉流程
+> - 新增「未開封聲明」合規要求
+> - 明確定義合規紅線：已開封藥品不可移轉
 
 ---
 
@@ -57,6 +65,58 @@
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+### 1.3 Compliance Red Lines (v1.1 新增)
+
+> **法規與感控合規要求** - 此節為強制性規範，違反將導致審計失敗。
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  藥品移轉合規紅線 (Compliance Red Lines)                            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ✅ 可移轉 (Transferable)                                           │
+│  ─────────────────────────────────────────────────────────────────  │
+│  • 未開封完整安瓿 (Unopened Ampoule)                                │
+│  • 未開封完整藥瓶 (Unopened Vial)                                   │
+│  • 原廠密封包裝 (Factory Sealed Package)                            │
+│                                                                     │
+│  ❌ 不可移轉 (Non-Transferable) → 必須走 WASTAGE 流程               │
+│  ─────────────────────────────────────────────────────────────────  │
+│  • 已抽藥的針筒 (Drawn Syringe)                                     │
+│  • 已開封的藥瓶 (Opened Vial) - 即使還剩一半                        │
+│  • 已穿刺的安瓿 (Punctured Ampoule)                                 │
+│  • 任何接觸過病人環境的藥品                                         │
+│                                                                     │
+│  ⚠️ 違反後果                                                        │
+│  ─────────────────────────────────────────────────────────────────  │
+│  • 感染控制違規 (Cross-contamination Risk)                          │
+│  • 管制藥審計失敗 (Controlled Substance Audit Failure)              │
+│  • 法律責任 (Legal Liability)                                       │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**UI 強制要求**：發起移轉前，操作者必須勾選確認：
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  ☑ 我聲明此藥品包裝完整未開封                                       │
+│    (I certify this item is unopened and intact)                     │
+│                                                                     │
+│  此聲明將記錄於審計日誌，操作者須承擔法律責任。                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 1.4 Batch Tracking Policy (v1.1 新增)
+
+| 模式 | 批號追蹤 | 說明 |
+|------|---------|------|
+| **標準模式** | 選填 | 有批號則記錄，無則略過 |
+| **戰地模式** | 忽略 | 不追蹤批號，僅追蹤數量與藥品代碼 |
+| **嚴格模式** | 必填 | 每支藥品必須掃描批號條碼 |
+
+> **預設**：戰地模式 (Field Mode) - 優先保障臨床效率。
 
 ---
 
@@ -208,6 +268,10 @@ CREATE TABLE drug_transfers (
     -- 拒絕/取消原因
     reject_reason TEXT,
 
+    -- v1.1 新增: 合規聲明
+    unopened_declared BOOLEAN NOT NULL DEFAULT 0,  -- 必須聲明藥品未開封
+    declaration_timestamp TEXT,                    -- 聲明時間
+
     -- 備註
     remarks TEXT,
 
@@ -219,7 +283,8 @@ CREATE TABLE drug_transfers (
     CHECK(transfer_type IN ('CASE_TO_CASE', 'CASE_TO_CART', 'CART_TO_CASE', 'CART_TO_CART')),
     CHECK(from_type IN ('CASE', 'CART')),
     CHECK(to_type IN ('CASE', 'CART')),
-    CHECK(status IN ('PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED'))
+    CHECK(status IN ('PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED')),
+    CHECK(unopened_declared = 1)  -- v1.1: 強制必須聲明未開封
 );
 
 -- 索引
@@ -252,45 +317,114 @@ CREATE TABLE transfer_notifications (
 );
 
 CREATE INDEX idx_notifications_nurse ON transfer_notifications(target_nurse_id, is_read);
+
+-- ============================================================================
+-- v1.1 新增: DB-Level 強制約束 (SQLite Triggers)
+-- ============================================================================
+-- 這些 Triggers 確保合規要求在 DB 層級強制執行，不僅依賴 UI 驗證。
+
+-- 1. 管制藥移轉必須有見證人
+CREATE TRIGGER enforce_controlled_witness
+BEFORE INSERT ON drug_transfers
+WHEN NEW.is_controlled = 1 AND NEW.witness_id IS NULL
+BEGIN
+    SELECT RAISE(ABORT, 'COMPLIANCE_ERROR: 管制藥移轉需要見證人 (Controlled substance transfer requires witness)');
+END;
+
+-- 2. CASE_TO_CASE 必須有目標案件和護理師
+CREATE TRIGGER enforce_case_transfer_fields
+BEFORE INSERT ON drug_transfers
+WHEN NEW.transfer_type = 'CASE_TO_CASE'
+     AND (NEW.to_case_id IS NULL OR NEW.to_nurse_id IS NULL)
+BEGIN
+    SELECT RAISE(ABORT, 'VALIDATION_ERROR: Case-to-case transfer requires to_case_id and to_nurse_id');
+END;
+
+-- 3. CART_TO_CART 必須有目標藥車
+CREATE TRIGGER enforce_cart_transfer_fields
+BEFORE INSERT ON drug_transfers
+WHEN NEW.transfer_type = 'CART_TO_CART'
+     AND (NEW.from_cart_id IS NULL OR NEW.to_cart_id IS NULL)
+BEGIN
+    SELECT RAISE(ABORT, 'VALIDATION_ERROR: Cart-to-cart transfer requires from_cart_id and to_cart_id');
+END;
+
+-- 4. 未開封聲明必須為 true (v1.1 合規要求)
+CREATE TRIGGER enforce_unopened_declaration
+BEFORE INSERT ON drug_transfers
+WHEN NEW.unopened_declared != 1
+BEGIN
+    SELECT RAISE(ABORT, 'COMPLIANCE_ERROR: 必須聲明藥品未開封 (Must declare item is unopened)');
+END;
+
+-- 5. 數量必須為正數
+CREATE TRIGGER enforce_positive_quantity
+BEFORE INSERT ON drug_transfers
+WHEN NEW.quantity <= 0
+BEGIN
+    SELECT RAISE(ABORT, 'VALIDATION_ERROR: Transfer quantity must be positive');
+END;
 ```
 
-### 3.3 移轉狀態機
+### 3.3 移轉狀態機 (v1.1 修正: Immediate Debit Model)
+
+> **v1.1 Critical Fix**: 採用 **Immediate Debit Model** 防止 Double-Spend。
+> 發起移轉時立即扣減來源庫存，避免 PENDING 期間重複使用。
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Drug Transfer State Machine                                        │
+│  Drug Transfer State Machine (v1.1 - Immediate Debit)               │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  ┌──────────┐                                                       │
-│  │ PENDING  │ ◄─── 發起移轉 (from_confirmed=true)                   │
+│  │ INITIATE │                                                       │
 │  └────┬─────┘                                                       │
 │       │                                                             │
-│       ├─────────────────────┐                                       │
-│       │                     │                                       │
-│       ▼                     ▼                                       │
-│  ┌──────────┐         ┌──────────┐                                  │
-│  │CONFIRMED │         │ REJECTED │                                  │
-│  │          │         │          │                                  │
-│  │ 接收方   │         │ 接收方   │                                  │
-│  │ 確認     │         │ 拒絕     │                                  │
-│  └────┬─────┘         └──────────┘                                  │
-│       │                     ▲                                       │
-│       │                     │                                       │
-│       │               ┌──────────┐                                  │
-│       │               │CANCELLED │ ◄─── 發起方在 PENDING 時取消     │
-│       │               └──────────┘                                  │
+│       │ ⚠️ 立即扣減來源 (Immediate Debit)                           │
+│       │ from_holdings -= quantity                                   │
+│       │ INSERT cart_inventory_transactions (TRANSFER_OUT_PENDING)   │
+│       │                                                             │
+│       ▼                                                             │
+│  ┌──────────┐                                                       │
+│  │ PENDING  │ ◄─── from_confirmed=true, 來源已扣減                  │
+│  └────┬─────┘                                                       │
+│       │                                                             │
+│       ├─────────────────────┬─────────────────────┐                 │
+│       │                     │                     │                 │
+│       ▼                     ▼                     ▼                 │
+│  ┌──────────┐         ┌──────────┐         ┌──────────┐            │
+│  │CONFIRMED │         │ REJECTED │         │CANCELLED │            │
+│  │          │         │          │         │          │            │
+│  │ to += qty│         │from += qty│        │from += qty│           │
+│  │ (入帳)   │         │ (回補)   │         │ (回補)   │            │
+│  └────┬─────┘         └──────────┘         └──────────┘            │
 │       │                                                             │
 │       ▼                                                             │
 │  ┌──────────────────────────────────────────────────────────────┐  │
-│  │ 帳務更新:                                                     │  │
-│  │ - From Case/Cart: holdings -= quantity                        │  │
+│  │ CONFIRMED 帳務更新:                                           │  │
+│  │ - UPDATE cart_inventory_transactions SET status='COMPLETED'   │  │
+│  │ - INSERT cart_inventory_transactions (TRANSFER_IN)            │  │
 │  │ - To Case/Cart: holdings += quantity                          │  │
-│  │ - cart_inventory_transactions: TRANSFER_OUT, TRANSFER_IN      │  │
 │  │ - controlled_drug_log: 管制藥審計記錄                          │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ REJECTED/CANCELLED 帳務回補:                                  │  │
+│  │ - INSERT cart_inventory_transactions (TRANSFER_REVERSAL)      │  │
+│  │ - From Case/Cart: holdings += quantity (回補)                 │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+**Immediate Debit Model 優點**:
+
+| 問題 | v1.0 (原設計) | v1.1 (Immediate Debit) |
+|------|--------------|----------------------|
+| PENDING 時使用同藥品 | ❌ 可用 (Double-Spend) | ✅ 已扣減，不可用 |
+| 庫存顯示 | ❌ 顯示錯誤數量 | ✅ 即時反映保留 |
+| 複雜度 | 低 | 低 (無需額外 reserved 欄位) |
+| REJECT/CANCEL 處理 | - | 回補交易 |
 
 ---
 
@@ -588,7 +722,95 @@ async def preview_reconciliation(case_id: str):
 </div>
 ```
 
-### 5.2 剩藥處理介面
+### 5.2 QR Code 快速移轉流程 (v1.1 新增)
+
+> **Gemini 建議**: 在忙碌的手術室，「選擇案件 → 選擇護理師」太慢。
+> QR Code 可大幅提升現場效率。
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  QR Code Transfer Workflow                                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Step 1: Sender (Nurse A) 發起移轉                                  │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  [藥品移轉] → 選擇 Fentanyl × 1 → 產生 QR Code               │  │
+│  │                                                              │  │
+│  │  ┌────────────────────┐                                      │  │
+│  │  │  ██████████████    │  移轉內容:                           │  │
+│  │  │  ██          ██    │  • Fentanyl 100mcg × 1              │  │
+│  │  │  ██  ██████  ██    │  • From: ANES-2026-001 (張小華)     │  │
+│  │  │  ██  ██████  ██    │  • Transfer ID: XFER-20260121-001   │  │
+│  │  │  ██          ██    │                                      │  │
+│  │  │  ██████████████    │  ⏱️ 有效期限: 5 分鐘                 │  │
+│  │  └────────────────────┘                                      │  │
+│  │                                                              │  │
+│  │  ⚠️ 此時來源庫存已扣減 (Immediate Debit)                     │  │
+│  │  狀態: TRANSFER_OUT_PENDING                                  │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  Step 2: Receiver (Nurse B) 掃描接收                                │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  [掃描 QR Code] → 顯示移轉內容                                │  │
+│  │                                                              │  │
+│  │  ┌────────────────────────────────────────────────────────┐  │  │
+│  │  │  確認接收藥品移轉                                       │  │  │
+│  │  │  ──────────────────────────────────────────────────── │  │  │
+│  │  │  來自: 張小華 (OR-1)                                   │  │  │
+│  │  │  藥品: Fentanyl 100mcg × 1 支                          │  │  │
+│  │  │  見證人: 陳護理師                                      │  │  │
+│  │  │                                                        │  │  │
+│  │  │  🔐 請輸入您的 PIN 碼確認接收                          │  │  │
+│  │  │  ┌──────────────────────────────────────────────────┐ │  │  │
+│  │  │  │  [____] [____] [____] [____]                     │ │  │  │
+│  │  │  └──────────────────────────────────────────────────┘ │  │  │
+│  │  │                                                        │  │  │
+│  │  │  [拒絕接收]              [確認接收]                    │  │  │
+│  │  └────────────────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  Step 3: 交易完成                                                   │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  ✅ 移轉完成                                                 │  │
+│  │                                                              │  │
+│  │  Nurse A (OR-1):           Nurse B (OR-2):                   │  │
+│  │  Fentanyl: 3 → 2 支        Fentanyl: 2 → 3 支                │  │
+│  │  (已扣減)                  (已入帳)                          │  │
+│  │                                                              │  │
+│  │  審計記錄已寫入 controlled_drug_log                          │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**QR Code 內容格式 (JSON + Base64)**:
+
+```json
+{
+  "version": "1.1",
+  "type": "DRUG_TRANSFER",
+  "transfer_id": "XFER-20260121-001",
+  "from_case_id": "ANES-2026-001",
+  "from_nurse_id": "NURSE-001",
+  "medicine_code": "FENT",
+  "quantity": 1,
+  "is_controlled": true,
+  "witness_id": "NURSE-003",
+  "expires_at": "2026-01-21T10:35:00Z",
+  "signature": "HMAC-SHA256(...)"
+}
+```
+
+**安全機制**:
+
+| 機制 | 說明 |
+|------|------|
+| **有效期限** | QR Code 5 分鐘後過期 |
+| **HMAC 簽章** | 防止偽造 QR Code |
+| **PIN 確認** | 管制藥接收需輸入 PIN |
+| **一次性使用** | 掃描後 QR Code 失效 |
+
+### 5.3 剩藥處理介面
 
 ```html
 <!-- 案件結束時的剩藥處理 -->
@@ -632,7 +854,7 @@ async def preview_reconciliation(case_id: str):
 </div>
 ```
 
-### 5.3 移轉發起介面
+### 5.4 移轉發起介面
 
 ```html
 <!-- 移轉 Modal -->
@@ -696,20 +918,51 @@ async def preview_reconciliation(case_id: str):
         </select>
     </div>
 
+    <!-- v1.1 新增: 未開封聲明 (必填) -->
+    <div class="declaration-section required">
+        <h4>合規聲明 <span class="required-mark">*</span></h4>
+        <label class="checkbox-label">
+            <input type="checkbox" id="unopenedDeclaration" required>
+            <span class="checkbox-text">
+                我聲明此藥品包裝完整未開封<br>
+                <small>(I certify this item is unopened and intact)</small>
+            </span>
+        </label>
+        <p class="legal-notice">
+            ⚠️ 此聲明將記錄於審計日誌，操作者須承擔法律責任。
+        </p>
+    </div>
+
     <!-- 備註 -->
     <div class="remarks">
         <h4>備註</h4>
         <textarea placeholder="選填"></textarea>
     </div>
 
+    <!-- v1.1: 快速移轉選項 -->
+    <div class="quick-transfer-option">
+        <button class="btn-qr" onclick="generateTransferQR()">
+            📱 產生 QR Code (讓對方掃描)
+        </button>
+    </div>
+
     <div class="actions">
         <button class="btn-secondary" onclick="closeModal()">取消</button>
-        <button class="btn-primary" onclick="submitTransfer()">確認移轉</button>
+        <button class="btn-primary" onclick="submitTransfer()" id="submitBtn" disabled>
+            確認移轉
+        </button>
     </div>
 </div>
+
+<script>
+// v1.1: 未勾選聲明時，無法提交
+document.getElementById('unopenedDeclaration').addEventListener('change', function() {
+    document.getElementById('submitBtn').disabled = !this.checked;
+});
+</script>
 ```
 
-### 5.4 接收通知介面
+### 5.5 接收通知介面
 
 ```html
 <!-- 收到移轉通知 (Toast/Modal) -->
@@ -744,7 +997,7 @@ async def preview_reconciliation(case_id: str):
 </div>
 ```
 
-### 5.5 Holdings Tab 更新
+### 5.6 Holdings Tab 更新
 
 ```html
 <!-- 管制藥 Holdings Tab (含移轉記錄) -->
