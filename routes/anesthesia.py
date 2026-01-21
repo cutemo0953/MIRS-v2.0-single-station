@@ -3411,6 +3411,20 @@ async def record_drug_transaction(
 @router.get("/cases/{case_id}/drugs/holdings")
 async def get_drug_holdings(case_id: str):
     """Get current drug holdings (balance) for a case"""
+    # Vercel demo mode
+    if IS_VERCEL and case_id.startswith("ANES-DEMO"):
+        demo_holdings = [
+            {"drug_code": "FENT", "drug_name": "Fentanyl 100mcg/2mL", "schedule_class": 2, "total_issued": 3, "total_used": 2, "total_wasted": 0, "balance": 1, "unit": "amp"},
+            {"drug_code": "MIDA", "drug_name": "Midazolam 5mg/mL", "schedule_class": 4, "total_issued": 2, "total_used": 1, "total_wasted": 0, "balance": 1, "unit": "amp"},
+        ]
+        return {
+            "case_id": case_id,
+            "holdings": demo_holdings,
+            "total_balance": 2,
+            "is_reconciled": False,
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -6059,11 +6073,39 @@ async def create_cart(
 
 @router.get("/carts/{cart_id}")
 async def get_cart(cart_id: str):
-    """取得藥車詳情與庫存"""
+    """取得藥車詳情與庫存 (Layer 3 - cart_inventory)"""
     if IS_VERCEL:
+        # Demo cart inventory aligned with Three-Layer Ledger architecture
+        demo_cart_inventory = [
+            {"medicine_code": "PROP", "medicine_name": "Propofol 200mg/20mL", "quantity": 20, "min_quantity": 5, "is_controlled": False, "last_dispatch": "2026-01-20T08:00:00Z"},
+            {"medicine_code": "FENT", "medicine_name": "Fentanyl 100mcg/2mL", "quantity": 10, "min_quantity": 3, "is_controlled": True, "controlled_level": 2, "last_dispatch": "2026-01-20T08:00:00Z"},
+            {"medicine_code": "MIDA", "medicine_name": "Midazolam 5mg/mL", "quantity": 8, "min_quantity": 3, "is_controlled": True, "controlled_level": 4, "last_dispatch": "2026-01-20T08:00:00Z"},
+            {"medicine_code": "KETA", "medicine_name": "Ketamine 50mg/mL", "quantity": 5, "min_quantity": 2, "is_controlled": True, "controlled_level": 3, "last_dispatch": "2026-01-20T08:00:00Z"},
+            {"medicine_code": "ROCU", "medicine_name": "Rocuronium 50mg/5mL", "quantity": 15, "min_quantity": 5, "is_controlled": False, "last_dispatch": "2026-01-20T08:00:00Z"},
+            {"medicine_code": "SUXI", "medicine_name": "Succinylcholine 200mg/10mL", "quantity": 10, "min_quantity": 3, "is_controlled": False, "last_dispatch": "2026-01-20T08:00:00Z"},
+            {"medicine_code": "ATRO", "medicine_name": "Atropine 0.5mg/mL", "quantity": 25, "min_quantity": 10, "is_controlled": False, "last_dispatch": "2026-01-20T08:00:00Z"},
+            {"medicine_code": "EPHE", "medicine_name": "Ephedrine 50mg/mL", "quantity": 20, "min_quantity": 5, "is_controlled": False, "last_dispatch": "2026-01-20T08:00:00Z"},
+            {"medicine_code": "PHEN", "medicine_name": "Phenylephrine 10mg/mL", "quantity": 15, "min_quantity": 5, "is_controlled": False, "last_dispatch": "2026-01-20T08:00:00Z"},
+            {"medicine_code": "SUGA", "medicine_name": "Sugammadex 200mg/2mL", "quantity": 6, "min_quantity": 2, "is_controlled": False, "last_dispatch": "2026-01-20T08:00:00Z"},
+            {"medicine_code": "NEOS", "medicine_name": "Neostigmine 0.5mg/mL", "quantity": 20, "min_quantity": 5, "is_controlled": False, "last_dispatch": "2026-01-20T08:00:00Z"},
+            {"medicine_code": "LIDO", "medicine_name": "Lidocaine 2% 20mL", "quantity": 30, "min_quantity": 10, "is_controlled": False, "last_dispatch": "2026-01-20T08:00:00Z"},
+        ]
         return {
-            "cart": {"cart_id": cart_id, "cart_name": "示範藥車", "status": "ACTIVE"},
-            "inventory": []
+            "cart": {
+                "cart_id": cart_id,
+                "cart_name": "麻醉藥車 Demo",
+                "cart_type": "ANESTHESIA",
+                "location": "OR-DEMO",
+                "status": "ACTIVE",
+                "layer": "Layer 3 - Anesthesia Cart"
+            },
+            "inventory": demo_cart_inventory,
+            "summary": {
+                "total_items": len(demo_cart_inventory),
+                "controlled_items": len([i for i in demo_cart_inventory if i.get("is_controlled")]),
+                "low_stock_items": len([i for i in demo_cart_inventory if i["quantity"] <= i["min_quantity"]])
+            },
+            "demo_mode": True
         }
 
     conn = get_db_connection()
@@ -6500,6 +6542,110 @@ async def get_cart_low_stock(cart_id: str):
             "cart_id": cart_id,
             "alerts_count": len(alerts),
             "alerts": alerts
+        }
+    finally:
+        conn.close()
+
+
+# --- Cart Controlled Drugs Inventory (Holdings Tab) ---
+@router.get("/carts/{cart_id}/controlled-drugs")
+async def get_cart_controlled_drugs(cart_id: str):
+    """
+    取得藥車管制藥清單 (for Holdings Tab)
+    Layer 3 - Anesthesia Cart controlled drugs inventory
+
+    Returns:
+        holdings: 管制藥持有清單
+        total_items: 管制藥品項數
+        recent_transactions: 最近管制藥交易
+    """
+    if IS_VERCEL:
+        # Demo controlled drugs for Holdings tab
+        demo_controlled = [
+            {
+                "medicine_code": "FENT",
+                "medicine_name": "Fentanyl 100mcg/2mL",
+                "controlled_level": 2,
+                "quantity": 10,
+                "unit": "amp",
+                "last_dispatch": "2026-01-20T08:00:00Z",
+                "last_use": "2026-01-21T09:30:00Z"
+            },
+            {
+                "medicine_code": "MIDA",
+                "medicine_name": "Midazolam 5mg/mL",
+                "controlled_level": 4,
+                "quantity": 8,
+                "unit": "amp",
+                "last_dispatch": "2026-01-20T08:00:00Z",
+                "last_use": "2026-01-21T10:15:00Z"
+            },
+            {
+                "medicine_code": "KETA",
+                "medicine_name": "Ketamine 50mg/mL",
+                "controlled_level": 3,
+                "quantity": 5,
+                "unit": "vial",
+                "last_dispatch": "2026-01-20T08:00:00Z",
+                "last_use": None
+            }
+        ]
+        demo_transactions = [
+            {"txn_id": "CITXN-DEMO-001", "txn_type": "DISPATCH", "medicine_code": "FENT", "quantity_change": 10, "created_at": "2026-01-20T08:00:00Z"},
+            {"txn_id": "CITXN-DEMO-002", "txn_type": "USE", "medicine_code": "FENT", "quantity_change": -1, "case_id": "ANES-DEMO-001", "created_at": "2026-01-21T09:30:00Z"},
+            {"txn_id": "CITXN-DEMO-003", "txn_type": "DISPATCH", "medicine_code": "MIDA", "quantity_change": 8, "created_at": "2026-01-20T08:00:00Z"},
+        ]
+        return {
+            "cart_id": cart_id,
+            "holdings": demo_controlled,
+            "total_items": len(demo_controlled),
+            "recent_transactions": demo_transactions,
+            "layer": "Layer 3 - Anesthesia Cart",
+            "demo_mode": True
+        }
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # Get controlled drugs in cart
+        cursor.execute("""
+            SELECT ci.medicine_code, ci.quantity, ci.last_replenish_at,
+                   m.medicine_name, m.controlled_level, m.unit
+            FROM cart_inventory ci
+            JOIN medicines m ON ci.medicine_code = m.medicine_code
+            WHERE ci.cart_id = ? AND m.is_controlled = 1
+            ORDER BY m.controlled_level, m.medicine_name
+        """, (cart_id,))
+        holdings = []
+        for row in cursor.fetchall():
+            holdings.append({
+                "medicine_code": row['medicine_code'],
+                "medicine_name": row['medicine_name'],
+                "controlled_level": row['controlled_level'],
+                "quantity": row['quantity'],
+                "unit": row['unit'] or 'amp',
+                "last_dispatch": row['last_replenish_at']
+            })
+
+        # Get recent transactions for controlled drugs
+        cursor.execute("""
+            SELECT txn_id, txn_type, medicine_code, quantity_change, case_id, created_at
+            FROM cart_inventory_transactions
+            WHERE cart_id = ? AND medicine_code IN (
+                SELECT medicine_code FROM medicines WHERE is_controlled = 1
+            )
+            ORDER BY created_at DESC
+            LIMIT 10
+        """, (cart_id,))
+        transactions = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            "cart_id": cart_id,
+            "holdings": holdings,
+            "total_items": len(holdings),
+            "recent_transactions": transactions,
+            "layer": "Layer 3 - Anesthesia Cart"
         }
     finally:
         conn.close()

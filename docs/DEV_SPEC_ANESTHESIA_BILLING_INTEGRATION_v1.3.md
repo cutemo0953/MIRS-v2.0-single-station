@@ -1,11 +1,12 @@
-# Anesthesia PWA ↔ Billing Integration DEV SPEC v1.2
+# Anesthesia PWA ↔ Billing Integration DEV SPEC v1.3
 
-**版本**: 1.2.0
-**日期**: 2026-01-20
+**版本**: 1.3.0
+**日期**: 2026-01-21
 **狀態**: DRAFT
-**關聯**: schema_pharmacy.sql, DEV_SPEC_MEDICATION_FORMULARY_v1.2.md (CIRS), CashDesk Handoff
-**審閱整合**: Gemini, ChatGPT feedback (v1.2 回饋整合完成)
+**關聯**: schema_pharmacy.sql, DEV_SPEC_MEDICATION_FORMULARY_v1.2.md (CIRS), DEV_SPEC_ANESTHESIA_INVENTORY_INTEGRATION_v1.0.md, CashDesk Handoff
+**審閱整合**: Gemini, ChatGPT feedback (v1.3 三層帳本修正)
 
+> **v1.3 變更 (CRITICAL)**: 修正庫存扣減邏輯 - 給藥時僅扣 `cart_inventory`，不直接扣 `medicines`。採用 Three-Layer Ledger 架構，避免雙重扣減 (double-spend)。
 > **v1.2 變更**: 整合 Gemini/ChatGPT 審閱回饋 - 管制藥殘餘量銷毀、時間計費防呆、三帳本強制綁定、VOID pattern 撤銷。
 > **v1.1 變更**: 擴充計費範圍，從「藥品計費」擴展為「完整麻醉計費」，包含麻醉處置費、藥品費、耗材費。
 
@@ -88,6 +89,55 @@
 | **Local Authority** | MIRS 本地庫存為 ground truth (offline 時) |
 | **Eventual Consistency** | 上線後與 Hub 對帳同步 |
 | **Audit Trail** | 所有操作可追溯，管制藥雙重審計 |
+
+### 1.3 Three-Layer Ledger Architecture (v1.3 新增)
+
+> **CRITICAL**: 此架構解決 v1.2 中「給藥直接扣 medicines」的雙重扣減問題。
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Layer 1: CIRS Hub Ledger (跨院區權威帳本)                           │
+│  ─────────────────────────────────────────────────────────────────  │
+│  Table: cirs.medicines                                              │
+│  • 僅在「調撥確認」時扣減                                            │
+│  • 藥師審核：治理/稽核層級                                           │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │ MED_DISPATCH (調撥)
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Layer 2: MIRS Station Pharmacy (單站權威帳本)                       │
+│  ─────────────────────────────────────────────────────────────────  │
+│  Table: mirs.medicines                                              │
+│  • 收到調撥時 +入庫                                                  │
+│  • 補充麻醉車時 -出庫 (dispatch to cart)                             │
+│  • 藥師審核：日常作業層級                                            │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │ CART_DISPATCH (補充藥車)
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Layer 3: Anesthesia Cart Ledger (藥車/托盤庫存)                     │
+│  ─────────────────────────────────────────────────────────────────  │
+│  Table: mirs.cart_inventory                                         │
+│  • 僅在「給藥執行」時扣減 ← 本規格實作此層                            │
+│  • 護理師/麻醉師操作                                                 │
+│  • 支援離線記錄，後續同步                                            │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**關鍵不變量 (Critical Invariant):**
+```
+Hub 總庫存 = Σ(所有站藥局庫存) + Σ(所有麻醉車庫存) + 在途調撥
+```
+
+**扣減規則:**
+
+| 操作 | 扣減 Layer | Table | 備註 |
+|------|-----------|-------|------|
+| Hub 調撥至 Station | Layer 1 | `cirs.medicines` | Hub 出庫 |
+| Station 收到調撥 | Layer 2 | `mirs.medicines` | Station 入庫 |
+| Station 補充藥車 | Layer 2 → 3 | `medicines` → `cart_inventory` | 藥局出、藥車入 |
+| **給藥執行** | **Layer 3 only** | **`cart_inventory`** | ⚠️ 不扣 medicines |
+| 給藥撤銷 (VOID) | Layer 3 only | `cart_inventory` | 回補藥車庫存 |
 
 ---
 
@@ -451,44 +501,52 @@ async def add_medication_v2(case_id: str, request: MedicationAdminRequest, actor
             VALUES (?, 'MEDICATION_ADMIN', ?, ?, ?)
         """, (case_id, json.dumps(payload), actor_id, datetime.now().isoformat()))
 
-        # 4. 扣減庫存
-        inventory_txn_id = None
+        # 4. 扣減藥車庫存 (Layer 3 - cart_inventory)
+        # ⚠️ v1.3 修正: 給藥時僅扣 cart_inventory，不扣 medicines (Layer 2)
+        # 參見: 1.3 Three-Layer Ledger Architecture
+        cart_txn_id = None
+        cart_id = request.cart_id or 'CART-ANES-001'  # 預設麻醉車
+
         if med['medicine_code'] != request.drug_code or 'nhi_price' not in med:
             # 藥品不在主檔，跳過庫存扣減
             pass
         else:
-            inventory_txn_id = f"TXN-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
+            cart_txn_id = f"CITXN-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
 
-            # 檢查庫存
-            new_stock = med['current_stock'] - billing_qty
-            if new_stock < 0:
-                warnings.append(f"庫存不足 (剩餘: {med['current_stock']}, 扣減: {billing_qty})")
-
-            # 寫入交易記錄
+            # 查詢藥車庫存
             cursor.execute("""
-                INSERT INTO pharmacy_transactions (
-                    transaction_id, transaction_type, medicine_code, generic_name,
-                    quantity, unit, station_code,
-                    is_controlled_drug, controlled_level,
-                    patient_id, prescription_id,
-                    operator, operator_role, verified_by,
-                    reason, status
-                ) VALUES (?, 'DISPENSE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED')
+                SELECT quantity FROM cart_inventory
+                WHERE cart_id = ? AND medicine_code = ?
+            """, (cart_id, med['medicine_code']))
+            cart_stock = cursor.fetchone()
+
+            current_cart_qty = cart_stock['quantity'] if cart_stock else 0
+            new_cart_qty = current_cart_qty - billing_qty
+
+            if new_cart_qty < 0:
+                warnings.append(f"藥車庫存不足 (剩餘: {current_cart_qty}, 扣減: {billing_qty})")
+
+            # 寫入藥車交易記錄
+            cursor.execute("""
+                INSERT INTO cart_inventory_transactions (
+                    txn_id, txn_type, cart_id, medicine_code,
+                    quantity_change, quantity_before, quantity_after,
+                    source_type, source_id, case_id, medication_event_id,
+                    actor_id, actor_name, remarks
+                ) VALUES (?, 'USE', ?, ?, ?, ?, ?, 'CASE', ?, ?, ?, ?, ?, ?)
             """, (
-                inventory_txn_id, med['medicine_code'], med['generic_name'],
-                billing_qty, billing_unit, 'MIRS-OR',
-                med['is_controlled_drug'], med.get('controlled_level'),
-                None,  # patient_id from case
-                None,  # prescription_id
-                actor_id, 'NURSE',
-                request.witness_id,
+                cart_txn_id, cart_id, med['medicine_code'],
+                -billing_qty, current_cart_qty, new_cart_qty,
+                case_id, case_id, event_id,
+                actor_id, None,
                 f"Anesthesia admin: {request.dose}{request.unit} {request.route}"
             ))
 
-            # 更新庫存
+            # 更新藥車庫存 (Layer 3 only - 不扣 medicines!)
             cursor.execute("""
-                UPDATE medicines SET current_stock = current_stock - ? WHERE medicine_code = ?
-            """, (billing_qty, med['medicine_code']))
+                UPDATE cart_inventory SET quantity = quantity - ?, updated_at = ?
+                WHERE cart_id = ? AND medicine_code = ?
+            """, (billing_qty, datetime.now().isoformat(), cart_id, med['medicine_code']))
 
         # 5. 管制藥審計
         controlled_log_id = None
@@ -2060,16 +2118,38 @@ async def void_medication_event(case_id: str, event_id: str, reason: str, actor_
             "reason": reason
         }), actor_id, datetime.now().isoformat()))
 
-        # 3. 庫存補償 (回補)
-        conn.execute("""
-            INSERT INTO pharmacy_transactions (transaction_type, medicine_code, quantity, reason)
-            VALUES ('VOID_REVERSAL', ?, ?, ?)
-        """, (original_event.drug_code, original_event.billing_quantity,
-              f"Void reversal for {event_id}"))
+        # 3. 藥車庫存補償 (回補 Layer 3 - cart_inventory)
+        # ⚠️ v1.3 修正: VOID 時僅回補 cart_inventory，不回補 medicines (Layer 2)
+        cart_id = original_event.cart_id or 'CART-ANES-001'
+        void_txn_id = f"CITXN-VOID-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
 
+        # 查詢當前藥車庫存
+        cart_stock = conn.execute("""
+            SELECT quantity FROM cart_inventory WHERE cart_id = ? AND medicine_code = ?
+        """, (cart_id, original_event.drug_code)).fetchone()
+        current_qty = cart_stock['quantity'] if cart_stock else 0
+        new_qty = current_qty + original_event.billing_quantity
+
+        # 寫入藥車交易記錄
         conn.execute("""
-            UPDATE medicines SET current_stock = current_stock + ? WHERE medicine_code = ?
-        """, (original_event.billing_quantity, original_event.drug_code))
+            INSERT INTO cart_inventory_transactions (
+                txn_id, txn_type, cart_id, medicine_code,
+                quantity_change, quantity_before, quantity_after,
+                source_type, source_id, case_id,
+                actor_id, remarks
+            ) VALUES (?, 'VOID_REVERSAL', ?, ?, ?, ?, ?, 'VOID', ?, ?, ?, ?)
+        """, (
+            void_txn_id, cart_id, original_event.drug_code,
+            original_event.billing_quantity, current_qty, new_qty,
+            event_id, case_id, actor_id,
+            f"Void reversal for {event_id}"
+        ))
+
+        # 回補藥車庫存 (Layer 3 only - 不回補 medicines!)
+        conn.execute("""
+            UPDATE cart_inventory SET quantity = quantity + ?, updated_at = ?
+            WHERE cart_id = ? AND medicine_code = ?
+        """, (original_event.billing_quantity, datetime.now().isoformat(), cart_id, original_event.drug_code))
 
         # 4. 計費補償
         conn.execute("""

@@ -1,13 +1,15 @@
-# DEV_SPEC: Anesthesia PWA Inventory Integration v1.0
+# DEV_SPEC: Anesthesia PWA Inventory Integration v1.1
 
 ## Document Info
 | Field | Value |
 |-------|-------|
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Date** | 2026-01-21 |
 | **Author** | Claude Opus 4.5 |
 | **Status** | Draft |
-| **Depends On** | DEV_SPEC_ANESTHESIA_BILLING_INTEGRATION_v1.2.md |
+| **Depends On** | DEV_SPEC_ANESTHESIA_BILLING_INTEGRATION_v1.3.md |
+
+> **v1.1 變更**: 對齊 Billing v1.3 的 Three-Layer Ledger 架構，釐清術語：`medicines` = Layer 2 (Station Pharmacy)，`cart_inventory` = Layer 3 (Anesthesia Cart)。
 
 ---
 
@@ -25,36 +27,55 @@ Anesthesia PWA 目前的庫存顯示有以下問題：
 | **調撥來源不明** | 不知道藥從哪來 | 顯示調撥來源及時間 |
 | **庫存與用藥未關聯** | 用藥不扣藥車庫存 | 用藥時扣減藥車庫存 |
 
-### 1.2 Solution Architecture
+### 1.2 Solution Architecture (Three-Layer Ledger)
+
+> **對齊**: 本架構與 DEV_SPEC_ANESTHESIA_BILLING_INTEGRATION_v1.3.md § 1.3 Three-Layer Ledger Architecture 一致。
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         MIRS Station                                │
+│  Three-Layer Ledger in MIRS Context                                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│  ┌──────────────────┐         ┌──────────────────────────────────┐ │
-│  │   medicines      │         │      cart_inventory              │ │
-│  │  (中央藥局主檔)   │ ──────> │     (藥車/托盤庫存)              │ │
-│  │                  │  調撥    │                                  │ │
-│  │  current_stock   │         │  cart_id: CART-ANES-001          │ │
-│  │  = 權威總量      │         │  medicine_code: BC90567209       │ │
-│  └──────────────────┘         │  quantity: 10 (持有量)           │ │
-│                               │  source_dispatch_id: DISP-001    │ │
-│                               └──────────────────────────────────┘ │
-│                                          │                         │
-│                                          │ 扣減                    │
-│                                          ▼                         │
-│                               ┌──────────────────────────────────┐ │
-│                               │   Anesthesia PWA                 │ │
-│                               │                                  │ │
-│                               │  ┌─────────┐  ┌───────────────┐  │ │
-│                               │  │ 給藥    │  │ 管制藥 Tab    │  │ │
-│                               │  │         │  │               │  │ │
-│                               │  │ 庫存:5  │  │ Fentanyl: 8支 │  │ │
-│                               │  │ (藥車)  │  │ Midazolam: 5支│  │ │
-│                               │  └─────────┘  └───────────────┘  │ │
-│                               └──────────────────────────────────┘ │
+│  Layer 2: Station Pharmacy (medicines table)                        │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │   medicines                                                   │  │
+│  │   • current_stock = 站藥局庫存 (非 Hub 總量)                  │  │
+│  │   • 收到 Hub 調撥時 +入庫                                     │  │
+│  │   • 補充藥車時 -出庫                                          │  │
+│  └───────────────────────────┬──────────────────────────────────┘  │
+│                              │ CART_DISPATCH (補充藥車)             │
+│                              ▼                                      │
+│  Layer 3: Anesthesia Cart (cart_inventory table)                    │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │   cart_inventory                                              │  │
+│  │   • cart_id: CART-ANES-001                                    │  │
+│  │   • quantity = 藥車持有量                                     │  │
+│  │   • 給藥時 -扣減 (本規格實作此層)                              │  │
+│  │   • ⚠️ 給藥不扣 medicines，只扣 cart_inventory               │  │
+│  └───────────────────────────┬──────────────────────────────────┘  │
+│                              │ USE (給藥執行)                       │
+│                              ▼                                      │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │   Anesthesia PWA                                              │  │
+│  │   ┌─────────────────┐  ┌─────────────────────────────────┐   │  │
+│  │   │ 給藥 Modal      │  │ 管制藥 Tab (Holdings)           │   │  │
+│  │   │ 庫存: 5 (藥車)  │  │ Fentanyl: 8支 | Midazolam: 5支  │   │  │
+│  │   └─────────────────┘  └─────────────────────────────────┘   │  │
+│  └──────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────┘
+
+扣減規則:
+┌─────────────────────┬────────────────────┬─────────────────────────┐
+│ 操作                │ 扣減位置           │ 備註                    │
+├─────────────────────┼────────────────────┼─────────────────────────┤
+│ 藥局補充藥車        │ medicines -出庫    │ Layer 2 → Layer 3       │
+│                     │ cart_inventory +入 │                         │
+├─────────────────────┼────────────────────┼─────────────────────────┤
+│ 給藥執行            │ cart_inventory -扣 │ Layer 3 only            │
+│ (CRITICAL)          │ ⚠️ 不扣 medicines  │                         │
+├─────────────────────┼────────────────────┼─────────────────────────┤
+│ 給藥撤銷 (VOID)     │ cart_inventory +回 │ Layer 3 only            │
+└─────────────────────┴────────────────────┴─────────────────────────┘
 ```
 
 ---
@@ -278,10 +299,15 @@ async def create_dispatch(request: DispatchRequest):
 @router.post("/dispatches/{dispatch_id}/confirm")
 async def confirm_dispatch(dispatch_id: str, actor_id: str):
     """
-    確認調撥 (藥車收貨)
-    - 更新 cart_inventory
-    - 扣減 medicines.current_stock
-    - 建立 cart_inventory_transactions
+    確認調撥 (藥車收貨) - Layer 2 → Layer 3 轉移
+
+    Operations:
+    - 扣減 medicines.current_stock (Layer 2: Station Pharmacy)
+    - 增加 cart_inventory.quantity (Layer 3: Anesthesia Cart)
+    - 建立 cart_inventory_transactions (txn_type='DISPATCH')
+
+    Note: 這是唯一會同時異動 medicines 和 cart_inventory 的操作。
+          給藥時只扣 cart_inventory，不扣 medicines。
     """
     pass
 
