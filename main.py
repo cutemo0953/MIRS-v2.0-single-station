@@ -9133,6 +9133,22 @@ async def get_equipment_v2():
     Returns:
         List of equipment with aggregated status from units
     """
+    # Vercel demo 模式：返回模擬設備資料
+    if IS_VERCEL:
+        demo_equipment = [
+            {"id": "RESP-001", "name": "H型氧氣鋼瓶", "type_code": "O2_CYLINDER_H", "type_name": "氧氣鋼瓶(H型)", "category": "呼吸設備", "resilience_category": "OXYGEN", "unit_count": 5, "avg_level": 64, "checked_count": 5, "last_check": "2026-01-10T08:00:00Z", "check_status": "CHECKED"},
+            {"id": "EMER-EQ-006", "name": "E型氧氣瓶", "type_code": "O2_CYLINDER_E", "type_name": "氧氣鋼瓶(E型)", "category": "急救設備", "resilience_category": "OXYGEN", "unit_count": 4, "avg_level": 65, "checked_count": 4, "last_check": "2026-01-10T08:00:00Z", "check_status": "CHECKED"},
+            {"id": "RESP-002", "name": "氧氣濃縮機 5L", "type_code": "O2_CONCENTRATOR", "type_name": "氧氣濃縮機", "category": "呼吸設備", "resilience_category": "OXYGEN", "unit_count": 1, "avg_level": 100, "checked_count": 1, "last_check": "2026-01-10T08:00:00Z", "check_status": "CHECKED"},
+            {"id": "UTIL-001", "name": "行動電源站", "type_code": "PWR_STATION", "type_name": "行動電源站", "category": "電力設備", "resilience_category": "POWER", "unit_count": 2, "avg_level": 72, "checked_count": 2, "last_check": "2026-01-10T08:00:00Z", "check_status": "CHECKED"},
+            {"id": "UTIL-002", "name": "發電機 (備用)", "type_code": "GENERATOR", "type_name": "柴油發電機", "category": "電力設備", "resilience_category": "POWER", "unit_count": 1, "avg_level": 70, "checked_count": 0, "last_check": None, "check_status": "PENDING"},
+            {"id": "RESP-003", "name": "呼吸器", "type_code": "VENTILATOR", "type_name": "呼吸器", "category": "呼吸設備", "resilience_category": None, "unit_count": 2, "avg_level": 100, "checked_count": 2, "last_check": "2026-01-10T08:00:00Z", "check_status": "CHECKED"},
+            {"id": "DIAG-001", "name": "生理監視器", "type_code": "VITAL_MONITOR", "type_name": "生理監視器", "category": "診斷設備", "resilience_category": None, "unit_count": 2, "avg_level": 100, "checked_count": 2, "last_check": "2026-01-10T08:00:00Z", "check_status": "CHECKED"},
+            {"id": "EMER-EQ-007", "name": "抽吸機", "type_code": "SUCTION", "type_name": "抽吸機", "category": "急救設備", "resilience_category": None, "unit_count": 1, "avg_level": 100, "checked_count": 1, "last_check": "2026-01-09T12:00:00Z", "check_status": "OVERDUE"},
+            {"id": "SURG-001", "name": "骨科手術包 (大)", "type_code": "SURGICAL_KIT", "type_name": "手術包", "category": "手術器械", "resilience_category": None, "unit_count": 3, "avg_level": 100, "checked_count": 3, "last_check": "2026-01-10T08:00:00Z", "check_status": "CHECKED"},
+            {"id": "SURG-002", "name": "清創包", "type_code": "SURGICAL_KIT", "type_name": "手術包", "category": "手術器械", "resilience_category": None, "unit_count": 5, "avg_level": 100, "checked_count": 5, "last_check": "2026-01-10T08:00:00Z", "check_status": "CHECKED"},
+        ]
+        return {"equipment": demo_equipment, "count": len(demo_equipment)}
+
     try:
         conn = db.get_connection()
         cursor = conn.cursor()

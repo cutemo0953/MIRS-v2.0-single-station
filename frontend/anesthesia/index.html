@@ -1174,6 +1174,13 @@
 
         <!-- Active Case View -->
         <div id="activeCaseView" class="hidden">
+            <!-- Back to List Button -->
+            <button onclick="backToList()" style="background: none; border: none; color: var(--primary); font-size: 0.9rem; padding: 8px 0; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 18px; height: 18px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                返回案件清單
+            </button>
             <!-- Case Info -->
             <div class="case-card">
                 <div class="case-header">
@@ -3650,6 +3657,16 @@
                 list.style.display = 'none';
                 arrow.style.transform = 'rotate(0deg)';
             }
+        }
+
+        // v1.5.4: 返回案件清單
+        function backToList() {
+            currentCase = null;
+            document.getElementById('noCaseView').classList.remove('hidden');
+            document.getElementById('activeCaseView').classList.add('hidden');
+            document.getElementById('resourceBar').classList.add('hidden');
+            // 清空 context badge
+            document.getElementById('contextBadge').classList.add('hidden');
         }
 
         async function selectCase(caseId) {
