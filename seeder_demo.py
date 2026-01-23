@@ -771,3 +771,118 @@ def clear_mirs_demo(conn: sqlite3.Connection):
 
     conn.commit()
     print("[MIRS Seeder] All demo data cleared")
+
+
+def seed_anesthesia_demo(conn: sqlite3.Connection):
+    """
+    植入麻醉模組測試資料 (v2.1.1)
+
+    Args:
+        conn: SQLite connection object
+
+    Usage:
+        python -c "import sqlite3; from seeder_demo import seed_anesthesia_demo; conn = sqlite3.connect('data/mirs.db'); seed_anesthesia_demo(conn)"
+    """
+    cursor = conn.cursor()
+    now = datetime.now()
+
+    # Check if anesthesia_cases table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='anesthesia_cases'")
+    if cursor.fetchone() is None:
+        print("[Anesthesia Seeder] anesthesia_cases table not found. Please start MIRS first to initialize tables.")
+        return
+
+    # Check if already seeded
+    cursor.execute("SELECT COUNT(*) FROM anesthesia_cases WHERE id LIKE 'ANES-SEED-%'")
+    if cursor.fetchone()[0] > 0:
+        print("[Anesthesia Seeder] Demo cases already exist. Skipping...")
+        return
+
+    print("[Anesthesia Seeder] Seeding anesthesia demo cases...")
+
+    # Demo patients/cases
+    demo_cases = [
+        {
+            "id": "ANES-SEED-001",
+            "patient_id": "P-TEST-001",
+            "patient_name": "陳大明",
+            "diagnosis": "急性闘尾炎",
+            "operation": "腹腔鏡闘尾切除術",
+            "planned_technique": "GA_ETT",
+            "asa_classification": "II",
+            "status": "PREOP",
+        },
+        {
+            "id": "ANES-SEED-002",
+            "patient_id": "P-TEST-002",
+            "patient_name": "林小華",
+            "diagnosis": "膽結石併膽囊炎",
+            "operation": "腹腔鏡膽囊切除術",
+            "planned_technique": "GA_LMA",
+            "asa_classification": "II",
+            "status": "PREOP",
+        },
+        {
+            "id": "ANES-SEED-003",
+            "patient_id": "P-TEST-003",
+            "patient_name": "張美玲",
+            "diagnosis": "右側腹股溝疝氣",
+            "operation": "腹腔鏡疝氣修補術",
+            "planned_technique": "RA_SPINAL",
+            "asa_classification": "I",
+            "status": "PREOP",
+        },
+        {
+            "id": "ANES-SEED-004",
+            "patient_id": "P-TEST-004",
+            "patient_name": "王建國",
+            "diagnosis": "右側股骨頸骨折",
+            "operation": "人工髖關節置換術",
+            "planned_technique": "RA_SPINAL",
+            "asa_classification": "III",
+            "status": "PREOP",
+        },
+        {
+            "id": "ANES-SEED-005",
+            "patient_id": "P-TEST-005",
+            "patient_name": "李淑芬",
+            "diagnosis": "子宮肌瘤",
+            "operation": "腹腔鏡子宮肌瘤切除術",
+            "planned_technique": "GA_ETT",
+            "asa_classification": "II",
+            "status": "PREOP",
+        },
+    ]
+
+    for case in demo_cases:
+        cursor.execute("""
+            INSERT INTO anesthesia_cases
+            (id, patient_id, patient_name, diagnosis, operation,
+             context_mode, planned_technique, asa_classification,
+             status, created_at, created_by)
+            VALUES (?, ?, ?, ?, ?, 'STANDARD', ?, ?, ?, ?, 'SEED')
+        """, (
+            case["id"],
+            case["patient_id"],
+            case["patient_name"],
+            case["diagnosis"],
+            case["operation"],
+            case["planned_technique"],
+            case["asa_classification"],
+            case["status"],
+            now.isoformat()
+        ))
+
+    conn.commit()
+    print(f"[Anesthesia Seeder] Created {len(demo_cases)} demo cases:")
+    for c in demo_cases:
+        print(f"  - {c['id']}: {c['patient_name']} / {c['operation']}")
+
+
+def clear_anesthesia_demo(conn: sqlite3.Connection):
+    """清除麻醉測試資料"""
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM anesthesia_events WHERE case_id LIKE 'ANES-SEED-%'")
+    cursor.execute("DELETE FROM anesthesia_cases WHERE id LIKE 'ANES-SEED-%'")
+    conn.commit()
+    print("[Anesthesia Seeder] Demo cases cleared")
