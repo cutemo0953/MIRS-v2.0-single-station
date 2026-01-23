@@ -8270,12 +8270,12 @@ def _rebuild_state_from_events(events: List[Dict]) -> Dict:
         payload = json.loads(event["payload"]) if event.get("payload") else {}
         clinical_time = event.get("clinical_time", "")
 
-        # Vitals
-        if event_type == "VITAL_SIGNS":
+        # Vitals (支援 VITAL_SIGN 和 VITAL_SIGNS)
+        if event_type in ("VITAL_SIGN", "VITAL_SIGNS"):
             state["vitals"].append({
                 "time": clinical_time,
-                "sbp": payload.get("sbp"),
-                "dbp": payload.get("dbp"),
+                "sbp": payload.get("sbp") or payload.get("bp_sys"),
+                "dbp": payload.get("dbp") or payload.get("bp_dia"),
                 "hr": payload.get("hr"),
                 "spo2": payload.get("spo2"),
                 "etco2": payload.get("etco2"),
@@ -8286,8 +8286,8 @@ def _rebuild_state_from_events(events: List[Dict]) -> Dict:
                 "events": None
             })
 
-        # Drug Administration
-        elif event_type in ("DRUG_GIVEN", "DRUG_DRAW"):
+        # Drug Administration (支援多種事件類型)
+        elif event_type in ("DRUG_GIVEN", "DRUG_DRAW", "MEDICATION_ADMIN"):
             state["drugs"].append({
                 "time": clinical_time,
                 "name": payload.get("drug_name") or payload.get("drug"),
@@ -8295,8 +8295,8 @@ def _rebuild_state_from_events(events: List[Dict]) -> Dict:
                 "route": payload.get("route", "IV")
             })
 
-        # IV Lines
-        elif event_type == "IV_LINE_INSERTED":
+        # IV Lines (支援 IV_ACCESS 和 IV_LINE_INSERTED)
+        elif event_type in ("IV_LINE_INSERTED", "IV_ACCESS"):
             state["iv_lines"].append({
                 "line_number": len(state["iv_lines"]) + 1,
                 "site": payload.get("site"),
@@ -8304,8 +8304,8 @@ def _rebuild_state_from_events(events: List[Dict]) -> Dict:
                 "catheter_type": payload.get("catheter_type", "PERIPHERAL")
             })
 
-        # IV Fluids
-        elif event_type == "IV_FLUID_GIVEN":
+        # IV Fluids (支援 FLUID_IN 和 IV_FLUID_GIVEN)
+        elif event_type in ("IV_FLUID_GIVEN", "FLUID_IN"):
             fluid_type = (payload.get("fluid_type") or "").upper()
             amount = payload.get("amount_ml", 0)
             if any(t in fluid_type for t in blood_types):
@@ -8331,9 +8331,14 @@ def _rebuild_state_from_events(events: List[Dict]) -> Dict:
             else:
                 state["io_balance"]["input"]["crystalloid_ml"] += amount
 
-        # Urine Output
-        elif event_type == "URINE_OUTPUT":
-            state["io_balance"]["output"]["urine_ml"] += payload.get("amount_ml", 0)
+        # Urine Output (支援 OUTPUT 和 URINE_OUTPUT)
+        elif event_type in ("URINE_OUTPUT", "OUTPUT"):
+            output_type = payload.get("output_type", "urine").lower()
+            amount = payload.get("amount_ml") or payload.get("volume_ml", 0)
+            if output_type == "urine":
+                state["io_balance"]["output"]["urine_ml"] += amount
+            else:
+                state["io_balance"]["output"]["blood_loss_ml"] += amount
 
         # Blood Loss
         elif event_type == "FLUID_OUT":
