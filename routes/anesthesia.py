@@ -8208,6 +8208,12 @@ def _generate_vitals_chart(vitals: List[Dict], page_start: int, page_end: int) -
     """
     Generate Matplotlib chart for BP/HR trends.
     Returns base64-encoded PNG image.
+
+    Chart is designed to align with vitals table below:
+    - Table has fixed 28px row-header + equal-width data columns
+    - Chart uses same structure: Y-axis area + data area
+    - Data points centered in each column
+    - No X-axis labels (table shows time below)
     """
     if not PDF_ENABLED:
         return ""
@@ -8216,39 +8222,75 @@ def _generate_vitals_chart(vitals: List[Dict], page_start: int, page_end: int) -
     if not page_vitals:
         return ""
 
-    # Extract data
-    times = []
+    n_cols = len(page_vitals)
+
+    # Extract data - X position at column center (0.5, 1.5, 2.5, ...)
+    x_positions = []
     sbp_values = []
     dbp_values = []
     hr_values = []
 
     for i, v in enumerate(page_vitals):
-        times.append(i)
+        x_positions.append(i + 0.5)  # Center of each column
         sbp_values.append(v.get('sbp') or None)
         dbp_values.append(v.get('dbp') or None)
         hr_values.append(v.get('hr') or None)
 
-    # Create figure
-    fig, ax = plt.subplots(figsize=(4, 1.8), dpi=100)
+    # Create figure - wide aspect ratio to match table width
+    fig_width = 12  # Wide figure for better resolution
+    fig_height = 1.8
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=150)
 
-    # Plot BP (red/blue) and HR (green)
-    if any(sbp_values):
-        ax.plot(times, sbp_values, 'r-', marker='o', markersize=2, linewidth=1, label='SBP')
-    if any(dbp_values):
-        ax.plot(times, dbp_values, 'b-', marker='o', markersize=2, linewidth=1, label='DBP')
-    if any(hr_values):
-        ax.plot(times, hr_values, 'g-', marker='s', markersize=2, linewidth=1, label='HR')
-
-    ax.set_xlabel('Time', fontsize=6)
-    ax.set_ylabel('mmHg / bpm', fontsize=6)
-    ax.tick_params(axis='both', labelsize=5)
-    ax.legend(fontsize=5, loc='upper right')
-    ax.grid(True, alpha=0.3)
+    # Set X-axis to match table columns (0 to n_cols)
+    ax.set_xlim(0, n_cols)
     ax.set_ylim(0, 200)
 
-    # Convert to base64
+    # Plot BP (red/blue) and HR (green) with data points at column centers
+    if any(v is not None for v in sbp_values):
+        ax.plot(x_positions, sbp_values, 'r-', marker='o', markersize=4, linewidth=1.2, label='SBP')
+    if any(v is not None for v in dbp_values):
+        ax.plot(x_positions, dbp_values, 'b-', marker='o', markersize=4, linewidth=1.2, label='DBP')
+    if any(v is not None for v in hr_values):
+        ax.plot(x_positions, hr_values, 'g--', marker='s', markersize=4, linewidth=1.2, label='HR')
+
+    # Vertical grid lines at column boundaries for alignment reference
+    for i in range(n_cols + 1):
+        ax.axvline(x=i, color='#e0e0e0', linestyle='-', linewidth=0.3)
+
+    # Horizontal grid lines at Y values
+    for y in [50, 100, 150]:
+        ax.axhline(y=y, color='#e0e0e0', linestyle='-', linewidth=0.3)
+    ax.axhline(y=100, color='#ccc', linestyle='--', linewidth=0.5)  # 100 reference line
+
+    # Remove X-axis completely (table shows time)
+    ax.set_xticks([])
+    ax.set_xticklabels([])
+    ax.tick_params(axis='x', length=0)
+
+    # Y-axis: show ticks inside the plot area
+    ax.set_yticks([50, 100, 150, 200])
+    ax.tick_params(axis='y', labelsize=8, direction='in', pad=-22)
+    ax.yaxis.set_tick_params(labelleft=True)
+
+    # Remove Y-axis label (external label in HTML)
+    ax.set_ylabel('')
+
+    # Remove spines for cleaner look
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_linewidth(0.5)
+    ax.spines['left'].set_linewidth(0.5)
+
+    # Legend inside the plot area, upper right
+    ax.legend(fontsize=8, loc='upper right', framealpha=0.9, edgecolor='none')
+
+    # Zero margins - Y-axis label is external (in HTML wrapper)
+    # This makes the chart data area align with table data columns
+    plt.subplots_adjust(left=0.001, right=0.999, top=0.95, bottom=0.02)
+
+    # Convert to base64 PNG
     buffer = io.BytesIO()
-    plt.savefig(buffer, format='png', bbox_inches='tight', pad_inches=0.1)
+    plt.savefig(buffer, format='png', dpi=150, facecolor='#fafafa', edgecolor='none')
     plt.close(fig)
     buffer.seek(0)
     return base64.b64encode(buffer.read()).decode('utf-8')

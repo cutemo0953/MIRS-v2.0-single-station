@@ -19,6 +19,7 @@
 | 1.0 | 2026-01-23 | 初版 - 根據護理師回饋新增 IV 管理、Foley、加溫毯欄位 |
 | 1.1 | 2026-01-23 | **重大修正** - 整合 Gemini/ChatGPT 批評：<br>• case_id 改 UUIDv7 + case_code<br>• 移除所有 AUTOINCREMENT identity<br>• IV_lines/monitors 定義為可重建投影<br>• FLUID_GIVEN 必須帶 line_id<br>• 新增 ts_device/ts_server/hlc 時間戳<br>• 新增 Foley 尿量累計邏輯<br>• 新增 End Case 強制收斂 |
 | 2.1 | 2026-01-23 | **整合至 MIRS** - 移自 CIRS 並整合到 MIRS 麻醉模組：<br>• 新增 `anesthesia_iv_lines` 資料表<br>• 新增 `anesthesia_monitors` 資料表<br>• 新增 `anesthesia_urine_outputs` 資料表<br>• 新增 11 個 API endpoints<br>• 新增 I/O Balance 計算端點 |
+| 2.2 | 2026-01-24 | **PDF 輸出完成** - 完整實作麻醉紀錄 PDF 輸出功能：<br>• 實作 M0073 格式 PDF 生成<br>• Jinja2 + WeasyPrint 渲染流程<br>• SVG 生命徵象圖表 (Vercel 相容)<br>• Matplotlib 圖表 (本地/RPi5)<br>• 3 欄佈局：藥物 / 圖表+表格 / 監測面板<br>• 自動分頁 (每頁 24 筆 vitals)<br>• 示範資料生成器 (seeder_demo.py)<br>• 前端預覽/下載雙模式 |
 
 ### 新增 API 端點 (v2.1)
 
@@ -34,6 +35,8 @@
 | POST | `/cases/{id}/urine-output` | 記錄尿量 |
 | POST | `/cases/{id}/timeout` | Time Out 核對 |
 | GET | `/cases/{id}/io-balance` | I/O 平衡計算 |
+| GET | `/cases/{id}/pdf` | 生成麻醉紀錄 PDF (M0073) |
+| GET | `/cases/{id}/pdf/preview` | 預覽 PDF (HTML 格式) |
 
 ### Walkaway 不變式 (v1.1 新增)
 
@@ -686,7 +689,7 @@ def can_add_event(case_id: str, event_type: str) -> bool:
 
 ---
 
-## 7. PDF 輸出 (v1.1 更新)
+## 7. PDF 輸出 (v2.2 完成實作)
 
 ### 7.1 純函式渲染原則
 
@@ -699,57 +702,142 @@ def can_add_event(case_id: str, event_type: str) -> bool:
 │                                                                              │
 │ 流程:                                                                        │
 │   1. 讀取 events (WHERE case_id = ?)                                        │
-│   2. 重建 canonical state (透過 rebuild 函式)                               │
-│   3. 生成 Matplotlib 圖表 (生命徵象趨勢圖)                                  │
+│   2. 重建 canonical state (_rebuild_state_from_events)                      │
+│   3. 生成圖表 (SVG 或 Matplotlib)                                           │
 │   4. 渲染 HTML 模板 (Jinja2)                                                │
-│   5. 轉換 PDF (WeasyPrint)                                                  │
+│   5. 轉換 PDF (WeasyPrint) 或回傳 HTML 預覽                                 │
 │                                                                              │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 7.2 PDF 生成 API
+### 7.2 環境適配
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│ 多環境支援                                                                   │
+│                                                                              │
+│ Vercel (無系統依賴):                                                         │
+│   ├─ 僅支援 HTML 預覽                                                        │
+│   ├─ 使用示範資料 (IS_VERCEL flag)                                          │
+│   ├─ SVG 圖表 (瀏覽器渲染)                                                  │
+│   └─ Jinja2 渲染                                                            │
+│                                                                              │
+│ 本地/RPi5 (完整功能):                                                        │
+│   ├─ 完整 PDF 生成                                                          │
+│   ├─ WeasyPrint + Matplotlib                                                │
+│   ├─ 真實資料庫查詢                                                         │
+│   └─ 支援預覽 (preview=true) 或下載 (preview=false)                         │
+│                                                                              │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.3 PDF 生成 API (已實作)
 
 ```python
-@router.get("/api/anesthesia/{case_id}/pdf")
-async def generate_anesthesia_pdf(case_id: str):
+@router.get("/api/anesthesia/cases/{case_id}/pdf")
+async def generate_pdf(
+    case_id: str,
+    preview: bool = Query(False),           # 預覽模式返回 HTML
+    hospital_name: str = Query("烏日林新醫院"),
+    hospital_address: str = Query("")
+):
     """
-    生成麻醉紀錄 PDF
+    生成麻醉紀錄 PDF (M0073)
 
-    對標：烏日林新醫院 M0073
+    - preview=True  → 返回 HTML 預覽
+    - preview=False → 返回 PDF 附件
+    - 自動分頁 (VITALS_PER_PAGE = 24)
     """
 
-    # 1. 從 events 讀取 (不從 projection)
+    # 1. 依賴檢查
+    if not preview and not PDF_ENABLED:
+        raise HTTPException(503, "PDF generation not available")
+
+    # 2. Vercel Demo Mode
+    if IS_VERCEL:
+        return render_demo_preview()
+
+    # 3. 從 events 讀取
     events = get_events_for_case(case_id)
 
-    # 2. 重建 canonical state
-    case_state = rebuild_case_from_events(events)
-    iv_lines = rebuild_iv_lines_from_events(events)
-    monitors = rebuild_monitors_from_events(events)
-    io_balance = calculate_io_balance(events)
-    vitals_timeline = build_vitals_timeline(events)
+    # 4. 重建 canonical state
+    state = _rebuild_state_from_events(events)
 
-    # 3. 生成圖表 (Matplotlib)
-    vitals_chart_png = generate_vitals_chart(vitals_timeline)
+    # 5. 分頁處理
+    pages = paginate_vitals(state["vitals"], VITALS_PER_PAGE)
 
-    # 4. 渲染 HTML
-    html = render_template("anesthesia_record_m0073.html", {
-        "case": case_state,
-        "iv_lines": iv_lines,
-        "monitors": monitors,
-        "io_balance": io_balance,
-        "vitals_chart": vitals_chart_png,  # Base64 encoded
-        "generated_at": datetime.now()
-    })
+    # 6. 渲染 Jinja2 模板
+    html = render_template("anesthesia_record_m0073.html", context)
 
-    # 5. 轉 PDF (WeasyPrint)
-    pdf = weasyprint.HTML(string=html).write_pdf()
-
-    # 6. 浮水印 (如果授權失效)
-    if not license_valid():
-        pdf = add_watermark(pdf, "TRIAL")
-
-    return Response(content=pdf, media_type="application/pdf")
+    # 7. 返回 HTML 或 PDF
+    if preview:
+        return StreamingResponse(html, media_type="text/html")
+    else:
+        pdf = WeasyHTML(string=html).write_pdf()
+        return StreamingResponse(pdf, media_type="application/pdf")
 ```
+
+### 7.4 M0073 PDF 版面配置
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 【Header】 醫院名稱 / 麻醉紀錄 ANESTHETIC RECORD / M0073 / 頁碼            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 【Info Bar】 (僅第一頁)                                                      │
+│ ┌─────────────────────────────────┐ ┌─────────────────────────────────────┐ │
+│ │ 姓名/性別/年齡/ASA/體重/身高    │ │ Dx/Op/Hb/Ht/K/Na/預估失血/備血     │ │
+│ │ 血型/OR | 麻醉方式勾選          │ │                                     │ │
+│ └─────────────────────────────────┘ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 【Main Content - 3 Columns】                                                 │
+│ ┌─────────┐ ┌─────────────────────────────────────────┐ ┌─────────────────┐ │
+│ │ 藥物     │ │              中央區域                    │ │   監測面板      │ │
+│ │ Drugs    │ │ ┌─────────────────────────────────────┐ │ │ ┌─────────────┐ │ │
+│ │          │ │ │        SVG 生命徵象圖表             │ │ │ │  Monitors   │ │ │
+│ │ 08:30    │ │ │    SBP(紅) DBP(藍) HR(綠)          │ │ │ │  EKG NIBP   │ │ │
+│ │ Propofol │ │ │    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━     │ │ │ │  SpO2 ETCO2 │ │ │
+│ │ 150mg    │ │ └─────────────────────────────────────┘ │ │ └─────────────┘ │ │
+│ │          │ │ ┌─────────────────────────────────────┐ │ │ ┌─────────────┐ │ │
+│ │ 08:31    │ │ │         生命徵象表格                │ │ │ │  IV Lines   │ │ │
+│ │ Fentanyl │ │ │  Hr │08│08│08│09│09│09│10│10│10│  │ │ │ │  #1 右手 20G│ │ │
+│ │ 100mcg   │ │ │ :mm│30│45│00│15│30│45│00│15│30│  │ │ │ └─────────────┘ │ │
+│ │          │ │ │ SBP│120│115│...                    │ │ │ ┌─────────────┐ │ │
+│ ├─────────┤ │ │ DBP│80│75│...                      │ │ │ │ I/O Balance │ │ │
+│ │ Agents  │ │ │ HR │72│68│...                      │ │ │ │ In:  1000ml │ │ │
+│ │ O2 Sevo │ │ │ SpO2│99│100│...                    │ │ │ │ Out:  400ml │ │ │
+│ │ ...     │ │ │ CO2│35│34│...                      │ │ │ │ Net: +600ml │ │ │
+│ │         │ │ │ T° │36.5│36.4│...                  │ │ │ └─────────────┘ │ │
+│ └─────────┘ │ └─────────────────────────────────────┘ │ └─────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 【Footer】 (僅最後一頁)                                                      │
+│ 麻醉時間 / 手術時間 / 麻醉醫師簽名 / 護理師簽名                              │
+│                         Generated by MIRS v2.2                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.5 SVG 圖表與表格對齊
+
+v2.2 實作了 SVG 圖表資料點與表格欄位精確對齊：
+
+```html
+{# 計算欄位位置以對齊表格 #}
+{% set vc = page.vitals|length %}
+{% set yaxis_pct = 4 %}      {# Y軸標籤佔 4% #}
+{% set data_pct = 96 %}      {# 資料區域佔 96% #}
+{% set col_pct = data_pct / vc %}  {# 每欄寬度 #}
+
+{# 資料點置於欄位中心 #}
+{% set xp = yaxis_pct + loop.index0 * col_pct + col_pct/2 %}
+```
+
+### 7.6 依賴項目
+
+| 依賴 | 功能 | 必要性 |
+|------|------|--------|
+| `Jinja2` | HTML 模板渲染 | 必要 (HTML 預覽) |
+| `WeasyPrint` | HTML→PDF 轉換 | 選用 (PDF 輸出) |
+| `Matplotlib` | 圖表生成 (PNG) | 選用 (本地環境) |
+| `SVG` | 圖表生成 (向量) | 內建 (Vercel 相容) |
 
 ---
 
@@ -777,6 +865,13 @@ async def generate_anesthesia_pdf(case_id: str):
 | **PDF Tests** | | |
 | PDF-01 | 生成 PDF | 包含 IV 管路流向資訊 |
 | PDF-02 | 從 events 重建後生成 PDF | 與原 PDF 一致 |
+| **PDF Tests (v2.2 新增)** | | |
+| PDF-03 | HTML 預覽 (/pdf?preview=true) | 返回可瀏覽 HTML |
+| PDF-04 | PDF 下載 (/pdf?preview=false) | 返回 M0073.pdf 附件 |
+| PDF-05 | Vercel 環境示範資料 | 自動切換 demo mode |
+| PDF-06 | 超過 24 筆 vitals 自動分頁 | 產生多頁 PDF |
+| PDF-07 | SVG 圖表與表格對齊 | 資料點對應表格欄位 |
+| PDF-08 | 前端預覽/下載按鈕 | UI 支援雙模式操作 |
 
 ---
 
@@ -790,5 +885,58 @@ async def generate_anesthesia_pdf(case_id: str):
 
 ---
 
-*MIRS Anesthesia Record PWA - v1.1*
+---
+
+## 10. 已完成功能清單 (v2.2)
+
+### 10.1 後端 API (routes/anesthesia.py)
+
+| 功能 | 端點 | 狀態 |
+|------|------|------|
+| PDF 生成 | `GET /cases/{id}/pdf` | ✅ 完成 |
+| PDF 預覽 | `GET /cases/{id}/pdf/preview` | ✅ 完成 |
+| 事件重建 | `_rebuild_state_from_events()` | ✅ 完成 |
+| SVG 圖表 | 內嵌於 Jinja2 模板 | ✅ 完成 |
+| Matplotlib 圖表 | `_generate_vitals_chart()` | ✅ 完成 |
+| 自動分頁 | `VITALS_PER_PAGE = 24` | ✅ 完成 |
+| Vercel Demo | `IS_VERCEL` 自動偵測 | ✅ 完成 |
+
+### 10.2 前端 UI (frontend/anesthesia/index.html)
+
+| 功能 | 狀態 |
+|------|------|
+| PDF 預覽按鈕 (新視窗開啟) | ✅ 完成 |
+| PDF 下載按鈕 | ✅ 完成 |
+| 日期篩選 (使用本地時區) | ✅ 完成 |
+| 病例狀態顯示 | ✅ 完成 |
+
+### 10.3 示範資料 (seeder_demo.py)
+
+| 功能 | 狀態 |
+|------|------|
+| 完整 vitals 資料 (每 15 分鐘) | ✅ 完成 |
+| 用藥記錄 (propofol, fentanyl 等) | ✅ 完成 |
+| IV 管路資料 | ✅ 完成 |
+| I/O 平衡資料 | ✅ 完成 |
+| 長時間手術案例 (3+ 小時, >24 vitals) | ✅ 完成 |
+
+### 10.4 PDF 模板 (templates/anesthesia_record_m0073.html)
+
+| 功能 | 狀態 |
+|------|------|
+| A4 橫向紙張 | ✅ 完成 |
+| 3 欄佈局 | ✅ 完成 |
+| 繁體中文字體 (Noto Sans TC) | ✅ 完成 |
+| 分頁機制 | ✅ 完成 |
+| SVG 圖表對齊 | ✅ 完成 |
+| 醫院/病患資訊區 | ✅ 完成 |
+| 生命徵象表格 | ✅ 完成 |
+| 用藥清單 | ✅ 完成 |
+| I/O Balance 面板 | ✅ 完成 |
+| 監測器面板 | ✅ 完成 |
+| 簽名欄 | ✅ 完成 |
+
+---
+
+*MIRS Anesthesia Record PWA - v2.2*
 *De Novo Orthopedics Inc. / 谷盺生物科技股份有限公司*
