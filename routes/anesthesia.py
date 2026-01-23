@@ -27,16 +27,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 # PDF Generation imports (lazy load to handle missing deps)
+# Jinja2 for HTML preview (works on Vercel)
 try:
     from jinja2 import Environment, FileSystemLoader
-    from weasyprint import HTML
+    JINJA2_ENABLED = True
+except ImportError:
+    JINJA2_ENABLED = False
+    logger.warning("HTML preview disabled: missing jinja2")
+
+# WeasyPrint + Matplotlib for PDF generation (requires system deps, NOT on Vercel)
+try:
+    from weasyprint import HTML as WeasyHTML
     import matplotlib
     matplotlib.use('Agg')  # Non-interactive backend
     import matplotlib.pyplot as plt
     PDF_ENABLED = True
 except ImportError:
     PDF_ENABLED = False
-    logger.warning("PDF generation disabled: missing weasyprint, jinja2, or matplotlib")
+    logger.warning("PDF generation disabled: missing weasyprint or matplotlib")
 
 router = APIRouter(prefix="/api/anesthesia", tags=["anesthesia"])
 
@@ -8267,16 +8275,29 @@ async def generate_pdf(
     Pure function rendering: PDF = f(events)
     - Fetches all events for the case
     - Rebuilds state from events (event sourcing)
-    - Generates Matplotlib chart for BP/HR trends
+    - Generates Matplotlib chart for BP/HR trends (if available)
     - Renders Jinja2 HTML template
-    - Converts to PDF with WeasyPrint
+    - Converts to PDF with WeasyPrint (or returns HTML preview)
     - Auto-paginates when vitals > 24
+
+    On Vercel: Only HTML preview is available (preview=True)
+    On RPi5/Local: Full PDF generation with WeasyPrint
     """
-    if not PDF_ENABLED:
-        raise HTTPException(
-            status_code=503,
-            detail="PDF generation not available. Install: pip install weasyprint jinja2 matplotlib"
-        )
+    # Check dependencies based on mode
+    if preview:
+        # HTML preview only needs Jinja2
+        if not JINJA2_ENABLED:
+            raise HTTPException(
+                status_code=503,
+                detail="HTML preview not available. Install: pip install jinja2"
+            )
+    else:
+        # PDF generation needs WeasyPrint + Matplotlib
+        if not PDF_ENABLED:
+            raise HTTPException(
+                status_code=503,
+                detail="PDF generation not available. Install: pip install weasyprint jinja2 matplotlib"
+            )
 
     conn = get_db_connection()
     try:
@@ -8414,7 +8435,7 @@ async def generate_pdf(
 
         # 9. Convert to PDF with WeasyPrint
         pdf_buffer = io.BytesIO()
-        HTML(string=html_content, base_url=str(template_dir)).write_pdf(pdf_buffer)
+        WeasyHTML(string=html_content, base_url=str(template_dir)).write_pdf(pdf_buffer)
         pdf_buffer.seek(0)
 
         return StreamingResponse(
