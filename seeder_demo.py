@@ -775,14 +775,18 @@ def clear_mirs_demo(conn: sqlite3.Connection):
 
 def seed_anesthesia_demo(conn: sqlite3.Connection):
     """
-    植入麻醉模組測試資料 (v2.1.1)
+    植入麻醉模組測試資料 (v2.1.2)
+    包含完整的 vital signs、藥物、IV 等事件資料
 
     Args:
         conn: SQLite connection object
 
     Usage:
-        python -c "import sqlite3; from seeder_demo import seed_anesthesia_demo; conn = sqlite3.connect('data/mirs.db'); seed_anesthesia_demo(conn)"
+        python -c "import sqlite3; from seeder_demo import seed_anesthesia_demo; conn = sqlite3.connect('medical_inventory.db'); seed_anesthesia_demo(conn)"
     """
+    import json
+    import uuid
+
     cursor = conn.cursor()
     now = datetime.now()
 
@@ -795,88 +799,136 @@ def seed_anesthesia_demo(conn: sqlite3.Connection):
     # Check if already seeded
     cursor.execute("SELECT COUNT(*) FROM anesthesia_cases WHERE id LIKE 'ANES-SEED-%'")
     if cursor.fetchone()[0] > 0:
-        print("[Anesthesia Seeder] Demo cases already exist. Skipping...")
+        print("[Anesthesia Seeder] Demo cases already exist. Use clear_anesthesia_demo() first to re-seed.")
         return
 
-    print("[Anesthesia Seeder] Seeding anesthesia demo cases...")
+    print("[Anesthesia Seeder] Seeding anesthesia demo cases with events...")
 
-    # Demo patients/cases
-    demo_cases = [
-        {
-            "id": "ANES-SEED-001",
-            "patient_id": "P-TEST-001",
-            "patient_name": "陳大明",
-            "diagnosis": "急性闘尾炎",
-            "operation": "腹腔鏡闘尾切除術",
-            "planned_technique": "GA_ETT",
-            "asa_classification": "II",
-            "status": "PREOP",
-        },
-        {
-            "id": "ANES-SEED-002",
-            "patient_id": "P-TEST-002",
-            "patient_name": "林小華",
-            "diagnosis": "膽結石併膽囊炎",
-            "operation": "腹腔鏡膽囊切除術",
-            "planned_technique": "GA_LMA",
-            "asa_classification": "II",
-            "status": "PREOP",
-        },
-        {
-            "id": "ANES-SEED-003",
-            "patient_id": "P-TEST-003",
-            "patient_name": "張美玲",
-            "diagnosis": "右側腹股溝疝氣",
-            "operation": "腹腔鏡疝氣修補術",
-            "planned_technique": "RA_SPINAL",
-            "asa_classification": "I",
-            "status": "PREOP",
-        },
-        {
-            "id": "ANES-SEED-004",
-            "patient_id": "P-TEST-004",
-            "patient_name": "王建國",
-            "diagnosis": "右側股骨頸骨折",
-            "operation": "人工髖關節置換術",
-            "planned_technique": "RA_SPINAL",
-            "asa_classification": "III",
-            "status": "PREOP",
-        },
-        {
-            "id": "ANES-SEED-005",
-            "patient_id": "P-TEST-005",
-            "patient_name": "李淑芬",
-            "diagnosis": "子宮肌瘤",
-            "operation": "腹腔鏡子宮肌瘤切除術",
-            "planned_technique": "GA_ETT",
-            "asa_classification": "II",
-            "status": "PREOP",
-        },
+    def gen_event_id():
+        return f"EVT-{uuid.uuid4().hex[:12].upper()}"
+
+    # === Case 1: 進行中案例 (有完整資料) ===
+    case1_start = now - timedelta(hours=2)
+    case1_id = "ANES-SEED-001"
+
+    cursor.execute("""
+        INSERT INTO anesthesia_cases
+        (id, patient_id, patient_name, diagnosis, operation,
+         context_mode, planned_technique, asa_classification,
+         status, anesthesia_start_at, surgery_start_at,
+         created_at, created_by)
+        VALUES (?, ?, ?, ?, ?, 'STANDARD', ?, ?, 'IN_PROGRESS', ?, ?, ?, 'SEED')
+    """, (
+        case1_id, "P-TEST-001", "陳大明",
+        "急性闘尾炎", "腹腔鏡闘尾切除術",
+        "GA_ETT", "II",
+        (case1_start).isoformat(),
+        (case1_start + timedelta(minutes=30)).isoformat(),
+        now.isoformat()
+    ))
+
+    # Vital signs (每 15 分鐘)
+    vitals_data = [
+        (0, 120, 80, 72, 99, 35, 36.5),
+        (15, 115, 75, 68, 100, 34, 36.4),
+        (30, 110, 70, 65, 100, 33, 36.3),
+        (45, 108, 68, 62, 99, 34, 36.2),
+        (60, 112, 72, 64, 100, 35, 36.2),
+        (75, 118, 76, 68, 99, 34, 36.3),
+        (90, 122, 78, 72, 100, 35, 36.4),
+        (105, 125, 80, 75, 99, 36, 36.5),
+    ]
+    for mins, sbp, dbp, hr, spo2, etco2, temp in vitals_data:
+        event_time = case1_start + timedelta(minutes=mins)
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'VITAL_SIGN', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case1_id, event_time.isoformat(),
+            json.dumps({"bp_sys": sbp, "bp_dia": dbp, "hr": hr, "spo2": spo2, "etco2": etco2, "temp": temp})
+        ))
+
+    # Medications
+    meds = [
+        (0, "Propofol", "150", "mg", "IV"),
+        (1, "Fentanyl", "100", "mcg", "IV"),
+        (2, "Rocuronium", "50", "mg", "IV"),
+        (5, "Sevoflurane", "2", "%", "INH"),
+        (45, "Fentanyl", "50", "mcg", "IV"),
+        (90, "Ondansetron", "4", "mg", "IV"),
+    ]
+    for mins, drug, dose, unit, route in meds:
+        event_time = case1_start + timedelta(minutes=mins)
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'MEDICATION_ADMIN', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case1_id, event_time.isoformat(),
+            json.dumps({"drug_name": drug, "dose": dose, "unit": unit, "route": route})
+        ))
+
+    # IV Line
+    cursor.execute("""
+        INSERT INTO anesthesia_events
+        (id, case_id, event_type, clinical_time, payload, actor_id)
+        VALUES (?, ?, 'IV_ACCESS', ?, ?, 'SEED')
+    """, (
+        gen_event_id(), case1_id, case1_start.isoformat(),
+        json.dumps({"line_number": 1, "site": "右手背", "gauge": "20G", "catheter_type": "PERIPHERAL"})
+    ))
+
+    # I/O Balance
+    cursor.execute("""
+        INSERT INTO anesthesia_events
+        (id, case_id, event_type, clinical_time, payload, actor_id)
+        VALUES (?, ?, 'FLUID_IN', ?, ?, 'SEED')
+    """, (
+        gen_event_id(), case1_id, (case1_start + timedelta(minutes=30)).isoformat(),
+        json.dumps({"fluid_type": "crystalloid", "fluid_name": "Normal Saline", "volume_ml": 500})
+    ))
+    cursor.execute("""
+        INSERT INTO anesthesia_events
+        (id, case_id, event_type, clinical_time, payload, actor_id)
+        VALUES (?, ?, 'FLUID_IN', ?, ?, 'SEED')
+    """, (
+        gen_event_id(), case1_id, (case1_start + timedelta(minutes=90)).isoformat(),
+        json.dumps({"fluid_type": "crystalloid", "fluid_name": "Lactated Ringer", "volume_ml": 500})
+    ))
+    cursor.execute("""
+        INSERT INTO anesthesia_events
+        (id, case_id, event_type, clinical_time, payload, actor_id)
+        VALUES (?, ?, 'OUTPUT', ?, ?, 'SEED')
+    """, (
+        gen_event_id(), case1_id, (case1_start + timedelta(minutes=100)).isoformat(),
+        json.dumps({"output_type": "urine", "volume_ml": 200})
+    ))
+
+    # === Case 2-5: PREOP 案例 (待開刀) ===
+    preop_cases = [
+        ("ANES-SEED-002", "P-TEST-002", "林小華", "膽結石併膽囊炎", "腹腔鏡膽囊切除術", "GA_LMA", "II"),
+        ("ANES-SEED-003", "P-TEST-003", "張美玲", "右側腹股溝疝氣", "腹腔鏡疝氣修補術", "RA_SPINAL", "I"),
+        ("ANES-SEED-004", "P-TEST-004", "王建國", "右側股骨頸骨折", "人工髖關節置換術", "RA_SPINAL", "III"),
+        ("ANES-SEED-005", "P-TEST-005", "李淑芬", "子宮肌瘤", "腹腔鏡子宮肌瘤切除術", "GA_ETT", "II"),
     ]
 
-    for case in demo_cases:
+    for case_id, patient_id, name, dx, op, tech, asa in preop_cases:
         cursor.execute("""
             INSERT INTO anesthesia_cases
             (id, patient_id, patient_name, diagnosis, operation,
              context_mode, planned_technique, asa_classification,
              status, created_at, created_by)
-            VALUES (?, ?, ?, ?, ?, 'STANDARD', ?, ?, ?, ?, 'SEED')
-        """, (
-            case["id"],
-            case["patient_id"],
-            case["patient_name"],
-            case["diagnosis"],
-            case["operation"],
-            case["planned_technique"],
-            case["asa_classification"],
-            case["status"],
-            now.isoformat()
-        ))
+            VALUES (?, ?, ?, ?, ?, 'STANDARD', ?, ?, 'PREOP', ?, 'SEED')
+        """, (case_id, patient_id, name, dx, op, tech, asa, now.isoformat()))
 
     conn.commit()
-    print(f"[Anesthesia Seeder] Created {len(demo_cases)} demo cases:")
-    for c in demo_cases:
-        print(f"  - {c['id']}: {c['patient_name']} / {c['operation']}")
+    print(f"[Anesthesia Seeder] Created 5 demo cases:")
+    print(f"  - ANES-SEED-001: 陳大明 (IN_PROGRESS, 8 vitals, 6 meds, IV, I/O)")
+    print(f"  - ANES-SEED-002: 林小華 (PREOP)")
+    print(f"  - ANES-SEED-003: 張美玲 (PREOP)")
+    print(f"  - ANES-SEED-004: 王建國 (PREOP)")
+    print(f"  - ANES-SEED-005: 李淑芬 (PREOP)")
 
 
 def clear_anesthesia_demo(conn: sqlite3.Connection):
