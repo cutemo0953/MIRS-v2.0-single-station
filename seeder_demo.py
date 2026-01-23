@@ -932,7 +932,7 @@ def seed_anesthesia_demo(conn: sqlite3.Connection):
          context_mode, planned_technique, asa_classification,
          status, anesthesia_start_at, surgery_start_at, surgery_end_at, anesthesia_end_at,
          created_at, created_by)
-        VALUES (?, ?, ?, ?, ?, 'STANDARD', ?, ?, 'COMPLETED', ?, ?, ?, ?, ?, 'SEED')
+        VALUES (?, ?, ?, ?, ?, 'STANDARD', ?, ?, 'CLOSED', ?, ?, ?, ?, ?, 'SEED')
     """, (
         case6_id, "P-TEST-006", "黃志明",
         "主動脈瘤 (AAA)", "開腹主動脈瘤修補術 + 雙側髂動脈人工血管置換",
@@ -1090,7 +1090,7 @@ def seed_anesthesia_demo(conn: sqlite3.Connection):
     print(f"  - ANES-SEED-003: 張美玲 (PREOP)")
     print(f"  - ANES-SEED-004: 王建國 (PREOP)")
     print(f"  - ANES-SEED-005: 李淑芬 (PREOP)")
-    print(f"  - ANES-SEED-006: 黃志明 (COMPLETED, 4.5hr長手術, 31 vitals, 18 meds, 3 IV lines, 血品輸注)")
+    print(f"  - ANES-SEED-006: 黃志明 (CLOSED, 4.5hr長手術, 31 vitals, 18 meds, 3 IV lines, 血品輸注)")
 
 
 def clear_anesthesia_demo(conn: sqlite3.Connection):
