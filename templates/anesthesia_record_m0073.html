@@ -131,15 +131,41 @@
             background: #f0f0f0;
         }
 
-        /* Vital Signs Chart */
+        /* Vital Signs Chart (SVG) */
         .chart-section {
             border: 1px solid #000;
-            text-align: center;
+            background: #fff;
+            padding: 4px;
         }
 
-        .chart-section img {
-            max-width: 100%;
+        .chart-section svg {
+            width: 100%;
             height: auto;
+        }
+
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            font-size: 7pt;
+            margin-top: 2px;
+        }
+
+        .chart-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .legend-square {
+            width: 8px;
+            height: 8px;
         }
 
         /* I/O Balance */
@@ -439,10 +465,94 @@
                 </table>
             </div>
 
-            <!-- Vital Signs Chart -->
-            {% if page.chart_image %}
+            <!-- Vital Signs Chart (SVG) -->
+            {% if page.vitals and page.vitals|length > 0 %}
             <div class="chart-section">
-                <img src="data:image/png;base64,{{ page.chart_image }}" alt="Vital Signs Chart">
+                <svg viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet">
+                    <!-- Background grid -->
+                    <defs>
+                        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#eee" stroke-width="0.5"/>
+                        </pattern>
+                    </defs>
+                    <rect x="25" y="5" width="170" height="100" fill="url(#grid)"/>
+
+                    <!-- Y-axis labels -->
+                    <text x="22" y="10" text-anchor="end" font-size="5" fill="#666">200</text>
+                    <text x="22" y="30" text-anchor="end" font-size="5" fill="#666">150</text>
+                    <text x="22" y="55" text-anchor="end" font-size="5" fill="#666">100</text>
+                    <text x="22" y="80" text-anchor="end" font-size="5" fill="#666">50</text>
+                    <text x="22" y="105" text-anchor="end" font-size="5" fill="#666">0</text>
+
+                    <!-- Y-axis line -->
+                    <line x1="25" y1="5" x2="25" y2="105" stroke="#000" stroke-width="0.5"/>
+                    <!-- X-axis line -->
+                    <line x1="25" y1="105" x2="195" y2="105" stroke="#000" stroke-width="0.5"/>
+
+                    <!-- Horizontal guide lines -->
+                    <line x1="25" y1="30" x2="195" y2="30" stroke="#ddd" stroke-width="0.3"/>
+                    <line x1="25" y1="55" x2="195" y2="55" stroke="#ddd" stroke-width="0.3"/>
+                    <line x1="25" y1="80" x2="195" y2="80" stroke="#ddd" stroke-width="0.3"/>
+
+                    {% set vitals_count = page.vitals|length %}
+                    {% set x_step = 170 / (vitals_count if vitals_count > 1 else 1) %}
+
+                    <!-- SBP Line (Red) -->
+                    <polyline fill="none" stroke="#dc2626" stroke-width="1.5"
+                        points="{% for v in page.vitals %}{% if v.sbp %}{{ 25 + loop.index0 * x_step }},{{ 105 - (v.sbp / 200 * 100) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
+
+                    <!-- DBP Line (Blue) -->
+                    <polyline fill="none" stroke="#2563eb" stroke-width="1.5"
+                        points="{% for v in page.vitals %}{% if v.dbp %}{{ 25 + loop.index0 * x_step }},{{ 105 - (v.dbp / 200 * 100) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
+
+                    <!-- HR Line (Green) -->
+                    <polyline fill="none" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="3,2"
+                        points="{% for v in page.vitals %}{% if v.hr %}{{ 25 + loop.index0 * x_step }},{{ 105 - (v.hr / 200 * 100) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
+
+                    <!-- SBP Points (Red circles) -->
+                    {% for v in page.vitals %}
+                    {% if v.sbp %}
+                    <circle cx="{{ 25 + loop.index0 * x_step }}" cy="{{ 105 - (v.sbp / 200 * 100) }}" r="2.5" fill="#dc2626"/>
+                    {% endif %}
+                    {% endfor %}
+
+                    <!-- DBP Points (Blue circles) -->
+                    {% for v in page.vitals %}
+                    {% if v.dbp %}
+                    <circle cx="{{ 25 + loop.index0 * x_step }}" cy="{{ 105 - (v.dbp / 200 * 100) }}" r="2.5" fill="#2563eb"/>
+                    {% endif %}
+                    {% endfor %}
+
+                    <!-- HR Points (Green squares) -->
+                    {% for v in page.vitals %}
+                    {% if v.hr %}
+                    <rect x="{{ 25 + loop.index0 * x_step - 2 }}" y="{{ 105 - (v.hr / 200 * 100) - 2 }}" width="4" height="4" fill="#16a34a"/>
+                    {% endif %}
+                    {% endfor %}
+
+                    <!-- X-axis time labels -->
+                    {% for v in page.vitals %}
+                    {% if loop.index0 % 3 == 0 or loop.last %}
+                    <text x="{{ 25 + loop.index0 * x_step }}" y="113" text-anchor="middle" font-size="4" fill="#666">{{ v.time_display }}</text>
+                    {% endif %}
+                    {% endfor %}
+                </svg>
+
+                <!-- Legend -->
+                <div class="chart-legend">
+                    <div class="chart-legend-item">
+                        <span class="legend-dot" style="background: #dc2626;"></span>
+                        <span>SBP</span>
+                    </div>
+                    <div class="chart-legend-item">
+                        <span class="legend-dot" style="background: #2563eb;"></span>
+                        <span>DBP</span>
+                    </div>
+                    <div class="chart-legend-item">
+                        <span class="legend-square" style="background: #16a34a;"></span>
+                        <span>HR</span>
+                    </div>
+                </div>
             </div>
             {% endif %}
 
