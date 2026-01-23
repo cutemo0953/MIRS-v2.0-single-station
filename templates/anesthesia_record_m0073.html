@@ -187,29 +187,28 @@
         /* Chart Section */
         .chart-section {
             border: 1px solid #000;
+            border-bottom: none;
             background: #fff;
-            padding: 2px 0;
-            flex: 1;
+            padding: 0;
         }
 
         .chart-header {
             display: flex;
             justify-content: space-between;
             font-size: 6pt;
-            border-bottom: 1px solid #ccc;
-            padding: 0 2px 1px 2px;
-            margin-bottom: 2px;
+            padding: 1px 2px;
+            background: #f8f8f8;
         }
 
         .chart-section svg {
             width: 100%;
-            height: 130px;
+            display: block;
         }
 
         .chart-section img {
             width: 100%;
             height: auto;
-            max-height: 130px;
+            max-height: 120px;
             object-fit: contain;
         }
 
@@ -231,14 +230,15 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 5pt;
+            table-layout: fixed;
         }
 
         .vitals-table th, .vitals-table td {
             border: 1px solid #ccc;
             padding: 0 1px;
             text-align: center;
-            min-width: 12px;
             height: 12px;
+            overflow: hidden;
         }
 
         .vitals-table th {
@@ -250,8 +250,7 @@
             background: #e0e0e0;
             text-align: left;
             font-weight: bold;
-            width: 25px;
-            min-width: 25px;
+            width: 4%;
             white-space: nowrap;
             font-size: 5pt;
         }
@@ -538,57 +537,59 @@
                 {% if page.chart_image %}
                 <img src="data:image/png;base64,{{ page.chart_image }}" alt="Vital Signs Chart">
                 {% elif page.vitals and page.vitals|length > 0 %}
-                <svg viewBox="0 0 800 130" preserveAspectRatio="none" style="width:100%; display:block;">
-                    <rect x="0" y="0" width="800" height="130" fill="#fafafa"/>
+                {# Calculate column positions to match table layout #}
+                {# Table: row-header=28px fixed, data columns=equal width #}
+                {# SVG: Y-axis=4% of width, data area=96% of width #}
+                {% set vc = page.vitals|length %}
+                {% set yaxis_pct = 4 %}
+                {% set data_pct = 96 %}
+                {% set col_pct = data_pct / vc %}
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%; height:120px; display:block;">
+                    <rect x="0" y="0" width="100" height="100" fill="#fafafa"/>
 
-                    <!-- Y-axis -->
-                    <line x1="25" y1="5" x2="25" y2="115" stroke="#333" stroke-width="1"/>
-                    <text x="22" y="10" text-anchor="end" font-size="6" fill="#666">200</text>
-                    <text x="22" y="32" text-anchor="end" font-size="6" fill="#666">150</text>
-                    <text x="22" y="60" text-anchor="end" font-size="6" fill="#666">100</text>
-                    <text x="22" y="87" text-anchor="end" font-size="6" fill="#666">50</text>
-                    <text x="22" y="115" text-anchor="end" font-size="6" fill="#666">0</text>
+                    <!-- Y-axis labels (outside main chart area) -->
+                    <text x="{{ yaxis_pct - 0.5 }}" y="5" text-anchor="end" font-size="2.5" fill="#666">200</text>
+                    <text x="{{ yaxis_pct - 0.5 }}" y="27" text-anchor="end" font-size="2.5" fill="#666">150</text>
+                    <text x="{{ yaxis_pct - 0.5 }}" y="50" text-anchor="end" font-size="2.5" fill="#666">100</text>
+                    <text x="{{ yaxis_pct - 0.5 }}" y="73" text-anchor="end" font-size="2.5" fill="#666">50</text>
 
-                    <!-- Grid -->
-                    <line x1="25" y1="32" x2="795" y2="32" stroke="#ddd" stroke-width="0.5"/>
-                    <line x1="25" y1="60" x2="795" y2="60" stroke="#ccc" stroke-width="0.5" stroke-dasharray="3,3"/>
-                    <line x1="25" y1="87" x2="795" y2="87" stroke="#ddd" stroke-width="0.5"/>
-                    <line x1="25" y1="115" x2="795" y2="115" stroke="#333" stroke-width="1"/>
+                    <!-- Y-axis line -->
+                    <line x1="{{ yaxis_pct }}" y1="0" x2="{{ yaxis_pct }}" y2="95" stroke="#999" stroke-width="0.2"/>
 
-                    {% set vc = page.vitals|length %}
-                    {% set xs = 770 / (vc if vc > 1 else 1) %}
+                    <!-- Horizontal grid lines -->
+                    <line x1="{{ yaxis_pct }}" y1="27" x2="100" y2="27" stroke="#ddd" stroke-width="0.1"/>
+                    <line x1="{{ yaxis_pct }}" y1="50" x2="100" y2="50" stroke="#ccc" stroke-width="0.15" stroke-dasharray="1,1"/>
+                    <line x1="{{ yaxis_pct }}" y1="73" x2="100" y2="73" stroke="#ddd" stroke-width="0.1"/>
+                    <line x1="{{ yaxis_pct }}" y1="95" x2="100" y2="95" stroke="#999" stroke-width="0.2"/>
 
-                    <!-- SBP -->
-                    <polyline fill="none" stroke="#dc2626" stroke-width="1.5"
-                        points="{% for v in page.vitals %}{% if v.sbp %}{{ 25 + loop.index0 * xs }},{{ 115 - (v.sbp / 200 * 110) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
-
-                    <!-- DBP -->
-                    <polyline fill="none" stroke="#2563eb" stroke-width="1.5"
-                        points="{% for v in page.vitals %}{% if v.dbp %}{{ 25 + loop.index0 * xs }},{{ 115 - (v.dbp / 200 * 110) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
-
-                    <!-- HR -->
-                    <polyline fill="none" stroke="#16a34a" stroke-width="1" stroke-dasharray="4,2"
-                        points="{% for v in page.vitals %}{% if v.hr %}{{ 25 + loop.index0 * xs }},{{ 115 - (v.hr / 200 * 110) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
-
-                    <!-- Points -->
+                    <!-- Vertical grid lines for each column -->
                     {% for v in page.vitals %}
-                        {% set xp = 25 + loop.index0 * xs %}
-                        {% if v.sbp %}<circle cx="{{ xp }}" cy="{{ 115 - (v.sbp / 200 * 110) }}" r="2" fill="#dc2626"/>{% endif %}
-                        {% if v.dbp %}<circle cx="{{ xp }}" cy="{{ 115 - (v.dbp / 200 * 110) }}" r="2" fill="#2563eb"/>{% endif %}
-                        {% if v.hr %}<rect x="{{ xp - 1.5 }}" y="{{ 115 - (v.hr / 200 * 110) - 1.5 }}" width="3" height="3" fill="#16a34a"/>{% endif %}
-                        <text x="{{ xp }}" y="125" text-anchor="middle" font-size="5" fill="#333">{{ v.minute }}</text>
+                    {% set col_x = yaxis_pct + loop.index0 * col_pct %}
+                    <line x1="{{ col_x }}" y1="0" x2="{{ col_x }}" y2="95" stroke="#eee" stroke-width="0.1"/>
+                    {% endfor %}
+
+                    <!-- SBP line (red) -->
+                    <polyline fill="none" stroke="#dc2626" stroke-width="0.4"
+                        points="{% for v in page.vitals %}{% if v.sbp %}{{ yaxis_pct + loop.index0 * col_pct + col_pct/2 }},{{ 95 - (v.sbp / 200 * 90) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
+
+                    <!-- DBP line (blue) -->
+                    <polyline fill="none" stroke="#2563eb" stroke-width="0.4"
+                        points="{% for v in page.vitals %}{% if v.dbp %}{{ yaxis_pct + loop.index0 * col_pct + col_pct/2 }},{{ 95 - (v.dbp / 200 * 90) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
+
+                    <!-- HR line (green, dashed) -->
+                    <polyline fill="none" stroke="#16a34a" stroke-width="0.3" stroke-dasharray="1,0.5"
+                        points="{% for v in page.vitals %}{% if v.hr %}{{ yaxis_pct + loop.index0 * col_pct + col_pct/2 }},{{ 95 - (v.hr / 200 * 90) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
+
+                    <!-- Data points at column centers -->
+                    {% for v in page.vitals %}
+                        {% set xp = yaxis_pct + loop.index0 * col_pct + col_pct/2 %}
+                        {% if v.sbp %}<circle cx="{{ xp }}" cy="{{ 95 - (v.sbp / 200 * 90) }}" r="0.6" fill="#dc2626"/>{% endif %}
+                        {% if v.dbp %}<circle cx="{{ xp }}" cy="{{ 95 - (v.dbp / 200 * 90) }}" r="0.6" fill="#2563eb"/>{% endif %}
+                        {% if v.hr %}<rect x="{{ xp - 0.4 }}" y="{{ 95 - (v.hr / 200 * 90) - 0.4 }}" width="0.8" height="0.8" fill="#16a34a"/>{% endif %}
                     {% endfor %}
                 </svg>
                 {% endif %}
 
-                <!-- Vent Settings -->
-                {% if vent_settings and vent_settings|length > 0 %}
-                <div class="vent-inline">
-                    <strong>Vent:</strong>
-                    {% set last_vent = vent_settings[-1] %}
-                    Mode:{{ last_vent.mode or '-' }} FiO2:{{ last_vent.fio2 or '-' }}% PEEP:{{ last_vent.peep or '-' }} TV:{{ last_vent.tv or '-' }} RR:{{ last_vent.rr or '-' }}
-                </div>
-                {% endif %}
             </div>
 
             <!-- Vitals Table -->
