@@ -3279,6 +3279,55 @@
         </div>
     </div>
 
+    <!-- v2.1: PDF Preview Modal (for Vercel Demo) -->
+    <div class="modal" id="pdfPreviewModal">
+        <div class="modal-content" style="max-width: 95vw; max-height: 95vh; width: 1000px; height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="flex-shrink: 0;">
+                <h2 class="modal-title">麻醉紀錄預覽 (M0073)</h2>
+                <button class="modal-close" onclick="closePDFPreviewModal()">&times;</button>
+            </div>
+
+            <!-- Vercel Demo Notice -->
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 8px; padding: 12px 16px; margin: 12px 16px 0 16px; flex-shrink: 0;">
+                <div style="display: flex; align-items: flex-start; gap: 10px;">
+                    <svg style="width: 20px; height: 20px; color: #d97706; flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div style="color: #92400e; font-size: 0.875rem;">
+                        <strong style="display: block; margin-bottom: 4px;">Vercel Demo 環境</strong>
+                        <span>由於 Vercel 的限制，PDF 直接下載功能僅在 Raspberry Pi 5 部署版本可用。</span>
+                        <span style="display: block; margin-top: 4px;">請使用下方按鈕開啟新視窗，然後按 <kbd style="background: #fff; padding: 2px 6px; border-radius: 4px; border: 1px solid #d97706; font-family: monospace;">Ctrl+P</kbd> (Windows) 或 <kbd style="background: #fff; padding: 2px 6px; border-radius: 4px; border: 1px solid #d97706; font-family: monospace;">Cmd+P</kbd> (Mac) 來列印或儲存為 PDF。</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 8px; padding: 12px 16px; flex-shrink: 0; border-bottom: 1px solid var(--border);">
+                <button onclick="openPDFInNewTab()" class="btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                    開啟新視窗列印
+                </button>
+                <button onclick="printPDFPreview()" class="btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background: #22c55e; border-color: #22c55e;">
+                    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                    </svg>
+                    直接列印
+                </button>
+            </div>
+
+            <!-- Preview iframe -->
+            <input type="hidden" id="pdfPreviewUrl" value="">
+            <iframe id="pdfPreviewFrame" style="flex: 1; border: none; background: #f5f5f5;" src="about:blank"></iframe>
+
+            <!-- Footer Info -->
+            <div style="padding: 8px 16px; background: var(--bg-secondary); border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-muted); flex-shrink: 0;">
+                <strong>RPi5 部署版本</strong>：支援 WeasyPrint 直接產生 PDF 並自動下載，無需手動列印。
+            </div>
+        </div>
+    </div>
+
     <!-- xIRS SDK v1.1 (Strangler Pattern Phase 1) -->
     <script src="/shared/sdk/xirs-config.js"></script>
     <script src="/shared/sdk/xirs-api.js"></script>
@@ -6290,7 +6339,16 @@
 
         // =================================================================
         // PDF Generation (v2.1) - M0073 Anesthesia Record
+        // Auto-detect: WeasyPrint (RPi5/Local) or HTML Preview (Vercel)
         // =================================================================
+
+        // Detect if running on Vercel demo environment
+        function isVercelDemo() {
+            const hostname = window.location.hostname;
+            return hostname.includes('vercel.app') ||
+                   hostname.includes('.vercel.') ||
+                   hostname.includes('mirs') && hostname.includes('.app');
+        }
 
         async function downloadPDF() {
             if (!currentCase) {
@@ -6300,7 +6358,14 @@
 
             const caseId = currentCase.id;
 
-            // Show loading state
+            // Auto-detect environment
+            if (isVercelDemo()) {
+                // Vercel: Open HTML preview with print instructions
+                openPDFPreviewModal(caseId);
+                return;
+            }
+
+            // Local/RPi5: Use WeasyPrint API
             const btn = event.target.closest('button');
             const originalText = btn.innerHTML;
             btn.innerHTML = `
@@ -6312,11 +6377,15 @@
             btn.disabled = true;
 
             try {
-                // Fetch PDF from API
                 const res = await fetch(`${API_BASE}/cases/${caseId}/pdf?hospital_name=${encodeURIComponent('烏日林新醫院')}`);
 
                 if (!res.ok) {
                     const error = await res.json().catch(() => ({ detail: 'PDF 生成失敗' }));
+                    // If WeasyPrint not available, fallback to preview
+                    if (error.detail && error.detail.includes('not available')) {
+                        openPDFPreviewModal(caseId);
+                        return;
+                    }
                     throw new Error(error.detail || 'PDF 生成失敗');
                 }
 
@@ -6333,12 +6402,43 @@
 
             } catch (err) {
                 console.error('PDF download error:', err);
-                alert('PDF 下載失敗: ' + err.message);
+                // Fallback to preview on any error
+                if (confirm('PDF 直接下載失敗，要開啟預覽頁面嗎？\n\n' + err.message)) {
+                    openPDFPreviewModal(caseId);
+                }
             } finally {
-                // Restore button
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
+        }
+
+        function openPDFPreviewModal(caseId) {
+            // Show the PDF preview modal with instructions
+            const modal = document.getElementById('pdfPreviewModal');
+            const previewUrl = `${API_BASE}/cases/${caseId}/pdf/preview?hospital_name=${encodeURIComponent('烏日林新醫院')}`;
+            document.getElementById('pdfPreviewUrl').value = previewUrl;
+            document.getElementById('pdfPreviewFrame').src = previewUrl;
+            modal.classList.add('active');
+        }
+
+        function closePDFPreviewModal() {
+            const modal = document.getElementById('pdfPreviewModal');
+            modal.classList.remove('active');
+            document.getElementById('pdfPreviewFrame').src = 'about:blank';
+        }
+
+        function openPDFInNewTab() {
+            const url = document.getElementById('pdfPreviewUrl').value;
+            const win = window.open(url, '_blank');
+            // Show print dialog hint
+            setTimeout(() => {
+                alert('請在新視窗中按 Ctrl+P (Windows) 或 Cmd+P (Mac) 來列印/儲存 PDF');
+            }, 500);
+        }
+
+        function printPDFPreview() {
+            const frame = document.getElementById('pdfPreviewFrame');
+            frame.contentWindow.print();
         }
 
         async function previewPDF() {
