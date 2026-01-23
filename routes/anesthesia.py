@@ -787,14 +787,37 @@ def init_anesthesia_schema(cursor):
             patient_id TEXT NOT NULL,
             patient_name TEXT,
 
+            -- v2.2: Patient demographics for PDF
+            patient_gender TEXT,
+            patient_age INTEGER,
+            patient_weight REAL,
+            patient_height REAL,
+            blood_type TEXT,
+            asa_class TEXT,
+
             -- v2.1.1: Surgery info
             diagnosis TEXT,
             operation TEXT,
+            or_room TEXT,
+            surgeon_name TEXT,
+
+            -- v2.2: Preop labs
+            preop_hb REAL,
+            preop_ht REAL,
+            preop_k REAL,
+            preop_na REAL,
+
+            -- v2.2: Blood preparation
+            estimated_blood_loss INTEGER,
+            blood_prepared TEXT,
+            blood_prepared_units TEXT,
 
             context_mode TEXT NOT NULL DEFAULT 'STANDARD',
 
             primary_anesthesiologist_id TEXT,
+            primary_anesthesiologist_name TEXT,
             primary_nurse_id TEXT,
+            primary_nurse_name TEXT,
 
             planned_technique TEXT,
 
@@ -8365,10 +8388,11 @@ def _rebuild_state_from_events(events: List[Dict]) -> Dict:
                 "catheter_type": payload.get("catheter_type", "PERIPHERAL")
             })
 
-        # IV Fluids (支援 FLUID_IN 和 IV_FLUID_GIVEN)
-        elif event_type in ("IV_FLUID_GIVEN", "FLUID_IN"):
-            fluid_type = (payload.get("fluid_type") or "").upper()
-            amount = payload.get("amount_ml", 0)
+        # IV Fluids (支援 FLUID_IN, IV_FLUID_GIVEN, FLUID_BOLUS)
+        elif event_type in ("IV_FLUID_GIVEN", "FLUID_IN", "FLUID_BOLUS"):
+            fluid_type = (payload.get("fluid_type") or payload.get("type") or "").upper()
+            # 支援多種欄位名稱: volume_ml, amount_ml, volume, amount
+            amount = payload.get("volume_ml") or payload.get("amount_ml") or payload.get("volume") or payload.get("amount", 0)
             if any(t in fluid_type for t in blood_types):
                 state["io_balance"]["input"]["blood_ml"] += amount
             elif any(t in fluid_type for t in colloid_types):
@@ -8378,32 +8402,21 @@ def _rebuild_state_from_events(events: List[Dict]) -> Dict:
 
         # Blood Products
         elif event_type == "BLOOD_PRODUCT":
-            amount = payload.get("volume_ml", 0)
+            amount = payload.get("volume_ml") or payload.get("amount_ml", 0)
             state["io_balance"]["input"]["blood_ml"] += amount
 
-        # Fluid Input
-        elif event_type in ("FLUID_IN", "FLUID_BOLUS"):
-            fluid_type = (payload.get("fluid_type") or payload.get("type") or "").upper()
-            amount = payload.get("volume") or payload.get("amount_ml", 0)
-            if any(t in fluid_type for t in blood_types):
-                state["io_balance"]["input"]["blood_ml"] += amount
-            elif any(t in fluid_type for t in colloid_types):
-                state["io_balance"]["input"]["colloid_ml"] += amount
-            else:
-                state["io_balance"]["input"]["crystalloid_ml"] += amount
-
-        # Urine Output (支援 OUTPUT 和 URINE_OUTPUT)
+        # Urine Output / Blood Loss (支援 OUTPUT 和 URINE_OUTPUT)
         elif event_type in ("URINE_OUTPUT", "OUTPUT"):
             output_type = payload.get("output_type", "urine").lower()
-            amount = payload.get("amount_ml") or payload.get("volume_ml", 0)
-            if output_type == "urine":
+            amount = payload.get("volume_ml") or payload.get("amount_ml") or payload.get("amount", 0)
+            if "urine" in output_type:
                 state["io_balance"]["output"]["urine_ml"] += amount
-            else:
+            elif "blood" in output_type:
                 state["io_balance"]["output"]["blood_loss_ml"] += amount
 
-        # Blood Loss
+        # Blood Loss (explicit)
         elif event_type == "FLUID_OUT":
-            state["io_balance"]["output"]["blood_loss_ml"] += payload.get("volume_ml", 0)
+            state["io_balance"]["output"]["blood_loss_ml"] += payload.get("volume_ml") or payload.get("amount_ml", 0)
 
         # Monitor Started (track Foley, etc.)
         elif event_type == "MONITOR_STARTED":
@@ -8451,15 +8464,27 @@ def _rebuild_state_from_events(events: List[Dict]) -> Dict:
                 "glucose": payload.get("glucose")
             })
 
-        # Timeline Events
+        # Timeline Events - extract HH:MM from ISO datetime
         elif event_type == "ANESTHESIA_START":
-            state["times"]["anesthesia_start"] = clinical_time[:5] if clinical_time else None
+            if clinical_time and "T" in clinical_time:
+                state["times"]["anesthesia_start"] = clinical_time.split("T")[1][:5]
+            elif clinical_time:
+                state["times"]["anesthesia_start"] = clinical_time[:5]
         elif event_type == "ANESTHESIA_END":
-            state["times"]["anesthesia_end"] = clinical_time[:5] if clinical_time else None
+            if clinical_time and "T" in clinical_time:
+                state["times"]["anesthesia_end"] = clinical_time.split("T")[1][:5]
+            elif clinical_time:
+                state["times"]["anesthesia_end"] = clinical_time[:5]
         elif event_type == "SURGERY_START":
-            state["times"]["surgery_start"] = clinical_time[:5] if clinical_time else None
+            if clinical_time and "T" in clinical_time:
+                state["times"]["surgery_start"] = clinical_time.split("T")[1][:5]
+            elif clinical_time:
+                state["times"]["surgery_start"] = clinical_time[:5]
         elif event_type == "SURGERY_END":
-            state["times"]["surgery_end"] = clinical_time[:5] if clinical_time else None
+            if clinical_time and "T" in clinical_time:
+                state["times"]["surgery_end"] = clinical_time.split("T")[1][:5]
+            elif clinical_time:
+                state["times"]["surgery_end"] = clinical_time[:5]
 
         # Technique
         elif event_type == "TECHNIQUE_SET":

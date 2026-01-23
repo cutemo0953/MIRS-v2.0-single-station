@@ -923,20 +923,37 @@ def seed_anesthesia_demo(conn: sqlite3.Connection):
         """, (case_id, patient_id, name, dx, op, tech, asa, now.isoformat()))
 
     # === Case 6: 長時間手術 (4.5小時，測試多頁 PDF) ===
+    # 完整的 AAA 修補手術案例，包含所有欄位
     case6_start = now - timedelta(hours=5)
     case6_id = "ANES-SEED-006"
 
     cursor.execute("""
         INSERT INTO anesthesia_cases
-        (id, patient_id, patient_name, diagnosis, operation,
-         context_mode, planned_technique, asa_classification,
+        (id, patient_id, patient_name,
+         patient_gender, patient_age, patient_weight, patient_height, blood_type, asa_class,
+         diagnosis, operation, or_room, surgeon_name,
+         preop_hb, preop_ht, preop_k, preop_na,
+         estimated_blood_loss, blood_prepared, blood_prepared_units,
+         context_mode, planned_technique,
+         primary_anesthesiologist_name, primary_nurse_name,
          status, anesthesia_start_at, surgery_start_at, surgery_end_at, anesthesia_end_at,
          created_at, created_by)
-        VALUES (?, ?, ?, ?, ?, 'STANDARD', ?, ?, 'CLOSED', ?, ?, ?, ?, ?, 'SEED')
+        VALUES (?, ?, ?,
+                ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?,
+                'STANDARD', ?,
+                ?, ?,
+                'CLOSED', ?, ?, ?, ?, ?, 'SEED')
     """, (
         case6_id, "P-TEST-006", "黃志明",
-        "主動脈瘤 (AAA)", "開腹主動脈瘤修補術 + 雙側髂動脈人工血管置換",
-        "GA_ETT", "III",
+        "M", 68, 72.5, 168, "A+", "III",
+        "主動脈瘤 (AAA)", "開腹主動脈瘤修補術 + 雙側髂動脈人工血管置換", "OR-3", "張心外醫師",
+        13.5, 40, 4.0, 140,
+        1500, "A+", "4U pRBC, 4U FFP, 6U PLT",
+        "GA_ETT",
+        "李麻醉醫師", "王護理師",
         case6_start.isoformat(),
         (case6_start + timedelta(minutes=30)).isoformat(),
         (case6_start + timedelta(hours=4, minutes=30)).isoformat(),
@@ -1041,16 +1058,20 @@ def seed_anesthesia_demo(conn: sqlite3.Connection):
         ))
 
     # I/O Balance (大手術大量輸液)
+    # fluid_type 需使用可識別的關鍵字: NS, LR, D5W (晶體), VOLUVEN, ALBUMIN (膠體), PRBC, FFP, PLT (血品)
     fluids_in = [
-        (30, "crystalloid", "Normal Saline", 1000),
-        (60, "crystalloid", "Lactated Ringer", 1000),
-        (100, "crystalloid", "Lactated Ringer", 500),
-        (140, "colloid", "Voluven", 500),
-        (180, "crystalloid", "Lactated Ringer", 1000),
-        (200, "blood", "pRBC Unit 1", 250),
-        (210, "blood", "pRBC Unit 2", 250),
-        (220, "crystalloid", "Lactated Ringer", 500),
-        (250, "blood", "FFP Unit 1", 200),
+        (30, "NS", "Normal Saline 0.9%", 1000),
+        (60, "LR", "Lactated Ringer", 1000),
+        (100, "LR", "Lactated Ringer", 500),
+        (140, "VOLUVEN", "Voluven 6%", 500),
+        (180, "LR", "Lactated Ringer", 1000),
+        (200, "PRBC", "pRBC Unit 1 (A+)", 280),
+        (215, "PRBC", "pRBC Unit 2 (A+)", 280),
+        (220, "LR", "Lactated Ringer", 500),
+        (240, "PRBC", "pRBC Unit 3 (A+)", 280),
+        (250, "FFP", "FFP Unit 1 (A+)", 220),
+        (260, "FFP", "FFP Unit 2 (A+)", 220),
+        (275, "ALBUMIN", "Albumin 20% 100mL", 100),
     ]
     for mins, ftype, fname, vol in fluids_in:
         cursor.execute("""
@@ -1167,18 +1188,37 @@ def seed_anesthesia_demo(conn: sqlite3.Connection):
             })
         ))
 
-    # === 新增：術前評估資料 (更新 case) ===
-    cursor.execute("""
-        UPDATE anesthesia_cases SET
-            preop_hb = 13.5,
-            preop_ht = 40,
-            preop_k = 4.0,
-            preop_na = 140,
-            estimated_blood_loss = 1500,
-            blood_prepared = 'A+',
-            blood_prepared_units = '4U pRBC, 4U FFP, 6U PLT'
-        WHERE id = ?
-    """, (case6_id,))
+    # === 新增：麻醉/手術時間事件 ===
+    time_events = [
+        (0, "ANESTHESIA_START"),
+        (30, "SURGERY_START"),
+        (270, "SURGERY_END"),
+        (300, "ANESTHESIA_END"),
+    ]
+    for mins, etype in time_events:
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, ?, ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, etype, (case6_start + timedelta(minutes=mins)).isoformat(),
+            json.dumps({"time": (case6_start + timedelta(minutes=mins)).isoformat()})
+        ))
+
+    # === 新增：人員指派事件 ===
+    staff_events = [
+        (0, "ANESTHESIOLOGIST", "李麻醉醫師"),
+        (0, "NURSE", "王護理師"),
+    ]
+    for mins, role, name in staff_events:
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'STAFF_ASSIGNED', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, (case6_start + timedelta(minutes=mins)).isoformat(),
+            json.dumps({"role": role, "name": name})
+        ))
 
     conn.commit()
     print(f"[Anesthesia Seeder] Created 6 demo cases:")
