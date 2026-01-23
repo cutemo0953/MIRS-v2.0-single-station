@@ -418,7 +418,7 @@
     <div class="header">
         <div class="hospital-info">
             <div class="hospital-name">{{ hospital_name }}</div>
-            {% if hospital_address and not hospital_address.startswith('annotation=') %}<div>{{ hospital_address }}</div>{% endif %}
+            {% if hospital_address and 'annotation=' not in (hospital_address|string) %}<div>{{ hospital_address }}</div>{% endif %}
         </div>
         <div class="form-title">
             麻醉紀錄單
