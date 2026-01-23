@@ -8515,7 +8515,7 @@ async def generate_pdf(
         cursor.execute("""
             SELECT * FROM anesthesia_events
             WHERE case_id = ?
-            ORDER BY clinical_time ASC, created_at ASC
+            ORDER BY clinical_time ASC, recorded_at ASC
         """, (case_id,))
         events = [dict(row) for row in cursor.fetchall()]
 
