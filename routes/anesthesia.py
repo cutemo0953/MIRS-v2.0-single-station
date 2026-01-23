@@ -8375,6 +8375,86 @@ async def generate_pdf(
                 detail="PDF generation not available. Install: pip install weasyprint jinja2 matplotlib"
             )
 
+    # Vercel Demo Mode: Generate demo preview
+    if IS_VERCEL:
+        now = datetime.now()
+        demo_context = {
+            "hospital_name": hospital_name,
+            "hospital_address": hospital_address,
+            "case_id": case_id,
+            "patient": {
+                "name": "王大明",
+                "chart_no": "P-DEMO-001",
+                "gender": "男",
+                "age": "45",
+                "weight": "70",
+                "height": "170",
+                "blood_type": "A+",
+                "asa_class": "II"
+            },
+            "surgery": {
+                "name": "腹腔鏡膽囊切除術",
+                "procedure": "Laparoscopic Cholecystectomy",
+                "date": now.strftime("%Y-%m-%d"),
+                "or_room": "OR-01",
+                "surgeon": "陳醫師"
+            },
+            "technique": "GA_ETT",
+            "iv_lines": [
+                {"line_number": 1, "site": "右手背", "gauge": "20G", "catheter_type": "PERIPHERAL"}
+            ],
+            "io_balance": {
+                "input": {"crystalloid_ml": 1000, "colloid_ml": 0, "blood_ml": 0, "total_ml": 1000},
+                "output": {"urine_ml": 300, "blood_loss_ml": 100, "total_ml": 400},
+                "balance_ml": 600
+            },
+            "times": {
+                "anesthesia_start": "08:30",
+                "anesthesia_end": "11:00",
+                "surgery_start": "09:00",
+                "surgery_end": "10:30"
+            },
+            "anesthesiologist": "李麻醉醫師",
+            "nurse": "林護理師",
+            "pages": [{
+                "page_number": 1,
+                "vitals": [
+                    {"time_display": "08:30", "sbp": 120, "dbp": 80, "hr": 72, "spo2": 99, "etco2": 35, "rr": 14, "temp": "36.5", "fio2": "50%", "mac": "1.0"},
+                    {"time_display": "08:45", "sbp": 115, "dbp": 75, "hr": 68, "spo2": 100, "etco2": 34, "rr": 12, "temp": "36.4", "fio2": "50%", "mac": "1.2"},
+                    {"time_display": "09:00", "sbp": 110, "dbp": 70, "hr": 65, "spo2": 100, "etco2": 33, "rr": 12, "temp": "36.3", "fio2": "45%", "mac": "1.0"},
+                    {"time_display": "09:15", "sbp": 108, "dbp": 68, "hr": 62, "spo2": 99, "etco2": 34, "rr": 12, "temp": "36.2", "fio2": "45%", "mac": "1.0"},
+                    {"time_display": "09:30", "sbp": 112, "dbp": 72, "hr": 64, "spo2": 100, "etco2": 35, "rr": 12, "temp": "36.2", "fio2": "45%", "mac": "0.9"},
+                    {"time_display": "09:45", "sbp": 118, "dbp": 76, "hr": 68, "spo2": 99, "etco2": 34, "rr": 14, "temp": "36.3", "fio2": "40%", "mac": "0.8"},
+                    {"time_display": "10:00", "sbp": 122, "dbp": 78, "hr": 72, "spo2": 100, "etco2": 35, "rr": 14, "temp": "36.4", "fio2": "40%", "mac": "0.6"},
+                    {"time_display": "10:15", "sbp": 125, "dbp": 80, "hr": 75, "spo2": 99, "etco2": 36, "rr": 14, "temp": "36.5", "fio2": "35%", "mac": "0.4"},
+                    {"time_display": "10:30", "sbp": 128, "dbp": 82, "hr": 78, "spo2": 100, "etco2": 37, "rr": 16, "temp": "36.6", "fio2": "30%", "mac": "0.2"},
+                ],
+                "drugs": [
+                    {"time": "08:30", "name": "Propofol", "dose": "150 mg", "route": "IV"},
+                    {"time": "08:31", "name": "Fentanyl", "dose": "100 mcg", "route": "IV"},
+                    {"time": "08:32", "name": "Rocuronium", "dose": "50 mg", "route": "IV"},
+                    {"time": "08:35", "name": "Sevoflurane", "dose": "2%", "route": "INH"},
+                    {"time": "09:30", "name": "Fentanyl", "dose": "50 mcg", "route": "IV"},
+                    {"time": "10:15", "name": "Ondansetron", "dose": "4 mg", "route": "IV"},
+                ],
+                "chart_image": ""
+            }],
+            "total_pages": 1,
+            "generated_at": now.strftime("%Y-%m-%d %H:%M:%S") + " (Demo)"
+        }
+
+        # Render demo template
+        template_dir = Path(__file__).parent.parent / "templates"
+        env = Environment(loader=FileSystemLoader(str(template_dir)))
+        template = env.get_template("anesthesia_record_m0073.html")
+        html_content = template.render(**demo_context)
+
+        return StreamingResponse(
+            io.BytesIO(html_content.encode('utf-8')),
+            media_type="text/html",
+            headers={"Content-Disposition": f"inline; filename=anesthesia_{case_id}_demo.html"}
+        )
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
