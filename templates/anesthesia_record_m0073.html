@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>麻醉紀錄單 M0073</title>
     <style>
         @page {
@@ -328,6 +329,86 @@
                 print-color-adjust: exact;
             }
         }
+
+        /* Mobile Responsive (iPhone) */
+        @media screen and (max-width: 768px) {
+            @page {
+                size: A4 portrait;
+                margin: 5mm;
+            }
+
+            body {
+                font-size: 8pt;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .form-title {
+                font-size: 14pt;
+            }
+
+            .patient-info {
+                grid-template-columns: repeat(2, 1fr);
+                font-size: 7pt;
+            }
+
+            .technique-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .chart-main {
+                min-height: 150px;
+                padding: 4px;
+            }
+
+            .chart-main svg {
+                height: 150px;
+            }
+
+            /* Stack bottom columns vertically on mobile */
+            .bottom-content {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .drugs-column,
+            .vitals-column,
+            .io-column {
+                width: 100%;
+            }
+
+            .vitals-table {
+                font-size: 5pt;
+            }
+
+            .vitals-table th,
+            .vitals-table td {
+                padding: 1px;
+                min-width: 14px;
+            }
+
+            .footer {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Very small screens (iPhone SE) */
+        @media screen and (max-width: 375px) {
+            .patient-info {
+                grid-template-columns: 1fr;
+            }
+
+            .technique-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -337,7 +418,7 @@
     <div class="header">
         <div class="hospital-info">
             <div class="hospital-name">{{ hospital_name }}</div>
-            <div>{{ hospital_address }}</div>
+            {% if hospital_address and not hospital_address.startswith('annotation=') %}<div>{{ hospital_address }}</div>{% endif %}
         </div>
         <div class="form-title">
             麻醉紀錄單
