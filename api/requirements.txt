@@ -1,5 +1,5 @@
 # MIRS Backend Dependencies for Vercel
-# Medical Inventory Resilience System v1.4.2-plus
+# Medical Inventory Resilience System v2.1
 
 fastapi>=0.104.0
 uvicorn>=0.24.0
@@ -13,4 +13,7 @@ pytz>=2024.1   # Timezone handling for blood bank expiry
 
 # PostgreSQL support (Neon)
 psycopg2-binary>=2.9.9
-# v1.5.1 - 2025年12月30日 - CIRS proxy support
+
+# v2.1: Anesthesia PDF Preview (HTML only on Vercel)
+jinja2>=3.1.0  # HTML template rendering for PDF preview
+# Note: weasyprint/matplotlib NOT included (require system deps)
