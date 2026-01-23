@@ -7570,6 +7570,17 @@ async def insert_iv_line(case_id: str, req: InsertIVLineRequest, actor_id: str =
 
     POST /api/anesthesia/cases/{case_id}/iv-lines
     """
+    if IS_VERCEL:
+        line_id = f"IV-{uuid.uuid4().hex[:8].upper()}"
+        return {
+            "line_id": line_id,
+            "line_number": 1,
+            "site": req.site,
+            "gauge": req.gauge,
+            "inserted_at": datetime.now().isoformat(),
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -7627,6 +7638,11 @@ async def insert_iv_line(case_id: str, req: InsertIVLineRequest, actor_id: str =
 @router.get("/cases/{case_id}/iv-lines")
 async def get_iv_lines(case_id: str, include_removed: bool = False):
     """取得案例的 IV 管路列表"""
+    if IS_VERCEL:
+        return {"iv_lines": [
+            {"line_id": "IV-DEMO-001", "line_number": 1, "site": "右手背", "gauge": "20G", "catheter_type": "PERIPHERAL", "current_rate_ml_hr": 100, "current_fluid_type": "N/S", "total_volume_ml": 500, "inserted_at": datetime.now().isoformat()},
+        ], "demo_mode": True}
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -7650,6 +7666,9 @@ async def update_iv_line(case_id: str, line_id: str, req: UpdateIVLineRequest, a
 
     PATCH /api/anesthesia/cases/{case_id}/iv-lines/{line_id}
     """
+    if IS_VERCEL:
+        return {"success": True, "line_id": line_id, "demo_mode": True}
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -7703,6 +7722,16 @@ async def give_iv_fluid(case_id: str, line_id: str, req: GiveIVFluidRequest, act
 
     POST /api/anesthesia/cases/{case_id}/iv-lines/{line_id}/fluids
     """
+    if IS_VERCEL:
+        return {
+            "success": True,
+            "line_id": line_id,
+            "fluid_type": req.fluid_type,
+            "amount_ml": req.amount_ml,
+            "cumulative_ml": req.amount_ml + 500,
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -7760,6 +7789,15 @@ async def start_monitor(case_id: str, req: StartMonitorRequest, actor_id: str = 
 
     POST /api/anesthesia/cases/{case_id}/monitors
     """
+    if IS_VERCEL:
+        monitor_id = f"MON-{uuid.uuid4().hex[:8].upper()}"
+        return {
+            "monitor_id": monitor_id,
+            "monitor_type": req.monitor_type,
+            "started_at": datetime.now().isoformat(),
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -7805,6 +7843,13 @@ async def start_monitor(case_id: str, req: StartMonitorRequest, actor_id: str = 
 @router.get("/cases/{case_id}/monitors")
 async def get_monitors(case_id: str, include_stopped: bool = False):
     """取得案例的監測器列表"""
+    if IS_VERCEL:
+        return {"monitors": [
+            {"monitor_id": "MON-DEMO-001", "monitor_type": "EKG", "started_at": datetime.now().isoformat()},
+            {"monitor_id": "MON-DEMO-002", "monitor_type": "SPO2", "started_at": datetime.now().isoformat()},
+            {"monitor_id": "MON-DEMO-003", "monitor_type": "NIBP", "started_at": datetime.now().isoformat()},
+        ], "demo_mode": True}
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -7843,6 +7888,9 @@ async def stop_monitor(case_id: str, monitor_id: str, actor_id: str = Query(...)
 
     DELETE /api/anesthesia/cases/{case_id}/monitors/{monitor_id}
     """
+    if IS_VERCEL:
+        return {"success": True, "monitor_id": monitor_id, "stopped_at": datetime.now().isoformat(), "demo_mode": True}
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -7880,6 +7928,14 @@ async def record_urine_output(case_id: str, req: RecordUrineOutputRequest, actor
 
     POST /api/anesthesia/cases/{case_id}/urine-output
     """
+    if IS_VERCEL:
+        return {
+            "success": True,
+            "amount_ml": req.amount_ml,
+            "cumulative_ml": req.amount_ml + 200,
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -7939,6 +7995,9 @@ async def complete_timeout(case_id: str, req: TimeOutRequest, actor_id: str = Qu
 
     POST /api/anesthesia/cases/{case_id}/timeout
     """
+    if IS_VERCEL:
+        return {"success": True, "completed_at": datetime.now().isoformat(), "demo_mode": True}
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -7983,6 +8042,23 @@ async def get_io_balance(case_id: str):
 
     GET /api/anesthesia/cases/{case_id}/io-balance
     """
+    if IS_VERCEL:
+        return {
+            "input": {
+                "crystalloid_ml": 1000,
+                "colloid_ml": 0,
+                "blood_ml": 0,
+                "total_ml": 1000
+            },
+            "output": {
+                "urine_ml": 300,
+                "blood_loss_ml": 100,
+                "total_ml": 400
+            },
+            "balance_ml": 600,
+            "demo_mode": True
+        }
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
