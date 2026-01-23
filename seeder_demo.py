@@ -922,13 +922,175 @@ def seed_anesthesia_demo(conn: sqlite3.Connection):
             VALUES (?, ?, ?, ?, ?, 'STANDARD', ?, ?, 'PREOP', ?, 'SEED')
         """, (case_id, patient_id, name, dx, op, tech, asa, now.isoformat()))
 
+    # === Case 6: 長時間手術 (4.5小時，測試多頁 PDF) ===
+    case6_start = now - timedelta(hours=5)
+    case6_id = "ANES-SEED-006"
+
+    cursor.execute("""
+        INSERT INTO anesthesia_cases
+        (id, patient_id, patient_name, diagnosis, operation,
+         context_mode, planned_technique, asa_classification,
+         status, anesthesia_start_at, surgery_start_at, surgery_end_at, anesthesia_end_at,
+         created_at, created_by)
+        VALUES (?, ?, ?, ?, ?, 'STANDARD', ?, ?, 'COMPLETED', ?, ?, ?, ?, ?, 'SEED')
+    """, (
+        case6_id, "P-TEST-006", "黃志明",
+        "主動脈瘤 (AAA)", "開腹主動脈瘤修補術 + 雙側髂動脈人工血管置換",
+        "GA_ETT", "III",
+        case6_start.isoformat(),
+        (case6_start + timedelta(minutes=30)).isoformat(),
+        (case6_start + timedelta(hours=4, minutes=30)).isoformat(),
+        (case6_start + timedelta(hours=5)).isoformat(),
+        now.isoformat()
+    ))
+
+    # Vital signs 每 10 分鐘, 共 30 筆 (5小時)
+    import random
+    long_vitals = []
+    for i in range(31):  # 0, 10, 20, ... 300 分鐘
+        mins = i * 10
+        # 模擬手術中血壓波動
+        if mins < 30:  # 誘導期
+            sbp = 130 - (mins // 10) * 8
+            dbp = 85 - (mins // 10) * 5
+            hr = 75 - (mins // 10) * 3
+        elif mins < 120:  # 手術早期穩定
+            sbp = 105 + random.randint(-5, 5)
+            dbp = 65 + random.randint(-3, 3)
+            hr = 60 + random.randint(-3, 5)
+        elif mins < 180:  # 主動脈鉗夾期 - 血壓上升
+            sbp = 140 + random.randint(-8, 8)
+            dbp = 85 + random.randint(-5, 5)
+            hr = 70 + random.randint(-5, 8)
+        elif mins < 240:  # 解除鉗夾期 - 血壓下降風險
+            sbp = 95 + random.randint(-10, 15)
+            dbp = 55 + random.randint(-5, 8)
+            hr = 85 + random.randint(-5, 10)
+        else:  # 恢復期
+            sbp = 115 + random.randint(-5, 10)
+            dbp = 70 + random.randint(-3, 5)
+            hr = 72 + random.randint(-3, 5)
+
+        spo2 = 99 if random.random() > 0.1 else 98
+        etco2 = 34 + random.randint(-2, 2)
+        temp = 36.0 + (mins / 600)  # 體溫慢慢下降後回升
+        if temp < 35.5:
+            temp = 35.5
+        if mins > 200:
+            temp = 36.2 + random.random() * 0.3
+
+        long_vitals.append((mins, sbp, dbp, hr, spo2, etco2, round(temp, 1)))
+
+    for mins, sbp, dbp, hr, spo2, etco2, temp in long_vitals:
+        event_time = case6_start + timedelta(minutes=mins)
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'VITAL_SIGN', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, event_time.isoformat(),
+            json.dumps({"bp_sys": sbp, "bp_dia": dbp, "hr": hr, "spo2": spo2, "etco2": etco2, "temp": temp})
+        ))
+
+    # 長手術藥物 (多次追加)
+    long_meds = [
+        (0, "Propofol", "200", "mg", "IV"),
+        (1, "Fentanyl", "150", "mcg", "IV"),
+        (2, "Rocuronium", "60", "mg", "IV"),
+        (5, "Sevoflurane", "2", "%", "INH"),
+        (30, "Fentanyl", "50", "mcg", "IV"),
+        (60, "Rocuronium", "20", "mg", "IV"),
+        (90, "Fentanyl", "50", "mcg", "IV"),
+        (120, "Rocuronium", "20", "mg", "IV"),  # 鉗夾前
+        (125, "Mannitol", "100", "g", "IV"),     # 腎臟保護
+        (130, "Heparin", "5000", "U", "IV"),     # 抗凝
+        (150, "Fentanyl", "50", "mcg", "IV"),
+        (180, "Rocuronium", "20", "mg", "IV"),
+        (185, "Protamine", "50", "mg", "IV"),    # 解抗凝
+        (200, "Norepinephrine", "4", "mcg/min", "IV"),  # 升壓
+        (210, "Fentanyl", "50", "mcg", "IV"),
+        (230, "Calcium gluconate", "1", "g", "IV"),  # 輸血後
+        (250, "Ondansetron", "8", "mg", "IV"),
+        (270, "Sugammadex", "200", "mg", "IV"),  # 逆轉肌鬆
+    ]
+    for mins, drug, dose, unit, route in long_meds:
+        event_time = case6_start + timedelta(minutes=mins)
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'MEDICATION_ADMIN', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, event_time.isoformat(),
+            json.dumps({"drug_name": drug, "dose": dose, "unit": unit, "route": route})
+        ))
+
+    # IV Lines (雙路 + 中央靜脈)
+    ivs = [
+        (0, 1, "左手背", "18G", "PERIPHERAL"),
+        (5, 2, "右前臂", "16G", "PERIPHERAL"),
+        (25, 3, "右頸內靜脈", "7Fr", "CENTRAL"),
+    ]
+    for mins, line_num, site, gauge, ctype in ivs:
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'IV_ACCESS', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, (case6_start + timedelta(minutes=mins)).isoformat(),
+            json.dumps({"line_number": line_num, "site": site, "gauge": gauge, "catheter_type": ctype})
+        ))
+
+    # I/O Balance (大手術大量輸液)
+    fluids_in = [
+        (30, "crystalloid", "Normal Saline", 1000),
+        (60, "crystalloid", "Lactated Ringer", 1000),
+        (100, "crystalloid", "Lactated Ringer", 500),
+        (140, "colloid", "Voluven", 500),
+        (180, "crystalloid", "Lactated Ringer", 1000),
+        (200, "blood", "pRBC Unit 1", 250),
+        (210, "blood", "pRBC Unit 2", 250),
+        (220, "crystalloid", "Lactated Ringer", 500),
+        (250, "blood", "FFP Unit 1", 200),
+    ]
+    for mins, ftype, fname, vol in fluids_in:
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'FLUID_IN', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, (case6_start + timedelta(minutes=mins)).isoformat(),
+            json.dumps({"fluid_type": ftype, "fluid_name": fname, "volume_ml": vol})
+        ))
+
+    # 輸出: 尿量 + 失血
+    outputs = [
+        (60, "urine", 100),
+        (120, "urine", 150),
+        (150, "blood_loss", 300),  # 手術中失血
+        (180, "blood_loss", 400),
+        (200, "urine", 100),
+        (210, "blood_loss", 200),
+        (240, "urine", 200),
+        (280, "urine", 150),
+    ]
+    for mins, otype, vol in outputs:
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'OUTPUT', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, (case6_start + timedelta(minutes=mins)).isoformat(),
+            json.dumps({"output_type": otype, "volume_ml": vol})
+        ))
+
     conn.commit()
-    print(f"[Anesthesia Seeder] Created 5 demo cases:")
+    print(f"[Anesthesia Seeder] Created 6 demo cases:")
     print(f"  - ANES-SEED-001: 陳大明 (IN_PROGRESS, 8 vitals, 6 meds, IV, I/O)")
     print(f"  - ANES-SEED-002: 林小華 (PREOP)")
     print(f"  - ANES-SEED-003: 張美玲 (PREOP)")
     print(f"  - ANES-SEED-004: 王建國 (PREOP)")
     print(f"  - ANES-SEED-005: 李淑芬 (PREOP)")
+    print(f"  - ANES-SEED-006: 黃志明 (COMPLETED, 4.5hr長手術, 31 vitals, 18 meds, 3 IV lines, 血品輸注)")
 
 
 def clear_anesthesia_demo(conn: sqlite3.Connection):
