@@ -952,6 +952,22 @@
             background: var(--primary-dark);
         }
 
+        .btn-small {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-small:active {
+            background: var(--primary-dark);
+        }
+
         /* Case List (No Active Case View) */
         .case-list {
             margin-top: 16px;
@@ -3150,9 +3166,9 @@
             <div class="ivio-section">
                 <div class="ivio-section-title">
                     <span>監測器</span>
-                    <button class="btn-small" onclick="showAddMonitorDialog()" style="padding: 4px 8px; font-size: 0.75rem;">+ 新增</button>
+                    <button class="btn-small" onclick="showAddMonitorDialog()">+ 新增</button>
                 </div>
-                <div id="monitorsList" style="display: flex; flex-wrap: wrap;"></div>
+                <div id="monitorsList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
             </div>
 
             <!-- Urine Output (if Foley active) -->
@@ -3161,9 +3177,9 @@
                     <span>尿量記錄</span>
                     <span id="urineTotalDisplay" style="color: #fbbf24;">累計: 0 ml</span>
                 </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <input type="number" id="urineAmountInput" placeholder="ml" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
-                    <button onclick="recordUrineOutput()" class="btn-primary" style="padding: 10px 16px;">記錄</button>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <input type="number" id="urineAmountInput" class="form-input" placeholder="輸入 ml" style="flex: 1; margin: 0;">
+                    <button onclick="recordUrineOutput()" class="btn btn-primary" style="width: auto; padding: 16px 24px;">記錄</button>
                 </div>
             </div>
 
@@ -3171,7 +3187,7 @@
             <div class="ivio-section">
                 <div class="ivio-section-title">
                     <span>IV 管路</span>
-                    <button class="btn-small" onclick="showAddIVLineDialog()" style="padding: 4px 8px; font-size: 0.75rem;">+ 插入</button>
+                    <button class="btn-small" onclick="showAddIVLineDialog()">+ 插入</button>
                 </div>
                 <div id="ivLinesList"></div>
             </div>
@@ -3197,10 +3213,10 @@
                 <h2 class="modal-title">插入 IV 管路</h2>
                 <button class="modal-close" onclick="closeModal('addIVLineModal')">&times;</button>
             </div>
-            <div style="padding: 16px;">
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">部位 *</label>
-                    <select id="ivSiteSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+            <form onsubmit="event.preventDefault(); insertIVLine();">
+                <div class="form-group">
+                    <label class="form-label">部位 *</label>
+                    <select id="ivSiteSelect" class="form-input" required>
                         <option value="">選擇...</option>
                         <option value="左手背">左手背</option>
                         <option value="右手背">右手背</option>
@@ -3213,25 +3229,25 @@
                         <option value="股靜脈CVC">股靜脈 CVC</option>
                     </select>
                 </div>
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">Gauge</label>
-                    <select id="ivGaugeSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+                <div class="form-group">
+                    <label class="form-label">Gauge</label>
+                    <select id="ivGaugeSelect" class="form-input">
                         <option value="">選擇...</option>
                         <option value="24G">24G</option>
                         <option value="22G">22G</option>
-                        <option value="20G">20G</option>
+                        <option value="20G" selected>20G</option>
                         <option value="18G">18G</option>
                         <option value="16G">16G</option>
                         <option value="14G">14G</option>
                         <option value="CVC">CVC</option>
                     </select>
                 </div>
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">初始滴速 (ml/hr)</label>
-                    <input type="number" id="ivRateInput" placeholder="100" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+                <div class="form-group">
+                    <label class="form-label">初始滴速 (ml/hr)</label>
+                    <input type="number" id="ivRateInput" class="form-input" placeholder="100">
                 </div>
-                <button onclick="insertIVLine()" class="btn-primary" style="width: 100%; padding: 12px;">插入 IV</button>
-            </div>
+                <button type="submit" class="btn btn-primary">插入 IV</button>
+            </form>
         </div>
     </div>
 
@@ -3242,10 +3258,10 @@
                 <h2 class="modal-title">啟動監測器</h2>
                 <button class="modal-close" onclick="closeModal('addMonitorModal')">&times;</button>
             </div>
-            <div style="padding: 16px;">
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">類型 *</label>
-                    <select id="monitorTypeSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);" onchange="onMonitorTypeChange()">
+            <form onsubmit="event.preventDefault(); startMonitor();">
+                <div class="form-group">
+                    <label class="form-label">類型 *</label>
+                    <select id="monitorTypeSelect" class="form-input" required onchange="onMonitorTypeChange()">
                         <option value="">選擇...</option>
                         <option value="EKG">EKG 心電圖</option>
                         <option value="SPO2">SpO2 血氧</option>
@@ -3258,24 +3274,24 @@
                         <option value="NMT">NMT 肌鬆</option>
                     </select>
                 </div>
-                <div id="foleySettingsDiv" style="display: none; margin-bottom: 12px;">
-                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">Foley Size</label>
-                    <select id="foleySizeSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+                <div class="form-group" id="foleySettingsDiv" style="display: none;">
+                    <label class="form-label">Foley Size</label>
+                    <select id="foleySizeSelect" class="form-input">
                         <option value="14Fr">14 Fr</option>
-                        <option value="16Fr">16 Fr</option>
+                        <option value="16Fr" selected>16 Fr</option>
                         <option value="18Fr">18 Fr</option>
                     </select>
                 </div>
-                <div id="airBlanketSettingsDiv" style="display: none; margin-bottom: 12px;">
-                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">溫度設定</label>
-                    <select id="airBlanketTempSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+                <div class="form-group" id="airBlanketSettingsDiv" style="display: none;">
+                    <label class="form-label">溫度設定</label>
+                    <select id="airBlanketTempSelect" class="form-input">
                         <option value="LOW">低溫 (32-34°C)</option>
-                        <option value="MEDIUM">中溫 (36-38°C)</option>
+                        <option value="MEDIUM" selected>中溫 (36-38°C)</option>
                         <option value="HIGH">高溫 (40-43°C)</option>
                     </select>
                 </div>
-                <button onclick="startMonitor()" class="btn-primary" style="width: 100%; padding: 12px;">啟動監測</button>
-            </div>
+                <button type="submit" class="btn btn-primary">啟動監測</button>
+            </form>
         </div>
     </div>
 
@@ -3302,15 +3318,15 @@
             </div>
 
             <!-- Action Buttons -->
-            <div style="display: flex; gap: 8px; padding: 12px 16px; flex-shrink: 0; border-bottom: 1px solid var(--border);">
-                <button onclick="openPDFInNewTab()" class="btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div style="display: flex; gap: 12px; padding: 16px; flex-shrink: 0; border-bottom: 1px solid var(--border);">
+                <button onclick="openPDFInNewTab()" class="btn btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                     </svg>
                     開啟新視窗列印
                 </button>
-                <button onclick="printPDFPreview()" class="btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background: #22c55e; border-color: #22c55e;">
-                    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="printPDFPreview()" class="btn btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #10b981;">
+                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                     </svg>
                     直接列印
