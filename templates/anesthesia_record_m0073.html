@@ -88,196 +88,6 @@
             margin-right: 4px;
         }
 
-        /* Main Content Grid */
-        .main-content {
-            display: grid;
-            grid-template-columns: 180px 1fr;
-            gap: 4px;
-        }
-
-        /* Left Panel: Drugs, Chart, I/O */
-        .left-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        /* Drug Section */
-        .drug-section {
-            border: 1px solid #000;
-            font-size: 7pt;
-        }
-
-        .drug-section-title {
-            background: #e0e0e0;
-            padding: 2px 4px;
-            font-weight: bold;
-            text-align: center;
-            border-bottom: 1px solid #000;
-        }
-
-        .drug-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .drug-table th, .drug-table td {
-            border: 1px solid #999;
-            padding: 1px 2px;
-            text-align: center;
-        }
-
-        .drug-table th {
-            background: #f0f0f0;
-        }
-
-        /* Vital Signs Chart (SVG) */
-        .chart-section {
-            border: 1px solid #000;
-            background: #fff;
-            padding: 4px;
-        }
-
-        .chart-section svg {
-            width: 100%;
-            height: auto;
-        }
-
-        .chart-legend {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            font-size: 7pt;
-            margin-top: 2px;
-        }
-
-        .chart-legend-item {
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-
-        .legend-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
-        .legend-square {
-            width: 8px;
-            height: 8px;
-        }
-
-        /* I/O Balance */
-        .io-section {
-            border: 1px solid #000;
-            font-size: 7pt;
-        }
-
-        .io-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .io-table th, .io-table td {
-            border: 1px solid #999;
-            padding: 1px 3px;
-        }
-
-        .io-table th {
-            background: #f0f0f0;
-            text-align: left;
-        }
-
-        .io-table td {
-            text-align: right;
-        }
-
-        /* Right Panel: Vitals Timeline */
-        .right-panel {
-            overflow: hidden;
-        }
-
-        .vitals-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 7pt;
-        }
-
-        .vitals-table th, .vitals-table td {
-            border: 1px solid #000;
-            padding: 1px 2px;
-            text-align: center;
-            min-width: 22px;
-        }
-
-        .vitals-table th {
-            background: #f5f5f5;
-            font-weight: bold;
-        }
-
-        .vitals-table .row-header {
-            background: #e8e8e8;
-            text-align: left;
-            font-weight: bold;
-            width: 60px;
-            white-space: nowrap;
-        }
-
-        .vitals-table .time-row {
-            background: #d0d0d0;
-            font-weight: bold;
-        }
-
-        .vitals-table .bp-systolic {
-            color: #c00;
-        }
-
-        .vitals-table .bp-diastolic {
-            color: #00c;
-        }
-
-        .vitals-table .hr {
-            color: #060;
-        }
-
-        .vitals-table .spo2 {
-            color: #006;
-        }
-
-        /* Events Row */
-        .events-row td {
-            font-size: 6pt;
-            vertical-align: top;
-            max-width: 25px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        /* Footer */
-        .footer {
-            margin-top: 4px;
-            border-top: 1px solid #000;
-            padding-top: 4px;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            font-size: 8pt;
-        }
-
-        .signature-box {
-            border: 1px solid #000;
-            padding: 4px;
-            min-height: 50px;
-        }
-
-        .signature-label {
-            font-weight: bold;
-            border-bottom: 1px dashed #999;
-            margin-bottom: 4px;
-        }
-
         /* Technique Section */
         .technique-section {
             border: 1px solid #000;
@@ -318,22 +128,197 @@
             top: -2px;
         }
 
-        /* IV Section */
-        .iv-section {
-            border: 1px solid #000;
-            font-size: 7pt;
+        /* ========== NEW LAYOUT: Chart First ========== */
+
+        /* Large Chart Section (Main) */
+        .chart-main {
+            border: 2px solid #000;
+            background: #fff;
+            padding: 8px;
             margin-bottom: 4px;
+            min-height: 200px;
         }
 
-        .iv-table {
+        .chart-main svg {
+            width: 100%;
+            height: 200px;
+        }
+
+        .chart-main img {
+            width: 100%;
+            height: auto;
+            max-height: 200px;
+            object-fit: contain;
+        }
+
+        .chart-title {
+            font-weight: bold;
+            font-size: 10pt;
+            text-align: center;
+            margin-bottom: 4px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 2px;
+        }
+
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            font-size: 8pt;
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px solid #eee;
+        }
+
+        .chart-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .legend-square {
+            width: 10px;
+            height: 10px;
+        }
+
+        /* Bottom Section: 3 columns */
+        .bottom-content {
+            display: grid;
+            grid-template-columns: 150px 1fr 180px;
+            gap: 4px;
+        }
+
+        /* Left Column: Drugs */
+        .drugs-column {
+            border: 1px solid #000;
+            font-size: 7pt;
+        }
+
+        .section-title {
+            background: #e0e0e0;
+            padding: 2px 4px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #000;
+            font-size: 8pt;
+        }
+
+        .drug-table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .iv-table th, .iv-table td {
+        .drug-table th, .drug-table td {
             border: 1px solid #999;
             padding: 1px 2px;
             text-align: center;
+        }
+
+        .drug-table th {
+            background: #f0f0f0;
+        }
+
+        /* Middle Column: Compact Vitals Table */
+        .vitals-column {
+            border: 1px solid #000;
+            overflow-x: auto;
+        }
+
+        .vitals-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 6pt;
+        }
+
+        .vitals-table th, .vitals-table td {
+            border: 1px solid #ccc;
+            padding: 1px 2px;
+            text-align: center;
+            min-width: 18px;
+        }
+
+        .vitals-table th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+
+        .vitals-table .row-header {
+            background: #e8e8e8;
+            text-align: left;
+            font-weight: bold;
+            width: 40px;
+            white-space: nowrap;
+            font-size: 6pt;
+        }
+
+        .vitals-table .time-row {
+            background: #d0d0d0;
+            font-weight: bold;
+        }
+
+        .bp-systolic { color: #c00; }
+        .bp-diastolic { color: #00c; }
+        .hr-value { color: #060; }
+
+        /* Right Column: IV + I/O */
+        .io-column {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .iv-section, .io-section {
+            border: 1px solid #000;
+            font-size: 7pt;
+        }
+
+        .iv-table, .io-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .iv-table th, .iv-table td,
+        .io-table th, .io-table td {
+            border: 1px solid #999;
+            padding: 1px 3px;
+        }
+
+        .io-table th {
+            background: #f0f0f0;
+            text-align: left;
+        }
+
+        .io-table td {
+            text-align: right;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 4px;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            font-size: 8pt;
+        }
+
+        .signature-box {
+            border: 1px solid #000;
+            padding: 4px;
+            min-height: 40px;
+        }
+
+        .signature-label {
+            font-weight: bold;
+            border-bottom: 1px dashed #999;
+            margin-bottom: 4px;
         }
 
         /* Print Adjustments */
@@ -417,290 +402,213 @@
     </div>
     {% endif %}
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Left Panel -->
-        <div class="left-panel">
+    <!-- ========== MAIN: Large Vital Signs Chart ========== -->
+    <div class="chart-main">
+        <div class="chart-title">Vital Signs Monitor</div>
+
+        {% if page.chart_image %}
+        <!-- Matplotlib chart (RPi5/Local) -->
+        <img src="data:image/png;base64,{{ page.chart_image }}" alt="Vital Signs Chart">
+        {% elif page.vitals and page.vitals|length > 0 %}
+        <!-- SVG chart (Vercel/Demo) -->
+        <svg viewBox="0 0 800 180" preserveAspectRatio="xMidYMid meet">
+            <!-- Background -->
+            <rect x="0" y="0" width="800" height="180" fill="#fafafa"/>
+
+            <!-- Grid lines -->
+            <defs>
+                <pattern id="grid" width="40" height="30" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 30" fill="none" stroke="#e5e5e5" stroke-width="0.5"/>
+                </pattern>
+            </defs>
+            <rect x="50" y="10" width="740" height="150" fill="url(#grid)"/>
+
+            <!-- Y-axis (0-200) -->
+            <line x1="50" y1="10" x2="50" y2="160" stroke="#333" stroke-width="1"/>
+            <text x="45" y="15" text-anchor="end" font-size="9" fill="#666">200</text>
+            <text x="45" y="47" text-anchor="end" font-size="9" fill="#666">150</text>
+            <text x="45" y="85" text-anchor="end" font-size="9" fill="#666">100</text>
+            <text x="45" y="122" text-anchor="end" font-size="9" fill="#666">50</text>
+            <text x="45" y="160" text-anchor="end" font-size="9" fill="#666">0</text>
+
+            <!-- Horizontal reference lines -->
+            <line x1="50" y1="47" x2="790" y2="47" stroke="#ddd" stroke-width="0.5"/>
+            <line x1="50" y1="85" x2="790" y2="85" stroke="#ccc" stroke-width="0.5" stroke-dasharray="5,5"/>
+            <line x1="50" y1="122" x2="790" y2="122" stroke="#ddd" stroke-width="0.5"/>
+
+            <!-- X-axis -->
+            <line x1="50" y1="160" x2="790" y2="160" stroke="#333" stroke-width="1"/>
+
+            {% set vitals_count = page.vitals|length %}
+            {% set x_step = 740 / (vitals_count if vitals_count > 1 else 1) %}
+
+            <!-- SBP Line (Red) -->
+            <polyline fill="none" stroke="#dc2626" stroke-width="2.5"
+                points="{% for v in page.vitals %}{% if v.sbp %}{{ 50 + loop.index0 * x_step }},{{ 160 - (v.sbp / 200 * 150) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
+
+            <!-- DBP Line (Blue) -->
+            <polyline fill="none" stroke="#2563eb" stroke-width="2.5"
+                points="{% for v in page.vitals %}{% if v.dbp %}{{ 50 + loop.index0 * x_step }},{{ 160 - (v.dbp / 200 * 150) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
+
+            <!-- HR Line (Green, dashed) -->
+            <polyline fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="8,4"
+                points="{% for v in page.vitals %}{% if v.hr %}{{ 50 + loop.index0 * x_step }},{{ 160 - (v.hr / 200 * 150) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
+
+            <!-- Data Points -->
+            {% for v in page.vitals %}
+                {% set x_pos = 50 + loop.index0 * x_step %}
+
+                <!-- SBP point -->
+                {% if v.sbp %}
+                <circle cx="{{ x_pos }}" cy="{{ 160 - (v.sbp / 200 * 150) }}" r="5" fill="#dc2626"/>
+                <text x="{{ x_pos }}" y="{{ 160 - (v.sbp / 200 * 150) - 8 }}" text-anchor="middle" font-size="7" fill="#dc2626">{{ v.sbp }}</text>
+                {% endif %}
+
+                <!-- DBP point -->
+                {% if v.dbp %}
+                <circle cx="{{ x_pos }}" cy="{{ 160 - (v.dbp / 200 * 150) }}" r="5" fill="#2563eb"/>
+                <text x="{{ x_pos }}" y="{{ 160 - (v.dbp / 200 * 150) + 12 }}" text-anchor="middle" font-size="7" fill="#2563eb">{{ v.dbp }}</text>
+                {% endif %}
+
+                <!-- HR point -->
+                {% if v.hr %}
+                <rect x="{{ x_pos - 4 }}" y="{{ 160 - (v.hr / 200 * 150) - 4 }}" width="8" height="8" fill="#16a34a"/>
+                {% endif %}
+
+                <!-- Time label -->
+                <text x="{{ x_pos }}" y="175" text-anchor="middle" font-size="8" fill="#333">{{ v.time_display }}</text>
+            {% endfor %}
+        </svg>
+        {% endif %}
+
+        <!-- Legend -->
+        <div class="chart-legend">
+            <div class="chart-legend-item">
+                <span class="legend-dot" style="background: #dc2626;"></span>
+                <span>SBP (收縮壓)</span>
+            </div>
+            <div class="chart-legend-item">
+                <span class="legend-dot" style="background: #2563eb;"></span>
+                <span>DBP (舒張壓)</span>
+            </div>
+            <div class="chart-legend-item">
+                <span class="legend-square" style="background: #16a34a;"></span>
+                <span>HR (心率)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== BOTTOM: Three Columns ========== -->
+    <div class="bottom-content">
+        <!-- Left: Drugs -->
+        <div class="drugs-column">
+            <div class="section-title">藥物給予</div>
+            <table class="drug-table">
+                <tr>
+                    <th>時間</th>
+                    <th>藥物</th>
+                    <th>劑量</th>
+                </tr>
+                {% for drug in page.drugs %}
+                <tr>
+                    <td>{{ drug.time }}</td>
+                    <td>{{ drug.name }}</td>
+                    <td>{{ drug.dose }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <!-- Middle: Compact Vitals Table -->
+        <div class="vitals-column">
+            <div class="section-title">Vital Signs Data</div>
+            <table class="vitals-table">
+                <tr class="time-row">
+                    <th class="row-header">Time</th>
+                    {% for v in page.vitals %}
+                    <th>{{ v.time_display }}</th>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="row-header">SBP</td>
+                    {% for v in page.vitals %}
+                    <td class="bp-systolic">{{ v.sbp or '-' }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="row-header">DBP</td>
+                    {% for v in page.vitals %}
+                    <td class="bp-diastolic">{{ v.dbp or '-' }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="row-header">HR</td>
+                    {% for v in page.vitals %}
+                    <td class="hr-value">{{ v.hr or '-' }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="row-header">SpO2</td>
+                    {% for v in page.vitals %}
+                    <td>{{ v.spo2 or '-' }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="row-header">EtCO2</td>
+                    {% for v in page.vitals %}
+                    <td>{{ v.etco2 or '-' }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="row-header">Temp</td>
+                    {% for v in page.vitals %}
+                    <td>{{ v.temp or '-' }}</td>
+                    {% endfor %}
+                </tr>
+            </table>
+        </div>
+
+        <!-- Right: IV + I/O -->
+        <div class="io-column">
             {% if page.page_number == 1 %}
-            <!-- IV Lines Section -->
+            <!-- IV Lines -->
             <div class="iv-section">
-                <div class="drug-section-title">IV 管路</div>
+                <div class="section-title">IV 管路</div>
                 <table class="iv-table">
                     <tr>
                         <th>#</th>
                         <th>部位</th>
                         <th>Gauge</th>
-                        <th>類型</th>
                     </tr>
                     {% for iv in iv_lines %}
                     <tr>
                         <td>{{ iv.line_number }}</td>
                         <td>{{ iv.site }}</td>
                         <td>{{ iv.gauge }}</td>
-                        <td>{{ iv.catheter_type }}</td>
                     </tr>
                     {% endfor %}
                 </table>
             </div>
             {% endif %}
 
-            <!-- Drug Administration -->
-            <div class="drug-section">
-                <div class="drug-section-title">藥物給予</div>
-                <table class="drug-table">
-                    <tr>
-                        <th>時間</th>
-                        <th>藥物</th>
-                        <th>劑量</th>
-                        <th>途徑</th>
-                    </tr>
-                    {% for drug in page.drugs %}
-                    <tr>
-                        <td>{{ drug.time }}</td>
-                        <td>{{ drug.name }}</td>
-                        <td>{{ drug.dose }}</td>
-                        <td>{{ drug.route }}</td>
-                    </tr>
-                    {% endfor %}
-                </table>
-            </div>
-
-            <!-- Vital Signs Chart -->
-            {% if page.chart_image %}
-            <!-- Matplotlib chart (RPi5/Local) -->
-            <div class="chart-section" style="text-align: center;">
-                <img src="data:image/png;base64,{{ page.chart_image }}" alt="Vital Signs Chart" style="max-width: 100%; height: auto;">
-            </div>
-            {% elif page.vitals and page.vitals|length > 0 %}
-            <!-- SVG chart (Vercel fallback) -->
-            <div class="chart-section">
-                <svg viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet">
-                    <!-- Background grid -->
-                    <defs>
-                        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#eee" stroke-width="0.5"/>
-                        </pattern>
-                    </defs>
-                    <rect x="25" y="5" width="170" height="100" fill="url(#grid)"/>
-
-                    <!-- Y-axis labels -->
-                    <text x="22" y="10" text-anchor="end" font-size="5" fill="#666">200</text>
-                    <text x="22" y="30" text-anchor="end" font-size="5" fill="#666">150</text>
-                    <text x="22" y="55" text-anchor="end" font-size="5" fill="#666">100</text>
-                    <text x="22" y="80" text-anchor="end" font-size="5" fill="#666">50</text>
-                    <text x="22" y="105" text-anchor="end" font-size="5" fill="#666">0</text>
-
-                    <!-- Y-axis line -->
-                    <line x1="25" y1="5" x2="25" y2="105" stroke="#000" stroke-width="0.5"/>
-                    <!-- X-axis line -->
-                    <line x1="25" y1="105" x2="195" y2="105" stroke="#000" stroke-width="0.5"/>
-
-                    <!-- Horizontal guide lines -->
-                    <line x1="25" y1="30" x2="195" y2="30" stroke="#ddd" stroke-width="0.3"/>
-                    <line x1="25" y1="55" x2="195" y2="55" stroke="#ddd" stroke-width="0.3"/>
-                    <line x1="25" y1="80" x2="195" y2="80" stroke="#ddd" stroke-width="0.3"/>
-
-                    {% set vitals_count = page.vitals|length %}
-                    {% set x_step = 170 / (vitals_count if vitals_count > 1 else 1) %}
-
-                    <!-- SBP Line (Red) -->
-                    <polyline fill="none" stroke="#dc2626" stroke-width="1.5"
-                        points="{% for v in page.vitals %}{% if v.sbp %}{{ 25 + loop.index0 * x_step }},{{ 105 - (v.sbp / 200 * 100) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
-
-                    <!-- DBP Line (Blue) -->
-                    <polyline fill="none" stroke="#2563eb" stroke-width="1.5"
-                        points="{% for v in page.vitals %}{% if v.dbp %}{{ 25 + loop.index0 * x_step }},{{ 105 - (v.dbp / 200 * 100) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
-
-                    <!-- HR Line (Green) -->
-                    <polyline fill="none" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="3,2"
-                        points="{% for v in page.vitals %}{% if v.hr %}{{ 25 + loop.index0 * x_step }},{{ 105 - (v.hr / 200 * 100) }}{% if not loop.last %} {% endif %}{% endif %}{% endfor %}"/>
-
-                    <!-- SBP Points (Red circles) -->
-                    {% for v in page.vitals %}
-                    {% if v.sbp %}
-                    <circle cx="{{ 25 + loop.index0 * x_step }}" cy="{{ 105 - (v.sbp / 200 * 100) }}" r="2.5" fill="#dc2626"/>
-                    {% endif %}
-                    {% endfor %}
-
-                    <!-- DBP Points (Blue circles) -->
-                    {% for v in page.vitals %}
-                    {% if v.dbp %}
-                    <circle cx="{{ 25 + loop.index0 * x_step }}" cy="{{ 105 - (v.dbp / 200 * 100) }}" r="2.5" fill="#2563eb"/>
-                    {% endif %}
-                    {% endfor %}
-
-                    <!-- HR Points (Green squares) -->
-                    {% for v in page.vitals %}
-                    {% if v.hr %}
-                    <rect x="{{ 25 + loop.index0 * x_step - 2 }}" y="{{ 105 - (v.hr / 200 * 100) - 2 }}" width="4" height="4" fill="#16a34a"/>
-                    {% endif %}
-                    {% endfor %}
-
-                    <!-- X-axis time labels -->
-                    {% for v in page.vitals %}
-                    {% if loop.index0 % 3 == 0 or loop.last %}
-                    <text x="{{ 25 + loop.index0 * x_step }}" y="113" text-anchor="middle" font-size="4" fill="#666">{{ v.time_display }}</text>
-                    {% endif %}
-                    {% endfor %}
-                </svg>
-
-                <!-- Legend -->
-                <div class="chart-legend">
-                    <div class="chart-legend-item">
-                        <span class="legend-dot" style="background: #dc2626;"></span>
-                        <span>SBP</span>
-                    </div>
-                    <div class="chart-legend-item">
-                        <span class="legend-dot" style="background: #2563eb;"></span>
-                        <span>DBP</span>
-                    </div>
-                    <div class="chart-legend-item">
-                        <span class="legend-square" style="background: #16a34a;"></span>
-                        <span>HR</span>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- I/O Balance (only on last page) -->
+            <!-- I/O Balance -->
             {% if page.page_number == total_pages %}
             <div class="io-section">
-                <div class="drug-section-title">I/O Balance</div>
+                <div class="section-title">I/O Balance</div>
                 <table class="io-table">
-                    <tr>
-                        <th colspan="2">輸入 Input</th>
-                    </tr>
-                    <tr>
-                        <th>晶體液</th>
-                        <td>{{ io_balance.input.crystalloid_ml }} mL</td>
-                    </tr>
-                    <tr>
-                        <th>膠體液</th>
-                        <td>{{ io_balance.input.colloid_ml }} mL</td>
-                    </tr>
-                    <tr>
-                        <th>血液製品</th>
-                        <td>{{ io_balance.input.blood_ml }} mL</td>
-                    </tr>
-                    <tr>
-                        <th>總輸入</th>
-                        <td><strong>{{ io_balance.input.total_ml }} mL</strong></td>
-                    </tr>
-                    <tr>
-                        <th colspan="2">輸出 Output</th>
-                    </tr>
-                    <tr>
-                        <th>尿量</th>
-                        <td>{{ io_balance.output.urine_ml }} mL</td>
-                    </tr>
-                    <tr>
-                        <th>失血量</th>
-                        <td>{{ io_balance.output.blood_loss_ml }} mL</td>
-                    </tr>
-                    <tr>
-                        <th>總輸出</th>
-                        <td><strong>{{ io_balance.output.total_ml }} mL</strong></td>
-                    </tr>
-                    <tr>
-                        <th>淨平衡</th>
-                        <td><strong>{{ io_balance.balance_ml }} mL</strong></td>
-                    </tr>
+                    <tr><th>輸入</th><td></td></tr>
+                    <tr><th>晶體液</th><td>{{ io_balance.input.crystalloid_ml }} mL</td></tr>
+                    <tr><th>膠體液</th><td>{{ io_balance.input.colloid_ml }} mL</td></tr>
+                    <tr><th>血品</th><td>{{ io_balance.input.blood_ml }} mL</td></tr>
+                    <tr><th><strong>Total In</strong></th><td><strong>{{ io_balance.input.total_ml }} mL</strong></td></tr>
+                    <tr><th>輸出</th><td></td></tr>
+                    <tr><th>尿量</th><td>{{ io_balance.output.urine_ml }} mL</td></tr>
+                    <tr><th>失血</th><td>{{ io_balance.output.blood_loss_ml }} mL</td></tr>
+                    <tr><th><strong>Total Out</strong></th><td><strong>{{ io_balance.output.total_ml }} mL</strong></td></tr>
+                    <tr style="background: #fffbeb;"><th><strong>Net Balance</strong></th><td><strong>{{ io_balance.balance_ml }} mL</strong></td></tr>
                 </table>
             </div>
             {% endif %}
-        </div>
-
-        <!-- Right Panel: Vitals Timeline -->
-        <div class="right-panel">
-            <table class="vitals-table">
-                <!-- Time Row -->
-                <tr class="time-row">
-                    <th class="row-header">時間</th>
-                    {% for v in page.vitals %}
-                    <th>{{ v.time_display }}</th>
-                    {% endfor %}
-                </tr>
-
-                <!-- BP Systolic -->
-                <tr>
-                    <td class="row-header">SBP</td>
-                    {% for v in page.vitals %}
-                    <td class="bp-systolic">{{ v.sbp or '' }}</td>
-                    {% endfor %}
-                </tr>
-
-                <!-- BP Diastolic -->
-                <tr>
-                    <td class="row-header">DBP</td>
-                    {% for v in page.vitals %}
-                    <td class="bp-diastolic">{{ v.dbp or '' }}</td>
-                    {% endfor %}
-                </tr>
-
-                <!-- HR -->
-                <tr>
-                    <td class="row-header">HR</td>
-                    {% for v in page.vitals %}
-                    <td class="hr">{{ v.hr or '' }}</td>
-                    {% endfor %}
-                </tr>
-
-                <!-- SpO2 -->
-                <tr>
-                    <td class="row-header">SpO2</td>
-                    {% for v in page.vitals %}
-                    <td class="spo2">{{ v.spo2 or '' }}</td>
-                    {% endfor %}
-                </tr>
-
-                <!-- EtCO2 -->
-                <tr>
-                    <td class="row-header">EtCO2</td>
-                    {% for v in page.vitals %}
-                    <td>{{ v.etco2 or '' }}</td>
-                    {% endfor %}
-                </tr>
-
-                <!-- RR -->
-                <tr>
-                    <td class="row-header">RR</td>
-                    {% for v in page.vitals %}
-                    <td>{{ v.rr or '' }}</td>
-                    {% endfor %}
-                </tr>
-
-                <!-- Temp -->
-                <tr>
-                    <td class="row-header">Temp</td>
-                    {% for v in page.vitals %}
-                    <td>{{ v.temp or '' }}</td>
-                    {% endfor %}
-                </tr>
-
-                <!-- FiO2 -->
-                <tr>
-                    <td class="row-header">FiO2</td>
-                    {% for v in page.vitals %}
-                    <td>{{ v.fio2 or '' }}</td>
-                    {% endfor %}
-                </tr>
-
-                <!-- MAC -->
-                <tr>
-                    <td class="row-header">MAC</td>
-                    {% for v in page.vitals %}
-                    <td>{{ v.mac or '' }}</td>
-                    {% endfor %}
-                </tr>
-
-                <!-- Events -->
-                <tr class="events-row">
-                    <td class="row-header">Events</td>
-                    {% for v in page.vitals %}
-                    <td title="{{ v.events_full or '' }}">{{ v.events or '' }}</td>
-                    {% endfor %}
-                </tr>
-            </table>
         </div>
     </div>
 
@@ -708,27 +616,23 @@
     {% if page.page_number == total_pages %}
     <div class="footer">
         <div class="signature-box">
-            <div class="signature-label">麻醉開始: {{ times.anesthesia_start or '____:____' }}</div>
-            <div class="signature-label">麻醉結束: {{ times.anesthesia_end or '____:____' }}</div>
+            <div class="signature-label">麻醉: {{ times.anesthesia_start or '__:__' }} - {{ times.anesthesia_end or '__:__' }}</div>
         </div>
         <div class="signature-box">
-            <div class="signature-label">手術開始: {{ times.surgery_start or '____:____' }}</div>
-            <div class="signature-label">手術結束: {{ times.surgery_end or '____:____' }}</div>
+            <div class="signature-label">手術: {{ times.surgery_start or '__:__' }} - {{ times.surgery_end or '__:__' }}</div>
         </div>
         <div class="signature-box">
-            <div class="signature-label">麻醉醫師:</div>
-            <div style="margin-top: 20px;">{{ anesthesiologist or '' }}</div>
+            <div class="signature-label">麻醉醫師: {{ anesthesiologist or '' }}</div>
         </div>
         <div class="signature-box">
-            <div class="signature-label">麻醉護理師:</div>
-            <div style="margin-top: 20px;">{{ nurse or '' }}</div>
+            <div class="signature-label">護理師: {{ nurse or '' }}</div>
         </div>
     </div>
     {% endif %}
 </div>
 {% endfor %}
 
-<div style="text-align: center; font-size: 7pt; color: #666; margin-top: 8px;">
+<div style="text-align: center; font-size: 7pt; color: #666; margin-top: 4px;">
     Generated by MIRS Anesthesia Module v2.1 | {{ generated_at }}
 </div>
 </body>
