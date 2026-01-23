@@ -465,8 +465,14 @@
                 </table>
             </div>
 
-            <!-- Vital Signs Chart (SVG) -->
-            {% if page.vitals and page.vitals|length > 0 %}
+            <!-- Vital Signs Chart -->
+            {% if page.chart_image %}
+            <!-- Matplotlib chart (RPi5/Local) -->
+            <div class="chart-section" style="text-align: center;">
+                <img src="data:image/png;base64,{{ page.chart_image }}" alt="Vital Signs Chart" style="max-width: 100%; height: auto;">
+            </div>
+            {% elif page.vitals and page.vitals|length > 0 %}
+            <!-- SVG chart (Vercel fallback) -->
             <div class="chart-section">
                 <svg viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet">
                     <!-- Background grid -->
