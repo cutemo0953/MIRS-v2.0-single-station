@@ -8551,28 +8551,42 @@ async def generate_pdf(
             end_idx = min(start_idx + VITALS_PER_PAGE, total_vitals)
             page_vitals = vitals[start_idx:end_idx]
 
-            # Format time display for each vital
-            for v in page_vitals:
+            # Format time display for each vital (compact format)
+            prev_hour = None
+            for i, v in enumerate(page_vitals):
                 if v.get("time"):
                     try:
                         t = datetime.fromisoformat(v["time"].replace("Z", "+00:00"))
+                        hour = t.strftime("%H")
+                        minute = t.strftime("%M")
                         v["time_display"] = t.strftime("%H:%M")
+                        v["hour"] = hour
+                        v["minute"] = f":{minute}"
+                        # Show hour only when it changes
+                        v["show_hour"] = (hour != prev_hour)
+                        prev_hour = hour
                     except:
                         v["time_display"] = v["time"][:5] if len(v["time"]) >= 5 else v["time"]
+                        v["hour"] = ""
+                        v["minute"] = v["time_display"]
+                        v["show_hour"] = True
                 else:
                     v["time_display"] = ""
+                    v["hour"] = ""
+                    v["minute"] = ""
+                    v["show_hour"] = False
 
             # Generate chart for this page's vitals
             chart_image = _generate_vitals_chart(vitals, start_idx, end_idx) if page_vitals else ""
 
-            # Drugs for this page (distribute evenly or all on page 1)
+            # Drugs for this page (max 12 per page to prevent overflow)
+            DRUGS_PER_PAGE = 12
             if page_num == 0:
-                page_drugs = state["drugs"][:20]  # First 20 drugs on page 1
+                page_drugs = state["drugs"][:DRUGS_PER_PAGE]
             else:
-                remaining_drugs = state["drugs"][20:]
-                drugs_per_page = max(1, len(remaining_drugs) // (total_pages - 1))
-                drug_start = (page_num - 1) * drugs_per_page
-                page_drugs = remaining_drugs[drug_start:drug_start + drugs_per_page]
+                remaining_drugs = state["drugs"][DRUGS_PER_PAGE:]
+                drug_start = (page_num - 1) * DRUGS_PER_PAGE
+                page_drugs = remaining_drugs[drug_start:drug_start + DRUGS_PER_PAGE]
 
             # Format drug times
             for d in page_drugs:
