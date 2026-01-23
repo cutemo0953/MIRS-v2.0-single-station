@@ -2,21 +2,41 @@
 MIRS Anesthesia Module - Phase A
 Event-Sourced, Offline-First Architecture
 
-Version: 1.5.3
+Version: 2.1.0
+- Added: IV Line Management
+- Added: Monitor Management (Foley, etc.)
+- Added: I/O Balance Calculation
+- Added: PDF Generation (M0073 with auto-pagination)
 """
 
 import json
 import os
 import uuid
+import base64
+import io
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from enum import Enum
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 import logging
 logger = logging.getLogger(__name__)
+
+# PDF Generation imports (lazy load to handle missing deps)
+try:
+    from jinja2 import Environment, FileSystemLoader
+    from weasyprint import HTML
+    import matplotlib
+    matplotlib.use('Agg')  # Non-interactive backend
+    import matplotlib.pyplot as plt
+    PDF_ENABLED = True
+except ImportError:
+    PDF_ENABLED = False
+    logger.warning("PDF generation disabled: missing weasyprint, jinja2, or matplotlib")
 
 router = APIRouter(prefix="/api/anesthesia", tags=["anesthesia"])
 
@@ -135,6 +155,20 @@ class EventType(str, Enum):
 
     # === 更正 ===
     CORRECTION = "CORRECTION"
+
+    # === IV 管路管理 (v2.1) ===
+    IV_LINE_INSERTED = "IV_LINE_INSERTED"      # 建立 IV 管路
+    IV_LINE_REMOVED = "IV_LINE_REMOVED"        # 移除 IV 管路
+    IV_RATE_CHANGED = "IV_RATE_CHANGED"        # 調整滴速
+    IV_FLUID_GIVEN = "IV_FLUID_GIVEN"          # 經 IV 給予輸液
+
+    # === 監測器管理 (v2.1) ===
+    MONITOR_STARTED = "MONITOR_STARTED"        # 啟動監測器 (Foley, 保溫毯等)
+    MONITOR_STOPPED = "MONITOR_STOPPED"        # 停止監測器
+    URINE_OUTPUT = "URINE_OUTPUT"              # 尿量記錄 (需 Foley)
+
+    # === Time Out (v2.1) ===
+    TIMEOUT_COMPLETED = "TIMEOUT_COMPLETED"    # Time Out 核對完成
 
 
 # v1.6.1: 補登原因
@@ -614,6 +648,62 @@ class ResourceReleaseRequest(BaseModel):
     note: Optional[str] = None
 
 
+# =============================================================================
+# v2.1: IV Line Models (IV 管路管理)
+# =============================================================================
+
+class InsertIVLineRequest(BaseModel):
+    """插入 IV 管路"""
+    site: str = Field(..., description="部位: 左手背, 右手背, 左前臂, 右前臂, 頸部CVC, etc.")
+    gauge: Optional[str] = Field(None, description="規格: 24G, 22G, 20G, 18G, 16G, CVC")
+    catheter_type: str = Field("PERIPHERAL", pattern="^(PERIPHERAL|CVC|PICC|ARTERIAL)$")
+    initial_fluid: Optional[str] = Field(None, description="初始輸液: N/S, L/R, D5W")
+    rate_ml_hr: Optional[int] = Field(None, ge=0, description="初始滴速 (ml/hr)")
+
+
+class UpdateIVLineRequest(BaseModel):
+    """更新 IV 管路"""
+    rate_ml_hr: Optional[int] = Field(None, ge=0, description="新滴速")
+    removed: Optional[bool] = Field(None, description="設為 true 移除管路")
+
+
+class GiveIVFluidRequest(BaseModel):
+    """經 IV 給予輸液"""
+    fluid_type: str = Field(..., description="輸液類型: N/S, L/R, D5W, pRBC, FFP, Albumin")
+    amount_ml: int = Field(..., gt=0, description="劑量 (ml)")
+    is_bolus: bool = Field(False, description="是否為 bolus")
+
+
+# =============================================================================
+# v2.1: Monitor Models (監測器管理)
+# =============================================================================
+
+class StartMonitorRequest(BaseModel):
+    """啟動監測器"""
+    monitor_type: str = Field(..., description="類型: EKG, SPO2, NIBP, IBP, CVP, FOLEY, AIR_BLANKET, BIS, ETCO2, NMT")
+    settings: Optional[dict] = Field(None, description="設定 (如 Foley size, 保溫毯溫度)")
+    notes: Optional[str] = None
+
+
+class RecordUrineOutputRequest(BaseModel):
+    """記錄尿量"""
+    amount_ml: int = Field(..., gt=0, description="尿量 (ml)")
+
+
+# =============================================================================
+# v2.1: Time Out Model
+# =============================================================================
+
+class TimeOutRequest(BaseModel):
+    """Time Out 核對"""
+    patient_id_confirmed: bool = Field(True, description="病患身分確認")
+    procedure_confirmed: bool = Field(True, description="手術部位確認")
+    consent_confirmed: bool = Field(True, description="同意書確認")
+    allergies_confirmed: bool = Field(True, description="過敏史確認")
+    equipment_ready: bool = Field(True, description="設備備妥")
+    notes: Optional[str] = None
+
+
 # PreOp Models
 class BattlefieldQuickFlags(BaseModel):
     airway_risk: str = Field(..., pattern="^(NORMAL|DIFFICULT)$")
@@ -1055,7 +1145,90 @@ def init_anesthesia_schema(cursor):
         ON pio_outcomes(problem_id)
     """)
 
-    logger.info("✓ Anesthesia schema initialized (Phase A + B + C-PIO)")
+    # =========================================================================
+    # v2.1: IV Lines Table (IV 管路管理)
+    # =========================================================================
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS anesthesia_iv_lines (
+            line_id TEXT PRIMARY KEY,
+            case_id TEXT NOT NULL,
+            line_number INTEGER NOT NULL,
+
+            -- 位置與規格
+            site TEXT NOT NULL,
+            gauge TEXT,
+            catheter_type TEXT DEFAULT 'PERIPHERAL',
+
+            -- 狀態
+            inserted_at DATETIME NOT NULL,
+            inserted_by TEXT NOT NULL,
+            removed_at DATETIME,
+            removed_by TEXT,
+
+            -- 當前滴速
+            current_rate_ml_hr INTEGER DEFAULT 0,
+            current_fluid_type TEXT,
+
+            -- 累計輸液量
+            total_volume_ml INTEGER DEFAULT 0,
+
+            FOREIGN KEY (case_id) REFERENCES anesthesia_cases(id),
+            CHECK(catheter_type IN ('PERIPHERAL', 'CVC', 'PICC', 'ARTERIAL'))
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_iv_lines_case
+        ON anesthesia_iv_lines(case_id, removed_at)
+    """)
+
+    # =========================================================================
+    # v2.1: Monitors Table (監測器管理 - Foley, 保溫毯等)
+    # =========================================================================
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS anesthesia_monitors (
+            monitor_id TEXT PRIMARY KEY,
+            case_id TEXT NOT NULL,
+
+            monitor_type TEXT NOT NULL,
+            settings TEXT,
+
+            started_at DATETIME NOT NULL,
+            started_by TEXT NOT NULL,
+            stopped_at DATETIME,
+            stopped_by TEXT,
+
+            notes TEXT,
+
+            FOREIGN KEY (case_id) REFERENCES anesthesia_cases(id),
+            CHECK(monitor_type IN ('EKG', 'SPO2', 'NIBP', 'IBP', 'CVP', 'FOLEY', 'AIR_BLANKET', 'BIS', 'ETCO2', 'NMT', 'TEMP', 'OTHER'))
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_monitors_case
+        ON anesthesia_monitors(case_id, stopped_at)
+    """)
+
+    # =========================================================================
+    # v2.1: Urine Outputs Table (尿量記錄)
+    # =========================================================================
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS anesthesia_urine_outputs (
+            id TEXT PRIMARY KEY,
+            case_id TEXT NOT NULL,
+            monitor_id TEXT NOT NULL,
+
+            amount_ml INTEGER NOT NULL,
+            recorded_at DATETIME NOT NULL,
+            recorded_by TEXT NOT NULL,
+
+            cumulative_ml INTEGER DEFAULT 0,
+
+            FOREIGN KEY (case_id) REFERENCES anesthesia_cases(id),
+            FOREIGN KEY (monitor_id) REFERENCES anesthesia_monitors(monitor_id)
+        )
+    """)
+
+    logger.info("✓ Anesthesia schema initialized (Phase A + B + C-PIO + D-IV/Foley)")
 
 
 # =============================================================================
@@ -7376,3 +7549,894 @@ async def release_cart(cart_id: str, nurse_id: str = Query(...)):
 
     finally:
         conn.close()
+
+
+# =============================================================================
+# v2.1: IV Line Management (IV 管路管理)
+# =============================================================================
+
+@router.post("/cases/{case_id}/iv-lines")
+async def insert_iv_line(case_id: str, req: InsertIVLineRequest, actor_id: str = Query(...)):
+    """
+    插入 IV 管路
+
+    POST /api/anesthesia/cases/{case_id}/iv-lines
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 驗證 case 存在
+        cursor.execute("SELECT id, status FROM anesthesia_cases WHERE id = ?", (case_id,))
+        case = cursor.fetchone()
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
+
+        # 取得下一個 line_number
+        cursor.execute("SELECT COALESCE(MAX(line_number), 0) + 1 FROM anesthesia_iv_lines WHERE case_id = ?", (case_id,))
+        line_number = cursor.fetchone()[0]
+
+        line_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+
+        # 插入 IV line
+        cursor.execute("""
+            INSERT INTO anesthesia_iv_lines (line_id, case_id, line_number, site, gauge, catheter_type,
+                                             inserted_at, inserted_by, current_rate_ml_hr, current_fluid_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (line_id, case_id, line_number, req.site, req.gauge, req.catheter_type,
+              now, actor_id, req.rate_ml_hr or 0, req.initial_fluid))
+
+        # 記錄事件
+        event_id = str(uuid.uuid4())
+        payload = {
+            "line_id": line_id,
+            "site": req.site,
+            "gauge": req.gauge,
+            "catheter_type": req.catheter_type,
+            "initial_fluid": req.initial_fluid,
+            "rate_ml_hr": req.rate_ml_hr
+        }
+        cursor.execute("""
+            INSERT INTO anesthesia_events (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (event_id, case_id, "IV_LINE_INSERTED", now, json.dumps(payload), actor_id))
+
+        conn.commit()
+
+        return {
+            "line_id": line_id,
+            "line_number": line_number,
+            "site": req.site,
+            "gauge": req.gauge,
+            "inserted_at": now
+        }
+
+    finally:
+        conn.close()
+
+
+@router.get("/cases/{case_id}/iv-lines")
+async def get_iv_lines(case_id: str, include_removed: bool = False):
+    """取得案例的 IV 管路列表"""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        if include_removed:
+            cursor.execute("SELECT * FROM anesthesia_iv_lines WHERE case_id = ? ORDER BY line_number", (case_id,))
+        else:
+            cursor.execute("SELECT * FROM anesthesia_iv_lines WHERE case_id = ? AND removed_at IS NULL ORDER BY line_number", (case_id,))
+
+        lines = [dict(row) for row in cursor.fetchall()]
+        return {"iv_lines": lines}
+
+    finally:
+        conn.close()
+
+
+@router.patch("/cases/{case_id}/iv-lines/{line_id}")
+async def update_iv_line(case_id: str, line_id: str, req: UpdateIVLineRequest, actor_id: str = Query(...)):
+    """
+    更新 IV 管路 (調整滴速或移除)
+
+    PATCH /api/anesthesia/cases/{case_id}/iv-lines/{line_id}
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 驗證 line 存在
+        cursor.execute("SELECT * FROM anesthesia_iv_lines WHERE line_id = ? AND case_id = ?", (line_id, case_id))
+        line = cursor.fetchone()
+        if not line:
+            raise HTTPException(status_code=404, detail="IV line not found")
+
+        now = datetime.now().isoformat()
+
+        if req.removed:
+            # 移除管路
+            cursor.execute("""
+                UPDATE anesthesia_iv_lines SET removed_at = ?, removed_by = ? WHERE line_id = ?
+            """, (now, actor_id, line_id))
+
+            event_id = str(uuid.uuid4())
+            payload = {"line_id": line_id, "site": line["site"]}
+            cursor.execute("""
+                INSERT INTO anesthesia_events (id, case_id, event_type, clinical_time, payload, actor_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (event_id, case_id, "IV_LINE_REMOVED", now, json.dumps(payload), actor_id))
+
+        elif req.rate_ml_hr is not None:
+            # 調整滴速
+            old_rate = line["current_rate_ml_hr"]
+            cursor.execute("""
+                UPDATE anesthesia_iv_lines SET current_rate_ml_hr = ? WHERE line_id = ?
+            """, (req.rate_ml_hr, line_id))
+
+            event_id = str(uuid.uuid4())
+            payload = {"line_id": line_id, "old_rate": old_rate, "new_rate": req.rate_ml_hr}
+            cursor.execute("""
+                INSERT INTO anesthesia_events (id, case_id, event_type, clinical_time, payload, actor_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (event_id, case_id, "IV_RATE_CHANGED", now, json.dumps(payload), actor_id))
+
+        conn.commit()
+        return {"success": True, "line_id": line_id}
+
+    finally:
+        conn.close()
+
+
+@router.post("/cases/{case_id}/iv-lines/{line_id}/fluids")
+async def give_iv_fluid(case_id: str, line_id: str, req: GiveIVFluidRequest, actor_id: str = Query(...)):
+    """
+    經 IV 給予輸液
+
+    POST /api/anesthesia/cases/{case_id}/iv-lines/{line_id}/fluids
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 驗證 line 存在且未移除
+        cursor.execute("SELECT * FROM anesthesia_iv_lines WHERE line_id = ? AND case_id = ? AND removed_at IS NULL", (line_id, case_id))
+        line = cursor.fetchone()
+        if not line:
+            raise HTTPException(status_code=404, detail="Active IV line not found")
+
+        now = datetime.now().isoformat()
+
+        # 更新累計量
+        new_total = (line["total_volume_ml"] or 0) + req.amount_ml
+        cursor.execute("""
+            UPDATE anesthesia_iv_lines SET total_volume_ml = ?, current_fluid_type = ? WHERE line_id = ?
+        """, (new_total, req.fluid_type, line_id))
+
+        # 記錄事件
+        event_id = str(uuid.uuid4())
+        payload = {
+            "line_id": line_id,
+            "fluid_type": req.fluid_type,
+            "amount_ml": req.amount_ml,
+            "is_bolus": req.is_bolus,
+            "cumulative_ml": new_total
+        }
+        cursor.execute("""
+            INSERT INTO anesthesia_events (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (event_id, case_id, "IV_FLUID_GIVEN", now, json.dumps(payload), actor_id))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "line_id": line_id,
+            "fluid_type": req.fluid_type,
+            "amount_ml": req.amount_ml,
+            "cumulative_ml": new_total
+        }
+
+    finally:
+        conn.close()
+
+
+# =============================================================================
+# v2.1: Monitor Management (監測器管理 - Foley, 保溫毯等)
+# =============================================================================
+
+@router.post("/cases/{case_id}/monitors")
+async def start_monitor(case_id: str, req: StartMonitorRequest, actor_id: str = Query(...)):
+    """
+    啟動監測器
+
+    POST /api/anesthesia/cases/{case_id}/monitors
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 驗證 case 存在
+        cursor.execute("SELECT id FROM anesthesia_cases WHERE id = ?", (case_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Case not found")
+
+        monitor_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+
+        cursor.execute("""
+            INSERT INTO anesthesia_monitors (monitor_id, case_id, monitor_type, settings, started_at, started_by, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (monitor_id, case_id, req.monitor_type, json.dumps(req.settings) if req.settings else None,
+              now, actor_id, req.notes))
+
+        # 記錄事件
+        event_id = str(uuid.uuid4())
+        payload = {
+            "monitor_id": monitor_id,
+            "monitor_type": req.monitor_type,
+            "settings": req.settings
+        }
+        cursor.execute("""
+            INSERT INTO anesthesia_events (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (event_id, case_id, "MONITOR_STARTED", now, json.dumps(payload), actor_id))
+
+        conn.commit()
+
+        return {
+            "monitor_id": monitor_id,
+            "monitor_type": req.monitor_type,
+            "started_at": now
+        }
+
+    finally:
+        conn.close()
+
+
+@router.get("/cases/{case_id}/monitors")
+async def get_monitors(case_id: str, include_stopped: bool = False):
+    """取得案例的監測器列表"""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        if include_stopped:
+            cursor.execute("SELECT * FROM anesthesia_monitors WHERE case_id = ? ORDER BY started_at", (case_id,))
+        else:
+            cursor.execute("SELECT * FROM anesthesia_monitors WHERE case_id = ? AND stopped_at IS NULL ORDER BY started_at", (case_id,))
+
+        monitors = []
+        for row in cursor.fetchall():
+            m = dict(row)
+            if m.get("settings"):
+                m["settings"] = json.loads(m["settings"])
+
+            # 如果是 Foley，取得尿量記錄
+            if m["monitor_type"] == "FOLEY":
+                cursor.execute("""
+                    SELECT SUM(amount_ml) as total_urine FROM anesthesia_urine_outputs WHERE monitor_id = ?
+                """, (m["monitor_id"],))
+                urine_row = cursor.fetchone()
+                m["total_urine_ml"] = urine_row["total_urine"] or 0 if urine_row else 0
+
+            monitors.append(m)
+
+        return {"monitors": monitors}
+
+    finally:
+        conn.close()
+
+
+@router.delete("/cases/{case_id}/monitors/{monitor_id}")
+async def stop_monitor(case_id: str, monitor_id: str, actor_id: str = Query(...)):
+    """
+    停止監測器
+
+    DELETE /api/anesthesia/cases/{case_id}/monitors/{monitor_id}
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM anesthesia_monitors WHERE monitor_id = ? AND case_id = ?", (monitor_id, case_id))
+        monitor = cursor.fetchone()
+        if not monitor:
+            raise HTTPException(status_code=404, detail="Monitor not found")
+
+        now = datetime.now().isoformat()
+
+        cursor.execute("""
+            UPDATE anesthesia_monitors SET stopped_at = ?, stopped_by = ? WHERE monitor_id = ?
+        """, (now, actor_id, monitor_id))
+
+        # 記錄事件
+        event_id = str(uuid.uuid4())
+        payload = {"monitor_id": monitor_id, "monitor_type": monitor["monitor_type"]}
+        cursor.execute("""
+            INSERT INTO anesthesia_events (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (event_id, case_id, "MONITOR_STOPPED", now, json.dumps(payload), actor_id))
+
+        conn.commit()
+        return {"success": True, "monitor_id": monitor_id, "stopped_at": now}
+
+    finally:
+        conn.close()
+
+
+@router.post("/cases/{case_id}/urine-output")
+async def record_urine_output(case_id: str, req: RecordUrineOutputRequest, actor_id: str = Query(...)):
+    """
+    記錄尿量 (需要有 Foley 監測器)
+
+    POST /api/anesthesia/cases/{case_id}/urine-output
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 找到活躍的 Foley 監測器
+        cursor.execute("""
+            SELECT monitor_id FROM anesthesia_monitors
+            WHERE case_id = ? AND monitor_type = 'FOLEY' AND stopped_at IS NULL
+        """, (case_id,))
+        foley = cursor.fetchone()
+        if not foley:
+            raise HTTPException(status_code=400, detail="No active Foley catheter found")
+
+        monitor_id = foley["monitor_id"]
+        now = datetime.now().isoformat()
+
+        # 計算累計尿量
+        cursor.execute("SELECT COALESCE(SUM(amount_ml), 0) FROM anesthesia_urine_outputs WHERE case_id = ?", (case_id,))
+        prev_total = cursor.fetchone()[0]
+        cumulative = prev_total + req.amount_ml
+
+        # 插入尿量記錄
+        record_id = str(uuid.uuid4())
+        cursor.execute("""
+            INSERT INTO anesthesia_urine_outputs (id, case_id, monitor_id, amount_ml, recorded_at, recorded_by, cumulative_ml)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (record_id, case_id, monitor_id, req.amount_ml, now, actor_id, cumulative))
+
+        # 記錄事件
+        event_id = str(uuid.uuid4())
+        payload = {"amount_ml": req.amount_ml, "cumulative_ml": cumulative}
+        cursor.execute("""
+            INSERT INTO anesthesia_events (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (event_id, case_id, "URINE_OUTPUT", now, json.dumps(payload), actor_id))
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "amount_ml": req.amount_ml,
+            "cumulative_ml": cumulative
+        }
+
+    finally:
+        conn.close()
+
+
+# =============================================================================
+# v2.1: Time Out
+# =============================================================================
+
+@router.post("/cases/{case_id}/timeout")
+async def complete_timeout(case_id: str, req: TimeOutRequest, actor_id: str = Query(...)):
+    """
+    完成 Time Out 核對
+
+    POST /api/anesthesia/cases/{case_id}/timeout
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT id FROM anesthesia_cases WHERE id = ?", (case_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Case not found")
+
+        now = datetime.now().isoformat()
+
+        # 記錄事件
+        event_id = str(uuid.uuid4())
+        payload = {
+            "patient_id_confirmed": req.patient_id_confirmed,
+            "procedure_confirmed": req.procedure_confirmed,
+            "consent_confirmed": req.consent_confirmed,
+            "allergies_confirmed": req.allergies_confirmed,
+            "equipment_ready": req.equipment_ready,
+            "notes": req.notes
+        }
+        cursor.execute("""
+            INSERT INTO anesthesia_events (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (event_id, case_id, "TIMEOUT_COMPLETED", now, json.dumps(payload), actor_id))
+
+        conn.commit()
+
+        return {"success": True, "completed_at": now}
+
+    finally:
+        conn.close()
+
+
+# =============================================================================
+# v2.1: I/O Balance Calculation
+# =============================================================================
+
+@router.get("/cases/{case_id}/io-balance")
+async def get_io_balance(case_id: str):
+    """
+    取得 I/O Balance (輸入/輸出平衡)
+
+    GET /api/anesthesia/cases/{case_id}/io-balance
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 取得所有相關事件
+        cursor.execute("""
+            SELECT event_type, payload FROM anesthesia_events
+            WHERE case_id = ? AND event_type IN ('IV_FLUID_GIVEN', 'FLUID_IN', 'FLUID_BOLUS', 'BLOOD_PRODUCT', 'FLUID_OUT', 'URINE_OUTPUT')
+            ORDER BY clinical_time
+        """, (case_id,))
+
+        events = cursor.fetchall()
+
+        # 分類計算
+        input_crystalloid = 0
+        input_colloid = 0
+        input_blood = 0
+        output_urine = 0
+        output_blood_loss = 0
+
+        crystalloid_types = ['N/S', 'NS', 'L/R', 'LR', 'D5W', 'D5S', 'RINGER', 'LACTATED RINGER']
+        colloid_types = ['ALBUMIN', 'VOLUVEN', 'HETASTARCH', 'DEXTRAN', 'GELATIN']
+        blood_types = ['PRBC', 'pRBC', 'FFP', 'PLATELET', 'CRYOPRECIPITATE', 'WHOLE BLOOD']
+
+        for event in events:
+            payload = json.loads(event["payload"]) if event["payload"] else {}
+            event_type = event["event_type"]
+
+            if event_type in ('IV_FLUID_GIVEN', 'FLUID_IN', 'FLUID_BOLUS'):
+                fluid_type = (payload.get("fluid_type") or "").upper()
+                amount = payload.get("amount_ml") or payload.get("volume") or 0
+
+                if any(t in fluid_type for t in blood_types):
+                    input_blood += amount
+                elif any(t in fluid_type for t in colloid_types):
+                    input_colloid += amount
+                else:
+                    input_crystalloid += amount
+
+            elif event_type == 'BLOOD_PRODUCT':
+                amount = payload.get("volume_ml") or payload.get("amount_ml") or 0
+                input_blood += amount
+
+            elif event_type == 'URINE_OUTPUT':
+                amount = payload.get("amount_ml") or 0
+                output_urine += amount
+
+            elif event_type == 'FLUID_OUT':
+                amount = payload.get("volume_ml") or payload.get("amount_ml") or 0
+                fluid_type = (payload.get("type") or "").upper()
+                if 'BLOOD' in fluid_type or 'EBL' in fluid_type:
+                    output_blood_loss += amount
+                else:
+                    # Other fluid out (drain, etc.) - count as blood loss for simplicity
+                    output_blood_loss += amount
+
+        total_input = input_crystalloid + input_colloid + input_blood
+        total_output = output_urine + output_blood_loss
+        balance = total_input - total_output
+
+        return {
+            "input": {
+                "crystalloid_ml": input_crystalloid,
+                "colloid_ml": input_colloid,
+                "blood_ml": input_blood,
+                "total_ml": total_input
+            },
+            "output": {
+                "urine_ml": output_urine,
+                "blood_loss_ml": output_blood_loss,
+                "total_ml": total_output
+            },
+            "balance_ml": balance
+        }
+
+    finally:
+        conn.close()
+
+
+# =============================================================================
+# v2.1: PDF Generation (M0073 Anesthesia Record)
+# =============================================================================
+
+VITALS_PER_PAGE = 24  # M0073 form has ~24-30 time columns; use 24 for readability
+
+
+def _generate_vitals_chart(vitals: List[Dict], page_start: int, page_end: int) -> str:
+    """
+    Generate Matplotlib chart for BP/HR trends.
+    Returns base64-encoded PNG image.
+    """
+    if not PDF_ENABLED:
+        return ""
+
+    page_vitals = vitals[page_start:page_end]
+    if not page_vitals:
+        return ""
+
+    # Extract data
+    times = []
+    sbp_values = []
+    dbp_values = []
+    hr_values = []
+
+    for i, v in enumerate(page_vitals):
+        times.append(i)
+        sbp_values.append(v.get('sbp') or None)
+        dbp_values.append(v.get('dbp') or None)
+        hr_values.append(v.get('hr') or None)
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(4, 1.8), dpi=100)
+
+    # Plot BP (red/blue) and HR (green)
+    if any(sbp_values):
+        ax.plot(times, sbp_values, 'r-', marker='o', markersize=2, linewidth=1, label='SBP')
+    if any(dbp_values):
+        ax.plot(times, dbp_values, 'b-', marker='o', markersize=2, linewidth=1, label='DBP')
+    if any(hr_values):
+        ax.plot(times, hr_values, 'g-', marker='s', markersize=2, linewidth=1, label='HR')
+
+    ax.set_xlabel('Time', fontsize=6)
+    ax.set_ylabel('mmHg / bpm', fontsize=6)
+    ax.tick_params(axis='both', labelsize=5)
+    ax.legend(fontsize=5, loc='upper right')
+    ax.grid(True, alpha=0.3)
+    ax.set_ylim(0, 200)
+
+    # Convert to base64
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png', bbox_inches='tight', pad_inches=0.1)
+    plt.close(fig)
+    buffer.seek(0)
+    return base64.b64encode(buffer.read()).decode('utf-8')
+
+
+def _rebuild_state_from_events(events: List[Dict]) -> Dict:
+    """
+    Pure function: Rebuild complete case state from events.
+    This is the core of event sourcing - PDF = f(events)
+    """
+    state = {
+        "vitals": [],
+        "drugs": [],
+        "iv_lines": [],
+        "monitors": [],
+        "patient": {},
+        "surgery": {},
+        "technique": None,
+        "times": {},
+        "io_balance": {
+            "input": {"crystalloid_ml": 0, "colloid_ml": 0, "blood_ml": 0, "total_ml": 0},
+            "output": {"urine_ml": 0, "blood_loss_ml": 0, "total_ml": 0},
+            "balance_ml": 0
+        },
+        "anesthesiologist": None,
+        "nurse": None
+    }
+
+    crystalloid_types = ['N/S', 'NS', 'L/R', 'LR', 'D5W', 'D5S', 'RINGER', 'LACTATED']
+    colloid_types = ['ALBUMIN', 'VOLUVEN', 'HETASTARCH', 'DEXTRAN', 'GELATIN']
+    blood_types = ['PRBC', 'pRBC', 'FFP', 'PLATELET', 'CRYOPRECIPITATE', 'WHOLE BLOOD']
+
+    for event in events:
+        event_type = event.get("event_type", "")
+        payload = json.loads(event["payload"]) if event.get("payload") else {}
+        clinical_time = event.get("clinical_time", "")
+
+        # Vitals
+        if event_type == "VITAL_SIGNS":
+            state["vitals"].append({
+                "time": clinical_time,
+                "sbp": payload.get("sbp"),
+                "dbp": payload.get("dbp"),
+                "hr": payload.get("hr"),
+                "spo2": payload.get("spo2"),
+                "etco2": payload.get("etco2"),
+                "rr": payload.get("rr"),
+                "temp": payload.get("temp"),
+                "fio2": payload.get("fio2"),
+                "mac": payload.get("mac"),
+                "events": None
+            })
+
+        # Drug Administration
+        elif event_type in ("DRUG_GIVEN", "DRUG_DRAW"):
+            state["drugs"].append({
+                "time": clinical_time,
+                "name": payload.get("drug_name") or payload.get("drug"),
+                "dose": f"{payload.get('amount', payload.get('dose', ''))} {payload.get('unit', '')}".strip(),
+                "route": payload.get("route", "IV")
+            })
+
+        # IV Lines
+        elif event_type == "IV_LINE_INSERTED":
+            state["iv_lines"].append({
+                "line_number": len(state["iv_lines"]) + 1,
+                "site": payload.get("site"),
+                "gauge": payload.get("gauge"),
+                "catheter_type": payload.get("catheter_type", "PERIPHERAL")
+            })
+
+        # IV Fluids
+        elif event_type == "IV_FLUID_GIVEN":
+            fluid_type = (payload.get("fluid_type") or "").upper()
+            amount = payload.get("amount_ml", 0)
+            if any(t in fluid_type for t in blood_types):
+                state["io_balance"]["input"]["blood_ml"] += amount
+            elif any(t in fluid_type for t in colloid_types):
+                state["io_balance"]["input"]["colloid_ml"] += amount
+            else:
+                state["io_balance"]["input"]["crystalloid_ml"] += amount
+
+        # Blood Products
+        elif event_type == "BLOOD_PRODUCT":
+            amount = payload.get("volume_ml", 0)
+            state["io_balance"]["input"]["blood_ml"] += amount
+
+        # Fluid Input
+        elif event_type in ("FLUID_IN", "FLUID_BOLUS"):
+            fluid_type = (payload.get("fluid_type") or payload.get("type") or "").upper()
+            amount = payload.get("volume") or payload.get("amount_ml", 0)
+            if any(t in fluid_type for t in blood_types):
+                state["io_balance"]["input"]["blood_ml"] += amount
+            elif any(t in fluid_type for t in colloid_types):
+                state["io_balance"]["input"]["colloid_ml"] += amount
+            else:
+                state["io_balance"]["input"]["crystalloid_ml"] += amount
+
+        # Urine Output
+        elif event_type == "URINE_OUTPUT":
+            state["io_balance"]["output"]["urine_ml"] += payload.get("amount_ml", 0)
+
+        # Blood Loss
+        elif event_type == "FLUID_OUT":
+            state["io_balance"]["output"]["blood_loss_ml"] += payload.get("volume_ml", 0)
+
+        # Monitor Started (track Foley, etc.)
+        elif event_type == "MONITOR_STARTED":
+            state["monitors"].append({
+                "type": payload.get("monitor_type"),
+                "started_at": clinical_time
+            })
+
+        # Timeline Events
+        elif event_type == "ANESTHESIA_START":
+            state["times"]["anesthesia_start"] = clinical_time[:5] if clinical_time else None
+        elif event_type == "ANESTHESIA_END":
+            state["times"]["anesthesia_end"] = clinical_time[:5] if clinical_time else None
+        elif event_type == "SURGERY_START":
+            state["times"]["surgery_start"] = clinical_time[:5] if clinical_time else None
+        elif event_type == "SURGERY_END":
+            state["times"]["surgery_end"] = clinical_time[:5] if clinical_time else None
+
+        # Technique
+        elif event_type == "TECHNIQUE_SET":
+            state["technique"] = payload.get("technique")
+
+        # Staff Assignment
+        elif event_type == "STAFF_ASSIGNED":
+            role = payload.get("role", "").upper()
+            name = payload.get("name") or payload.get("staff_name")
+            if "ANESTHESIOLOGIST" in role or "DOCTOR" in role or "DR" in role:
+                state["anesthesiologist"] = name
+            elif "NURSE" in role or "RN" in role:
+                state["nurse"] = name
+
+    # Calculate I/O totals
+    io_in = state["io_balance"]["input"]
+    io_out = state["io_balance"]["output"]
+    io_in["total_ml"] = io_in["crystalloid_ml"] + io_in["colloid_ml"] + io_in["blood_ml"]
+    io_out["total_ml"] = io_out["urine_ml"] + io_out["blood_loss_ml"]
+    state["io_balance"]["balance_ml"] = io_in["total_ml"] - io_out["total_ml"]
+
+    return state
+
+
+@router.get("/cases/{case_id}/pdf")
+async def generate_pdf(
+    case_id: str,
+    preview: bool = Query(False, description="If true, return HTML preview instead of PDF"),
+    hospital_name: str = Query("烏日林新醫院", description="Hospital name for header"),
+    hospital_address: str = Query("", description="Hospital address (optional)")
+):
+    """
+    Generate PDF Anesthesia Record (M0073)
+
+    GET /api/anesthesia/cases/{case_id}/pdf
+
+    Pure function rendering: PDF = f(events)
+    - Fetches all events for the case
+    - Rebuilds state from events (event sourcing)
+    - Generates Matplotlib chart for BP/HR trends
+    - Renders Jinja2 HTML template
+    - Converts to PDF with WeasyPrint
+    - Auto-paginates when vitals > 24
+    """
+    if not PDF_ENABLED:
+        raise HTTPException(
+            status_code=503,
+            detail="PDF generation not available. Install: pip install weasyprint jinja2 matplotlib"
+        )
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 1. Get case info
+        cursor.execute("""
+            SELECT * FROM anesthesia_cases WHERE id = ?
+        """, (case_id,))
+        case = cursor.fetchone()
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
+        case_dict = dict(case)
+
+        # 2. Get all events (chronological order)
+        cursor.execute("""
+            SELECT * FROM anesthesia_events
+            WHERE case_id = ?
+            ORDER BY clinical_time ASC, created_at ASC
+        """, (case_id,))
+        events = [dict(row) for row in cursor.fetchall()]
+
+        # 3. Rebuild state from events (pure function)
+        state = _rebuild_state_from_events(events)
+
+        # 4. Get IV lines from projection table (for additional details)
+        cursor.execute("""
+            SELECT * FROM anesthesia_iv_lines WHERE case_id = ? ORDER BY line_number
+        """, (case_id,))
+        iv_lines = [dict(row) for row in cursor.fetchall()]
+        if iv_lines:
+            state["iv_lines"] = [{
+                "line_number": iv.get("line_number", i+1),
+                "site": iv.get("site"),
+                "gauge": iv.get("gauge"),
+                "catheter_type": iv.get("catheter_type", "PERIPHERAL")
+            } for i, iv in enumerate(iv_lines)]
+
+        # 5. Paginate vitals (24 per page)
+        vitals = state["vitals"]
+        total_vitals = len(vitals)
+        total_pages = max(1, (total_vitals + VITALS_PER_PAGE - 1) // VITALS_PER_PAGE)
+
+        pages = []
+        for page_num in range(total_pages):
+            start_idx = page_num * VITALS_PER_PAGE
+            end_idx = min(start_idx + VITALS_PER_PAGE, total_vitals)
+            page_vitals = vitals[start_idx:end_idx]
+
+            # Format time display for each vital
+            for v in page_vitals:
+                if v.get("time"):
+                    try:
+                        t = datetime.fromisoformat(v["time"].replace("Z", "+00:00"))
+                        v["time_display"] = t.strftime("%H:%M")
+                    except:
+                        v["time_display"] = v["time"][:5] if len(v["time"]) >= 5 else v["time"]
+                else:
+                    v["time_display"] = ""
+
+            # Generate chart for this page's vitals
+            chart_image = _generate_vitals_chart(vitals, start_idx, end_idx) if page_vitals else ""
+
+            # Drugs for this page (distribute evenly or all on page 1)
+            if page_num == 0:
+                page_drugs = state["drugs"][:20]  # First 20 drugs on page 1
+            else:
+                remaining_drugs = state["drugs"][20:]
+                drugs_per_page = max(1, len(remaining_drugs) // (total_pages - 1))
+                drug_start = (page_num - 1) * drugs_per_page
+                page_drugs = remaining_drugs[drug_start:drug_start + drugs_per_page]
+
+            # Format drug times
+            for d in page_drugs:
+                if d.get("time"):
+                    try:
+                        t = datetime.fromisoformat(d["time"].replace("Z", "+00:00"))
+                        d["time"] = t.strftime("%H:%M")
+                    except:
+                        d["time"] = d["time"][:5] if len(d["time"]) >= 5 else d["time"]
+
+            pages.append({
+                "page_number": page_num + 1,
+                "vitals": page_vitals,
+                "drugs": page_drugs,
+                "chart_image": chart_image
+            })
+
+        # 6. Prepare template context
+        context = {
+            "hospital_name": hospital_name,
+            "hospital_address": hospital_address,
+            "case_id": case_id,
+            "patient": {
+                "name": case_dict.get("patient_name", ""),
+                "chart_no": case_dict.get("patient_id", ""),
+                "gender": case_dict.get("patient_gender", ""),
+                "age": case_dict.get("patient_age", ""),
+                "weight": case_dict.get("patient_weight", ""),
+                "height": case_dict.get("patient_height", ""),
+                "blood_type": case_dict.get("blood_type", ""),
+                "asa_class": case_dict.get("asa_class", "")
+            },
+            "surgery": {
+                "name": case_dict.get("surgery_name", ""),
+                "procedure": case_dict.get("procedure", ""),
+                "date": case_dict.get("created_at", "")[:10] if case_dict.get("created_at") else "",
+                "or_room": case_dict.get("or_room", ""),
+                "surgeon": case_dict.get("surgeon_name", "")
+            },
+            "technique": state["technique"] or case_dict.get("planned_technique"),
+            "iv_lines": state["iv_lines"],
+            "io_balance": state["io_balance"],
+            "times": state["times"],
+            "anesthesiologist": state["anesthesiologist"],
+            "nurse": state["nurse"],
+            "pages": pages,
+            "total_pages": total_pages,
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        # 7. Render Jinja2 template
+        template_dir = Path(__file__).parent.parent / "templates"
+        env = Environment(loader=FileSystemLoader(str(template_dir)))
+        template = env.get_template("anesthesia_record_m0073.html")
+        html_content = template.render(**context)
+
+        # 8. Return HTML preview or PDF
+        if preview:
+            return StreamingResponse(
+                io.BytesIO(html_content.encode('utf-8')),
+                media_type="text/html",
+                headers={"Content-Disposition": f"inline; filename=anesthesia_{case_id}.html"}
+            )
+
+        # 9. Convert to PDF with WeasyPrint
+        pdf_buffer = io.BytesIO()
+        HTML(string=html_content, base_url=str(template_dir)).write_pdf(pdf_buffer)
+        pdf_buffer.seek(0)
+
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=M0073_anesthesia_{case_id}.pdf"
+            }
+        )
+
+    finally:
+        conn.close()
+
+
+@router.get("/cases/{case_id}/pdf/preview")
+async def preview_pdf(
+    case_id: str,
+    hospital_name: str = Query("烏日林新醫院", description="Hospital name for header")
+):
+    """
+    Preview PDF as HTML (alias for /pdf?preview=true)
+
+    GET /api/anesthesia/cases/{case_id}/pdf/preview
+    """
+    return await generate_pdf(case_id, preview=True, hospital_name=hospital_name)

@@ -15,6 +15,11 @@ pydantic>=2.8.0
 # PDF 生成
 reportlab>=4.0.0
 
+# v2.1: 麻醉紀錄 PDF (M0073)
+weasyprint>=62.0
+jinja2>=3.1.0
+matplotlib>=3.8.0
+
 # QR Code 生成
 qrcode[pil]>=7.4.2
 

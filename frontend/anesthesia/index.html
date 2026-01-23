@@ -1245,6 +1245,13 @@
                     </svg>
                     <span>結案</span>
                 </button>
+                <button class="quick-btn" onclick="downloadPDF()" style="background: #6366f1; border-color: #6366f1;">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11v6m0 0l-2-2m2 2l2-2"></path>
+                    </svg>
+                    <span>PDF</span>
+                </button>
             </div>
 
             <!-- Advanced Events Row -->
@@ -1394,6 +1401,12 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path>
             </svg>
             <span>氧氣</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('ivio')" style="color: #22c55e;">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+            <span>IV/IO</span>
         </div>
     </nav>
 
@@ -2976,6 +2989,9 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
         .sync-badge {
             background: #a1a1aa;
             color: #18181b;
@@ -3009,6 +3025,259 @@
             margin-top: 36px;
         }
     </style>
+
+    <!-- v2.1: IV/IO Modal Styles -->
+    <style>
+        .ivio-section { margin-bottom: 20px; }
+        .ivio-section-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .iv-line-card {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-left: 3px solid #22c55e;
+        }
+        .iv-line-card.removed {
+            border-left-color: var(--border);
+            opacity: 0.5;
+        }
+        .iv-line-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .iv-line-site { font-weight: 600; }
+        .iv-line-gauge { font-size: 0.75rem; color: var(--text-muted); }
+        .iv-rate-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .iv-rate-input {
+            width: 80px;
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--text);
+            text-align: center;
+        }
+        .io-balance-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .io-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .io-row:last-child { border-bottom: none; }
+        .io-label { color: var(--text-muted); }
+        .io-value { font-weight: 600; }
+        .io-value.positive { color: #22c55e; }
+        .io-value.negative { color: #ef4444; }
+        .monitor-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+        .monitor-badge.foley { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .monitor-badge.air { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+        .fluid-quick-btn {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--text);
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+        .fluid-quick-btn:hover { background: var(--card-hover); }
+    </style>
+
+    <!-- v2.1: IV/IO Modal -->
+    <div class="modal" id="ivioModal">
+        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 class="modal-title">IV 管路 / I-O Balance</h2>
+                <button class="modal-close" onclick="closeModal('ivioModal')">&times;</button>
+            </div>
+
+            <!-- I/O Balance Summary -->
+            <div class="io-balance-card">
+                <div style="font-weight: 600; margin-bottom: 12px;">I/O Balance</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">輸入 Input</div>
+                        <div id="ioInputTotal" style="font-size: 1.5rem; font-weight: 700;">0 ml</div>
+                        <div id="ioInputBreakdown" style="font-size: 0.75rem; color: var(--text-muted);"></div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">輸出 Output</div>
+                        <div id="ioOutputTotal" style="font-size: 1.5rem; font-weight: 700;">0 ml</div>
+                        <div id="ioOutputBreakdown" style="font-size: 0.75rem; color: var(--text-muted);"></div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+                    <span style="font-size: 0.875rem; color: var(--text-muted);">淨平衡</span>
+                    <div id="ioNetBalance" style="font-size: 1.75rem; font-weight: 700; color: #22c55e;">+0 ml</div>
+                </div>
+            </div>
+
+            <!-- Active Monitors -->
+            <div class="ivio-section">
+                <div class="ivio-section-title">
+                    <span>監測器</span>
+                    <button class="btn-small" onclick="showAddMonitorDialog()" style="padding: 4px 8px; font-size: 0.75rem;">+ 新增</button>
+                </div>
+                <div id="monitorsList" style="display: flex; flex-wrap: wrap;"></div>
+            </div>
+
+            <!-- Urine Output (if Foley active) -->
+            <div class="ivio-section" id="urineSection" style="display: none;">
+                <div class="ivio-section-title">
+                    <span>尿量記錄</span>
+                    <span id="urineTotalDisplay" style="color: #fbbf24;">累計: 0 ml</span>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="number" id="urineAmountInput" placeholder="ml" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+                    <button onclick="recordUrineOutput()" class="btn-primary" style="padding: 10px 16px;">記錄</button>
+                </div>
+            </div>
+
+            <!-- IV Lines -->
+            <div class="ivio-section">
+                <div class="ivio-section-title">
+                    <span>IV 管路</span>
+                    <button class="btn-small" onclick="showAddIVLineDialog()" style="padding: 4px 8px; font-size: 0.75rem;">+ 插入</button>
+                </div>
+                <div id="ivLinesList"></div>
+            </div>
+
+            <!-- Quick Fluid Buttons -->
+            <div class="ivio-section">
+                <div class="ivio-section-title">快速輸液</div>
+                <div id="quickFluidButtons">
+                    <button class="fluid-quick-btn" onclick="quickFluid('N/S', 500)">N/S 500ml</button>
+                    <button class="fluid-quick-btn" onclick="quickFluid('L/R', 500)">L/R 500ml</button>
+                    <button class="fluid-quick-btn" onclick="quickFluid('D5W', 500)">D5W 500ml</button>
+                    <button class="fluid-quick-btn" onclick="quickFluid('pRBC', 250)">pRBC 1U</button>
+                    <button class="fluid-quick-btn" onclick="quickFluid('FFP', 200)">FFP 1U</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add IV Line Dialog -->
+    <div class="modal" id="addIVLineModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">插入 IV 管路</h2>
+                <button class="modal-close" onclick="closeModal('addIVLineModal')">&times;</button>
+            </div>
+            <div style="padding: 16px;">
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">部位 *</label>
+                    <select id="ivSiteSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+                        <option value="">選擇...</option>
+                        <option value="左手背">左手背</option>
+                        <option value="右手背">右手背</option>
+                        <option value="左前臂">左前臂</option>
+                        <option value="右前臂">右前臂</option>
+                        <option value="左肘正中">左肘正中</option>
+                        <option value="右肘正中">右肘正中</option>
+                        <option value="頸部CVC">頸部 CVC</option>
+                        <option value="鎖骨下CVC">鎖骨下 CVC</option>
+                        <option value="股靜脈CVC">股靜脈 CVC</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">Gauge</label>
+                    <select id="ivGaugeSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+                        <option value="">選擇...</option>
+                        <option value="24G">24G</option>
+                        <option value="22G">22G</option>
+                        <option value="20G">20G</option>
+                        <option value="18G">18G</option>
+                        <option value="16G">16G</option>
+                        <option value="14G">14G</option>
+                        <option value="CVC">CVC</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">初始滴速 (ml/hr)</label>
+                    <input type="number" id="ivRateInput" placeholder="100" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+                </div>
+                <button onclick="insertIVLine()" class="btn-primary" style="width: 100%; padding: 12px;">插入 IV</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Monitor Dialog -->
+    <div class="modal" id="addMonitorModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">啟動監測器</h2>
+                <button class="modal-close" onclick="closeModal('addMonitorModal')">&times;</button>
+            </div>
+            <div style="padding: 16px;">
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">類型 *</label>
+                    <select id="monitorTypeSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);" onchange="onMonitorTypeChange()">
+                        <option value="">選擇...</option>
+                        <option value="EKG">EKG 心電圖</option>
+                        <option value="SPO2">SpO2 血氧</option>
+                        <option value="NIBP">NIBP 血壓</option>
+                        <option value="IBP">IBP A-line</option>
+                        <option value="FOLEY">Foley 導尿管</option>
+                        <option value="AIR_BLANKET">保溫毯</option>
+                        <option value="BIS">BIS 麻醉深度</option>
+                        <option value="ETCO2">EtCO2</option>
+                        <option value="NMT">NMT 肌鬆</option>
+                    </select>
+                </div>
+                <div id="foleySettingsDiv" style="display: none; margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">Foley Size</label>
+                    <select id="foleySizeSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+                        <option value="14Fr">14 Fr</option>
+                        <option value="16Fr">16 Fr</option>
+                        <option value="18Fr">18 Fr</option>
+                    </select>
+                </div>
+                <div id="airBlanketSettingsDiv" style="display: none; margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 4px; font-size: 0.875rem;">溫度設定</label>
+                    <select id="airBlanketTempSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+                        <option value="LOW">低溫 (32-34°C)</option>
+                        <option value="MEDIUM">中溫 (36-38°C)</option>
+                        <option value="HIGH">高溫 (40-43°C)</option>
+                    </select>
+                </div>
+                <button onclick="startMonitor()" class="btn-primary" style="width: 100%; padding: 12px;">啟動監測</button>
+            </div>
+        </div>
+    </div>
 
     <!-- xIRS SDK v1.1 (Strangler Pattern Phase 1) -->
     <script src="/shared/sdk/xirs-config.js"></script>
@@ -5650,6 +5919,13 @@
                 document.getElementById('drugsModal').classList.add('active');
             } else if (tab === 'o2') {
                 showO2Modal();
+            } else if (tab === 'ivio') {
+                if (!currentCase) {
+                    alert('請先選擇或建立案例');
+                    return;
+                }
+                loadIVIOData();
+                document.getElementById('ivioModal').classList.add('active');
             }
         }
 
@@ -6010,6 +6286,67 @@
             } catch (err) {
                 alert('關閉失敗: ' + err.message);
             }
+        }
+
+        // =================================================================
+        // PDF Generation (v2.1) - M0073 Anesthesia Record
+        // =================================================================
+
+        async function downloadPDF() {
+            if (!currentCase) {
+                alert('請先選擇案例');
+                return;
+            }
+
+            const caseId = currentCase.id;
+
+            // Show loading state
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `
+                <svg class="icon animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span>生成中...</span>
+            `;
+            btn.disabled = true;
+
+            try {
+                // Fetch PDF from API
+                const res = await fetch(`${API_BASE}/cases/${caseId}/pdf?hospital_name=${encodeURIComponent('烏日林新醫院')}`);
+
+                if (!res.ok) {
+                    const error = await res.json().catch(() => ({ detail: 'PDF 生成失敗' }));
+                    throw new Error(error.detail || 'PDF 生成失敗');
+                }
+
+                // Download the PDF
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `M0073_anesthesia_${caseId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+            } catch (err) {
+                console.error('PDF download error:', err);
+                alert('PDF 下載失敗: ' + err.message);
+            } finally {
+                // Restore button
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function previewPDF() {
+            if (!currentCase) return;
+
+            const caseId = currentCase.id;
+            // Open preview in new window
+            window.open(`${API_BASE}/cases/${caseId}/pdf/preview?hospital_name=${encodeURIComponent('烏日林新醫院')}`, '_blank');
         }
 
         function showCustomMedForm() {
@@ -6557,6 +6894,258 @@
                 }
             } catch (err) {
                 console.error('Failed to load timeline:', err);
+            }
+        }
+
+        // =================================================================
+        // v2.1: IV/IO Management Functions
+        // =================================================================
+
+        let ivLines = [];
+        let monitors = [];
+        let ioBalance = { input: {}, output: {}, balance_ml: 0 };
+
+        async function loadIVIOData() {
+            if (!currentCase) return;
+
+            try {
+                // Load IV lines
+                const ivRes = await apiFetch(`${API_BASE}/cases/${currentCase.id}/iv-lines`);
+                const ivData = await ivRes.json();
+                ivLines = ivData.iv_lines || [];
+                renderIVLines();
+
+                // Load monitors
+                const monRes = await apiFetch(`${API_BASE}/cases/${currentCase.id}/monitors`);
+                const monData = await monRes.json();
+                monitors = monData.monitors || [];
+                renderMonitors();
+
+                // Load I/O balance
+                const ioRes = await apiFetch(`${API_BASE}/cases/${currentCase.id}/io-balance`);
+                ioBalance = await ioRes.json();
+                renderIOBalance();
+
+            } catch (err) {
+                console.error('Failed to load IV/IO data:', err);
+            }
+        }
+
+        function renderIVLines() {
+            const container = document.getElementById('ivLinesList');
+            if (ivLines.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 16px;">尚無 IV 管路</div>';
+                return;
+            }
+
+            container.innerHTML = ivLines.map(line => `
+                <div class="iv-line-card ${line.removed_at ? 'removed' : ''}">
+                    <div class="iv-line-header">
+                        <div>
+                            <span class="iv-line-site">#${line.line_number} ${line.site}</span>
+                            <span class="iv-line-gauge">${line.gauge || ''}</span>
+                        </div>
+                        ${!line.removed_at ? `<button onclick="removeIVLine('${line.line_id}')" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.75rem;">移除</button>` : '<span style="color: var(--text-muted); font-size: 0.75rem;">已移除</span>'}
+                    </div>
+                    ${!line.removed_at ? `
+                        <div class="iv-rate-control">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">滴速:</span>
+                            <input type="number" class="iv-rate-input" value="${line.current_rate_ml_hr || 0}" onchange="updateIVRate('${line.line_id}', this.value)">
+                            <span style="font-size: 0.75rem;">ml/hr</span>
+                            <span style="margin-left: auto; font-size: 0.75rem; color: var(--text-muted);">累計: ${line.total_volume_ml || 0} ml</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderMonitors() {
+            const container = document.getElementById('monitorsList');
+            const urineSection = document.getElementById('urineSection');
+
+            if (monitors.length === 0) {
+                container.innerHTML = '<span style="color: var(--text-muted);">無監測器</span>';
+                urineSection.style.display = 'none';
+                return;
+            }
+
+            const hasFoley = monitors.some(m => m.monitor_type === 'FOLEY' && !m.stopped_at);
+            urineSection.style.display = hasFoley ? 'block' : 'none';
+
+            if (hasFoley) {
+                const foley = monitors.find(m => m.monitor_type === 'FOLEY' && !m.stopped_at);
+                document.getElementById('urineTotalDisplay').textContent = `累計: ${foley.total_urine_ml || 0} ml`;
+            }
+
+            container.innerHTML = monitors.filter(m => !m.stopped_at).map(m => {
+                let badgeClass = '';
+                let label = m.monitor_type;
+                if (m.monitor_type === 'FOLEY') { badgeClass = 'foley'; label = 'Foley'; }
+                if (m.monitor_type === 'AIR_BLANKET') { badgeClass = 'air'; label = '保溫毯'; }
+                return `<span class="monitor-badge ${badgeClass}" onclick="stopMonitor('${m.monitor_id}')">${label} ×</span>`;
+            }).join('');
+        }
+
+        function renderIOBalance() {
+            const input = ioBalance.input || {};
+            const output = ioBalance.output || {};
+
+            document.getElementById('ioInputTotal').textContent = `${input.total_ml || 0} ml`;
+            document.getElementById('ioInputBreakdown').textContent = `晶體 ${input.crystalloid_ml || 0} / 膠體 ${input.colloid_ml || 0} / 血品 ${input.blood_ml || 0}`;
+
+            document.getElementById('ioOutputTotal').textContent = `${output.total_ml || 0} ml`;
+            document.getElementById('ioOutputBreakdown').textContent = `尿量 ${output.urine_ml || 0} / 失血 ${output.blood_loss_ml || 0}`;
+
+            const net = ioBalance.balance_ml || 0;
+            const netEl = document.getElementById('ioNetBalance');
+            netEl.textContent = `${net >= 0 ? '+' : ''}${net} ml`;
+            netEl.style.color = net >= 0 ? '#22c55e' : '#ef4444';
+        }
+
+        function showAddIVLineDialog() {
+            document.getElementById('ivSiteSelect').value = '';
+            document.getElementById('ivGaugeSelect').value = '';
+            document.getElementById('ivRateInput').value = '';
+            document.getElementById('addIVLineModal').classList.add('active');
+        }
+
+        async function insertIVLine() {
+            const site = document.getElementById('ivSiteSelect').value;
+            if (!site) { alert('請選擇部位'); return; }
+
+            const gauge = document.getElementById('ivGaugeSelect').value;
+            const rate = parseInt(document.getElementById('ivRateInput').value) || 0;
+            const catheterType = site.includes('CVC') ? 'CVC' : 'PERIPHERAL';
+
+            try {
+                const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/iv-lines?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ site, gauge, catheter_type: catheterType, rate_ml_hr: rate })
+                });
+
+                if (!res.ok) throw new Error('Failed');
+
+                closeModal('addIVLineModal');
+                loadIVIOData();
+            } catch (err) {
+                alert('插入失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        async function updateIVRate(lineId, rate) {
+            try {
+                await apiFetch(`${API_BASE}/cases/${currentCase.id}/iv-lines/${lineId}?actor_id=${actorId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rate_ml_hr: parseInt(rate) || 0 })
+                });
+            } catch (err) {
+                alert('更新失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        async function removeIVLine(lineId) {
+            if (!confirm('確定移除此 IV 管路？')) return;
+
+            try {
+                await apiFetch(`${API_BASE}/cases/${currentCase.id}/iv-lines/${lineId}?actor_id=${actorId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ removed: true })
+                });
+                loadIVIOData();
+            } catch (err) {
+                alert('移除失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        async function quickFluid(fluidType, amount) {
+            // Find first active IV line
+            const activeLine = ivLines.find(l => !l.removed_at);
+            if (!activeLine) {
+                alert('請先插入 IV 管路');
+                return;
+            }
+
+            try {
+                await apiFetch(`${API_BASE}/cases/${currentCase.id}/iv-lines/${activeLine.line_id}/fluids?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fluid_type: fluidType, amount_ml: amount })
+                });
+                loadIVIOData();
+            } catch (err) {
+                alert('給予輸液失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        function showAddMonitorDialog() {
+            document.getElementById('monitorTypeSelect').value = '';
+            document.getElementById('foleySettingsDiv').style.display = 'none';
+            document.getElementById('airBlanketSettingsDiv').style.display = 'none';
+            document.getElementById('addMonitorModal').classList.add('active');
+        }
+
+        function onMonitorTypeChange() {
+            const type = document.getElementById('monitorTypeSelect').value;
+            document.getElementById('foleySettingsDiv').style.display = type === 'FOLEY' ? 'block' : 'none';
+            document.getElementById('airBlanketSettingsDiv').style.display = type === 'AIR_BLANKET' ? 'block' : 'none';
+        }
+
+        async function startMonitor() {
+            const monitorType = document.getElementById('monitorTypeSelect').value;
+            if (!monitorType) { alert('請選擇類型'); return; }
+
+            let settings = {};
+            if (monitorType === 'FOLEY') {
+                settings.foley_size = document.getElementById('foleySizeSelect').value;
+            } else if (monitorType === 'AIR_BLANKET') {
+                settings.temperature_setting = document.getElementById('airBlanketTempSelect').value;
+            }
+
+            try {
+                await apiFetch(`${API_BASE}/cases/${currentCase.id}/monitors?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ monitor_type: monitorType, settings })
+                });
+
+                closeModal('addMonitorModal');
+                loadIVIOData();
+            } catch (err) {
+                alert('啟動失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        async function stopMonitor(monitorId) {
+            if (!confirm('確定停止此監測器？')) return;
+
+            try {
+                await apiFetch(`${API_BASE}/cases/${currentCase.id}/monitors/${monitorId}?actor_id=${actorId}`, {
+                    method: 'DELETE'
+                });
+                loadIVIOData();
+            } catch (err) {
+                alert('停止失敗: ' + getErrorMessage(err));
+            }
+        }
+
+        async function recordUrineOutput() {
+            const amount = parseInt(document.getElementById('urineAmountInput').value);
+            if (!amount || amount <= 0) { alert('請輸入有效尿量'); return; }
+
+            try {
+                await apiFetch(`${API_BASE}/cases/${currentCase.id}/urine-output?actor_id=${actorId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount_ml: amount })
+                });
+
+                document.getElementById('urineAmountInput').value = '';
+                loadIVIOData();
+            } catch (err) {
+                alert('記錄失敗: ' + getErrorMessage(err));
             }
         }
 

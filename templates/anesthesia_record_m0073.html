@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>麻醉紀錄單 M0073</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 8mm;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif;
+            font-size: 9pt;
+            line-height: 1.3;
+            color: #000;
+        }
+
+        .page {
+            width: 100%;
+            page-break-after: always;
+            position: relative;
+        }
+
+        .page:last-child {
+            page-break-after: auto;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #000;
+            padding-bottom: 4px;
+            margin-bottom: 4px;
+        }
+
+        .hospital-info {
+            text-align: left;
+        }
+
+        .hospital-name {
+            font-size: 14pt;
+            font-weight: bold;
+        }
+
+        .form-title {
+            font-size: 16pt;
+            font-weight: bold;
+            text-align: center;
+            flex: 1;
+        }
+
+        .form-code {
+            text-align: right;
+            font-size: 8pt;
+        }
+
+        .page-indicator {
+            font-size: 10pt;
+            font-weight: bold;
+        }
+
+        /* Patient Info */
+        .patient-info {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 2px;
+            border: 1px solid #000;
+            padding: 4px;
+            margin-bottom: 4px;
+            font-size: 8pt;
+        }
+
+        .patient-info .item {
+            display: flex;
+        }
+
+        .patient-info .label {
+            font-weight: bold;
+            margin-right: 4px;
+        }
+
+        /* Main Content Grid */
+        .main-content {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 4px;
+        }
+
+        /* Left Panel: Drugs, Chart, I/O */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* Drug Section */
+        .drug-section {
+            border: 1px solid #000;
+            font-size: 7pt;
+        }
+
+        .drug-section-title {
+            background: #e0e0e0;
+            padding: 2px 4px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #000;
+        }
+
+        .drug-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .drug-table th, .drug-table td {
+            border: 1px solid #999;
+            padding: 1px 2px;
+            text-align: center;
+        }
+
+        .drug-table th {
+            background: #f0f0f0;
+        }
+
+        /* Vital Signs Chart */
+        .chart-section {
+            border: 1px solid #000;
+            text-align: center;
+        }
+
+        .chart-section img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* I/O Balance */
+        .io-section {
+            border: 1px solid #000;
+            font-size: 7pt;
+        }
+
+        .io-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .io-table th, .io-table td {
+            border: 1px solid #999;
+            padding: 1px 3px;
+        }
+
+        .io-table th {
+            background: #f0f0f0;
+            text-align: left;
+        }
+
+        .io-table td {
+            text-align: right;
+        }
+
+        /* Right Panel: Vitals Timeline */
+        .right-panel {
+            overflow: hidden;
+        }
+
+        .vitals-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 7pt;
+        }
+
+        .vitals-table th, .vitals-table td {
+            border: 1px solid #000;
+            padding: 1px 2px;
+            text-align: center;
+            min-width: 22px;
+        }
+
+        .vitals-table th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+
+        .vitals-table .row-header {
+            background: #e8e8e8;
+            text-align: left;
+            font-weight: bold;
+            width: 60px;
+            white-space: nowrap;
+        }
+
+        .vitals-table .time-row {
+            background: #d0d0d0;
+            font-weight: bold;
+        }
+
+        .vitals-table .bp-systolic {
+            color: #c00;
+        }
+
+        .vitals-table .bp-diastolic {
+            color: #00c;
+        }
+
+        .vitals-table .hr {
+            color: #060;
+        }
+
+        .vitals-table .spo2 {
+            color: #006;
+        }
+
+        /* Events Row */
+        .events-row td {
+            font-size: 6pt;
+            vertical-align: top;
+            max-width: 25px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 4px;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            font-size: 8pt;
+        }
+
+        .signature-box {
+            border: 1px solid #000;
+            padding: 4px;
+            min-height: 50px;
+        }
+
+        .signature-label {
+            font-weight: bold;
+            border-bottom: 1px dashed #999;
+            margin-bottom: 4px;
+        }
+
+        /* Technique Section */
+        .technique-section {
+            border: 1px solid #000;
+            padding: 3px;
+            font-size: 7pt;
+            margin-bottom: 4px;
+        }
+
+        .technique-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+        }
+
+        .technique-item {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .checkbox {
+            width: 10px;
+            height: 10px;
+            border: 1px solid #000;
+            display: inline-block;
+        }
+
+        .checkbox.checked {
+            background: #000;
+        }
+
+        .checkbox.checked::after {
+            content: "✓";
+            color: #fff;
+            font-size: 8pt;
+            position: relative;
+            left: 1px;
+            top: -2px;
+        }
+
+        /* IV Section */
+        .iv-section {
+            border: 1px solid #000;
+            font-size: 7pt;
+            margin-bottom: 4px;
+        }
+
+        .iv-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .iv-table th, .iv-table td {
+            border: 1px solid #999;
+            padding: 1px 2px;
+            text-align: center;
+        }
+
+        /* Print Adjustments */
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+{% for page in pages %}
+<div class="page">
+    <!-- Header -->
+    <div class="header">
+        <div class="hospital-info">
+            <div class="hospital-name">{{ hospital_name }}</div>
+            <div>{{ hospital_address }}</div>
+        </div>
+        <div class="form-title">
+            麻醉紀錄單
+            <div class="page-indicator">第 {{ page.page_number }} 頁 / 共 {{ total_pages }} 頁</div>
+        </div>
+        <div class="form-code">
+            <div>M0073</div>
+            <div>病歷號: {{ patient.chart_no }}</div>
+            <div>Case: {{ case_id }}</div>
+        </div>
+    </div>
+
+    <!-- Patient Info (only on first page) -->
+    {% if page.page_number == 1 %}
+    <div class="patient-info">
+        <div class="item"><span class="label">姓名:</span>{{ patient.name }}</div>
+        <div class="item"><span class="label">性別:</span>{{ patient.gender }}</div>
+        <div class="item"><span class="label">年齡:</span>{{ patient.age }}</div>
+        <div class="item"><span class="label">體重:</span>{{ patient.weight }} kg</div>
+        <div class="item"><span class="label">身高:</span>{{ patient.height }} cm</div>
+        <div class="item"><span class="label">血型:</span>{{ patient.blood_type }}</div>
+        <div class="item"><span class="label">ASA:</span>{{ patient.asa_class }}</div>
+        <div class="item"><span class="label">手術:</span>{{ surgery.name }}</div>
+        <div class="item"><span class="label">術式:</span>{{ surgery.procedure }}</div>
+        <div class="item"><span class="label">日期:</span>{{ surgery.date }}</div>
+        <div class="item"><span class="label">OR:</span>{{ surgery.or_room }}</div>
+        <div class="item"><span class="label">主刀:</span>{{ surgery.surgeon }}</div>
+    </div>
+
+    <!-- Technique Section (only on first page) -->
+    <div class="technique-section">
+        <strong>麻醉方式:</strong>
+        <div class="technique-grid">
+            <div class="technique-item">
+                <span class="checkbox {% if technique == 'GA_ETT' %}checked{% endif %}"></span> 全身麻醉(ETT)
+            </div>
+            <div class="technique-item">
+                <span class="checkbox {% if technique == 'GA_LMA' %}checked{% endif %}"></span> 全身麻醉(LMA)
+            </div>
+            <div class="technique-item">
+                <span class="checkbox {% if technique == 'GA_MASK' %}checked{% endif %}"></span> 全身麻醉(Mask)
+            </div>
+            <div class="technique-item">
+                <span class="checkbox {% if technique == 'RA_SPINAL' %}checked{% endif %}"></span> 脊髓麻醉
+            </div>
+            <div class="technique-item">
+                <span class="checkbox {% if technique == 'RA_EPIDURAL' %}checked{% endif %}"></span> 硬膜外麻醉
+            </div>
+            <div class="technique-item">
+                <span class="checkbox {% if technique == 'RA_CSE' %}checked{% endif %}"></span> CSE
+            </div>
+            <div class="technique-item">
+                <span class="checkbox {% if technique == 'RA_BLOCK' %}checked{% endif %}"></span> 神經阻斷
+            </div>
+            <div class="technique-item">
+                <span class="checkbox {% if technique == 'SEDATION' %}checked{% endif %}"></span> 鎮靜麻醉
+            </div>
+            <div class="technique-item">
+                <span class="checkbox {% if technique == 'LOCAL' %}checked{% endif %}"></span> 局部麻醉
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            {% if page.page_number == 1 %}
+            <!-- IV Lines Section -->
+            <div class="iv-section">
+                <div class="drug-section-title">IV 管路</div>
+                <table class="iv-table">
+                    <tr>
+                        <th>#</th>
+                        <th>部位</th>
+                        <th>Gauge</th>
+                        <th>類型</th>
+                    </tr>
+                    {% for iv in iv_lines %}
+                    <tr>
+                        <td>{{ iv.line_number }}</td>
+                        <td>{{ iv.site }}</td>
+                        <td>{{ iv.gauge }}</td>
+                        <td>{{ iv.catheter_type }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- Drug Administration -->
+            <div class="drug-section">
+                <div class="drug-section-title">藥物給予</div>
+                <table class="drug-table">
+                    <tr>
+                        <th>時間</th>
+                        <th>藥物</th>
+                        <th>劑量</th>
+                        <th>途徑</th>
+                    </tr>
+                    {% for drug in page.drugs %}
+                    <tr>
+                        <td>{{ drug.time }}</td>
+                        <td>{{ drug.name }}</td>
+                        <td>{{ drug.dose }}</td>
+                        <td>{{ drug.route }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+            <!-- Vital Signs Chart -->
+            {% if page.chart_image %}
+            <div class="chart-section">
+                <img src="data:image/png;base64,{{ page.chart_image }}" alt="Vital Signs Chart">
+            </div>
+            {% endif %}
+
+            <!-- I/O Balance (only on last page) -->
+            {% if page.page_number == total_pages %}
+            <div class="io-section">
+                <div class="drug-section-title">I/O Balance</div>
+                <table class="io-table">
+                    <tr>
+                        <th colspan="2">輸入 Input</th>
+                    </tr>
+                    <tr>
+                        <th>晶體液</th>
+                        <td>{{ io_balance.input.crystalloid_ml }} mL</td>
+                    </tr>
+                    <tr>
+                        <th>膠體液</th>
+                        <td>{{ io_balance.input.colloid_ml }} mL</td>
+                    </tr>
+                    <tr>
+                        <th>血液製品</th>
+                        <td>{{ io_balance.input.blood_ml }} mL</td>
+                    </tr>
+                    <tr>
+                        <th>總輸入</th>
+                        <td><strong>{{ io_balance.input.total_ml }} mL</strong></td>
+                    </tr>
+                    <tr>
+                        <th colspan="2">輸出 Output</th>
+                    </tr>
+                    <tr>
+                        <th>尿量</th>
+                        <td>{{ io_balance.output.urine_ml }} mL</td>
+                    </tr>
+                    <tr>
+                        <th>失血量</th>
+                        <td>{{ io_balance.output.blood_loss_ml }} mL</td>
+                    </tr>
+                    <tr>
+                        <th>總輸出</th>
+                        <td><strong>{{ io_balance.output.total_ml }} mL</strong></td>
+                    </tr>
+                    <tr>
+                        <th>淨平衡</th>
+                        <td><strong>{{ io_balance.balance_ml }} mL</strong></td>
+                    </tr>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Panel: Vitals Timeline -->
+        <div class="right-panel">
+            <table class="vitals-table">
+                <!-- Time Row -->
+                <tr class="time-row">
+                    <th class="row-header">時間</th>
+                    {% for v in page.vitals %}
+                    <th>{{ v.time_display }}</th>
+                    {% endfor %}
+                </tr>
+
+                <!-- BP Systolic -->
+                <tr>
+                    <td class="row-header">SBP</td>
+                    {% for v in page.vitals %}
+                    <td class="bp-systolic">{{ v.sbp or '' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- BP Diastolic -->
+                <tr>
+                    <td class="row-header">DBP</td>
+                    {% for v in page.vitals %}
+                    <td class="bp-diastolic">{{ v.dbp or '' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- HR -->
+                <tr>
+                    <td class="row-header">HR</td>
+                    {% for v in page.vitals %}
+                    <td class="hr">{{ v.hr or '' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- SpO2 -->
+                <tr>
+                    <td class="row-header">SpO2</td>
+                    {% for v in page.vitals %}
+                    <td class="spo2">{{ v.spo2 or '' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- EtCO2 -->
+                <tr>
+                    <td class="row-header">EtCO2</td>
+                    {% for v in page.vitals %}
+                    <td>{{ v.etco2 or '' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- RR -->
+                <tr>
+                    <td class="row-header">RR</td>
+                    {% for v in page.vitals %}
+                    <td>{{ v.rr or '' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Temp -->
+                <tr>
+                    <td class="row-header">Temp</td>
+                    {% for v in page.vitals %}
+                    <td>{{ v.temp or '' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- FiO2 -->
+                <tr>
+                    <td class="row-header">FiO2</td>
+                    {% for v in page.vitals %}
+                    <td>{{ v.fio2 or '' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- MAC -->
+                <tr>
+                    <td class="row-header">MAC</td>
+                    {% for v in page.vitals %}
+                    <td>{{ v.mac or '' }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Events -->
+                <tr class="events-row">
+                    <td class="row-header">Events</td>
+                    {% for v in page.vitals %}
+                    <td title="{{ v.events_full or '' }}">{{ v.events or '' }}</td>
+                    {% endfor %}
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Footer (only on last page) -->
+    {% if page.page_number == total_pages %}
+    <div class="footer">
+        <div class="signature-box">
+            <div class="signature-label">麻醉開始: {{ times.anesthesia_start or '____:____' }}</div>
+            <div class="signature-label">麻醉結束: {{ times.anesthesia_end or '____:____' }}</div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-label">手術開始: {{ times.surgery_start or '____:____' }}</div>
+            <div class="signature-label">手術結束: {{ times.surgery_end or '____:____' }}</div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-label">麻醉醫師:</div>
+            <div style="margin-top: 20px;">{{ anesthesiologist or '' }}</div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-label">麻醉護理師:</div>
+            <div style="margin-top: 20px;">{{ nurse or '' }}</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+
+<div style="text-align: center; font-size: 7pt; color: #666; margin-top: 8px;">
+    Generated by MIRS Anesthesia Module v2.1 | {{ generated_at }}
+</div>
+</body>
+</html>
