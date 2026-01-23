@@ -59,6 +59,8 @@ def get_demo_anesthesia_cases():
             "id": "ANES-DEMO-001",
             "patient_id": "P-DEMO-001",
             "patient_name": "王大明",
+            "diagnosis": "膽結石併膽囊炎",
+            "operation": "腹腔鏡膽囊切除術",
             "status": "IN_PROGRESS",
             "context_mode": "STANDARD",
             "planned_technique": "GA_ETT",
@@ -70,6 +72,8 @@ def get_demo_anesthesia_cases():
             "id": "ANES-DEMO-002",
             "patient_id": "P-DEMO-002",
             "patient_name": "林小華",
+            "diagnosis": "右側腹股溝疝氣",
+            "operation": "腹腔鏡疝氣修補術",
             "status": "PREOP",
             "context_mode": "STANDARD",
             "planned_technique": "RA_SPINAL",
@@ -81,6 +85,8 @@ def get_demo_anesthesia_cases():
             "id": "ANES-DEMO-003",
             "patient_id": "P-DEMO-003",
             "patient_name": "張美玲",
+            "diagnosis": "子宮肌瘤",
+            "operation": "腹腔鏡子宮肌瘤切除術",
             "status": "CLOSED",
             "context_mode": "STANDARD",
             "planned_technique": "GA_LMA",
@@ -289,6 +295,9 @@ class CreateCaseRequest(BaseModel):
     surgery_case_id: Optional[str] = None
     patient_id: str
     patient_name: Optional[str] = None
+    # v2.1.1: Surgery info
+    diagnosis: Optional[str] = None
+    operation: Optional[str] = None
     context_mode: ContextMode = ContextMode.STANDARD
     planned_technique: Optional[AnesthesiaTechnique] = None
     # v1.1: ASA Classification for billing
@@ -306,6 +315,9 @@ class CaseResponse(BaseModel):
     surgery_case_id: Optional[str]
     patient_id: str
     patient_name: Optional[str]
+    # v2.1.1: Surgery info
+    diagnosis: Optional[str] = None
+    operation: Optional[str] = None
     context_mode: str
     planned_technique: Optional[str]
     # v1.1: ASA Classification for billing
@@ -775,6 +787,10 @@ def init_anesthesia_schema(cursor):
             patient_id TEXT NOT NULL,
             patient_name TEXT,
 
+            -- v2.1.1: Surgery info
+            diagnosis TEXT,
+            operation TEXT,
+
             context_mode TEXT NOT NULL DEFAULT 'STANDARD',
 
             primary_anesthesiologist_id TEXT,
@@ -934,6 +950,16 @@ def init_anesthesia_schema(cursor):
         pass
     try:
         cursor.execute("ALTER TABLE anesthesia_cases ADD COLUMN is_emergency INTEGER DEFAULT 0")
+    except:
+        pass
+
+    # v2.1.1: Add diagnosis and operation columns
+    try:
+        cursor.execute("ALTER TABLE anesthesia_cases ADD COLUMN diagnosis TEXT")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE anesthesia_cases ADD COLUMN operation TEXT")
     except:
         pass
 
@@ -1304,17 +1330,20 @@ async def create_case(request: CreateCaseRequest, actor_id: str = Query(...)):
         cursor.execute("""
             INSERT INTO anesthesia_cases (
                 id, surgery_case_id, patient_id, patient_name,
+                diagnosis, operation,
                 context_mode, planned_technique,
                 asa_classification, is_emergency,
                 primary_anesthesiologist_id, primary_nurse_id,
                 cirs_registration_ref, patient_snapshot,
                 created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             case_id,
             request.surgery_case_id,
             request.patient_id,
             request.patient_name,
+            request.diagnosis,
+            request.operation,
             request.context_mode.value,
             request.planned_technique.value if request.planned_technique else None,
             request.asa_classification,
@@ -1361,6 +1390,8 @@ async def create_case(request: CreateCaseRequest, actor_id: str = Query(...)):
             surgery_case_id=row['surgery_case_id'],
             patient_id=row['patient_id'],
             patient_name=row['patient_name'],
+            diagnosis=row['diagnosis'] if 'diagnosis' in row.keys() else None,
+            operation=row['operation'] if 'operation' in row.keys() else None,
             context_mode=row['context_mode'],
             planned_technique=row['planned_technique'],
             asa_classification=row['asa_classification'] if 'asa_classification' in row.keys() else None,
@@ -1454,12 +1485,15 @@ async def get_case(case_id: str):
 
 
 class UpdateCaseRequest(BaseModel):
-    """v1.1: 更新案例請求 (支援 ASA)"""
+    """v2.1.1: 更新案例請求 (支援 ASA + 診斷/術式)"""
     primary_anesthesiologist_id: Optional[str] = None
     primary_nurse_id: Optional[str] = None
     planned_technique: Optional[str] = None
     asa_classification: Optional[str] = None
     is_emergency: Optional[bool] = None
+    # v2.1.1: Surgery info
+    diagnosis: Optional[str] = None
+    operation: Optional[str] = None
 
 
 @router.patch("/cases/{case_id}")
@@ -1496,6 +1530,15 @@ async def update_case_metadata(
     if request.is_emergency is not None:
         updates.append("is_emergency = ?")
         params.append(1 if request.is_emergency else 0)
+
+    # v2.1.1: Surgery info
+    if request.diagnosis is not None:
+        updates.append("diagnosis = ?")
+        params.append(request.diagnosis)
+
+    if request.operation is not None:
+        updates.append("operation = ?")
+        params.append(request.operation)
 
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")

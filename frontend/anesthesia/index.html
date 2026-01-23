@@ -1206,6 +1206,11 @@
                     </div>
                     <span class="case-status preop" id="caseStatus">PREOP</span>
                 </div>
+                <!-- v2.1.1: 診斷 + 術式 -->
+                <div style="margin-top: 6px; font-size: 0.8rem; color: var(--text-muted);">
+                    <div id="diagnosisInfo" style="margin-bottom: 2px;"></div>
+                    <div id="operationInfo" style="font-weight: 500; color: var(--text-primary);"></div>
+                </div>
                 <!-- v1.1: 麻醉方式 + ASA 分級顯示 (可點擊編輯) -->
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
                     <span class="case-tag technique" id="techniqueInfo" onclick="showEditCaseInfoModal()" style="cursor: pointer;">GA_ETT</span>
@@ -1460,6 +1465,14 @@
                 <div class="form-group">
                     <label class="form-label">病患姓名</label>
                     <input type="text" class="form-input" id="newPatientName" placeholder="選填">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">診斷 (Diagnosis)</label>
+                    <input type="text" class="form-input" id="newDiagnosis" placeholder="選填">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">手術名稱 (Operation)</label>
+                    <input type="text" class="form-input" id="newOperation" placeholder="選填">
                 </div>
                 <div class="form-group">
                     <label class="form-label">麻醉方式</label>
@@ -3926,6 +3939,7 @@
                                 <div>
                                     <div class="case-id">${c.id}</div>
                                     <div style="font-weight: 600;">${c.patient_name || c.patient_id}</div>
+                                    ${c.operation ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">${c.operation}</div>` : ''}
                                 </div>
                                 <span class="case-status ${c.status.toLowerCase()}">${c.status}</span>
                             </div>
@@ -4017,6 +4031,10 @@
                 document.getElementById('patientName').textContent = currentCase.patient_name || currentCase.patient_id;
                 document.getElementById('caseStatus').textContent = currentCase.status;
                 document.getElementById('caseStatus').className = `case-status ${currentCase.status.toLowerCase()}`;
+
+                // v2.1.1: Update diagnosis and operation display
+                document.getElementById('diagnosisInfo').textContent = currentCase.diagnosis ? `Dx: ${currentCase.diagnosis}` : '';
+                document.getElementById('operationInfo').textContent = currentCase.operation || '';
 
                 // v1.1: Update technique and ASA display
                 updateCaseInfoDisplay();
@@ -4316,6 +4334,8 @@
             const body = {
                 patient_id: document.getElementById('newPatientId').value,
                 patient_name: document.getElementById('newPatientName').value || null,
+                diagnosis: document.getElementById('newDiagnosis').value || null,
+                operation: document.getElementById('newOperation').value || null,
                 planned_technique: document.getElementById('newTechnique').value,
                 asa_classification: document.getElementById('newAsaClass').value,
                 is_emergency: document.getElementById('newAsaEmergency').checked,
