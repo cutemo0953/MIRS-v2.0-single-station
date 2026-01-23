@@ -1083,6 +1083,103 @@ def seed_anesthesia_demo(conn: sqlite3.Connection):
             json.dumps({"output_type": otype, "volume_ml": vol})
         ))
 
+    # === 新增：呼吸器設定 (VENT_SETTING_CHANGE) ===
+    vent_settings = [
+        (5, "VCV", 50, 5, 500, 12),    # 誘導後: VCV, FiO2 50%, PEEP 5, TV 500, RR 12
+        (60, "VCV", 45, 5, 500, 12),   # 穩定: 降 FiO2
+        (120, "VCV", 50, 8, 500, 14),  # 鉗夾期: 增 PEEP/RR
+        (180, "VCV", 60, 10, 500, 16), # 解鉗夾: 增 FiO2
+        (240, "VCV", 45, 5, 500, 12),  # 恢復
+        (280, "CPAP", 40, 5, None, None),  # 準備拔管
+    ]
+    for mins, mode, fio2, peep, tv, rr in vent_settings:
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'VENT_SETTING_CHANGE', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, (case6_start + timedelta(minutes=mins)).isoformat(),
+            json.dumps({"mode": mode, "fio2": fio2, "peep": peep, "tv": tv, "rr": rr})
+        ))
+
+    # === 新增：吸入麻醉劑設定 (Agents - 用 AGENT_SETTING 事件) ===
+    agent_settings = [
+        (5, 2, 2.0, 0),      # O2 2L, Sevo 2%, Air 0
+        (30, 2, 1.5, 1),     # 維持: Sevo 降到 1.5%
+        (60, 2, 1.2, 1),
+        (120, 2, 1.5, 1),    # 鉗夾期: 稍增
+        (180, 2, 1.0, 1),    # 解鉗夾
+        (240, 2, 0.8, 1),    # 準備醒
+        (270, 2, 0.5, 2),    # 甦醒期
+        (290, 3, 0, 0),      # 停 Sevo, 純氧
+    ]
+    for mins, o2_flow, sevo_percent, air_flow in agent_settings:
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'AGENT_SETTING', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, (case6_start + timedelta(minutes=mins)).isoformat(),
+            json.dumps({"o2_flow": o2_flow, "sevo_percent": sevo_percent, "air_flow": air_flow, "des_percent": 0})
+        ))
+
+    # === 新增：監測器啟動 (MONITOR_STARTED) ===
+    monitors = [
+        (0, "EKG", "5-lead"),
+        (0, "NIBP", "左上臂"),
+        (0, "SpO2", "右食指"),
+        (0, "TEMP", "鼻咽"),
+        (5, "ETCO2", "主流式"),
+        (25, "ART", "左橈動脈"),
+        (25, "CVP", "右頸內靜脈"),
+        (30, "FOLEY", "14Fr"),
+        (30, "AIR_BLANKET", "上半身"),
+    ]
+    for mins, monitor_type, location in monitors:
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'MONITOR_STARTED', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, (case6_start + timedelta(minutes=mins)).isoformat(),
+            json.dumps({"monitor_type": monitor_type, "location": location})
+        ))
+
+    # === 新增：實驗室數據 (LAB_RESULT_POINT) ===
+    lab_data = [
+        # (mins, hb, hct, ph, pco2, po2, hco3, be, na, k, ca, glucose)
+        (0, 13.5, 40, None, None, None, None, None, 140, 4.0, 2.2, 110),  # 術前
+        (60, 12.8, 38, 7.38, 42, 180, 24, -1, 139, 4.2, 2.1, 125),        # ABG #1
+        (150, 10.2, 30, 7.32, 38, 220, 20, -4, 138, 4.8, 1.9, 145),       # 失血後
+        (220, 9.8, 29, 7.28, 35, 250, 18, -6, 136, 5.2, 2.0, 160),        # 輸血中
+        (280, 11.5, 34, 7.35, 40, 200, 22, -2, 138, 4.5, 2.1, 140),       # 輸血後
+    ]
+    for mins, hb, hct, ph, pco2, po2, hco3, be, na, k, ca, glucose in lab_data:
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'LAB_RESULT_POINT', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, (case6_start + timedelta(minutes=mins)).isoformat(),
+            json.dumps({
+                "hb": hb, "hct": hct, "ph": ph, "pco2": pco2, "po2": po2,
+                "hco3": hco3, "be": be, "na": na, "k": k, "ca": ca, "glucose": glucose
+            })
+        ))
+
+    # === 新增：術前評估資料 (更新 case) ===
+    cursor.execute("""
+        UPDATE anesthesia_cases SET
+            preop_hb = 13.5,
+            preop_ht = 40,
+            preop_k = 4.0,
+            preop_na = 140,
+            estimated_blood_loss = 1500,
+            blood_prepared = 'A+',
+            blood_prepared_units = '4U pRBC, 4U FFP, 6U PLT'
+        WHERE id = ?
+    """, (case6_id,))
+
     conn.commit()
     print(f"[Anesthesia Seeder] Created 6 demo cases:")
     print(f"  - ANES-SEED-001: 陳大明 (IN_PROGRESS, 8 vitals, 6 meds, IV, I/O)")

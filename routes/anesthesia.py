@@ -963,6 +963,22 @@ def init_anesthesia_schema(cursor):
     except:
         pass
 
+    # v2.2: Add preop data columns for comprehensive PDF
+    preop_columns = [
+        ("preop_hb", "REAL"),
+        ("preop_ht", "REAL"),
+        ("preop_k", "REAL"),
+        ("preop_na", "REAL"),
+        ("estimated_blood_loss", "INTEGER"),
+        ("blood_prepared", "TEXT"),
+        ("blood_prepared_units", "TEXT"),
+    ]
+    for col_name, col_type in preop_columns:
+        try:
+            cursor.execute(f"ALTER TABLE anesthesia_cases ADD COLUMN {col_name} {col_type}")
+        except:
+            pass
+
     # Phase A-6: WAL Sync Queue for offline-first operations
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS anesthesia_sync_queue (
@@ -8248,6 +8264,9 @@ def _rebuild_state_from_events(events: List[Dict]) -> Dict:
         "drugs": [],
         "iv_lines": [],
         "monitors": [],
+        "vent_settings": [],      # 呼吸器設定
+        "agent_settings": [],     # 吸入麻醉劑設定
+        "lab_data": [],           # 實驗室數據
         "patient": {},
         "surgery": {},
         "technique": None,
@@ -8348,7 +8367,46 @@ def _rebuild_state_from_events(events: List[Dict]) -> Dict:
         elif event_type == "MONITOR_STARTED":
             state["monitors"].append({
                 "type": payload.get("monitor_type"),
+                "location": payload.get("location"),
                 "started_at": clinical_time
+            })
+
+        # Ventilator Settings
+        elif event_type == "VENT_SETTING_CHANGE":
+            state["vent_settings"].append({
+                "time": clinical_time,
+                "mode": payload.get("mode"),
+                "fio2": payload.get("fio2"),
+                "peep": payload.get("peep"),
+                "tv": payload.get("tv"),
+                "rr": payload.get("rr")
+            })
+
+        # Agent/Gas Settings (Sevoflurane, Desflurane, O2, Air)
+        elif event_type == "AGENT_SETTING":
+            state["agent_settings"].append({
+                "time": clinical_time,
+                "o2_flow": payload.get("o2_flow"),
+                "air_flow": payload.get("air_flow"),
+                "sevo_percent": payload.get("sevo_percent"),
+                "des_percent": payload.get("des_percent")
+            })
+
+        # Lab Results (ABG, CBC, etc.)
+        elif event_type == "LAB_RESULT_POINT":
+            state["lab_data"].append({
+                "time": clinical_time,
+                "hb": payload.get("hb"),
+                "hct": payload.get("hct"),
+                "ph": payload.get("ph"),
+                "pco2": payload.get("pco2"),
+                "po2": payload.get("po2"),
+                "hco3": payload.get("hco3"),
+                "be": payload.get("be"),
+                "na": payload.get("na"),
+                "k": payload.get("k"),
+                "ca": payload.get("ca"),
+                "glucose": payload.get("glucose")
             })
 
         # Timeline Events
@@ -8628,10 +8686,23 @@ async def generate_pdf(
             },
             "technique": state["technique"] or case_dict.get("planned_technique"),
             "iv_lines": state["iv_lines"],
+            "monitors": state["monitors"],
+            "vent_settings": state["vent_settings"],
+            "agent_settings": state["agent_settings"],
+            "lab_data": state["lab_data"],
             "io_balance": state["io_balance"],
             "times": state["times"],
             "anesthesiologist": state["anesthesiologist"],
             "nurse": state["nurse"],
+            "diagnosis": case_dict.get("diagnosis", ""),
+            "operation": case_dict.get("operation", ""),
+            "preop_hb": case_dict.get("preop_hb"),
+            "preop_ht": case_dict.get("preop_ht"),
+            "preop_k": case_dict.get("preop_k"),
+            "preop_na": case_dict.get("preop_na"),
+            "estimated_blood_loss": case_dict.get("estimated_blood_loss"),
+            "blood_prepared": case_dict.get("blood_prepared"),
+            "blood_prepared_units": case_dict.get("blood_prepared_units"),
             "pages": pages,
             "total_pages": total_pages,
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
