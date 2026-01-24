@@ -14,6 +14,7 @@
           "services/**",
           "templates/**",
           "frontend/**",
+          "shared/**",
           "seeder_demo.py",
           "Index.html"
         ]

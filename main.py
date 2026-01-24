@@ -3378,6 +3378,16 @@ if _shared_dir.exists() and not IS_VERCEL:
     app.mount("/shared", StaticFiles(directory=str(_shared_dir)), name="shared")
     print(f"[MIRS] Mounted /shared from {_shared_dir}")
 
+# Vercel: Serve shared SDK files via explicit routes
+if IS_VERCEL:
+    @app.get("/shared/sdk/{filename}")
+    async def serve_shared_sdk(filename: str):
+        """Serve xIRS SDK stub files for Vercel demo"""
+        sdk_file = PROJECT_ROOT / "shared" / "sdk" / filename
+        if sdk_file.exists() and filename.endswith('.js'):
+            return FileResponse(sdk_file, media_type="application/javascript")
+        raise HTTPException(status_code=404, detail=f"SDK file not found: {filename}")
+
 # ============================================================================
 # 資料庫初始化 - 支援 PostgreSQL (Neon) 或 SQLite
 # ============================================================================
