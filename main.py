@@ -107,6 +107,15 @@ except ImportError as e:
     blood_router = None
     init_blood_schema = None
 
+# v3.2 新增: Oxygen Tracking 氧氣追蹤模組 (DEV_SPEC_OXYGEN_TRACKING_SYNC_v1.1)
+try:
+    from routes.oxygen_tracking import router as oxygen_tracking_router, init_schema as init_oxygen_schema
+    OXYGEN_TRACKING_AVAILABLE = True
+except ImportError as e:
+    OXYGEN_TRACKING_AVAILABLE = False
+    oxygen_tracking_router = None
+    init_oxygen_schema = None
+
 
 # ============================================================================
 # 日誌配置
@@ -8849,6 +8858,17 @@ if BLOOD_MODULE_AVAILABLE and blood_router:
     logger.info("✓ MIRS Blood Bank v1.0 已啟用 (/api/blood)")
 else:
     logger.warning("Blood Bank 模組未啟用")
+
+# v3.2: Oxygen Tracking 氧氣追蹤模組
+if OXYGEN_TRACKING_AVAILABLE and oxygen_tracking_router:
+    try:
+        init_oxygen_schema()
+    except Exception as e:
+        logger.warning(f"Oxygen Tracking 初始化警告: {e}")
+    app.include_router(oxygen_tracking_router)
+    logger.info("✓ MIRS Oxygen Tracking v1.0 已啟用 (/api/oxygen)")
+else:
+    logger.warning("Oxygen Tracking 模組未啟用")
 
 
 class ResilienceConfigUpdate(BaseModel):
