@@ -1959,6 +1959,37 @@ async def get_events(
     limit: int = Query(default=500, le=2000)
 ):
     """Get all events for a case"""
+    # v2.3: Vercel demo mode
+    if IS_VERCEL and case_id.startswith("ANES-DEMO"):
+        demo_cases = get_demo_anesthesia_cases()
+        demo_case = next((c for c in demo_cases if c["id"] == case_id), None)
+        if demo_case:
+            case_start = datetime.fromisoformat(demo_case["started_at"])
+        else:
+            case_start = datetime.now() - timedelta(hours=1)
+
+        if case_id == "ANES-DEMO-006":
+            demo_events = get_demo_complex_events(case_id, case_start)
+        else:
+            # Simple demo events for other cases
+            demo_events = [
+                {"id": f"{case_id}-evt-001", "case_id": case_id, "event_type": "VITAL_SIGN",
+                 "clinical_time": (case_start + timedelta(minutes=5)).isoformat(),
+                 "payload": {"bp_sys": 120, "bp_dia": 75, "hr": 72, "spo2": 99, "etco2": 35}},
+                {"id": f"{case_id}-evt-002", "case_id": case_id, "event_type": "MILESTONE",
+                 "clinical_time": (case_start + timedelta(minutes=10)).isoformat(),
+                 "payload": {"type": "INTUBATION"}},
+                {"id": f"{case_id}-evt-003", "case_id": case_id, "event_type": "VITAL_SIGN",
+                 "clinical_time": (case_start + timedelta(minutes=15)).isoformat(),
+                 "payload": {"bp_sys": 95, "bp_dia": 60, "hr": 85, "spo2": 98, "etco2": 38}},
+            ]
+
+        # Filter by event_type if specified
+        if event_type:
+            demo_events = [e for e in demo_events if e['event_type'] == event_type]
+
+        return {"events": demo_events, "count": len(demo_events), "demo_mode": True}
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
