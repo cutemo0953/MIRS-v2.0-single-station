@@ -1247,6 +1247,12 @@
                     </svg>
                     <span>輸血</span>
                 </button>
+                <button class="quick-btn" onclick="showLabModal()" style="background: #0891b2; border-color: #0891b2;">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                    <span>Lab/ABG</span>
+                </button>
                 <button class="quick-btn success" onclick="startAnesthesiaWithTimeSelector()" id="btnStart">
                     <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
@@ -2205,6 +2211,106 @@
                     <div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 4px;">
                         無法等待雙人核對或清單查詢時使用，事後需補登
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lab / ABG Modal -->
+    <div class="modal" id="labModal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #0891b2, #0e7490);">
+                <h2 class="modal-title">Lab / ABG 記錄</h2>
+                <button class="modal-close" onclick="closeModal('labModal')">&times;</button>
+            </div>
+            <div style="padding: 16px; max-height: 70vh; overflow-y: auto;">
+                <!-- Test Type Selection -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label">檢驗類型</label>
+                    <select id="labTestType" class="form-input" style="padding: 12px;" onchange="updateLabFields()">
+                        <option value="ABG">ABG 動脈血氣</option>
+                        <option value="VBG">VBG 靜脈血氣</option>
+                        <option value="POC_HB">POC Hb/Hct</option>
+                        <option value="POC_GLUCOSE">POC Glucose</option>
+                        <option value="ACT">ACT 活化凝血時間</option>
+                    </select>
+                </div>
+
+                <!-- ABG/VBG Fields -->
+                <div id="labAbgFields">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">pH</label>
+                            <input type="number" id="labPh" class="form-input" step="0.01" placeholder="7.35-7.45">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">PaO2 (mmHg)</label>
+                            <input type="number" id="labPo2" class="form-input" placeholder="80-100">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">PaCO2 (mmHg)</label>
+                            <input type="number" id="labPco2" class="form-input" placeholder="35-45">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">HCO3 (mEq/L)</label>
+                            <input type="number" id="labHco3" class="form-input" step="0.1" placeholder="22-26">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">BE (mEq/L)</label>
+                            <input type="number" id="labBe" class="form-input" step="0.1" placeholder="-2 to +2">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">SaO2 (%)</label>
+                            <input type="number" id="labSao2" class="form-input" placeholder="95-100">
+                        </div>
+                    </div>
+                    <div style="border-top: 1px solid var(--border); margin: 16px 0; padding-top: 16px;">
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">電解質 / 代謝</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div class="form-group">
+                                <label class="form-label">Na (mEq/L)</label>
+                                <input type="number" id="labNa" class="form-input" placeholder="135-145">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">K (mEq/L)</label>
+                                <input type="number" id="labK" class="form-input" step="0.1" placeholder="3.5-5.0">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Ca (mg/dL)</label>
+                                <input type="number" id="labCa" class="form-input" step="0.1" placeholder="8.5-10.5">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Glucose (mg/dL)</label>
+                                <input type="number" id="labGlucose" class="form-input" placeholder="70-110">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="border-top: 1px solid var(--border); margin: 16px 0; padding-top: 16px;">
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">血液學</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div class="form-group">
+                                <label class="form-label">Hb (g/dL)</label>
+                                <input type="number" id="labHb" class="form-input" step="0.1" placeholder="12-16">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Hct (%)</label>
+                                <input type="number" id="labHct" class="form-input" step="0.1" placeholder="36-48">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ACT Field (hidden by default) -->
+                <div id="labActField" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">ACT (秒)</label>
+                        <input type="number" id="labAct" class="form-input" placeholder="80-120">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button class="btn" style="background: var(--card-hover); flex: 1;" onclick="closeModal('labModal')">取消</button>
+                    <button class="btn btn-primary" style="flex: 2; background: #0891b2;" onclick="submitLabResult()">確認記錄</button>
                 </div>
             </div>
         </div>
@@ -5118,6 +5224,125 @@
                 selectedEl.style.borderColor = '#dc2626';
             }
             verifyBloodUnit();
+        }
+
+        // ================================================================
+        // Lab / ABG Functions
+        // ================================================================
+
+        function showLabModal() {
+            if (!currentCase) {
+                alert('請先選擇或建立一個麻醉案例');
+                return;
+            }
+            // Reset all fields
+            clearLabFields();
+            // Show ABG fields by default
+            updateLabFields();
+            document.getElementById('labModal').classList.add('active');
+        }
+
+        function clearLabFields() {
+            const fields = ['labPh', 'labPo2', 'labPco2', 'labHco3', 'labBe', 'labSao2',
+                           'labNa', 'labK', 'labCa', 'labGlucose', 'labHb', 'labHct', 'labAct'];
+            fields.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            document.getElementById('labTestType').value = 'ABG';
+        }
+
+        function updateLabFields() {
+            const testType = document.getElementById('labTestType').value;
+            const abgFields = document.getElementById('labAbgFields');
+            const actField = document.getElementById('labActField');
+
+            if (testType === 'ACT') {
+                abgFields.style.display = 'none';
+                actField.style.display = 'block';
+            } else {
+                abgFields.style.display = 'block';
+                actField.style.display = 'none';
+            }
+        }
+
+        async function submitLabResult() {
+            const testType = document.getElementById('labTestType').value;
+
+            // Build payload based on test type
+            const payload = {
+                test_type: testType
+            };
+
+            // ABG/VBG/POC fields
+            if (testType !== 'ACT') {
+                const ph = document.getElementById('labPh').value;
+                const po2 = document.getElementById('labPo2').value;
+                const pco2 = document.getElementById('labPco2').value;
+                const hco3 = document.getElementById('labHco3').value;
+                const be = document.getElementById('labBe').value;
+                const sao2 = document.getElementById('labSao2').value;
+                const na = document.getElementById('labNa').value;
+                const k = document.getElementById('labK').value;
+                const ca = document.getElementById('labCa').value;
+                const glucose = document.getElementById('labGlucose').value;
+                const hb = document.getElementById('labHb').value;
+                const hct = document.getElementById('labHct').value;
+
+                if (ph) payload.ph = parseFloat(ph);
+                if (po2) payload.po2 = parseFloat(po2);
+                if (pco2) payload.pco2 = parseFloat(pco2);
+                if (hco3) payload.hco3 = parseFloat(hco3);
+                if (be) payload.be = parseFloat(be);
+                if (sao2) payload.sao2 = parseFloat(sao2);
+                if (na) payload.na = parseFloat(na);
+                if (k) payload.k = parseFloat(k);
+                if (ca) payload.ca = parseFloat(ca);
+                if (glucose) payload.glucose = parseFloat(glucose);
+                if (hb) payload.hb = parseFloat(hb);
+                if (hct) payload.hct = parseFloat(hct);
+
+                // Specimen type based on test type
+                if (testType === 'ABG') payload.specimen = 'arterial';
+                else if (testType === 'VBG') payload.specimen = 'venous';
+            } else {
+                // ACT
+                const act = document.getElementById('labAct').value;
+                if (!act) {
+                    alert('請輸入 ACT 數值');
+                    return;
+                }
+                payload.act = parseFloat(act);
+            }
+
+            // Check if at least one value is entered
+            const hasValue = Object.keys(payload).some(k => k !== 'test_type' && k !== 'specimen');
+            if (!hasValue) {
+                alert('請至少輸入一個檢驗數值');
+                return;
+            }
+
+            try {
+                const res = await apiFetch(`/api/anesthesia/cases/${currentCase.id}/events`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_type: 'LAB_RESULT_POINT',
+                        payload: payload
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to submit lab result');
+                }
+
+                alert(`✓ ${testType} 檢驗結果已記錄`);
+                closeModal('labModal');
+                loadEvents(currentCase.id);
+            } catch (e) {
+                alert('記錄失敗: ' + e.message);
+            }
         }
 
         // ================================================================

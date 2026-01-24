@@ -1,7 +1,7 @@
 # MIRS 麻醉紀錄 - IV/Foley 管理模組規格書
 
-**版本**: 2.1
-**日期**: 2026-01-23
+**版本**: 2.3
+**日期**: 2026-01-24
 **狀態**: 已整合至 MIRS
 **審閱者**: 麻醉護理師, Gemini, ChatGPT
 **檔案**: `/routes/anesthesia.py`
@@ -20,6 +20,7 @@
 | 1.1 | 2026-01-23 | **重大修正** - 整合 Gemini/ChatGPT 批評：<br>• case_id 改 UUIDv7 + case_code<br>• 移除所有 AUTOINCREMENT identity<br>• IV_lines/monitors 定義為可重建投影<br>• FLUID_GIVEN 必須帶 line_id<br>• 新增 ts_device/ts_server/hlc 時間戳<br>• 新增 Foley 尿量累計邏輯<br>• 新增 End Case 強制收斂 |
 | 2.1 | 2026-01-23 | **整合至 MIRS** - 移自 CIRS 並整合到 MIRS 麻醉模組：<br>• 新增 `anesthesia_iv_lines` 資料表<br>• 新增 `anesthesia_monitors` 資料表<br>• 新增 `anesthesia_urine_outputs` 資料表<br>• 新增 11 個 API endpoints<br>• 新增 I/O Balance 計算端點 |
 | 2.2 | 2026-01-24 | **PDF 輸出完成** - 完整實作麻醉紀錄 PDF 輸出功能：<br>• 實作 M0073 格式 PDF 生成<br>• Jinja2 + WeasyPrint 渲染流程<br>• SVG 生命徵象圖表 (Vercel 相容)<br>• Matplotlib 圖表 (本地/RPi5)<br>• 3 欄佈局：藥物 / 圖表+表格 / 監測面板<br>• 自動分頁 (每頁 24 筆 vitals)<br>• 示範資料生成器 (seeder_demo.py)<br>• 前端預覽/下載雙模式 |
+| 2.3 | 2026-01-24 | **Lab/ABG 輸入功能** - 新增術中檢驗資料輸入與顯示：<br>• 前端 Lab Modal：支援 ABG/VBG/POC Hb/Glucose/ACT<br>• ABG 完整欄位：pH, PaO2, PaCO2, HCO3, BE, SaO2<br>• 電解質欄位：Na, K, Ca, Glucose<br>• 血液學欄位：Hb, Hct<br>• PDF Lab 表格擴充：從 4 欄位擴充至 11 欄位<br>• Seeder 新增 3 筆 ABG 測試資料 |
 
 ### 新增 API 端點 (v2.1)
 

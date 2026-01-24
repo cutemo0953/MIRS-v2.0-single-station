@@ -1220,6 +1220,44 @@ def seed_anesthesia_demo(conn: sqlite3.Connection):
             json.dumps({"role": role, "name": name})
         ))
 
+    # === 新增：Lab/ABG 檢驗結果事件 ===
+    lab_events = [
+        # (分鐘, ABG 資料)
+        (30, {  # 插管後 ABG
+            "test_type": "ABG",
+            "specimen": "arterial",
+            "ph": 7.38, "po2": 185, "pco2": 38,
+            "hco3": 22.5, "be": -1.5,
+            "na": 140, "k": 3.8, "ca": 9.2, "glucose": 128,
+            "hb": 11.2, "hct": 33.6
+        }),
+        (150, {  # 輸血中 ABG
+            "test_type": "ABG",
+            "specimen": "arterial",
+            "ph": 7.32, "po2": 165, "pco2": 42,
+            "hco3": 21.0, "be": -3.5,
+            "na": 138, "k": 4.2, "ca": 8.8, "glucose": 145,
+            "hb": 9.8, "hct": 29.4
+        }),
+        (240, {  # 手術結束前 ABG
+            "test_type": "ABG",
+            "specimen": "arterial",
+            "ph": 7.36, "po2": 175, "pco2": 40,
+            "hco3": 22.0, "be": -2.0,
+            "na": 139, "k": 4.0, "ca": 9.0, "glucose": 135,
+            "hb": 10.5, "hct": 31.5
+        }),
+    ]
+    for mins, lab_data in lab_events:
+        cursor.execute("""
+            INSERT INTO anesthesia_events
+            (id, case_id, event_type, clinical_time, payload, actor_id)
+            VALUES (?, ?, 'LAB_RESULT_POINT', ?, ?, 'SEED')
+        """, (
+            gen_event_id(), case6_id, (case6_start + timedelta(minutes=mins)).isoformat(),
+            json.dumps(lab_data)
+        ))
+
     conn.commit()
     print(f"[Anesthesia Seeder] Created 6 demo cases:")
     print(f"  - ANES-SEED-001: 陳大明 (IN_PROGRESS, 8 vitals, 6 meds, IV, I/O)")
@@ -1227,7 +1265,7 @@ def seed_anesthesia_demo(conn: sqlite3.Connection):
     print(f"  - ANES-SEED-003: 張美玲 (PREOP)")
     print(f"  - ANES-SEED-004: 王建國 (PREOP)")
     print(f"  - ANES-SEED-005: 李淑芬 (PREOP)")
-    print(f"  - ANES-SEED-006: 黃志明 (CLOSED, 4.5hr長手術, 31 vitals, 18 meds, 3 IV lines, 血品輸注)")
+    print(f"  - ANES-SEED-006: 黃志明 (CLOSED, 4.5hr長手術, 31 vitals, 18 meds, 3 ABG, 3 IV lines, 血品輸注)")
 
 
 def clear_anesthesia_demo(conn: sqlite3.Connection):
