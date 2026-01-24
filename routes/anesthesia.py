@@ -2447,7 +2447,7 @@ async def claim_oxygen_cylinder(case_id: str, request: ClaimOxygenRequest, actor
     # Check cylinder is available
     cursor.execute("""
         SELECT eu.id, eu.unit_serial, eu.claimed_by_case_id, eu.level_percent,
-               e.name as equipment_name, e.capacity_liters
+               e.name as equipment_name
         FROM equipment_units eu
         LEFT JOIN equipment e ON eu.equipment_id = e.id
         WHERE eu.id = ? AND (eu.is_active = 1 OR eu.is_active IS NULL)
@@ -2467,10 +2467,10 @@ async def claim_oxygen_cylinder(case_id: str, request: ClaimOxygenRequest, actor
     initial_level = request.initial_level_percent if request.initial_level_percent is not None else (unit['level_percent'] or 100)
     flow_rate = request.flow_rate_lpm or 2.0
 
-    # 判斷鋼瓶類型和容量
+    # 判斷鋼瓶類型和容量 (E型=680L, H型=6900L)
     equip_name = unit['equipment_name'] or ''
     cylinder_type = 'E' if 'E' in equip_name or 'E型' in equip_name else 'H'
-    capacity = unit['capacity_liters'] or (680 if cylinder_type == 'E' else 6900)
+    capacity = 680 if cylinder_type == 'E' else 6900
 
     try:
         # Claim the cylinder (basic fields first)
