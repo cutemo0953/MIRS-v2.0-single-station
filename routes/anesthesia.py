@@ -2473,16 +2473,23 @@ async def claim_oxygen_cylinder(case_id: str, request: ClaimOxygenRequest, actor
     capacity = unit['capacity_liters'] or (680 if cylinder_type == 'E' else 6900)
 
     try:
-        # Claim the cylinder with flow rate
+        # Claim the cylinder (basic fields first)
         cursor.execute("""
             UPDATE equipment_units
             SET claimed_by_case_id = ?,
                 claimed_at = datetime('now'),
                 claimed_by_user_id = ?,
-                status = 'IN_USE',
-                last_flow_rate_lpm = ?
+                status = 'IN_USE'
             WHERE id = ?
-        """, (case_id, actor_id, flow_rate, request.cylinder_unit_id))
+        """, (case_id, actor_id, request.cylinder_unit_id))
+
+        # Try to update last_flow_rate_lpm (column may not exist in older DBs)
+        try:
+            cursor.execute("""
+                UPDATE equipment_units SET last_flow_rate_lpm = ? WHERE id = ?
+            """, (flow_rate, request.cylinder_unit_id))
+        except Exception:
+            pass  # Column doesn't exist, skip
 
         # Update case
         cursor.execute("""
@@ -2491,25 +2498,29 @@ async def claim_oxygen_cylinder(case_id: str, request: ClaimOxygenRequest, actor
             WHERE id = ?
         """, (str(request.cylinder_unit_id), case_id))
 
-        # Add OXYGEN_CLAIMED event to main events table (for Virtual Sensor)
+        # Try to add OXYGEN_CLAIMED event to main events table (for Virtual Sensor)
+        # This table may not exist if oxygen_tracking module hasn't initialized
         import time
-        event_id = generate_event_id()
-        ts_device = int(time.time() * 1000)
-        cursor.execute("""
-            INSERT OR IGNORE INTO events (id, event_id, entity_type, entity_id, event_type, ts_device, actor_id, payload)
-            VALUES (?, ?, 'equipment_unit', ?, 'OXYGEN_CLAIMED', ?, ?, ?)
-        """, (
-            event_id, event_id, str(request.cylinder_unit_id), ts_device, actor_id,
-            json.dumps({
-                "case_id": case_id,
-                "unit_serial": unit['unit_serial'],
-                "cylinder_type": cylinder_type,
-                "initial_level_percent": initial_level,
-                "initial_psi": request.initial_pressure_psi,
-                "capacity_liters": capacity,
-                "flow_rate_lpm": flow_rate
-            })
-        ))
+        try:
+            event_id = generate_event_id()
+            ts_device = int(time.time() * 1000)
+            cursor.execute("""
+                INSERT INTO events (id, event_id, entity_type, entity_id, event_type, ts_device, actor_id, payload)
+                VALUES (?, ?, 'equipment_unit', ?, 'OXYGEN_CLAIMED', ?, ?, ?)
+            """, (
+                event_id, event_id, str(request.cylinder_unit_id), ts_device, actor_id,
+                json.dumps({
+                    "case_id": case_id,
+                    "unit_serial": unit['unit_serial'],
+                    "cylinder_type": cylinder_type,
+                    "initial_level_percent": initial_level,
+                    "initial_psi": request.initial_pressure_psi,
+                    "capacity_liters": capacity,
+                    "flow_rate_lpm": flow_rate
+                })
+            ))
+        except Exception as e:
+            logger.warning(f"Could not write to events table: {e}")
 
         # Also add to anesthesia_events (backwards compatibility)
         anes_event_id = generate_event_id()
