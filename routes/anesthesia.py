@@ -8814,12 +8814,19 @@ async def generate_pdf(
 
             # Extract vitals from events
             vitals = []
+            prev_hour = None
             for e in demo_events:
                 if e["event_type"] == "VITAL_SIGN":
                     p = e["payload"]
                     t = datetime.fromisoformat(e["clinical_time"])
+                    hour_str = t.strftime("%H")
+                    show_hour = (hour_str != prev_hour)
+                    prev_hour = hour_str
                     vitals.append({
                         "time_display": t.strftime("%H:%M"),
+                        "hour": hour_str,
+                        "minute": t.strftime("%M"),
+                        "show_hour": show_hour,
                         "sbp": p.get("bp_sys", 0),
                         "dbp": p.get("bp_dia", 0),
                         "hr": p.get("hr", 0),
@@ -8929,9 +8936,9 @@ async def generate_pdf(
         else:
             # Simple demo for other cases
             vitals = [
-                {"time_display": "08:30", "sbp": 120, "dbp": 80, "hr": 72, "spo2": 99, "etco2": 35, "rr": 14, "temp": "36.5", "fio2": "50%", "mac": "1.0"},
-                {"time_display": "08:45", "sbp": 115, "dbp": 75, "hr": 68, "spo2": 100, "etco2": 34, "rr": 12, "temp": "36.4", "fio2": "50%", "mac": "1.2"},
-                {"time_display": "09:00", "sbp": 110, "dbp": 70, "hr": 65, "spo2": 100, "etco2": 33, "rr": 12, "temp": "36.3", "fio2": "45%", "mac": "1.0"},
+                {"time_display": "08:30", "hour": "08", "minute": "30", "show_hour": True, "sbp": 120, "dbp": 80, "hr": 72, "spo2": 99, "etco2": 35, "rr": 14, "temp": "36.5", "fio2": "50%", "mac": "1.0"},
+                {"time_display": "08:45", "hour": "08", "minute": "45", "show_hour": False, "sbp": 115, "dbp": 75, "hr": 68, "spo2": 100, "etco2": 34, "rr": 12, "temp": "36.4", "fio2": "50%", "mac": "1.2"},
+                {"time_display": "09:00", "hour": "09", "minute": "00", "show_hour": True, "sbp": 110, "dbp": 70, "hr": 65, "spo2": 100, "etco2": 33, "rr": 12, "temp": "36.3", "fio2": "45%", "mac": "1.0"},
             ]
             drugs = [
                 {"time": "08:30", "name": "Propofol", "dose": "150 mg", "route": "IV"},
