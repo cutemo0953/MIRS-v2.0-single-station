@@ -8758,6 +8758,10 @@ async def generate_pdf(
     On Vercel: Only HTML preview is available (preview=True)
     On RPi5/Local: Full PDF generation with WeasyPrint
     """
+    # Vercel always returns HTML preview (no WeasyPrint available)
+    if IS_VERCEL:
+        preview = True
+
     # Check dependencies based on mode
     if preview:
         # HTML preview only needs Jinja2
