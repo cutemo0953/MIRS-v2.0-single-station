@@ -13,6 +13,7 @@
           "database/**",
           "services/**",
           "templates/**",
+          "frontend/**",
           "seeder_demo.py",
           "Index.html"
         ]
