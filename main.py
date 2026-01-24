@@ -3820,6 +3820,35 @@ def run_migrations():
             cursor.execute("ALTER TABLE equipment_units ADD COLUMN updated_at TIMESTAMP")
             logger.info("✓ Migration: 新增 equipment_units.updated_at 欄位")
 
+        # v3.2: 確保 equipment_units 有 last_flow_rate_lpm 欄位 (氧氣追蹤)
+        cursor.execute("PRAGMA table_info(equipment_units)")
+        eu_columns = [col[1] for col in cursor.fetchall()]
+        if eu_columns and 'last_flow_rate_lpm' not in eu_columns:
+            cursor.execute("ALTER TABLE equipment_units ADD COLUMN last_flow_rate_lpm REAL")
+            logger.info("✓ Migration: 新增 equipment_units.last_flow_rate_lpm 欄位")
+
+        # v3.2: 建立 events 表 (氧氣追蹤 Virtual Sensor)
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='events'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE events (
+                    id TEXT PRIMARY KEY,
+                    event_id TEXT UNIQUE NOT NULL,
+                    entity_type TEXT NOT NULL,
+                    entity_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    ts_device INTEGER NOT NULL,
+                    actor_id TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    sync_status TEXT DEFAULT 'LOCAL'
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_entity ON events(entity_type, entity_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts_device)")
+            logger.info("✓ Migration: 建立 events 表 (氧氣追蹤)")
+
         # v2.1: 建立 equipment_lifecycle_events 表
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='equipment_lifecycle_events'")
         if not cursor.fetchone():
