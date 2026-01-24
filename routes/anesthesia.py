@@ -8513,7 +8513,7 @@ def _rebuild_state_from_events(events: List[Dict]) -> Dict:
 async def generate_pdf(
     case_id: str,
     preview: bool = Query(False, description="If true, return HTML preview instead of PDF"),
-    hospital_name: str = Query("烏日林新醫院", description="Hospital name for header"),
+    hospital_name: str = Query("谷盺生技責任醫院", description="Hospital name for header"),
     hospital_address: str = Query("", description="Hospital address (optional)")
 ):
     """
@@ -8809,7 +8809,7 @@ async def generate_pdf(
 @router.get("/cases/{case_id}/pdf/preview")
 async def preview_pdf(
     case_id: str,
-    hospital_name: str = Query("烏日林新醫院", description="Hospital name for header")
+    hospital_name: str = Query("谷盺生技責任醫院", description="Hospital name for header")
 ):
     """
     Preview PDF as HTML (alias for /pdf?preview=true)
