@@ -93,8 +93,193 @@ def get_demo_anesthesia_cases():
             "created_at": (now - timedelta(hours=3)).isoformat(),
             "started_at": (now - timedelta(hours=3)).isoformat(),
             "actor_id": "demo-user"
+        },
+        # v2.3: 複雜長手術案例 - 黃志明 (4.5hr, 完整 PDF 展示用)
+        {
+            "id": "ANES-DEMO-006",
+            "patient_id": "P-DEMO-006",
+            "patient_name": "黃志明",
+            "patient_gender": "M",
+            "patient_age": 68,
+            "patient_weight": 72.5,
+            "patient_height": 168,
+            "blood_type": "A+",
+            "asa_class": "III",
+            "diagnosis": "升主動脈瘤 (6.2cm)",
+            "operation": "乙乙型主動脈置換術 (Bentall procedure)",
+            "or_room": "OR-3",
+            "surgeon_name": "陳心外醫師",
+            "preop_hb": 13.2,
+            "preop_ht": 39.6,
+            "preop_k": 4.1,
+            "preop_na": 141,
+            "estimated_blood_loss": 1500,
+            "blood_prepared": "PRBC",
+            "blood_prepared_units": "4U",
+            "status": "CLOSED",
+            "context_mode": "STANDARD",
+            "planned_technique": "GA_ETT",
+            "primary_anesthesiologist_name": "李麻醉醫師",
+            "primary_nurse_name": "王護理師",
+            "created_at": (now - timedelta(hours=6)).isoformat(),
+            "started_at": (now - timedelta(hours=6)).isoformat(),
+            "anesthesia_start_at": (now - timedelta(hours=6)).isoformat(),
+            "surgery_start_at": (now - timedelta(hours=5, minutes=30)).isoformat(),
+            "surgery_end_at": (now - timedelta(hours=1, minutes=30)).isoformat(),
+            "anesthesia_end_at": (now - timedelta(hours=1)).isoformat(),
+            "actor_id": "demo-user"
         }
     ]
+
+
+def get_demo_complex_events(case_id: str, case_start: datetime):
+    """Generate comprehensive demo events for complex case ANES-DEMO-006"""
+    events = []
+    evt_idx = 1
+
+    def add_event(event_type, minutes, payload):
+        nonlocal evt_idx
+        events.append({
+            "id": f"{case_id}-evt-{evt_idx:03d}",
+            "case_id": case_id,
+            "event_type": event_type,
+            "clinical_time": (case_start + timedelta(minutes=minutes)).isoformat(),
+            "payload": payload
+        })
+        evt_idx += 1
+
+    # Milestones
+    add_event("MILESTONE", 0, {"type": "ANESTHESIA_START"})
+    add_event("MILESTONE", 15, {"type": "INTUBATION"})
+    add_event("MILESTONE", 30, {"type": "SURGERY_START"})
+    add_event("MILESTONE", 270, {"type": "SURGERY_END"})
+    add_event("MILESTONE", 285, {"type": "EXTUBATION"})
+    add_event("MILESTONE", 300, {"type": "ANESTHESIA_END"})
+
+    # Vital signs every 10 minutes for 5 hours (31 readings)
+    vital_data = [
+        (0, 145, 85, 78, 99, 0),
+        (10, 125, 75, 72, 100, 35),
+        (20, 118, 70, 68, 99, 36),
+        (30, 110, 65, 70, 99, 35),
+        (40, 105, 62, 72, 98, 37),
+        (50, 98, 58, 75, 98, 38),
+        (60, 92, 55, 78, 97, 38),
+        (70, 88, 52, 82, 97, 39),
+        (80, 95, 58, 78, 98, 37),
+        (90, 102, 62, 75, 98, 36),
+        (100, 108, 65, 72, 99, 35),
+        (110, 105, 63, 74, 98, 36),
+        (120, 98, 58, 78, 97, 38),
+        (130, 92, 55, 82, 97, 39),
+        (140, 88, 52, 85, 96, 40),
+        (150, 95, 58, 80, 97, 38),
+        (160, 102, 62, 76, 98, 37),
+        (170, 108, 65, 74, 98, 36),
+        (180, 112, 68, 72, 99, 35),
+        (190, 115, 70, 70, 99, 35),
+        (200, 118, 72, 68, 99, 34),
+        (210, 120, 74, 70, 99, 35),
+        (220, 118, 72, 72, 99, 35),
+        (230, 115, 70, 74, 98, 36),
+        (240, 118, 72, 72, 99, 35),
+        (250, 122, 75, 70, 99, 34),
+        (260, 125, 78, 72, 99, 35),
+        (270, 128, 80, 75, 99, 36),
+        (280, 132, 82, 78, 100, 0),
+        (290, 138, 85, 82, 99, 0),
+        (300, 142, 88, 85, 98, 0),
+    ]
+    for mins, sys, dia, hr, spo2, etco2 in vital_data:
+        payload = {"bp_sys": sys, "bp_dia": dia, "hr": hr, "spo2": spo2}
+        if etco2 > 0:
+            payload["etco2"] = etco2
+        add_event("VITAL_SIGN", mins, payload)
+
+    # Medications
+    meds = [
+        (5, "Fentanyl", 100, "mcg", "IV"),
+        (8, "Propofol", 150, "mg", "IV"),
+        (12, "Rocuronium", 50, "mg", "IV"),
+        (55, "Ephedrine", 5, "mg", "IV"),
+        (65, "Ephedrine", 5, "mg", "IV"),
+        (75, "Phenylephrine", 100, "mcg", "IV"),
+        (90, "Fentanyl", 50, "mcg", "IV"),
+        (120, "Rocuronium", 20, "mg", "IV"),
+        (145, "Phenylephrine", 100, "mcg", "IV"),
+        (180, "Fentanyl", 50, "mcg", "IV"),
+        (200, "Rocuronium", 10, "mg", "IV"),
+        (240, "Morphine", 5, "mg", "IV"),
+        (275, "Neostigmine", 2.5, "mg", "IV"),
+        (275, "Glycopyrrolate", 0.4, "mg", "IV"),
+    ]
+    for mins, drug, dose, unit, route in meds:
+        add_event("MEDICATION_ADMIN", mins, {
+            "drug_name": drug, "dose": dose, "unit": unit, "route": route
+        })
+
+    # IV Lines
+    add_event("IV_LINE_INSERTED", 3, {
+        "site": "RIGHT_HAND", "gauge": 18, "drip_rate_ml_hr": 100, "catheter_type": "PERIPHERAL"
+    })
+    add_event("IV_LINE_INSERTED", 20, {
+        "site": "RIGHT_NECK", "gauge": 7, "drip_rate_ml_hr": 0, "catheter_type": "CVC"
+    })
+    add_event("IV_LINE_INSERTED", 25, {
+        "site": "LEFT_WRIST", "gauge": 20, "drip_rate_ml_hr": 0, "catheter_type": "ARTERIAL"
+    })
+
+    # Fluids
+    add_event("FLUID_IN", 0, {"fluid_type": "NS", "volume_ml": 500})
+    add_event("FLUID_IN", 60, {"fluid_type": "LR", "volume_ml": 1000})
+    add_event("FLUID_IN", 120, {"fluid_type": "LR", "volume_ml": 1000})
+    add_event("FLUID_IN", 150, {"fluid_type": "VOLUVEN", "volume_ml": 500})
+    add_event("FLUID_IN", 180, {"fluid_type": "ALBUMIN", "volume_ml": 250})
+
+    # Blood products
+    add_event("BLOOD_ADMIN", 140, {"product_type": "PRBC", "unit_id": "PRBC-001", "action": "START"})
+    add_event("BLOOD_ADMIN", 170, {"product_type": "PRBC", "unit_id": "PRBC-001", "action": "COMPLETE"})
+    add_event("BLOOD_ADMIN", 175, {"product_type": "PRBC", "unit_id": "PRBC-002", "action": "START"})
+    add_event("BLOOD_ADMIN", 205, {"product_type": "PRBC", "unit_id": "PRBC-002", "action": "COMPLETE"})
+    add_event("BLOOD_ADMIN", 210, {"product_type": "FFP", "unit_id": "FFP-001", "action": "START"})
+    add_event("BLOOD_ADMIN", 240, {"product_type": "FFP", "unit_id": "FFP-001", "action": "COMPLETE"})
+
+    # Urine output
+    add_event("URINE_OUTPUT", 60, {"volume_ml": 150})
+    add_event("URINE_OUTPUT", 120, {"volume_ml": 200})
+    add_event("URINE_OUTPUT", 180, {"volume_ml": 180})
+    add_event("URINE_OUTPUT", 240, {"volume_ml": 220})
+    add_event("URINE_OUTPUT", 300, {"volume_ml": 150})
+
+    # Blood loss
+    add_event("BLOOD_LOSS", 90, {"volume_ml": 300})
+    add_event("BLOOD_LOSS", 150, {"volume_ml": 500})
+    add_event("BLOOD_LOSS", 210, {"volume_ml": 400})
+    add_event("BLOOD_LOSS", 270, {"volume_ml": 200})
+
+    # ABG Labs
+    add_event("LAB_RESULT_POINT", 30, {
+        "test_type": "ABG", "specimen": "arterial",
+        "ph": 7.38, "po2": 185, "pco2": 38, "hco3": 22.5, "be": -1.5,
+        "na": 140, "k": 3.8, "ca": 9.2, "glucose": 128, "hb": 11.2, "hct": 33.6
+    })
+    add_event("LAB_RESULT_POINT", 150, {
+        "test_type": "ABG", "specimen": "arterial",
+        "ph": 7.32, "po2": 165, "pco2": 42, "hco3": 21.0, "be": -3.5,
+        "na": 138, "k": 4.2, "ca": 8.8, "glucose": 145, "hb": 9.8, "hct": 29.4
+    })
+    add_event("LAB_RESULT_POINT", 240, {
+        "test_type": "ABG", "specimen": "arterial",
+        "ph": 7.36, "po2": 175, "pco2": 40, "hco3": 22.0, "be": -2.0,
+        "na": 139, "k": 4.0, "ca": 9.0, "glucose": 135, "hb": 10.5, "hct": 31.5
+    })
+
+    # Monitors
+    add_event("MONITOR_START", 5, {"monitor_type": "FOLEY", "foley_size": 16})
+    add_event("MONITOR_START", 22, {"monitor_type": "CVP"})
+    add_event("MONITOR_START", 26, {"monitor_type": "ARTERIAL_LINE"})
+
+    return events
 
 
 # =============================================================================
@@ -1808,7 +1993,7 @@ async def get_timeline(case_id: str):
     """Get reconstructed timeline (grouped by type)"""
     # v1.5.3: Vercel demo mode - return demo timeline
     if IS_VERCEL and case_id.startswith("ANES-DEMO"):
-        # Get case start time (1 hour ago for demo)
+        # Get case start time from demo cases
         demo_cases = get_demo_anesthesia_cases()
         demo_case = next((c for c in demo_cases if c["id"] == case_id), None)
         if demo_case:
@@ -1816,76 +2001,86 @@ async def get_timeline(case_id: str):
         else:
             case_start = datetime.now() - timedelta(hours=1)
 
-        # Create timeline events relative to case start time
-        demo_events = [
-            {
-                "id": f"{case_id}-evt-001",
-                "case_id": case_id,
-                "event_type": "VITAL_SIGN",
-                "clinical_time": (case_start + timedelta(minutes=5)).isoformat(),
-                "payload": {"bp_sys": 120, "bp_dia": 75, "hr": 72, "spo2": 99, "etco2": 35}
-            },
-            {
-                "id": f"{case_id}-evt-002",
-                "case_id": case_id,
-                "event_type": "MILESTONE",
-                "clinical_time": (case_start + timedelta(minutes=10)).isoformat(),
-                "payload": {"type": "INTUBATION"}
-            },
-            {
-                "id": f"{case_id}-evt-003",
-                "case_id": case_id,
-                "event_type": "VITAL_SIGN",
-                "clinical_time": (case_start + timedelta(minutes=15)).isoformat(),
-                "payload": {"bp_sys": 95, "bp_dia": 60, "hr": 85, "spo2": 98, "etco2": 38}
-            },
-            {
-                "id": f"{case_id}-evt-004",
-                "case_id": case_id,
-                "event_type": "MEDICATION_ADMIN",
-                "clinical_time": (case_start + timedelta(minutes=18)).isoformat(),
-                "payload": {"drug_name": "Ephedrine", "dose": 5, "unit": "mg", "route": "IV"}
-            },
-            {
-                "id": f"{case_id}-evt-005",
-                "case_id": case_id,
-                "event_type": "VITAL_SIGN",
-                "clinical_time": (case_start + timedelta(minutes=25)).isoformat(),
-                "payload": {"bp_sys": 110, "bp_dia": 70, "hr": 78, "spo2": 99, "etco2": 36}
-            },
-            {
-                "id": f"{case_id}-evt-006",
-                "case_id": case_id,
-                "event_type": "MILESTONE",
-                "clinical_time": (case_start + timedelta(minutes=30)).isoformat(),
-                "payload": {"type": "INCISION"}
-            },
-            {
-                "id": f"{case_id}-evt-007",
-                "case_id": case_id,
-                "event_type": "VITAL_SIGN",
-                "clinical_time": (case_start + timedelta(minutes=40)).isoformat(),
-                "payload": {"bp_sys": 115, "bp_dia": 72, "hr": 75, "spo2": 99, "etco2": 35}
-            },
-            {
-                "id": f"{case_id}-evt-008",
-                "case_id": case_id,
-                "event_type": "VITAL_SIGN",
-                "clinical_time": (case_start + timedelta(minutes=55)).isoformat(),
-                "payload": {"bp_sys": 118, "bp_dia": 74, "hr": 70, "spo2": 100, "etco2": 34}
-            },
-        ]
+        # For complex case ANES-DEMO-006, use comprehensive event generator
+        if case_id == "ANES-DEMO-006":
+            demo_events = get_demo_complex_events(case_id, case_start)
+        else:
+            # Simple demo events for other cases
+            demo_events = [
+                {
+                    "id": f"{case_id}-evt-001",
+                    "case_id": case_id,
+                    "event_type": "VITAL_SIGN",
+                    "clinical_time": (case_start + timedelta(minutes=5)).isoformat(),
+                    "payload": {"bp_sys": 120, "bp_dia": 75, "hr": 72, "spo2": 99, "etco2": 35}
+                },
+                {
+                    "id": f"{case_id}-evt-002",
+                    "case_id": case_id,
+                    "event_type": "MILESTONE",
+                    "clinical_time": (case_start + timedelta(minutes=10)).isoformat(),
+                    "payload": {"type": "INTUBATION"}
+                },
+                {
+                    "id": f"{case_id}-evt-003",
+                    "case_id": case_id,
+                    "event_type": "VITAL_SIGN",
+                    "clinical_time": (case_start + timedelta(minutes=15)).isoformat(),
+                    "payload": {"bp_sys": 95, "bp_dia": 60, "hr": 85, "spo2": 98, "etco2": 38}
+                },
+                {
+                    "id": f"{case_id}-evt-004",
+                    "case_id": case_id,
+                    "event_type": "MEDICATION_ADMIN",
+                    "clinical_time": (case_start + timedelta(minutes=18)).isoformat(),
+                    "payload": {"drug_name": "Ephedrine", "dose": 5, "unit": "mg", "route": "IV"}
+                },
+                {
+                    "id": f"{case_id}-evt-005",
+                    "case_id": case_id,
+                    "event_type": "VITAL_SIGN",
+                    "clinical_time": (case_start + timedelta(minutes=25)).isoformat(),
+                    "payload": {"bp_sys": 110, "bp_dia": 70, "hr": 78, "spo2": 99, "etco2": 36}
+                },
+                {
+                    "id": f"{case_id}-evt-006",
+                    "case_id": case_id,
+                    "event_type": "MILESTONE",
+                    "clinical_time": (case_start + timedelta(minutes=30)).isoformat(),
+                    "payload": {"type": "INCISION"}
+                },
+                {
+                    "id": f"{case_id}-evt-007",
+                    "case_id": case_id,
+                    "event_type": "VITAL_SIGN",
+                    "clinical_time": (case_start + timedelta(minutes=40)).isoformat(),
+                    "payload": {"bp_sys": 115, "bp_dia": 72, "hr": 75, "spo2": 99, "etco2": 35}
+                },
+                {
+                    "id": f"{case_id}-evt-008",
+                    "case_id": case_id,
+                    "event_type": "VITAL_SIGN",
+                    "clinical_time": (case_start + timedelta(minutes=55)).isoformat(),
+                    "payload": {"bp_sys": 118, "bp_dia": 74, "hr": 70, "spo2": 100, "etco2": 34}
+                },
+            ]
+
         return {
             'vitals': [e for e in demo_events if e['event_type'] == 'VITAL_SIGN'],
             'medications': [e for e in demo_events if e['event_type'] == 'MEDICATION_ADMIN'],
             'vasoactive': [],
-            'fluids': [],
+            'fluids': [e for e in demo_events if e['event_type'] in ('FLUID_IN', 'IV_FLUID_GIVEN', 'FLUID_BOLUS')],
+            'blood': [e for e in demo_events if e['event_type'] == 'BLOOD_ADMIN'],
             'airway': [],
             'anesthesia_depth': [],
             'milestones': [e for e in demo_events if e['event_type'] == 'MILESTONE'],
-            'labs': [],
+            'labs': [e for e in demo_events if e['event_type'] == 'LAB_RESULT_POINT'],
             'positioning': [],
             'notes': [],
+            'iv_lines': [e for e in demo_events if e['event_type'] == 'IV_LINE_INSERTED'],
+            'monitors': [e for e in demo_events if e['event_type'] == 'MONITOR_START'],
+            'urine': [e for e in demo_events if e['event_type'] == 'URINE_OUTPUT'],
+            'blood_loss': [e for e in demo_events if e['event_type'] == 'BLOOD_LOSS'],
             'all': demo_events,
             'demo_mode': True
         }
