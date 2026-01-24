@@ -986,28 +986,40 @@ def get_quick_drugs_with_inventory(db_path: str = "database/mirs.db") -> List[Di
     """
     取得快速用藥清單含庫存資訊 (Phase 3)
 
+    v3.2: 改為通用名稱查詢，不依賴特定藥品編碼
+          如果資料庫沒有藥品，返回內建清單
+
     Returns:
         藥品清單含庫存狀態
     """
+    # 常用麻醉藥物定義 (通用名稱 + 預設值)
+    ANESTHESIA_DRUGS = [
+        {"generic_name": "Propofol", "default_dose": 100, "unit": "mg", "route": "IV", "is_controlled": False},
+        {"generic_name": "Fentanyl", "default_dose": 100, "unit": "mcg", "route": "IV", "is_controlled": True, "controlled_level": 2},
+        {"generic_name": "Rocuronium", "default_dose": 50, "unit": "mg", "route": "IV", "is_controlled": False},
+        {"generic_name": "Succinylcholine", "default_dose": 100, "unit": "mg", "route": "IV", "is_controlled": False},
+        {"generic_name": "Midazolam", "default_dose": 2, "unit": "mg", "route": "IV", "is_controlled": True, "controlled_level": 4},
+        {"generic_name": "Atropine", "default_dose": 0.5, "unit": "mg", "route": "IV", "is_controlled": False},
+        {"generic_name": "Ephedrine", "default_dose": 10, "unit": "mg", "route": "IV", "is_controlled": False},
+        {"generic_name": "Phenylephrine", "default_dose": 100, "unit": "mcg", "route": "IV", "is_controlled": False},
+        {"generic_name": "Sugammadex", "default_dose": 200, "unit": "mg", "route": "IV", "is_controlled": False},
+        {"generic_name": "Neostigmine", "default_dose": 2.5, "unit": "mg", "route": "IV", "is_controlled": False},
+        {"generic_name": "Ketamine", "default_dose": 50, "unit": "mg", "route": "IV", "is_controlled": True, "controlled_level": 3},
+        {"generic_name": "Lidocaine", "default_dose": 100, "unit": "mg", "route": "IV", "is_controlled": False},
+        {"generic_name": "Morphine", "default_dose": 5, "unit": "mg", "route": "IV", "is_controlled": True, "controlled_level": 2},
+        {"generic_name": "Epinephrine", "default_dose": 1, "unit": "mg", "route": "IV", "is_controlled": False},
+        {"generic_name": "Glycopyrrolate", "default_dose": 0.2, "unit": "mg", "route": "IV", "is_controlled": False},
+        {"generic_name": "Ondansetron", "default_dose": 4, "unit": "mg", "route": "IV", "is_controlled": False},
+    ]
+
     conn = get_db_connection(db_path)
     cursor = conn.cursor()
 
     try:
-        # 常用麻醉藥物清單
-        quick_drug_codes = [
-            'BC90567209',  # Fentanyl
-            'BC80456209',  # Morphine
-            'BC11001209',  # Propofol
-            'BC01678209',  # Ketamine
-            'BC60234209',  # Diazepam (INJ)
-            'AC34567209',  # Lidocaine
-            'AC06775209',  # Epinephrine
-            'AC12790209',  # Atropine
-            'AC12380209',  # Neostigmine
-            'BC11007209',  # Neostigmine (我們的版本)
-        ]
+        # 用通用名稱查詢資料庫
+        generic_names = [d['generic_name'] for d in ANESTHESIA_DRUGS]
+        placeholders = ','.join(['?'] * len(generic_names))
 
-        placeholders = ','.join(['?'] * len(quick_drug_codes))
         cursor.execute(f"""
             SELECT
                 medicine_code, generic_name, brand_name, unit,
@@ -1015,39 +1027,76 @@ def get_quick_drugs_with_inventory(db_path: str = "database/mirs.db") -> List[Di
                 current_stock, min_stock,
                 content_per_unit, content_unit
             FROM medicines
-            WHERE medicine_code IN ({placeholders}) AND is_active = 1
+            WHERE (generic_name IN ({placeholders}) OR brand_name IN ({placeholders}))
+              AND is_active = 1
             ORDER BY generic_name
-        """, quick_drug_codes)
+        """, generic_names + generic_names)
 
-        drugs = []
+        # 建立資料庫藥品的 lookup
+        db_drugs = {}
         for row in cursor.fetchall():
-            # 庫存狀態
-            stock = row['current_stock']
-            min_stock = row['min_stock'] or 2
-            if stock <= 0:
-                stock_status = 'OUT_OF_STOCK'
-                stock_display = '缺貨'
-            elif stock <= min_stock:
-                stock_status = 'LOW_STOCK'
-                stock_display = f'⚠️ {stock}'
-            else:
-                stock_status = 'OK'
-                stock_display = str(stock)
+            db_drugs[row['generic_name'].lower()] = dict(row)
 
-            drugs.append({
-                "medicine_code": row['medicine_code'],
-                "generic_name": row['generic_name'],
-                "brand_name": row['brand_name'],
-                "unit": row['unit'],
-                "nhi_price": float(row['nhi_price'] or 0),
-                "is_controlled": bool(row['is_controlled_drug']),
-                "controlled_level": row['controlled_level'],
-                "current_stock": stock,
-                "stock_status": stock_status,
-                "stock_display": stock_display,
-                "content_per_unit": float(row['content_per_unit'] or 1),
-                "content_unit": row['content_unit']
-            })
+        # 組合結果：資料庫有的用資料庫，沒有的用內建預設
+        drugs = []
+        for drug_def in ANESTHESIA_DRUGS:
+            generic_name = drug_def['generic_name']
+            db_drug = db_drugs.get(generic_name.lower())
+
+            if db_drug:
+                # 資料庫有此藥品
+                stock = db_drug['current_stock'] or 0
+                min_stock = db_drug['min_stock'] or 2
+                if stock <= 0:
+                    stock_status = 'OUT_OF_STOCK'
+                    stock_display = '缺貨'
+                elif stock <= min_stock:
+                    stock_status = 'LOW_STOCK'
+                    stock_display = f'⚠️ {stock}'
+                else:
+                    stock_status = 'OK'
+                    stock_display = str(stock)
+
+                drugs.append({
+                    "medicine_code": db_drug['medicine_code'],
+                    "medicine_name": f"{generic_name} {db_drug.get('brand_name', '')}".strip(),
+                    "generic_name": generic_name,
+                    "brand_name": db_drug.get('brand_name'),
+                    "default_dose": drug_def['default_dose'],
+                    "default_unit": drug_def['unit'],
+                    "unit": db_drug.get('unit') or drug_def['unit'],
+                    "route": drug_def['route'],
+                    "nhi_price": float(db_drug.get('nhi_price') or 0),
+                    "is_controlled": bool(db_drug.get('is_controlled_drug')) or drug_def.get('is_controlled', False),
+                    "controlled_level": db_drug.get('controlled_level') or drug_def.get('controlled_level'),
+                    "current_stock": stock,
+                    "stock_status": stock_status,
+                    "stock_display": stock_display,
+                    "content_per_unit": float(db_drug.get('content_per_unit') or 1),
+                    "content_unit": db_drug.get('content_unit'),
+                    "from_db": True
+                })
+            else:
+                # 資料庫沒有，用內建預設 (顯示為 N/A 庫存)
+                drugs.append({
+                    "medicine_code": generic_name[:4].upper(),
+                    "medicine_name": generic_name,
+                    "generic_name": generic_name,
+                    "brand_name": None,
+                    "default_dose": drug_def['default_dose'],
+                    "default_unit": drug_def['unit'],
+                    "unit": drug_def['unit'],
+                    "route": drug_def['route'],
+                    "nhi_price": 0,
+                    "is_controlled": drug_def.get('is_controlled', False),
+                    "controlled_level": drug_def.get('controlled_level'),
+                    "current_stock": None,
+                    "stock_status": "N/A",
+                    "stock_display": "N/A",
+                    "content_per_unit": 1,
+                    "content_unit": drug_def['unit'],
+                    "from_db": False
+                })
 
         return drugs
 
