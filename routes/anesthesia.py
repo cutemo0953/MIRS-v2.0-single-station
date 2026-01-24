@@ -2627,9 +2627,9 @@ async def get_oxygen_status(case_id: str):
             "est_minutes_remaining": None
         }
 
-    # Get cylinder info
+    # Get cylinder info including claimed flow rate
     cursor.execute("""
-        SELECT u.unit_serial, u.level_percent, et.capacity_config
+        SELECT u.unit_serial, u.level_percent, u.last_flow_rate_lpm, et.capacity_config
         FROM equipment_units u
         JOIN equipment e ON u.equipment_id = e.id
         LEFT JOIN equipment_types et ON e.type_code = et.type_code
@@ -2640,21 +2640,25 @@ async def get_oxygen_status(case_id: str):
     if not cylinder:
         return {"source_type": "CYLINDER", "error": "Cylinder not found"}
 
-    # Get latest flow rate from vitals
-    cursor.execute("""
-        SELECT payload FROM anesthesia_events
-        WHERE case_id = ? AND event_type = 'VITAL_SIGN'
-        ORDER BY clinical_time DESC LIMIT 10
-    """, (case_id,))
+    # Use claimed flow rate from equipment_units, fall back to vitals or default
+    avg_flow = cylinder['last_flow_rate_lpm'] if cylinder['last_flow_rate_lpm'] else None
 
-    vitals = cursor.fetchall()
-    flow_rates = []
-    for v in vitals:
-        payload = json.loads(v['payload'])
-        if payload.get('o2_flow_lpm'):
-            flow_rates.append(payload['o2_flow_lpm'])
+    if avg_flow is None:
+        # Fallback: try to get from vitals
+        cursor.execute("""
+            SELECT payload FROM anesthesia_events
+            WHERE case_id = ? AND event_type = 'VITAL_SIGN'
+            ORDER BY clinical_time DESC LIMIT 10
+        """, (case_id,))
 
-    avg_flow = sum(flow_rates) / len(flow_rates) if flow_rates else 2.0  # Default 2 L/min
+        vitals = cursor.fetchall()
+        flow_rates = []
+        for v in vitals:
+            payload = json.loads(v['payload'])
+            if payload.get('o2_flow_lpm'):
+                flow_rates.append(payload['o2_flow_lpm'])
+
+        avg_flow = sum(flow_rates) / len(flow_rates) if flow_rates else 2.0  # Default 2 L/min
 
     # Calculate estimate
     capacity_config = json.loads(cylinder['capacity_config']) if cylinder['capacity_config'] else {}
