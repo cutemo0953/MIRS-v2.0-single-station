@@ -8774,71 +8774,202 @@ async def generate_pdf(
                 detail="PDF generation not available. Install: pip install weasyprint jinja2 matplotlib"
             )
 
-    # Vercel Demo Mode: Generate demo preview
+    # Vercel Demo Mode: Generate demo preview based on case_id
     if IS_VERCEL:
+        demo_cases = get_demo_anesthesia_cases()
+        demo_case = next((c for c in demo_cases if c["id"] == case_id), None)
+        if not demo_case:
+            raise HTTPException(status_code=404, detail=f"Demo case not found: {case_id}")
+
         now = datetime.now()
+        case_start = datetime.fromisoformat(demo_case["started_at"])
+
+        # Build patient info from demo case
+        patient_info = {
+            "name": demo_case.get("patient_name", "未知"),
+            "chart_no": demo_case.get("patient_id", ""),
+            "gender": "男" if demo_case.get("patient_gender") == "M" else "女" if demo_case.get("patient_gender") == "F" else "",
+            "age": str(demo_case.get("patient_age", "")),
+            "weight": str(demo_case.get("patient_weight", "")),
+            "height": str(demo_case.get("patient_height", "")),
+            "blood_type": demo_case.get("blood_type", ""),
+            "asa_class": demo_case.get("asa_class", "")
+        }
+
+        surgery_info = {
+            "name": demo_case.get("operation", ""),
+            "procedure": demo_case.get("operation", ""),
+            "date": case_start.strftime("%Y-%m-%d"),
+            "or_room": demo_case.get("or_room", "OR-01"),
+            "surgeon": demo_case.get("surgeon_name", "")
+        }
+
+        # For complex case ANES-DEMO-006, use comprehensive events
+        if case_id == "ANES-DEMO-006":
+            demo_events = get_demo_complex_events(case_id, case_start)
+
+            # Extract vitals from events
+            vitals = []
+            for e in demo_events:
+                if e["event_type"] == "VITAL_SIGN":
+                    p = e["payload"]
+                    t = datetime.fromisoformat(e["clinical_time"])
+                    vitals.append({
+                        "time_display": t.strftime("%H:%M"),
+                        "sbp": p.get("bp_sys", 0),
+                        "dbp": p.get("bp_dia", 0),
+                        "hr": p.get("hr", 0),
+                        "spo2": p.get("spo2", 0),
+                        "etco2": p.get("etco2", 0),
+                        "rr": 12,
+                        "temp": "36.5",
+                        "fio2": "50%",
+                        "mac": "1.0"
+                    })
+
+            # Extract drugs from events
+            drugs = []
+            for e in demo_events:
+                if e["event_type"] == "MEDICATION_ADMIN":
+                    p = e["payload"]
+                    t = datetime.fromisoformat(e["clinical_time"])
+                    drugs.append({
+                        "time": t.strftime("%H:%M"),
+                        "name": p.get("drug_name", ""),
+                        "dose": f"{p.get('dose', '')} {p.get('unit', '')}",
+                        "route": p.get("route", "IV")
+                    })
+
+            # Extract IV lines
+            iv_lines = []
+            line_num = 1
+            for e in demo_events:
+                if e["event_type"] == "IV_LINE_INSERTED":
+                    p = e["payload"]
+                    site_map = {"RIGHT_HAND": "右手背", "RIGHT_NECK": "右頸", "LEFT_WRIST": "左腕"}
+                    iv_lines.append({
+                        "line_number": line_num,
+                        "site": site_map.get(p.get("site"), p.get("site", "")),
+                        "gauge": f"{p.get('gauge', '')}G",
+                        "catheter_type": p.get("catheter_type", "PERIPHERAL")
+                    })
+                    line_num += 1
+
+            # Extract labs
+            lab_data = []
+            for e in demo_events:
+                if e["event_type"] == "LAB_RESULT_POINT":
+                    p = e["payload"]
+                    t = e["clinical_time"]
+                    lab_data.append({
+                        "time": t,
+                        "hb": p.get("hb"),
+                        "hct": p.get("hct"),
+                        "ph": p.get("ph"),
+                        "po2": p.get("po2"),
+                        "pco2": p.get("pco2"),
+                        "hco3": p.get("hco3"),
+                        "be": p.get("be"),
+                        "na": p.get("na"),
+                        "k": p.get("k"),
+                        "ca": p.get("ca"),
+                        "glucose": p.get("glucose")
+                    })
+
+            # Calculate I/O balance
+            io_in = {"crystalloid_ml": 0, "colloid_ml": 0, "blood_ml": 0, "total_ml": 0}
+            io_out = {"urine_ml": 0, "blood_loss_ml": 0, "total_ml": 0}
+            for e in demo_events:
+                if e["event_type"] == "FLUID_IN":
+                    p = e["payload"]
+                    fluid_type = p.get("fluid_type", "").upper()
+                    vol = p.get("volume_ml", 0)
+                    if fluid_type in ("NS", "LR", "D5W"):
+                        io_in["crystalloid_ml"] += vol
+                    elif fluid_type in ("VOLUVEN", "ALBUMIN"):
+                        io_in["colloid_ml"] += vol
+                elif e["event_type"] == "BLOOD_ADMIN" and e["payload"].get("action") == "COMPLETE":
+                    io_in["blood_ml"] += 250  # approx per unit
+                elif e["event_type"] == "URINE_OUTPUT":
+                    io_out["urine_ml"] += e["payload"].get("volume_ml", 0)
+                elif e["event_type"] == "BLOOD_LOSS":
+                    io_out["blood_loss_ml"] += e["payload"].get("volume_ml", 0)
+            io_in["total_ml"] = io_in["crystalloid_ml"] + io_in["colloid_ml"] + io_in["blood_ml"]
+            io_out["total_ml"] = io_out["urine_ml"] + io_out["blood_loss_ml"]
+
+            # Paginate vitals (24 per page)
+            VITALS_PER_PAGE_DEMO = 24
+            total_vitals = len(vitals)
+            total_pages = max(1, (total_vitals + VITALS_PER_PAGE_DEMO - 1) // VITALS_PER_PAGE_DEMO)
+
+            pages = []
+            for page_num in range(total_pages):
+                start_idx = page_num * VITALS_PER_PAGE_DEMO
+                end_idx = min(start_idx + VITALS_PER_PAGE_DEMO, total_vitals)
+                page_vitals = vitals[start_idx:end_idx]
+                page_drugs = drugs if page_num == 0 else []  # drugs on first page only
+                pages.append({
+                    "page_number": page_num + 1,
+                    "vitals": page_vitals,
+                    "drugs": page_drugs,
+                    "chart_image": ""
+                })
+
+            times = {
+                "anesthesia_start": case_start.strftime("%H:%M"),
+                "anesthesia_end": (case_start + timedelta(hours=5)).strftime("%H:%M"),
+                "surgery_start": (case_start + timedelta(minutes=30)).strftime("%H:%M"),
+                "surgery_end": (case_start + timedelta(hours=4, minutes=30)).strftime("%H:%M")
+            }
+
+        else:
+            # Simple demo for other cases
+            vitals = [
+                {"time_display": "08:30", "sbp": 120, "dbp": 80, "hr": 72, "spo2": 99, "etco2": 35, "rr": 14, "temp": "36.5", "fio2": "50%", "mac": "1.0"},
+                {"time_display": "08:45", "sbp": 115, "dbp": 75, "hr": 68, "spo2": 100, "etco2": 34, "rr": 12, "temp": "36.4", "fio2": "50%", "mac": "1.2"},
+                {"time_display": "09:00", "sbp": 110, "dbp": 70, "hr": 65, "spo2": 100, "etco2": 33, "rr": 12, "temp": "36.3", "fio2": "45%", "mac": "1.0"},
+            ]
+            drugs = [
+                {"time": "08:30", "name": "Propofol", "dose": "150 mg", "route": "IV"},
+                {"time": "08:31", "name": "Fentanyl", "dose": "100 mcg", "route": "IV"},
+                {"time": "08:32", "name": "Rocuronium", "dose": "50 mg", "route": "IV"},
+            ]
+            iv_lines = [{"line_number": 1, "site": "右手背", "gauge": "20G", "catheter_type": "PERIPHERAL"}]
+            lab_data = []
+            io_in = {"crystalloid_ml": 1000, "colloid_ml": 0, "blood_ml": 0, "total_ml": 1000}
+            io_out = {"urine_ml": 300, "blood_loss_ml": 100, "total_ml": 400}
+            pages = [{"page_number": 1, "vitals": vitals, "drugs": drugs, "chart_image": ""}]
+            total_pages = 1
+            times = {"anesthesia_start": "08:30", "anesthesia_end": "11:00", "surgery_start": "09:00", "surgery_end": "10:30"}
+
         demo_context = {
             "hospital_name": hospital_name,
             "hospital_address": hospital_address,
             "case_id": case_id,
-            "patient": {
-                "name": "王大明",
-                "chart_no": "P-DEMO-001",
-                "gender": "男",
-                "age": "45",
-                "weight": "70",
-                "height": "170",
-                "blood_type": "A+",
-                "asa_class": "II"
-            },
-            "surgery": {
-                "name": "腹腔鏡膽囊切除術",
-                "procedure": "Laparoscopic Cholecystectomy",
-                "date": now.strftime("%Y-%m-%d"),
-                "or_room": "OR-01",
-                "surgeon": "陳醫師"
-            },
-            "technique": "GA_ETT",
-            "iv_lines": [
-                {"line_number": 1, "site": "右手背", "gauge": "20G", "catheter_type": "PERIPHERAL"}
-            ],
+            "patient": patient_info,
+            "surgery": surgery_info,
+            "diagnosis": demo_case.get("diagnosis", ""),
+            "operation": demo_case.get("operation", ""),
+            "preop_hb": demo_case.get("preop_hb"),
+            "preop_ht": demo_case.get("preop_ht"),
+            "preop_k": demo_case.get("preop_k"),
+            "preop_na": demo_case.get("preop_na"),
+            "estimated_blood_loss": demo_case.get("estimated_blood_loss"),
+            "blood_prepared": demo_case.get("blood_prepared"),
+            "blood_prepared_units": demo_case.get("blood_prepared_units"),
+            "technique": demo_case.get("planned_technique", "GA_ETT"),
+            "iv_lines": iv_lines,
+            "lab_data": lab_data if case_id == "ANES-DEMO-006" else [],
             "io_balance": {
-                "input": {"crystalloid_ml": 1000, "colloid_ml": 0, "blood_ml": 0, "total_ml": 1000},
-                "output": {"urine_ml": 300, "blood_loss_ml": 100, "total_ml": 400},
-                "balance_ml": 600
+                "input": io_in,
+                "output": io_out,
+                "balance_ml": io_in["total_ml"] - io_out["total_ml"]
             },
-            "times": {
-                "anesthesia_start": "08:30",
-                "anesthesia_end": "11:00",
-                "surgery_start": "09:00",
-                "surgery_end": "10:30"
-            },
-            "anesthesiologist": "李麻醉醫師",
-            "nurse": "林護理師",
-            "pages": [{
-                "page_number": 1,
-                "vitals": [
-                    {"time_display": "08:30", "sbp": 120, "dbp": 80, "hr": 72, "spo2": 99, "etco2": 35, "rr": 14, "temp": "36.5", "fio2": "50%", "mac": "1.0"},
-                    {"time_display": "08:45", "sbp": 115, "dbp": 75, "hr": 68, "spo2": 100, "etco2": 34, "rr": 12, "temp": "36.4", "fio2": "50%", "mac": "1.2"},
-                    {"time_display": "09:00", "sbp": 110, "dbp": 70, "hr": 65, "spo2": 100, "etco2": 33, "rr": 12, "temp": "36.3", "fio2": "45%", "mac": "1.0"},
-                    {"time_display": "09:15", "sbp": 108, "dbp": 68, "hr": 62, "spo2": 99, "etco2": 34, "rr": 12, "temp": "36.2", "fio2": "45%", "mac": "1.0"},
-                    {"time_display": "09:30", "sbp": 112, "dbp": 72, "hr": 64, "spo2": 100, "etco2": 35, "rr": 12, "temp": "36.2", "fio2": "45%", "mac": "0.9"},
-                    {"time_display": "09:45", "sbp": 118, "dbp": 76, "hr": 68, "spo2": 99, "etco2": 34, "rr": 14, "temp": "36.3", "fio2": "40%", "mac": "0.8"},
-                    {"time_display": "10:00", "sbp": 122, "dbp": 78, "hr": 72, "spo2": 100, "etco2": 35, "rr": 14, "temp": "36.4", "fio2": "40%", "mac": "0.6"},
-                    {"time_display": "10:15", "sbp": 125, "dbp": 80, "hr": 75, "spo2": 99, "etco2": 36, "rr": 14, "temp": "36.5", "fio2": "35%", "mac": "0.4"},
-                    {"time_display": "10:30", "sbp": 128, "dbp": 82, "hr": 78, "spo2": 100, "etco2": 37, "rr": 16, "temp": "36.6", "fio2": "30%", "mac": "0.2"},
-                ],
-                "drugs": [
-                    {"time": "08:30", "name": "Propofol", "dose": "150 mg", "route": "IV"},
-                    {"time": "08:31", "name": "Fentanyl", "dose": "100 mcg", "route": "IV"},
-                    {"time": "08:32", "name": "Rocuronium", "dose": "50 mg", "route": "IV"},
-                    {"time": "08:35", "name": "Sevoflurane", "dose": "2%", "route": "INH"},
-                    {"time": "09:30", "name": "Fentanyl", "dose": "50 mcg", "route": "IV"},
-                    {"time": "10:15", "name": "Ondansetron", "dose": "4 mg", "route": "IV"},
-                ],
-                "chart_image": ""
-            }],
-            "total_pages": 1,
+            "times": times,
+            "anesthesiologist": demo_case.get("primary_anesthesiologist_name", "李麻醉醫師"),
+            "nurse": demo_case.get("primary_nurse_name", "林護理師"),
+            "pages": pages,
+            "total_pages": total_pages,
             "generated_at": now.strftime("%Y-%m-%d %H:%M:%S") + " (Demo)"
         }
 
