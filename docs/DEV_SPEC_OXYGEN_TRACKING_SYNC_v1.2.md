@@ -1,8 +1,8 @@
 # xIRS 氧氣鋼瓶追蹤與跨裝置同步規格書
 
-**版本**: 1.1
+**版本**: 1.2
 **日期**: 2026-01-24
-**狀態**: 架構審閱後修訂
+**狀態**: ✅ 實作完成 (Phase 2-9)
 **審閱者**: Gemini, ChatGPT
 **作者**: Claude Code (Opus 4.5)
 
@@ -14,6 +14,7 @@
 |------|------|------|
 | 1.0 | 2026-01-24 | 初版 |
 | 1.1 | 2026-01-24 | **重大架構修正** - 根據 Gemini/ChatGPT 審閱：<br>• 移除對 xIRS.Bus 的跨裝置依賴<br>• 氧氣事件併入主 events 表 (Walkaway 一致)<br>• 新增換瓶 (Swap) 工作流程<br>• 新增 2-RPi 測試計畫 |
+| 1.2 | 2026-01-24 | **實作完成** - Phase 2-9 全部實作：<br>• `routes/oxygen_tracking.py` - 氧氣追蹤模組<br>• `shared/sdk/xirs-bus.js` - BroadcastChannel + SSE<br>• `main.py` - 路由註冊 |
 
 ---
 
@@ -765,18 +766,18 @@ echo "=== Test Complete ==="
 
 ## 9. 實作優先順序
 
-| Phase | 工作項目 | 預估時間 | 優先級 |
-|-------|----------|----------|--------|
-| 1 | ✅ 修正 BioMed 顯示邏輯 (unit_serial) | 完成 | P0 |
-| 2 | 定義氧氣 canonical events schema | 2 小時 | P0 |
-| 3 | 實作 /oxygen/claim, release 端點 | 4 小時 | P0 |
-| 4 | 實作 calculate_virtual_sensor() | 2 小時 | P1 |
-| 5 | 實作 /live-status 端點 | 1 小時 | P1 |
-| 6 | 實作 Projection 更新邏輯 | 2 小時 | P1 |
-| 7 | 實作換瓶 (swap) 工作流程 | 3 小時 | P2 |
-| 8 | 升級 xIRS.Bus (非阻塞通知) | 1 小時 | P2 |
-| 9 | 實作 SSE 端點 (跨裝置) | 3 小時 | P3 |
-| 10 | 2-RPi 測試腳本 | 2 小時 | P3 |
+| Phase | 工作項目 | 狀態 | 實作檔案 |
+|-------|----------|------|----------|
+| 1 | ✅ 修正 BioMed 顯示邏輯 (unit_serial) | 完成 | `frontend/biomed/index.html` |
+| 2 | ✅ 定義氧氣 canonical events schema | 完成 | `routes/oxygen_tracking.py:init_oxygen_events_schema()` |
+| 3 | ✅ 實作 /oxygen/claim, release 端點 | 完成 | `routes/oxygen_tracking.py:claim_oxygen()`, `release_oxygen()` |
+| 4 | ✅ 實作 calculate_virtual_sensor() | 完成 | `routes/oxygen_tracking.py:calculate_virtual_sensor()` |
+| 5 | ✅ 實作 /live-status 端點 | 完成 | `routes/oxygen_tracking.py:get_unit_live_status()` |
+| 6 | ✅ 實作 Projection 更新邏輯 | 完成 | `routes/oxygen_tracking.py:update_oxygen_projection()` |
+| 7 | ✅ 實作換瓶 (swap) 工作流程 | 完成 | `routes/oxygen_tracking.py:swap_cylinder()` |
+| 8 | ✅ 升級 xIRS.Bus (非阻塞通知) | 完成 | `shared/sdk/xirs-bus.js` |
+| 9 | ✅ 實作 SSE 端點 (跨裝置) | 完成 | `routes/oxygen_tracking.py:event_stream()` |
+| 10 | 🔲 2-RPi 測試腳本 | 待測試 | `tests/oxygen_sync_test.sh` |
 
 ---
 
@@ -792,11 +793,33 @@ echo "=== Test Complete ==="
 
 ## 11. 相關文件
 
+**規格文件:**
 - `DEV_SPEC_IMPLEMENTATION_DIRECTIVES_v1.0.md` - 實作指令書
 - `DEV_SPEC_ANESTHESIA_PSI_TRACKING.md` - PSI 追蹤規格
 - `PROGRESS_REPORT_WALKAWAY_v1.0.md` - Event Sourcing 進度
 
+**實作檔案:**
+- `routes/oxygen_tracking.py` - 氧氣追蹤模組 (1,270+ 行)
+- `shared/sdk/xirs-bus.js` - xIRS.Bus v1.1 + SSE Client
+- `main.py` - 路由註冊 (OXYGEN_TRACKING_AVAILABLE)
+
 ---
 
-*xIRS Oxygen Tracking & Cross-Device Sync Specification v1.1*
+## 12. API 端點總覽
+
+| 方法 | 端點 | 說明 |
+|------|------|------|
+| POST | `/api/oxygen/cases/{case_id}/claim` | 認領氧氣瓶 |
+| POST | `/api/oxygen/cases/{case_id}/flow-change` | 流量變更 |
+| POST | `/api/oxygen/cases/{case_id}/check` | 手動 PSI/% 檢查 |
+| POST | `/api/oxygen/cases/{case_id}/swap` | 換瓶 (原子操作) |
+| POST | `/api/oxygen/cases/{case_id}/release` | 釋放氧氣瓶 |
+| GET | `/api/oxygen/units/{unit_id}/live-status` | 即時狀態 (含 Virtual Sensor) |
+| GET | `/api/oxygen/units` | 列出所有氧氣瓶單位 |
+| GET | `/api/oxygen/units/{unit_id}/events` | 單位事件歷史 |
+| GET | `/api/oxygen/events/stream` | SSE 跨裝置同步 |
+
+---
+
+*xIRS Oxygen Tracking & Cross-Device Sync Specification v1.2*
 *De Novo Orthopedics Inc. / 谷盺生物科技股份有限公司*
