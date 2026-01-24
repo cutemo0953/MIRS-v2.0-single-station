@@ -47,7 +47,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.21</p>
+                    <p class="text-xs opacity-80">v1.2.22</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -545,7 +545,7 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                             </svg>
                                         </template>
-                                        <span class="text-xs font-medium flex-1" :class="unit.last_check ? 'text-gray-800' : 'text-gray-500'" x-text="unit.unit_label || (unit.equipment_name?.includes('E') ? 'E型' : 'H型') + (idx + 1) + '號'"></span>
+                                        <span class="text-xs font-medium flex-1" :class="unit.last_check ? 'text-gray-800' : 'text-gray-500'" x-text="unit.unit_label || unit.unit_serial || ('單位 #' + unit.id)"></span>
                                         <span class="text-xs font-bold" :class="unit.last_check ? (unit.psi >= 1320 ? 'text-amber-600' : unit.psi >= 660 ? 'text-orange-600' : 'text-red-600') : 'text-gray-400'" x-text="(unit.level_percent || Math.round((unit.psi || 0) / 2200 * 100)) + '%'"></span>
                                         <span class="text-xs text-gray-400" x-text="unit.capacity_L ? unit.capacity_L + 'L' : (unit.equipment_name?.includes('H型') ? '6,900L' : '680L')"></span>
                                     </div>
