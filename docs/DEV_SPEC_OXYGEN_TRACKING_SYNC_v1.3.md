@@ -1,8 +1,8 @@
 # xIRS 氧氣鋼瓶追蹤與跨裝置同步規格書
 
-**版本**: 1.2
+**版本**: 1.3
 **日期**: 2026-01-24
-**狀態**: ✅ 實作完成 (Phase 2-9)
+**狀態**: ✅ 實作完成 (Phase 2-9) + 流速顯示修正
 **審閱者**: Gemini, ChatGPT
 **作者**: Claude Code (Opus 4.5)
 
@@ -15,6 +15,7 @@
 | 1.0 | 2026-01-24 | 初版 |
 | 1.1 | 2026-01-24 | **重大架構修正** - 根據 Gemini/ChatGPT 審閱：<br>• 移除對 xIRS.Bus 的跨裝置依賴<br>• 氧氣事件併入主 events 表 (Walkaway 一致)<br>• 新增換瓶 (Swap) 工作流程<br>• 新增 2-RPi 測試計畫 |
 | 1.2 | 2026-01-24 | **實作完成** - Phase 2-9 全部實作：<br>• `routes/oxygen_tracking.py` - 氧氣追蹤模組<br>• `shared/sdk/xirs-bus.js` - BroadcastChannel + SSE<br>• `main.py` - 路由註冊 |
+| 1.3 | 2026-01-24 | **整合測試與修正** - 詳見 §13 問題解決歷程 |
 
 ---
 
@@ -821,5 +822,168 @@ echo "=== Test Complete ==="
 
 ---
 
-*xIRS Oxygen Tracking & Cross-Device Sync Specification v1.2*
+## 13. 問題解決歷程 (v1.3)
+
+### 13.1 藥物列表問題
+
+**問題**: 麻醉 PWA 給藥列表顯示藥物數量遠少於 Vercel demo
+
+**根因**: `services/anesthesia_billing.py` 的 `get_quick_drugs_with_inventory()` 使用硬編碼的 `medicine_code` 查詢，但 RPi 資料庫中藥品沒有這些 code
+
+**解決**: 改用 `generic_name` 查詢並加入 16 種常用麻醉藥物的 fallback 預設值
+
+**檔案**: `services/anesthesia_billing.py`
+
+---
+
+### 13.2 氧氣認領失敗 - events 表不存在
+
+**問題**: 認領氧氣時回傳 `Internal Server Error`
+
+**錯誤訊息**:
+```
+sqlite3.OperationalError: no such table: events
+```
+
+**根因**: 氧氣追蹤模組依賴 `events` 表 (與 Walkaway Event Sourcing 一致)，但該表未在 RPi 建立
+
+**解決**: 在 `main.py` startup 加入 migration:
+```python
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS events (
+        event_id TEXT PRIMARY KEY,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        ts_device INTEGER NOT NULL,
+        actor_id TEXT,
+        payload TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+""")
+```
+
+---
+
+### 13.3 氧氣認領失敗 - equipment_units 欄位不存在
+
+**問題**: events 表建立後仍失敗
+
+**錯誤訊息**:
+```
+sqlite3.OperationalError: no such column: claimed_by_case_id
+```
+
+**根因**: `equipment_units` 表缺少氧氣追蹤所需欄位
+
+**解決**: 加入 migration 新增欄位:
+```sql
+ALTER TABLE equipment_units ADD COLUMN claimed_by_case_id TEXT;
+ALTER TABLE equipment_units ADD COLUMN claimed_at DATETIME;
+ALTER TABLE equipment_units ADD COLUMN claimed_by_user_id TEXT;
+ALTER TABLE equipment_units ADD COLUMN last_flow_rate_lpm REAL;
+ALTER TABLE equipment_units ADD COLUMN is_active INTEGER DEFAULT 1;
+```
+
+**手動 Migration 指令** (RPi 上執行):
+```bash
+sqlite3 /home/xirs/mirs/database/mirs.db "ALTER TABLE equipment_units ADD COLUMN claimed_by_case_id TEXT; ALTER TABLE equipment_units ADD COLUMN claimed_at DATETIME; ALTER TABLE equipment_units ADD COLUMN claimed_by_user_id TEXT; ALTER TABLE equipment_units ADD COLUMN last_flow_rate_lpm REAL; ALTER TABLE equipment_units ADD COLUMN is_active INTEGER DEFAULT 1;"
+```
+
+---
+
+### 13.4 氧氣認領失敗 - capacity_liters 欄位不存在
+
+**問題**: 欄位新增後仍失敗
+
+**錯誤訊息**:
+```
+sqlite3.OperationalError: no such column: e.capacity_liters
+```
+
+**根因**: 查詢引用 `equipment.capacity_liters`，但該欄位不存在於 RPi 資料庫
+
+**解決**: 移除查詢中的 `e.capacity_liters`，改用硬編碼容量:
+```python
+# 根據鋼瓶類型設定容量
+if 'H' in unit_serial.upper():
+    capacity_liters = 6900  # H 型
+else:
+    capacity_liters = 680   # E 型 (預設)
+```
+
+---
+
+### 13.5 流速顯示錯誤
+
+**問題**: 認領時設定 3 L/min，但氧氣模態窗顯示 2 L/min
+
+**根因**: `routes/anesthesia.py` 的 `get_oxygen_status()` 從 vitals 事件計算平均流速，而非讀取 `equipment_units.last_flow_rate_lpm`
+
+**原始程式碼**:
+```python
+# Get latest flow rate from vitals
+cursor.execute("""
+    SELECT payload FROM anesthesia_events
+    WHERE case_id = ? AND event_type = 'VITAL_SIGN'
+    ORDER BY clinical_time DESC LIMIT 10
+""", (case_id,))
+
+vitals = cursor.fetchall()
+flow_rates = []
+for v in vitals:
+    payload = json.loads(v['payload'])
+    if payload.get('o2_flow_lpm'):
+        flow_rates.append(payload['o2_flow_lpm'])
+
+avg_flow = sum(flow_rates) / len(flow_rates) if flow_rates else 2.0  # Default 2 L/min
+```
+
+**修正後**:
+```python
+# Get cylinder info including claimed flow rate
+cursor.execute("""
+    SELECT u.unit_serial, u.level_percent, u.last_flow_rate_lpm, et.capacity_config
+    FROM equipment_units u
+    JOIN equipment e ON u.equipment_id = e.id
+    LEFT JOIN equipment_types et ON e.type_code = et.type_code
+    WHERE u.id = ?
+""", (int(case['oxygen_source_id']),))
+
+cylinder = cursor.fetchone()
+
+# Use claimed flow rate from equipment_units, fall back to vitals or default
+avg_flow = cylinder['last_flow_rate_lpm'] if cylinder['last_flow_rate_lpm'] else None
+
+if avg_flow is None:
+    # Fallback: try to get from vitals
+    # ... (原本的 vitals 查詢邏輯)
+```
+
+**關鍵改變**: 優先讀取 `equipment_units.last_flow_rate_lpm` (認領時寫入)，僅在未設定時才 fallback 到 vitals 計算
+
+---
+
+### 13.6 問題解決總結
+
+| # | 問題 | 根因 | 解決方案 | 檔案 |
+|---|------|------|----------|------|
+| 1 | 藥物列表過少 | 硬編碼 medicine_code | 改用 generic_name + fallback | `services/anesthesia_billing.py` |
+| 2 | events 表不存在 | 未建表 | main.py startup migration | `main.py` |
+| 3 | claimed_by_case_id 不存在 | 缺欄位 | ALTER TABLE 新增欄位 | `main.py` + 手動 migration |
+| 4 | capacity_liters 不存在 | 查詢引用不存在欄位 | 移除欄位，用鋼瓶類型判斷 | `routes/anesthesia.py` |
+| 5 | 流速顯示 2 L/min | 從 vitals 計算而非 DB | 讀取 last_flow_rate_lpm | `routes/anesthesia.py` |
+
+---
+
+### 13.7 學習心得
+
+1. **Schema 一致性**: Vercel demo 與 RPi 的資料庫 schema 可能不同步，需要 migration 策略
+2. **Fallback 設計**: 在查詢時應考慮欄位可能不存在，使用 try/except 或 COALESCE
+3. **權威資料來源**: 流速應該從「認領時寫入的值」讀取，而非「間接計算」
+4. **手動 Migration**: 對於已部署的 RPi，需要提供單行 sqlite3 指令供現場執行
+
+---
+
+*xIRS Oxygen Tracking & Cross-Device Sync Specification v1.3*
 *De Novo Orthopedics Inc. / 谷盺生物科技股份有限公司*
