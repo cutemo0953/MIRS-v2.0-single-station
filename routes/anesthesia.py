@@ -808,6 +808,8 @@ QUICK_SCENARIO_TEMPLATES = {
 class ClaimOxygenRequest(BaseModel):
     cylinder_unit_id: int
     initial_pressure_psi: Optional[int] = None
+    initial_level_percent: Optional[int] = Field(None, ge=0, le=100, description="初始剩餘 %")
+    flow_rate_lpm: Optional[float] = Field(2.0, gt=0, description="流速 L/min (預設 2.0)")
 
 
 # =============================================================================
@@ -2434,15 +2436,21 @@ async def get_battlefield_preop(case_id: str):
 
 @router.post("/cases/{case_id}/claim-oxygen")
 async def claim_oxygen_cylinder(case_id: str, request: ClaimOxygenRequest, actor_id: str = Query(...)):
-    """Claim an oxygen cylinder for this case"""
+    """
+    Claim an oxygen cylinder for this case
+
+    v3.2: 新增 flow_rate_lpm 參數，整合 oxygen tracking 模組
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
 
     # Check cylinder is available
     cursor.execute("""
-        SELECT id, unit_serial, claimed_by_case_id, level_percent
-        FROM equipment_units
-        WHERE id = ? AND (is_active = 1 OR is_active IS NULL)
+        SELECT eu.id, eu.unit_serial, eu.claimed_by_case_id, eu.level_percent,
+               e.name as equipment_name, e.capacity_liters
+        FROM equipment_units eu
+        LEFT JOIN equipment e ON eu.equipment_id = e.id
+        WHERE eu.id = ? AND (eu.is_active = 1 OR eu.is_active IS NULL)
     """, (request.cylinder_unit_id,))
 
     unit = cursor.fetchone()
@@ -2455,13 +2463,26 @@ async def claim_oxygen_cylinder(case_id: str, request: ClaimOxygenRequest, actor
             detail=f"此氧氣瓶已被 {unit['claimed_by_case_id']} 使用中"
         )
 
+    # 使用請求中的 level_percent，或從 unit 取得
+    initial_level = request.initial_level_percent if request.initial_level_percent is not None else (unit['level_percent'] or 100)
+    flow_rate = request.flow_rate_lpm or 2.0
+
+    # 判斷鋼瓶類型和容量
+    equip_name = unit['equipment_name'] or ''
+    cylinder_type = 'E' if 'E' in equip_name or 'E型' in equip_name else 'H'
+    capacity = unit['capacity_liters'] or (680 if cylinder_type == 'E' else 6900)
+
     try:
-        # Claim the cylinder
+        # Claim the cylinder with flow rate
         cursor.execute("""
             UPDATE equipment_units
-            SET claimed_by_case_id = ?, claimed_at = datetime('now'), claimed_by_user_id = ?
+            SET claimed_by_case_id = ?,
+                claimed_at = datetime('now'),
+                claimed_by_user_id = ?,
+                status = 'IN_USE',
+                last_flow_rate_lpm = ?
             WHERE id = ?
-        """, (case_id, actor_id, request.cylinder_unit_id))
+        """, (case_id, actor_id, flow_rate, request.cylinder_unit_id))
 
         # Update case
         cursor.execute("""
@@ -2470,20 +2491,41 @@ async def claim_oxygen_cylinder(case_id: str, request: ClaimOxygenRequest, actor
             WHERE id = ?
         """, (str(request.cylinder_unit_id), case_id))
 
-        # Add resource check event
+        # Add OXYGEN_CLAIMED event to main events table (for Virtual Sensor)
+        import time
         event_id = generate_event_id()
+        ts_device = int(time.time() * 1000)
+        cursor.execute("""
+            INSERT OR IGNORE INTO events (id, event_id, entity_type, entity_id, event_type, ts_device, actor_id, payload)
+            VALUES (?, ?, 'equipment_unit', ?, 'OXYGEN_CLAIMED', ?, ?, ?)
+        """, (
+            event_id, event_id, str(request.cylinder_unit_id), ts_device, actor_id,
+            json.dumps({
+                "case_id": case_id,
+                "unit_serial": unit['unit_serial'],
+                "cylinder_type": cylinder_type,
+                "initial_level_percent": initial_level,
+                "initial_psi": request.initial_pressure_psi,
+                "capacity_liters": capacity,
+                "flow_rate_lpm": flow_rate
+            })
+        ))
+
+        # Also add to anesthesia_events (backwards compatibility)
+        anes_event_id = generate_event_id()
         cursor.execute("""
             INSERT INTO anesthesia_events (
                 id, case_id, event_type, clinical_time, payload, actor_id
             ) VALUES (?, ?, 'RESOURCE_CHECK', datetime('now'), ?, ?)
         """, (
-            event_id, case_id,
+            anes_event_id, case_id,
             json.dumps({
                 "resource": "O2_CYLINDER",
                 "cylinder_id": unit['unit_serial'],
                 "unit_id": request.cylinder_unit_id,
-                "level_percent": unit['level_percent'],
+                "level_percent": initial_level,
                 "pressure_psi": request.initial_pressure_psi,
+                "flow_rate_lpm": flow_rate,
                 "action": "CLAIM"
             }),
             actor_id
@@ -2494,7 +2536,10 @@ async def claim_oxygen_cylinder(case_id: str, request: ClaimOxygenRequest, actor
         return {
             "success": True,
             "cylinder_serial": unit['unit_serial'],
-            "level_percent": unit['level_percent']
+            "level_percent": initial_level,
+            "flow_rate_lpm": flow_rate,
+            "capacity_liters": capacity,
+            "cylinder_type": cylinder_type
         }
 
     except Exception as e:

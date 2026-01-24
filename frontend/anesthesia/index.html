@@ -4398,11 +4398,24 @@
         async function claimO2Cylinder(unitId) {
             if (!currentCase) return;
 
+            // v3.2: 詢問流速設定
+            const flowRateStr = prompt('請輸入氧氣流速 (L/min):', '2');
+            if (flowRateStr === null) return; // 取消
+
+            const flowRate = parseFloat(flowRateStr);
+            if (isNaN(flowRate) || flowRate <= 0) {
+                alert('請輸入有效的流速 (大於 0)');
+                return;
+            }
+
             try {
                 const res = await apiFetch(`${API_BASE}/cases/${currentCase.id}/claim-oxygen?actor_id=${actorId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cylinder_unit_id: unitId })
+                    body: JSON.stringify({
+                        cylinder_unit_id: unitId,
+                        flow_rate_lpm: flowRate
+                    })
                 });
 
                 if (!res.ok) {
@@ -4412,12 +4425,21 @@
                 }
 
                 const data = await res.json();
-                alert(`已認領氧氣瓶: ${data.cylinder_serial} (${data.level_percent}%)`);
+                alert(`已認領氧氣瓶: ${data.cylinder_serial} (${data.level_percent}%)\n流速: ${data.flow_rate_lpm} L/min`);
 
                 // Reload status
                 await loadO2Status(currentCase.id);
                 updateO2ModalStatus();
                 await loadAvailableCylinders();
+
+                // v3.2: 發送 xIRS.Bus 通知
+                if (window.xIRS?.Bus?.emit) {
+                    xIRS.Bus.emit('oxygen:claimed', {
+                        unit_id: unitId,
+                        case_id: currentCase.id,
+                        flow_rate_lpm: flowRate
+                    });
+                }
 
             } catch (err) {
                 console.error('Failed to claim cylinder:', err);
@@ -4446,6 +4468,13 @@
                 await loadO2Status(currentCase.id);
                 updateO2ModalStatus();
                 await loadAvailableCylinders();
+
+                // v3.2: 發送 xIRS.Bus 通知
+                if (window.xIRS?.Bus?.emit) {
+                    xIRS.Bus.emit('oxygen:released', {
+                        case_id: currentCase.id
+                    });
+                }
 
             } catch (err) {
                 console.error('Failed to release cylinder:', err);
