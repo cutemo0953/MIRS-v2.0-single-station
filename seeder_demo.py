@@ -467,6 +467,9 @@ def seed_mirs_demo(conn: sqlite3.Connection):
     print(f"  - Resilience tables (v1.2.8)")
     print(f"  - 9 oxygen cylinder units")
 
+    # v2.3: 同時 seed 麻醉模組資料 (包含複雜病患 ANES-SEED-006)
+    seed_anesthesia_demo(conn)
+
 
 def _ensure_resilience_equipment(cursor, now):
     """Helper: Ensure resilience equipment exists (v1.4.6, v2.0 新增 type_code)"""
