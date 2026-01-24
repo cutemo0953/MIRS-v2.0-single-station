@@ -47,7 +47,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.22</p>
+                    <p class="text-xs opacity-80">v1.2.23</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -1210,6 +1210,27 @@
                         this.isOnline = false;
                     });
 
+                    // v1.2.23: 監聽 xIRS.Bus 氧氣事件 (同裝置即時刷新)
+                    if (window.xIRS?.Bus?.on) {
+                        xIRS.Bus.on('oxygen:claimed', () => {
+                            console.log('[BioMed] Oxygen claimed notification - refreshing...');
+                            this.loadResilienceStatus();
+                        });
+                        xIRS.Bus.on('oxygen:released', () => {
+                            console.log('[BioMed] Oxygen released notification - refreshing...');
+                            this.loadResilienceStatus();
+                        });
+                        xIRS.Bus.on('oxygen:flow_change', () => {
+                            console.log('[BioMed] Oxygen flow change notification - refreshing...');
+                            this.loadResilienceStatus();
+                        });
+                        xIRS.Bus.on('oxygen:swapped', () => {
+                            console.log('[BioMed] Oxygen swapped notification - refreshing...');
+                            this.loadResilienceStatus();
+                        });
+                        console.log('[BioMed] xIRS.Bus oxygen event listeners registered');
+                    }
+
                     console.log('[BioMed] Calling loadEquipment...');
                     await this.loadEquipment();
                     console.log('[BioMed] Calling loadResilienceStatus...');
@@ -1348,13 +1369,37 @@
                                 const res = await apiFetch(`/api/v2/equipment/${eq.id}/units`);
                                 if (res.ok) {
                                     const data = await res.json();
-                                    const units = (data.units || []).map(u => ({
-                                        ...u,
-                                        equipment_id: eq.id,
-                                        equipment_name: eq.name,
-                                        capacity_L: eq.capacity_L || (eq.name?.includes('H型') ? 6900 : 680),
-                                        // v1.2.3: 將 level_percent 轉換為 PSI (H型滿瓶 = 2200 PSI)
-                                        psi: Math.round((u.level_percent || 0) / 100 * 2200)
+                                    const units = await Promise.all((data.units || []).map(async (u) => {
+                                        const unit = {
+                                            ...u,
+                                            equipment_id: eq.id,
+                                            equipment_name: eq.name,
+                                            capacity_L: eq.capacity_L || (eq.name?.includes('H型') ? 6900 : 680),
+                                            // v1.2.3: 將 level_percent 轉換為 PSI (H型滿瓶 = 2200 PSI)
+                                            psi: Math.round((u.level_percent || 0) / 100 * 2200)
+                                        };
+
+                                        // v1.2.23: 如果單位正在使用中，取得 Virtual Sensor 即時計算
+                                        if (u.status === 'IN_USE' && u.claimed_by_case_id) {
+                                            try {
+                                                const liveRes = await apiFetch(`/api/oxygen/units/${u.id}/live-status`);
+                                                if (liveRes.ok) {
+                                                    const liveData = await liveRes.json();
+                                                    if (liveData.is_live_calculation && liveData.live_level_percent !== undefined) {
+                                                        unit.level_percent = liveData.live_level_percent;
+                                                        unit.psi = Math.round(liveData.live_level_percent / 100 * 2200);
+                                                        unit.time_to_empty_minutes = liveData.time_to_empty_minutes;
+                                                        unit.flow_rate_lpm = liveData.flow_rate_lpm;
+                                                        unit.is_live = true;
+                                                        console.log(`[BioMed] Live O2 for unit ${u.id}: ${liveData.live_level_percent}%`);
+                                                    }
+                                                }
+                                            } catch (liveErr) {
+                                                console.warn(`[BioMed] Failed to get live status for unit ${u.id}:`, liveErr);
+                                            }
+                                        }
+
+                                        return unit;
                                     }));
                                     allUnits.push(...units);
                                 }
