@@ -47,7 +47,7 @@
                 </svg>
                 <div>
                     <h1 class="text-lg font-bold">BioMed 設備維護</h1>
-                    <p class="text-xs opacity-80">v1.2.19</p>
+                    <p class="text-xs opacity-80">v1.2.20</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -1194,6 +1194,7 @@
 
                 // Lifecycle
                 async init() {
+                    console.log('[BioMed] init() started');
                     if ('serviceWorker' in navigator) {
                         try {
                             await navigator.serviceWorker.register('/biomed/service-worker.js');
@@ -1211,20 +1212,27 @@
                         this.isOnline = false;
                     });
 
+                    console.log('[BioMed] Calling loadEquipment...');
                     await this.loadEquipment();
+                    console.log('[BioMed] Calling loadResilienceStatus...');
                     await this.loadResilienceStatus();
+                    console.log('[BioMed] init() completed');
                 },
 
                 // API Methods
                 async loadEquipment() {
+                    console.log('[BioMed] loadEquipment() started, xIRS.API=', typeof xIRS !== 'undefined' ? xIRS.API : 'xIRS undefined');
                     try {
                         // v1.2.19: Use v2 API for complete equipment data (resilience_category, check_status)
                         const res = await apiFetch('/api/v2/equipment');
+                        console.log('[BioMed] API response received, ok=', res.ok, 'status=', res.status);
                         if (res.ok) {
                             const data = await res.json();
                             // v2 API returns {equipment: [...], count: N}
                             this.equipment = data.equipment || data || [];
                             console.log('[BioMed] Loaded equipment:', this.equipment.length);
+                        } else {
+                            console.error('[BioMed] API response not ok:', res.status);
                         }
                     } catch (err) {
                         console.error('[BioMed] Failed to load equipment:', err);
