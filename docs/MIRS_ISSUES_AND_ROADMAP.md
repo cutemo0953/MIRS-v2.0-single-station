@@ -2,8 +2,8 @@
 
 > 記錄待解決問題、設計討論、與未來規劃
 
-**更新日期**: 2026-01-10
-**版本**: v0.6 (Gemini + ChatGPT 建議整合)
+**更新日期**: 2026-01-25
+**版本**: v0.7 (P2-01 HLC + P2-02 Analytics Dashboard 完成)
 
 ---
 
@@ -465,8 +465,35 @@ STATION_LIFECYCLE_SPEC.md
   - [x] `station_type === 'PHARMACY'` 時禁用角色切換
   - [x] 保留 Factory Reset 後門
 
+### Phase 2.8 (P2 - Commercial Appliance) ✅ 已完成 (v2.9.0)
+
+- [x] **P2-01: HLC (Hybrid Logical Clock) 時間同步**
+  - [x] `services/hlc.py` - HLC 實作
+  - [x] `database/migrations/m008_hlc.py` - HLC 欄位遷移
+  - [x] `routes/anesthesia.py` 整合 HLC 到 xIRS headers
+  - [x] `X-XIRS-HLC` header 格式: `{physical_ms}.{logical_counter}.{node_id}`
+  - [x] RPi 測試通過
+
+- [x] **P2-02: Analytics Dashboard 進階分析儀表板**
+  - [x] `routes/analytics.py` - 分析 API endpoints
+    - `/api/analytics/dashboard` - 總覽
+    - `/api/analytics/cases/summary` - 案例統計
+    - `/api/analytics/cases/daily` - 每日趨勢
+    - `/api/analytics/medications/usage` - 用藥統計
+    - `/api/analytics/equipment/utilization` - 設備使用率
+    - `/api/analytics/oxygen/consumption` - 氧氣消耗
+  - [x] `frontend/dashboard/index.html` - Dashboard PWA (Alpine.js)
+  - [x] 掛載於 `/dashboard/`
+  - [x] RPi 測試通過
+
+**MIRS Dashboard vs CIRS Dashboard**:
+| CIRS | MIRS |
+|------|------|
+| 即時作戰控制 | 歷史分析統計 |
+| 病患流量、資源同步 | 案例量、用藥、設備 |
+| 醫護人員用 | 管理者用 |
+
 ### Phase 2.6
-- [ ] Hub 設備編輯加入電量欄位
 - [ ] Hub 設備管理加入「預設位置」欄位
 - [ ] PWA 位置欄位改為下拉選單（從 Hub 設定讀取）
 - [x] Hub 同步通知功能

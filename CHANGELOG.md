@@ -6,6 +6,53 @@
 
 ---
 
+## [P2 HLC + Analytics] - 2026-01-25
+
+### 新增 (Added)
+- **P2-01: Hybrid Logical Clock (HLC) 分散式時間同步**
+  - `services/hlc.py`: HLC 核心實作
+    - `HybridLogicalClock` class: 混合邏輯時鐘
+    - `now()`: 產生本地事件 HLC 時間戳
+    - `receive()`: 接收遠端事件時更新時鐘
+    - `compare()`: 比較兩個 HLC 值的因果順序
+  - `database/migrations/m008_hlc.py`: HLC 欄位遷移
+    - `anesthesia_events.hlc_timestamp`: 事件 HLC 時間戳
+    - `anesthesia_events.source_node`: 來源節點 ID
+    - `offline_event_queue.client_hlc/server_hlc`: 離線佇列 HLC
+  - `routes/anesthesia.py`: 整合 HLC 到 xIRS headers
+    - `X-XIRS-HLC` header: `{physical_ms}.{logical_counter}.{node_id}`
+
+- **P2-02: Analytics Dashboard 進階分析儀表板**
+  - `routes/analytics.py`: 分析 API (6 endpoints)
+    - `GET /api/analytics/dashboard`: 總覽 (今日/週/月案例、警示)
+    - `GET /api/analytics/cases/summary`: 案例統計 (狀態分佈、ASA、麻醉師)
+    - `GET /api/analytics/cases/daily`: 每日趨勢 (30天)
+    - `GET /api/analytics/medications/usage`: 用藥排行
+    - `GET /api/analytics/equipment/utilization`: 設備使用率
+    - `GET /api/analytics/oxygen/consumption`: 氧氣消耗統計
+  - `frontend/dashboard/index.html`: Dashboard PWA
+    - Alpine.js 即時數據顯示
+    - SVG 長條圖 (30天案例量)
+    - 狀態分佈、用藥排行、設備狀態
+    - 低氧氣/血品過期警示
+
+### 檔案變更
+| 檔案 | 說明 |
+|------|------|
+| `services/hlc.py` | 新增 HLC 核心服務 (280 行) |
+| `database/migrations/m008_hlc.py` | HLC 欄位遷移 (116 行) |
+| `routes/analytics.py` | 分析 API (546 行) |
+| `routes/anesthesia.py` | +36 行 (HLC 整合) |
+| `frontend/dashboard/index.html` | Dashboard PWA (466 行) |
+| `main.py` | +21 行 (analytics router + dashboard mount) |
+
+### RPi 測試結果
+- HLC header: `x-xirs-hlc: 1769353104751.0.MIRS-UNKNOWN` ✅
+- Analytics API: 全部 endpoints 正常回應 ✅
+- Dashboard UI: `/dashboard/` 可存取 ✅
+
+---
+
 ## [Anesthesia Billing v1.2.0] - 2026-01-20
 
 ### 新增 (Added)
