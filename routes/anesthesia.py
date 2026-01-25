@@ -2,11 +2,12 @@
 MIRS Anesthesia Module - Phase A
 Event-Sourced, Offline-First Architecture
 
-Version: 2.1.0
+Version: 2.4.0
 - Added: IV Line Management
 - Added: Monitor Management (Foley, etc.)
 - Added: I/O Balance Calculation
 - Added: PDF Generation (M0073 with auto-pagination)
+- Added: License-based PDF Watermark (P1-02, 2026-01-25)
 """
 
 import json
@@ -45,6 +46,18 @@ try:
 except ImportError:
     PDF_ENABLED = False
     logger.warning("PDF generation disabled: missing weasyprint or matplotlib")
+
+# v2.4: License-based PDF Watermark (P1-02)
+try:
+    from services.license_service import get_watermark_text, get_license_status
+    from services.pdf_watermark import apply_watermark_to_pdf, PDF_WATERMARK_AVAILABLE
+    WATERMARK_ENABLED = PDF_WATERMARK_AVAILABLE
+except ImportError:
+    WATERMARK_ENABLED = False
+    get_watermark_text = lambda: None
+    get_license_status = lambda: None
+    apply_watermark_to_pdf = lambda buf, txt: buf
+    logger.info("PDF watermark disabled: license service not available")
 
 router = APIRouter(prefix="/api/anesthesia", tags=["anesthesia"])
 
@@ -9222,6 +9235,12 @@ async def generate_pdf(
         WeasyHTML(string=html_content, base_url=str(template_dir)).write_pdf(pdf_buffer)
         pdf_buffer.seek(0)
 
+        # 10. Apply license-based watermark (P1-02)
+        watermark_text = get_watermark_text()
+        if watermark_text and WATERMARK_ENABLED:
+            logger.info(f"Applying watermark: {watermark_text}")
+            pdf_buffer = apply_watermark_to_pdf(pdf_buffer, watermark_text)
+
         return StreamingResponse(
             pdf_buffer,
             media_type="application/pdf",
@@ -9245,3 +9264,79 @@ async def preview_pdf(
     GET /api/anesthesia/cases/{case_id}/pdf/preview
     """
     return await generate_pdf(case_id, preview=True, hospital_name=hospital_name)
+
+
+# =============================================================================
+# v2.4: License & Watermark Status Endpoints (P1-02)
+# =============================================================================
+
+@router.get("/license/status")
+async def get_license_status_endpoint():
+    """
+    Get current license status and watermark info.
+
+    GET /api/anesthesia/license/status
+
+    Returns:
+        License state, tier, watermark text (if any), and service availability
+    """
+    try:
+        status = get_license_status()
+        if status:
+            return {
+                "state": status.state.value,
+                "tier": status.tier,
+                "expires_at": status.expires_at.isoformat() if status.expires_at else None,
+                "hardware_mismatch": status.hardware_mismatch,
+                "grace_ends_at": status.grace_ends_at.isoformat() if status.grace_ends_at else None,
+                "message": status.message,
+                "watermark_text": status.watermark_text,
+                "watermark_enabled": WATERMARK_ENABLED,
+                "pdf_enabled": PDF_ENABLED
+            }
+        else:
+            return {
+                "state": "UNKNOWN",
+                "message": "License service not available",
+                "watermark_enabled": WATERMARK_ENABLED,
+                "pdf_enabled": PDF_ENABLED
+            }
+    except Exception as e:
+        return {
+            "state": "ERROR",
+            "message": str(e),
+            "watermark_enabled": WATERMARK_ENABLED,
+            "pdf_enabled": PDF_ENABLED
+        }
+
+
+@router.post("/license/test-mode/{mode}")
+async def set_license_test_mode(mode: str):
+    """
+    Set license state for testing (development only).
+
+    POST /api/anesthesia/license/test-mode/{mode}
+
+    Modes: LICENSED, GRACE_MODE, BASIC_MODE, TRIAL
+    """
+    if IS_VERCEL:
+        return {"error": "Test mode not available on Vercel"}
+
+    try:
+        from services.license_service import license_manager, LicenseState
+
+        mode_upper = mode.upper()
+        if mode_upper not in [s.value for s in LicenseState]:
+            return {"error": f"Invalid mode. Use: LICENSED, GRACE_MODE, BASIC_MODE, TRIAL"}
+
+        state = LicenseState(mode_upper)
+        status = license_manager.set_test_mode(state)
+
+        return {
+            "success": True,
+            "state": status.state.value,
+            "watermark_text": status.watermark_text,
+            "message": status.message
+        }
+    except Exception as e:
+        return {"error": str(e)}

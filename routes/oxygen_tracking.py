@@ -31,7 +31,8 @@ from pydantic import BaseModel, Field
 router = APIRouter(prefix="/api/oxygen", tags=["oxygen-tracking"])
 
 IS_VERCEL = os.environ.get("VERCEL") == "1"
-DB_PATH = os.environ.get("MIRS_DB_PATH", "mirs.db")
+# Use medical_inventory.db which contains equipment_units table
+DB_PATH = os.environ.get("MIRS_DB_PATH", "medical_inventory.db")
 
 
 def get_db_connection():
@@ -151,7 +152,8 @@ def create_oxygen_event(
 
     This is the ONLY way to record oxygen state changes (Single Source of Truth).
     """
-    event_id = str(uuid.uuid7())
+    # Use uuid7 if available (Python 3.12+), otherwise fall back to uuid4
+    event_id = str(uuid.uuid7() if hasattr(uuid, 'uuid7') else uuid.uuid4())
     ts_device = int(time.time() * 1000)
 
     cursor.execute("""
@@ -710,7 +712,7 @@ async def release_oxygen(
     cursor = conn.cursor()
 
     try:
-        # Get current cylinder info
+        # Get current cylinder info - first try via anesthesia_cases, then fallback to direct claim
         cursor.execute("""
             SELECT eu.*, ac.id as case_id
             FROM anesthesia_cases ac
@@ -718,6 +720,14 @@ async def release_oxygen(
             WHERE ac.id = ? AND eu.claimed_by_case_id = ?
         """, (case_id, case_id))
         unit = cursor.fetchone()
+
+        # Fallback: find by claimed_by_case_id directly (for non-anesthesia cases)
+        if not unit:
+            cursor.execute("""
+                SELECT * FROM equipment_units
+                WHERE claimed_by_case_id = ?
+            """, (case_id,))
+            unit = cursor.fetchone()
 
         if not unit:
             raise HTTPException(status_code=404, detail="No cylinder claimed by this case")
@@ -842,11 +852,13 @@ async def list_oxygen_units():
 
     try:
         # Get all oxygen-related units (E-type and H-type cylinders)
+        # Note: capacity_liters is derived from cylinder type (E=680L, H=6900L)
         cursor.execute("""
-            SELECT eu.*, e.name as equipment_name, e.capacity_liters
+            SELECT eu.*, e.name as equipment_name
             FROM equipment_units eu
             JOIN equipment e ON eu.equipment_id = e.id
             WHERE e.name LIKE '%氧氣%' OR e.name LIKE '%O2%' OR e.id LIKE '%CYL%'
+               OR eu.unit_serial LIKE '%CYL%' OR eu.unit_serial LIKE 'O2%'
             ORDER BY eu.equipment_id, eu.unit_serial
         """)
 

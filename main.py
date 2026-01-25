@@ -116,6 +116,14 @@ except ImportError as e:
     oxygen_tracking_router = None
     init_oxygen_schema = None
 
+# v3.3 新增: OTA 更新模組 (P1-04)
+try:
+    from routes.ota import router as ota_router
+    OTA_AVAILABLE = True
+except ImportError as e:
+    OTA_AVAILABLE = False
+    ota_router = None
+
 
 # ============================================================================
 # 日誌配置
@@ -8898,6 +8906,13 @@ if OXYGEN_TRACKING_AVAILABLE and oxygen_tracking_router:
     logger.info("✓ MIRS Oxygen Tracking v1.0 已啟用 (/api/oxygen)")
 else:
     logger.warning("Oxygen Tracking 模組未啟用")
+
+# v3.3: OTA 更新模組 (P1-04)
+if OTA_AVAILABLE and ota_router:
+    app.include_router(ota_router)
+    logger.info("✓ MIRS OTA Update v1.0 已啟用 (/api/ota)")
+else:
+    logger.warning("OTA Update 模組未啟用")
 
 
 class ResilienceConfigUpdate(BaseModel):
