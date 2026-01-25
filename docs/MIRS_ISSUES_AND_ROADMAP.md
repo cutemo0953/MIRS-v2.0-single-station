@@ -3,7 +3,18 @@
 > 記錄待解決問題、設計討論、與未來規劃
 
 **更新日期**: 2026-01-25
-**版本**: v0.7 (P2-01 HLC + P2-02 Analytics Dashboard 完成)
+**版本**: v0.8
+
+---
+
+## ⚠️ 重要通知
+
+**統一路線圖已移至**: [`CIRS/docs/MASTER_ROADMAP_v1.0.md`](https://github.com/cutemo0953/CIRS/blob/main/docs/MASTER_ROADMAP_v1.0.md)
+
+本文件保留架構原則與歷史問題記錄，但 **待開發清單不再維護**。
+請以 Master Roadmap 為準。
+
+---
 
 ---
 
