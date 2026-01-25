@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIRS Analytics Dashboard</title>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-100);
+            color: var(--gray-800);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header .subtitle {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-card .label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.active .value {
+            color: var(--success);
+        }
+
+        /* Section */
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 120px;
+            padding: 0.5rem 0;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: var(--primary);
+            border-radius: 4px 4px 0 0;
+            min-height: 4px;
+            transition: height 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .chart-bar:hover {
+            opacity: 0.8;
+        }
+
+        .chart-bar .tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--gray-800);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+
+        .chart-bar:hover .tooltip {
+            display: block;
+        }
+
+        /* Status Distribution */
+        .status-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .status-dot.closed { background: var(--success); }
+        .status-dot.pacu { background: var(--warning); }
+        .status-dot.in-progress { background: var(--primary); }
+        .status-dot.preop { background: var(--gray-200); }
+
+        /* Medication List */
+        .med-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .med-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+
+        .med-item .name {
+            font-weight: 500;
+        }
+
+        .med-item .count {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+        }
+
+        /* Equipment Grid */
+        .equipment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .equipment-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+
+        .equipment-item .level {
+            font-weight: 600;
+        }
+
+        .equipment-item .level.low {
+            color: var(--danger);
+        }
+
+        /* Alerts */
+        .alerts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+        }
+
+        .alert-item.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .alert-item.critical {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray-600);
+        }
+
+        /* Two Column Layout */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Refresh Button */
+        .refresh-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body x-data="dashboard()" x-init="init()">
+    <header class="header">
+        <div class="header-row">
+            <div>
+                <h1>MIRS Analytics Dashboard</h1>
+                <p class="subtitle" x-text="lastUpdated ? `Updated: ${lastUpdated}` : 'Loading...'"></p>
+            </div>
+            <button class="refresh-btn" @click="refresh()">Refresh</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="value" x-text="summary.today_cases">-</div>
+                <div class="label">Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" x-text="summary.week_cases">-</div>
+                <div class="label">This Week</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" x-text="summary.month_cases">-</div>
+                <div class="label">This Month</div>
+            </div>
+            <div class="stat-card active">
+                <div class="value" x-text="summary.active_cases">-</div>
+                <div class="label">Active Now</div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="two-col">
+            <!-- Case Volume Chart -->
+            <div class="section">
+                <h2 class="section-title">Case Volume (30 days)</h2>
+                <div class="chart-container">
+                    <template x-for="day in dailyStats" :key="day.date">
+                        <div class="chart-bar"
+                             :style="`height: ${Math.max(4, (day.case_count / maxDailyCases) * 100)}%`">
+                            <div class="tooltip" x-text="`${day.date}: ${day.case_count} cases`"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Status Distribution -->
+            <div class="section">
+                <h2 class="section-title">Status Distribution</h2>
+                <div class="status-list">
+                    <div class="status-item">
+                        <span class="status-dot closed"></span>
+                        <span>CLOSED</span>
+                        <span x-text="caseSummary.by_status?.CLOSED || 0"></span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot pacu"></span>
+                        <span>PACU</span>
+                        <span x-text="caseSummary.by_status?.PACU || 0"></span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot in-progress"></span>
+                        <span>IN_PROGRESS</span>
+                        <span x-text="caseSummary.by_status?.IN_PROGRESS || 0"></span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot preop"></span>
+                        <span>PREOP</span>
+                        <span x-text="caseSummary.by_status?.PREOP || 0"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="two-col">
+            <!-- Top Medications -->
+            <div class="section">
+                <h2 class="section-title">Top Medications</h2>
+                <div class="med-list">
+                    <template x-for="med in medications.slice(0, 5)" :key="med.drug_name">
+                        <div class="med-item">
+                            <span class="name" x-text="med.drug_name"></span>
+                            <span class="count" x-text="med.administrations"></span>
+                        </div>
+                    </template>
+                    <div x-show="medications.length === 0" class="loading">No medication data</div>
+                </div>
+            </div>
+
+            <!-- Equipment Utilization -->
+            <div class="section">
+                <h2 class="section-title">Equipment Status</h2>
+                <div class="equipment-grid">
+                    <template x-for="eq in equipment.slice(0, 6)" :key="eq.equipment_id">
+                        <div class="equipment-item">
+                            <span x-text="eq.name"></span>
+                            <span class="level" :class="eq.level_percent <= 20 ? 'low' : ''"
+                                  x-text="eq.level_percent ? `${eq.level_percent}%` : eq.current_status"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        <div class="section" x-show="summary.alerts && summary.alerts.length > 0">
+            <h2 class="section-title">Alerts</h2>
+            <div class="alerts-list">
+                <template x-for="alert in summary.alerts" :key="alert.message">
+                    <div class="alert-item" :class="alert.severity">
+                        <span x-text="alert.message"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function dashboard() {
+            return {
+                summary: {},
+                caseSummary: {},
+                dailyStats: [],
+                medications: [],
+                equipment: [],
+                lastUpdated: null,
+
+                get maxDailyCases() {
+                    if (this.dailyStats.length === 0) return 1;
+                    return Math.max(...this.dailyStats.map(d => d.case_count), 1);
+                },
+
+                async init() {
+                    await this.refresh();
+                    // Auto-refresh every 60 seconds
+                    setInterval(() => this.refresh(), 60000);
+                },
+
+                async refresh() {
+                    try {
+                        const [summaryRes, caseRes, dailyRes, medRes, eqRes] = await Promise.all([
+                            fetch('/api/analytics/dashboard').then(r => r.json()),
+                            fetch('/api/analytics/cases/summary').then(r => r.json()),
+                            fetch('/api/analytics/cases/daily?days=30').then(r => r.json()),
+                            fetch('/api/analytics/medications/usage?limit=10').then(r => r.json()),
+                            fetch('/api/analytics/equipment/utilization').then(r => r.json())
+                        ]);
+
+                        this.summary = summaryRes;
+                        this.caseSummary = caseRes;
+                        this.dailyStats = dailyRes.reverse(); // oldest first for chart
+                        this.medications = medRes;
+                        this.equipment = eqRes;
+                        this.lastUpdated = new Date().toLocaleTimeString();
+                    } catch (e) {
+                        console.error('Failed to load dashboard:', e);
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html>

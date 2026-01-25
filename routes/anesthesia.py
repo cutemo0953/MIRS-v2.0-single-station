@@ -59,6 +59,16 @@ except ImportError:
     apply_watermark_to_pdf = lambda buf, txt: buf
     logger.info("PDF watermark disabled: license service not available")
 
+# v2.5: HLC (Hybrid Logical Clock) for distributed event ordering (P2-01)
+try:
+    from services.hlc import HybridLogicalClock, hlc_now, get_hlc
+    HLC_ENABLED = True
+except ImportError:
+    HLC_ENABLED = False
+    hlc_now = lambda node_id=None: None
+    get_hlc = lambda node_id=None: None
+    logger.info("HLC disabled: hlc service not available")
+
 router = APIRouter(prefix="/api/anesthesia", tags=["anesthesia"])
 
 # Vercel demo mode detection (moved to top for availability in all endpoints)
@@ -4191,15 +4201,23 @@ DEMO_ANESTHESIA_PATIENTS = [
 
 
 def make_xirs_response(data: dict, hub_revision: int = 0) -> JSONResponse:
-    """Create response with xIRS protocol headers."""
-    return JSONResponse(
-        content=data,
-        headers={
-            "X-XIRS-Protocol-Version": XIRS_PROTOCOL_VERSION,
-            "X-XIRS-Hub-Revision": str(hub_revision),
-            "X-XIRS-Station-Id": STATION_ID,
-        }
-    )
+    """Create response with xIRS protocol headers including HLC."""
+    headers = {
+        "X-XIRS-Protocol-Version": XIRS_PROTOCOL_VERSION,
+        "X-XIRS-Hub-Revision": str(hub_revision),
+        "X-XIRS-Station-Id": STATION_ID,
+    }
+
+    # v2.5: Add HLC timestamp for causal ordering (P2-01)
+    if HLC_ENABLED:
+        try:
+            hlc_ts = hlc_now(STATION_ID)
+            if hlc_ts:
+                headers["X-XIRS-HLC"] = hlc_ts
+        except Exception as e:
+            logger.warning(f"HLC generation failed: {e}")
+
+    return JSONResponse(content=data, headers=headers)
 
 
 @router.get("/proxy/cirs/waiting-list")

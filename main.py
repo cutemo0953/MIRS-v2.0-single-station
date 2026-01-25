@@ -124,6 +124,14 @@ except ImportError as e:
     OTA_AVAILABLE = False
     ota_router = None
 
+# v3.4 新增: Analytics Dashboard (P2-02)
+try:
+    from routes.analytics import router as analytics_router
+    ANALYTICS_AVAILABLE = True
+except ImportError as e:
+    ANALYTICS_AVAILABLE = False
+    analytics_router = None
+
 
 # ============================================================================
 # 日誌配置
@@ -3394,6 +3402,12 @@ _shared_dir = PROJECT_ROOT / "shared"
 if _shared_dir.exists() and not IS_VERCEL:
     app.mount("/shared", StaticFiles(directory=str(_shared_dir)), name="shared")
     print(f"[MIRS] Mounted /shared from {_shared_dir}")
+
+# Mount Analytics Dashboard (P2-02)
+_dashboard_dir = PROJECT_ROOT / "frontend" / "dashboard"
+if _dashboard_dir.exists() and not IS_VERCEL:
+    app.mount("/dashboard", StaticFiles(directory=str(_dashboard_dir), html=True), name="dashboard")
+    print(f"[MIRS] Mounted /dashboard from {_dashboard_dir}")
 
 # Vercel: Serve shared SDK files via explicit routes
 if IS_VERCEL:
@@ -8913,6 +8927,13 @@ if OTA_AVAILABLE and ota_router:
     logger.info("✓ MIRS OTA Update v1.0 已啟用 (/api/ota)")
 else:
     logger.warning("OTA Update 模組未啟用")
+
+# v3.4: Analytics Dashboard (P2-02)
+if ANALYTICS_AVAILABLE and analytics_router:
+    app.include_router(analytics_router)
+    logger.info("✓ MIRS Analytics Dashboard v1.0 已啟用 (/api/analytics)")
+else:
+    logger.warning("Analytics Dashboard 模組未啟用")
 
 
 class ResilienceConfigUpdate(BaseModel):
