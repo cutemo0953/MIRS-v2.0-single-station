@@ -15,6 +15,7 @@
 | 1.0 | 2026-01-26 | 初版 |
 | 1.1 | 2026-01-26 | **重大修正** - 整合 Gemini/ChatGPT 審閱意見:<br>• G1: Snapshot + Events 雙軌還原<br>• G2: Admin PIN 保護<br>• G3: 批量交易<br>• C1-C8: 分頁/分批/hash驗證/雙寫/server_uuid 等 |
 | 1.2 | 2026-01-26 | **擴展 Lifeboat**:<br>• Phase 2.5: Biomed/Blood/Pharmacy PWAs Lifeboat<br>• Phase 3: HLC 整合到 events 和 xIRS headers |
+| 1.3 | 2026-01-26 | **自動更新系統**:<br>• MIRS/CIRS auto-update.sh 腳本<br>• systemd timer (每小時檢查)<br>• 安全機制: 時間視窗、活躍手術檢查、自動回滾<br>• RPi 部署完成 (DNO-HC01) |
 
 ---
 
@@ -702,6 +703,110 @@ MIRS 不需要登入，但需要「戰術性身分鎖定」：
 
 ---
 
-*DEV_SPEC_LIFEBOAT_MIRS_v1.1*
+## 附錄 C: 自動更新系統 (v1.2)
+
+### C.1 架構
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  systemd timer (每小時)                                       │
+│       │                                                       │
+│       ▼                                                       │
+│  scripts/auto-update.sh                                       │
+│       │                                                       │
+│       ├── 1. git fetch (檢查更新)                             │
+│       ├── 2. 安全檢查 (時間視窗 02:00-05:00、活躍手術)         │
+│       ├── 3. git pull --ff-only (套用更新)                    │
+│       ├── 4. systemctl restart mirs/cirs                      │
+│       ├── 5. Health check (/api/dr/health)                    │
+│       └── 6. 失敗則自動 rollback (git reset --hard)           │
+│                                                               │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### C.2 常用指令
+
+```bash
+# === 檢查更新 ===
+~/MIRS-v2.0-single-station/scripts/auto-update.sh --check
+~/CIRS/scripts/auto-update.sh --check
+
+# === 強制更新 (忽略時間視窗) ===
+~/MIRS-v2.0-single-station/scripts/auto-update.sh --force
+~/CIRS/scripts/auto-update.sh --force
+
+# === 查看更新 log ===
+tail -f /var/log/mirs-update.log
+tail -f /var/log/cirs-update.log
+
+# === 查看 timer 狀態 ===
+sudo systemctl list-timers | grep -E "cirs|mirs"
+
+# === 手動觸發 timer ===
+sudo systemctl start mirs-update.service
+sudo systemctl start cirs-update.service
+
+# === 停用自動更新 ===
+sudo systemctl stop mirs-update.timer
+sudo systemctl disable mirs-update.timer
+```
+
+### C.3 安裝步驟
+
+```bash
+# MIRS
+chmod +x ~/MIRS-v2.0-single-station/scripts/auto-update.sh
+sudo cp ~/MIRS-v2.0-single-station/deploy/systemd/mirs-update.service /etc/systemd/system/
+sudo cp ~/MIRS-v2.0-single-station/deploy/systemd/mirs-update.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now mirs-update.timer
+
+# CIRS
+chmod +x ~/CIRS/scripts/auto-update.sh
+sudo cp ~/CIRS/deploy/cirs-update.service /etc/systemd/system/
+sudo cp ~/CIRS/deploy/cirs-update.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now cirs-update.timer
+```
+
+### C.4 Migration 指令 (資料庫升級)
+
+```bash
+# 新增 events 表 HLC 欄位
+python3 -c "import sqlite3; c=sqlite3.connect('data/medical_inventory.db').cursor(); [c.execute(f'ALTER TABLE events ADD COLUMN {col} {defn}') for col,defn in [('hlc','TEXT'),('site_id',\"TEXT DEFAULT 'main'\"),('payload_hash','TEXT'),('acknowledged','INTEGER DEFAULT 0')] if col not in [r[1] for r in c.execute('PRAGMA table_info(events)').fetchall()]]; c.connection.commit(); print('Done')"
+```
+
+---
+
+## 附錄 D: 進度記錄
+
+### 2026-01-26 進度
+
+| 時間 | 項目 | 狀態 |
+|------|------|------|
+| 22:00 | Lifeboat Phase 1 (DR API) | ✅ 完成 |
+| 22:30 | Lifeboat Phase 2 (Anesthesia PWA) | ✅ 完成 |
+| 22:45 | Lifeboat Phase 2.5 (Biomed/Blood/Pharmacy PWA) | ✅ 完成 |
+| 22:50 | HLC Integration (Phase 3) | ✅ 完成 |
+| 22:55 | Auto-Update System (MIRS + CIRS) | ✅ 完成 |
+| 23:00 | RPi 部署 + Migration | ✅ 完成 |
+
+**已部署到 RPi (DNO-HC01)**:
+- MIRS: `server_uuid: MIRS-1dbaee3763814815`
+- CIRS: auto-update timer 已啟用
+- Health check: `/api/dr/health` → 200 OK
+
+**Git Commits**:
+```
+0f5b49a fix(ota): Auto-detect installation directory in update scripts
+ec77569 feat(ota): Add source-based auto-update system for RPi
+a452d6b feat(lifeboat): Expand Lifeboat to all PWAs + HLC integration
+ea3997c feat: Implement Lifeboat Phase 2 (PWA Auto-Backup & Restore)
+94d5849 feat: Implement Lifeboat Phase 1 (Disaster Recovery API)
+```
+
+---
+
+*DEV_SPEC_LIFEBOAT_MIRS_v1.2*
 *Reviewed by: Gemini, ChatGPT*
 *De Novo Orthopedics Inc.*
