@@ -1,0 +1,20 @@
+[Unit]
+Description=MIRS Auto-Update Service
+After=network-online.target mirs.service
+Wants=network-online.target
+ConditionPathExists=/opt/mirs/scripts/auto-update.sh
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/mirs
+ExecStart=/opt/mirs/scripts/auto-update.sh
+StandardOutput=append:/var/log/mirs-update.log
+StandardError=append:/var/log/mirs-update.log
+
+# Environment
+Environment=MIRS_DIR=/opt/mirs
+Environment=MIRS_SERVICE=mirs
+Environment=MIRS_BRANCH=main
+Environment=MIRS_UPDATE_WINDOW_START=02:00
+Environment=MIRS_UPDATE_WINDOW_END=05:00

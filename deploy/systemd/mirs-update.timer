@@ -1,0 +1,14 @@
+[Unit]
+Description=MIRS Auto-Update Timer
+Requires=mirs-update.service
+
+[Timer]
+# Run every hour to check for updates
+OnCalendar=hourly
+# Add random delay to avoid all devices updating at once
+RandomizedDelaySec=300
+# Persist timer across reboots
+Persistent=true
+
+[Install]
+WantedBy=timers.target
