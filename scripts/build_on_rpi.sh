@@ -47,10 +47,10 @@ check_system() {
         exit 1
     fi
 
-    # Check Python version
+    # Check Python version (3.11, 3.12, or 3.13)
     PYTHON_VERSION=$(python3 --version 2>&1 | cut -d' ' -f2 | cut -d'.' -f1,2)
-    if [[ "$PYTHON_VERSION" != "3.11" && "$PYTHON_VERSION" != "3.12" ]]; then
-        log_error "Python 3.11 or 3.12 required. Found: $PYTHON_VERSION"
+    if [[ "$PYTHON_VERSION" != "3.11" && "$PYTHON_VERSION" != "3.12" && "$PYTHON_VERSION" != "3.13" ]]; then
+        log_error "Python 3.11, 3.12, or 3.13 required. Found: $PYTHON_VERSION"
         exit 1
     fi
 
