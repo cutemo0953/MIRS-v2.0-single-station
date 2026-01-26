@@ -66,6 +66,9 @@ check_system() {
 install_nuitka() {
     log_info "Installing Nuitka..."
 
+    # Python 3.12+ on Debian/RPi OS requires --break-system-packages
+    # This is safe on a dedicated RPi device
+    pip3 install --user --break-system-packages nuitka ordered-set zstandard 2>/dev/null || \
     pip3 install --user nuitka ordered-set zstandard
 
     # Verify installation
