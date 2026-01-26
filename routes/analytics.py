@@ -261,10 +261,10 @@ async def get_case_summary(
         """, params)
         by_asa = {r['asa_classification']: r['count'] for r in cursor.fetchall()}
 
-        # By anesthesiologist (top 10)
+        # By anesthesiologist (top 10) - using ID since name column doesn't exist
         cursor.execute(f"""
             SELECT
-                primary_anesthesiologist_name as name,
+                COALESCE(primary_anesthesiologist_id, 'Unknown') as name,
                 COUNT(*) as case_count,
                 AVG(
                     CASE WHEN anesthesia_end_at IS NOT NULL AND anesthesia_start_at IS NOT NULL
@@ -272,8 +272,8 @@ async def get_case_summary(
                     END
                 ) as avg_duration
             FROM anesthesia_cases
-            WHERE primary_anesthesiologist_name IS NOT NULL {date_filter}
-            GROUP BY primary_anesthesiologist_name
+            WHERE primary_anesthesiologist_id IS NOT NULL {date_filter}
+            GROUP BY primary_anesthesiologist_id
             ORDER BY case_count DESC
             LIMIT 10
         """, params)
