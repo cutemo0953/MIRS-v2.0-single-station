@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIRS Analytics Dashboard</title>
+    <title>MIRS 分析儀表板</title>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         :root {
@@ -297,16 +297,49 @@
             justify-content: space-between;
             align-items: center;
         }
+
+        /* Quick Links */
+        .quick-links {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--gray-50);
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--gray-800);
+            font-size: 0.875rem;
+            transition: background 0.2s;
+        }
+
+        .quick-link:hover {
+            background: var(--gray-200);
+        }
+
+        .quick-link.external {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        .quick-link.external:hover {
+            background: #bfdbfe;
+        }
     </style>
 </head>
 <body x-data="dashboard()" x-init="init()">
     <header class="header">
         <div class="header-row">
             <div>
-                <h1>MIRS Analytics Dashboard</h1>
-                <p class="subtitle" x-text="lastUpdated ? `Updated: ${lastUpdated}` : 'Loading...'"></p>
+                <h1>MIRS 分析儀表板</h1>
+                <p class="subtitle" x-text="lastUpdated ? `最後更新: ${lastUpdated}` : '載入中...'"></p>
             </div>
-            <button class="refresh-btn" @click="refresh()">Refresh</button>
+            <button class="refresh-btn" @click="refresh()">重新整理</button>
         </div>
     </header>
 
@@ -315,19 +348,19 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="value" x-text="summary.today_cases">-</div>
-                <div class="label">Today</div>
+                <div class="label">今日</div>
             </div>
             <div class="stat-card">
                 <div class="value" x-text="summary.week_cases">-</div>
-                <div class="label">This Week</div>
+                <div class="label">本週</div>
             </div>
             <div class="stat-card">
                 <div class="value" x-text="summary.month_cases">-</div>
-                <div class="label">This Month</div>
+                <div class="label">本月</div>
             </div>
             <div class="stat-card active">
                 <div class="value" x-text="summary.active_cases">-</div>
-                <div class="label">Active Now</div>
+                <div class="label">進行中</div>
             </div>
         </div>
 
@@ -335,12 +368,12 @@
         <div class="two-col">
             <!-- Case Volume Chart -->
             <div class="section">
-                <h2 class="section-title">Case Volume (30 days)</h2>
+                <h2 class="section-title">案例趨勢 (近30日)</h2>
                 <div class="chart-container">
                     <template x-for="day in dailyStats" :key="day.date">
                         <div class="chart-bar"
                              :style="`height: ${Math.max(4, (day.case_count / maxDailyCases) * 100)}%`">
-                            <div class="tooltip" x-text="`${day.date}: ${day.case_count} cases`"></div>
+                            <div class="tooltip" x-text="`${day.date}: ${day.case_count} 例`"></div>
                         </div>
                     </template>
                 </div>
@@ -348,26 +381,26 @@
 
             <!-- Status Distribution -->
             <div class="section">
-                <h2 class="section-title">Status Distribution</h2>
+                <h2 class="section-title">狀態分布</h2>
                 <div class="status-list">
                     <div class="status-item">
                         <span class="status-dot closed"></span>
-                        <span>CLOSED</span>
+                        <span>已結案</span>
                         <span x-text="caseSummary.by_status?.CLOSED || 0"></span>
                     </div>
                     <div class="status-item">
                         <span class="status-dot pacu"></span>
-                        <span>PACU</span>
+                        <span>恢復室</span>
                         <span x-text="caseSummary.by_status?.PACU || 0"></span>
                     </div>
                     <div class="status-item">
                         <span class="status-dot in-progress"></span>
-                        <span>IN_PROGRESS</span>
+                        <span>進行中</span>
                         <span x-text="caseSummary.by_status?.IN_PROGRESS || 0"></span>
                     </div>
                     <div class="status-item">
                         <span class="status-dot preop"></span>
-                        <span>PREOP</span>
+                        <span>術前準備</span>
                         <span x-text="caseSummary.by_status?.PREOP || 0"></span>
                     </div>
                 </div>
@@ -378,7 +411,7 @@
         <div class="two-col">
             <!-- Top Medications -->
             <div class="section">
-                <h2 class="section-title">Top Medications</h2>
+                <h2 class="section-title">常用藥物</h2>
                 <div class="med-list">
                     <template x-for="med in medications.slice(0, 5)" :key="med.drug_name">
                         <div class="med-item">
@@ -386,13 +419,13 @@
                             <span class="count" x-text="med.administrations"></span>
                         </div>
                     </template>
-                    <div x-show="medications.length === 0" class="loading">No medication data</div>
+                    <div x-show="medications.length === 0" class="loading">暫無藥物資料</div>
                 </div>
             </div>
 
             <!-- Equipment Utilization -->
             <div class="section">
-                <h2 class="section-title">Equipment Status</h2>
+                <h2 class="section-title">設備狀態</h2>
                 <div class="equipment-grid">
                     <template x-for="eq in equipment.slice(0, 6)" :key="eq.equipment_id">
                         <div class="equipment-item">
@@ -407,13 +440,27 @@
 
         <!-- Alerts -->
         <div class="section" x-show="summary.alerts && summary.alerts.length > 0">
-            <h2 class="section-title">Alerts</h2>
+            <h2 class="section-title">警示</h2>
             <div class="alerts-list">
                 <template x-for="alert in summary.alerts" :key="alert.message">
                     <div class="alert-item" :class="alert.severity">
                         <span x-text="alert.message"></span>
                     </div>
                 </template>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="section">
+            <h2 class="section-title">快速連結</h2>
+            <div class="quick-links">
+                <a href="/anesthesia/" class="quick-link">麻醉紀錄</a>
+                <a href="/blood/" class="quick-link">血庫管理</a>
+                <a href="/pharmacy/" class="quick-link">藥局</a>
+                <a href="/biomed/" class="quick-link">設備管理</a>
+                <a href="http://localhost:8090/dashboard/" class="quick-link external" target="_blank">
+                    CIRS 儀表板 →
+                </a>
             </div>
         </div>
     </div>
@@ -454,7 +501,7 @@
                         this.dailyStats = dailyRes.reverse(); // oldest first for chart
                         this.medications = medRes;
                         this.equipment = eqRes;
-                        this.lastUpdated = new Date().toLocaleTimeString();
+                        this.lastUpdated = new Date().toLocaleTimeString('zh-TW');
                     } catch (e) {
                         console.error('Failed to load dashboard:', e);
                     }
