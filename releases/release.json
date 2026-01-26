@@ -1,0 +1,59 @@
+{
+  "schema_version": "2.0",
+  "version": "2.4.1",
+  "channel": "stable",
+  "release_date": "2026-01-26T12:25:06Z",
+  "commit_hash": "647d59c",
+  "build_date": "2026-01-26T12:25:06Z",
+
+  "signature": {
+    "algorithm": "minisign",
+    "key_id": "RWQv22qwGAFuMINaVoJEAxa0DV7ox9KMTVqwpP3DMvhhLY0nFIe5KdHC",
+    "manifest_signature": "release.json.minisig"
+  },
+
+  "assets": {
+    "mirs": {
+      "name": "mirs-server-2.4.1-arm64",
+      "download_url": "https://github.com/cutemo0953/xirs-releases/releases/download/v2.4.1/mirs-server-2.4.1-arm64",
+      "sha256": "6813581c8f9d39d50cd8a23d660c43ed398752de8d3843b94826515a59cc6687",
+      "signature_url": "https://github.com/cutemo0953/xirs-releases/releases/download/v2.4.1/mirs-server-2.4.1-arm64.minisig",
+      "size_bytes": 45,
+      "min_upgrade_version": "2.0.0",
+      "requires_migration": false
+    }
+  },
+
+  "migration": {
+    "requires_migration": false,
+    "migration_type": "none",
+    "backward_compatible": true,
+    "min_rollback_version": null,
+    "migration_script": null
+  },
+
+  "breaking_changes": {
+    "has_breaking": false,
+    "reasons": [],
+    "requires_manual_approval": false
+  },
+
+  "constraints": {
+    "min_current_version": "2.0.0",
+    "max_current_version": null,
+    "allowed_channels": ["stable", "beta"],
+    "force_update": false
+  },
+
+  "smoke_test": {
+    "endpoints": [
+      {"path": "/api/health", "expected_status": 200},
+      {"path": "/api/ota/status", "expected_status": 200},
+      {"path": "/api/equipment", "expected_status": 200}
+    ],
+    "timeout_seconds": 60,
+    "retry_count": 3
+  },
+
+  "release_notes": "xIRS v2.4.1 release. See GitHub release for full changelog."
+}

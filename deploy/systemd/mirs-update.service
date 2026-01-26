@@ -2,18 +2,16 @@
 Description=MIRS Auto-Update Service
 After=network-online.target mirs.service
 Wants=network-online.target
-ConditionPathExists=/opt/mirs/scripts/auto-update.sh
 
 [Service]
 Type=oneshot
 User=root
-WorkingDirectory=/opt/mirs
-ExecStart=/opt/mirs/scripts/auto-update.sh
+# Auto-detect: tries common locations
+ExecStart=/bin/bash -c 'SCRIPT=""; for p in /home/*/MIRS-v2.0-single-station/scripts/auto-update.sh /opt/mirs/scripts/auto-update.sh /home/*/mirs/scripts/auto-update.sh; do [ -x "$p" ] && SCRIPT="$p" && break; done; [ -n "$SCRIPT" ] && exec "$SCRIPT" || echo "auto-update.sh not found"'
 StandardOutput=append:/var/log/mirs-update.log
 StandardError=append:/var/log/mirs-update.log
 
-# Environment
-Environment=MIRS_DIR=/opt/mirs
+# Environment (script auto-detects MIRS_DIR if not set)
 Environment=MIRS_SERVICE=mirs
 Environment=MIRS_BRANCH=main
 Environment=MIRS_UPDATE_WINDOW_START=02:00

@@ -20,8 +20,9 @@
 
 set -e
 
-# Configuration
-MIRS_DIR="${MIRS_DIR:-/opt/mirs}"
+# Configuration - Auto-detect directory if not set
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MIRS_DIR="${MIRS_DIR:-$(dirname "$SCRIPT_DIR")}"
 MIRS_SERVICE="${MIRS_SERVICE:-mirs}"
 MIRS_BRANCH="${MIRS_BRANCH:-main}"
 MIRS_REMOTE="${MIRS_REMOTE:-origin}"
