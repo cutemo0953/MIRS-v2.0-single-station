@@ -9061,6 +9061,8 @@ async def generate_pdf(
             "blood_prepared_units": demo_case.get("blood_prepared_units"),
             "technique": demo_case.get("planned_technique", "GA_ETT"),
             "iv_lines": iv_lines,
+            "monitors": [{"type": "EKG"}, {"type": "NIBP"}, {"type": "SpO2"}, {"type": "ETCO2"}],
+            "agent_settings": [],
             "lab_data": lab_data if case_id == "ANES-DEMO-006" else [],
             "io_balance": {
                 "input": io_in,
@@ -9072,7 +9074,8 @@ async def generate_pdf(
             "nurse": demo_case.get("primary_nurse_name", "林護理師"),
             "pages": pages,
             "total_pages": total_pages,
-            "generated_at": now.strftime("%Y-%m-%d %H:%M:%S") + " (Demo)"
+            "generated_at": now.strftime("%Y-%m-%d %H:%M:%S") + " (Demo)",
+            "show_watermark": True  # Always show watermark in Vercel demo mode
         }
 
         # Render demo template
@@ -9231,7 +9234,8 @@ async def generate_pdf(
             "blood_prepared_units": case_dict.get("blood_prepared_units"),
             "pages": pages,
             "total_pages": total_pages,
-            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "show_watermark": get_watermark_text() is not None  # Show watermark if not licensed
         }
 
         # 7. Render Jinja2 template

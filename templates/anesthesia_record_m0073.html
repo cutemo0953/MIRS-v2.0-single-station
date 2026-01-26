@@ -449,9 +449,69 @@
                 print-color-adjust: exact;
             }
         }
+
+        /* Demo/Trial Watermark */
+        .watermark-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            overflow: hidden;
+        }
+
+        .watermark-diagonal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-35deg);
+            font-size: 42px;
+            font-weight: bold;
+            color: rgba(200, 0, 0, 0.12);
+            white-space: nowrap;
+            font-family: Arial, sans-serif;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .watermark-company {
+            position: fixed;
+            bottom: 8px;
+            right: 10px;
+            font-size: 8px;
+            color: rgba(100, 100, 100, 0.4);
+            font-family: Arial, sans-serif;
+        }
+
+        .watermark-corner {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            font-size: 7px;
+            color: rgba(200, 0, 0, 0.25);
+            font-family: Arial, sans-serif;
+            text-align: right;
+        }
+
+        @media print {
+            .watermark-overlay {
+                position: fixed;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
     </style>
 </head>
 <body>
+{% if show_watermark %}
+<div class="watermark-overlay">
+    <div class="watermark-diagonal">TRIAL VERSION - NOT FOR CLINICAL USE</div>
+    <div class="watermark-corner">DEMO MODE</div>
+    <div class="watermark-company">De Novo Orthopedics Inc.</div>
+</div>
+{% endif %}
 {% for page in pages %}
 <div class="page">
     <!-- Header -->
