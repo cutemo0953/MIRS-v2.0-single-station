@@ -20,6 +20,9 @@
     <script src="/shared/sdk/xirs-ui.js"></script>
     <script src="/shared/sdk/index.js"></script>
 
+    <!-- Lifeboat (Disaster Recovery) v1.0 -->
+    <script src="/shared/sdk/lifeboat.js"></script>
+
     <style>
         [x-cloak] { display: none !important; }
         body {
@@ -1235,6 +1238,54 @@
                     await this.loadEquipment();
                     console.log('[BioMed] Calling loadResilienceStatus...');
                     await this.loadResilienceStatus();
+
+                    // Lifeboat (Disaster Recovery) v1.0
+                    if (typeof LifeboatClient !== 'undefined' && !this.isVercelDemo) {
+                        this.lifeboat = new LifeboatClient({
+                            apiBase: '/api/dr',
+                            backupIntervalMs: 5 * 60 * 1000,
+                            onNewHostDetected: (health) => {
+                                console.log('[BioMed] New host detected:', health.server_uuid);
+                                this.showToast('偵測到新主機', 'info');
+                            },
+                            onRestoreNeeded: async (health) => {
+                                console.log('[BioMed] Restore needed - empty database on new host');
+                                if (confirm('偵測到新主機且資料庫為空。\n\n是否從本機備份還原資料？\n\n(需要管理員 PIN)')) {
+                                    const pin = prompt('請輸入管理員 PIN:');
+                                    if (pin) {
+                                        try {
+                                            this.showToast('正在還原資料...', 'info');
+                                            const result = await this.lifeboat.restore({ pin });
+                                            if (result.success) {
+                                                this.showToast(`還原完成: ${result.totalInserted} 筆事件`, 'success');
+                                                await this.loadEquipment();
+                                                await this.loadResilienceStatus();
+                                            } else {
+                                                this.showToast('還原失敗: ' + result.message, 'error');
+                                            }
+                                        } catch (e) {
+                                            this.showToast('還原失敗: ' + e.message, 'error');
+                                        }
+                                    }
+                                }
+                            },
+                            onBackupComplete: (data) => {
+                                console.log('[BioMed] Backup complete:', data.events_count, 'events');
+                            },
+                            onError: (msg, error) => {
+                                console.error('[BioMed] Lifeboat error:', msg, error);
+                            }
+                        });
+                        const initOk = await this.lifeboat.init();
+                        if (initOk) {
+                            console.log('[BioMed] Lifeboat initialized');
+                            const healthResult = await this.lifeboat.checkServerHealth();
+                            if (!healthResult.needsRestore) {
+                                this.lifeboat.startPeriodicBackup();
+                            }
+                        }
+                    }
+
                     console.log('[BioMed] init() completed');
                 },
 

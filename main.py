@@ -3399,6 +3399,40 @@ async def serve_blood_icon(filename: str):
     raise HTTPException(status_code=404)
 
 
+# =====================================================================
+# Pharmacy PWA Routes (v1.5.2: Lifeboat support)
+# =====================================================================
+@app.get("/pharmacy")
+@app.get("/pharmacy/")
+async def serve_pharmacy():
+    """Serve Pharmacy PWA"""
+    if IS_VERCEL:
+        # Vercel: Redirect to static hosting
+        return RedirectResponse(url="https://mirs-pharmacy.vercel.app/")
+    html_file = PROJECT_ROOT / "frontend" / "pharmacy" / "index.html"
+    if html_file.exists():
+        return FileResponse(html_file, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Pharmacy PWA not found")
+
+
+@app.get("/pharmacy/manifest.json")
+async def serve_pharmacy_manifest():
+    """Serve Pharmacy PWA manifest"""
+    manifest_file = PROJECT_ROOT / "frontend" / "pharmacy" / "manifest.json"
+    if manifest_file.exists():
+        return FileResponse(manifest_file, media_type="application/json")
+    raise HTTPException(status_code=404)
+
+
+@app.get("/pharmacy/service-worker.js")
+async def serve_pharmacy_sw():
+    """Serve Pharmacy PWA service worker"""
+    sw_file = PROJECT_ROOT / "frontend" / "pharmacy" / "service-worker.js"
+    if sw_file.exists():
+        return FileResponse(sw_file, media_type="application/javascript")
+    raise HTTPException(status_code=404)
+
+
 # 掛載靜態文件(Logo圖片等)
 # Mount static files with pathlib for cross-platform path safety
 _static_dir = PROJECT_ROOT / "static"

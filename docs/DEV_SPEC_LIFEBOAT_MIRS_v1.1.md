@@ -1,10 +1,10 @@
 # DEV_SPEC: MIRS Lifeboat (Walkaway Test) 實作
 
-**版本**: 1.1
+**版本**: 1.2
 **日期**: 2026-01-26
-**狀態**: 待實作
+**狀態**: ✅ ALL PHASES COMPLETED
 **優先級**: P0 (Critical)
-**預估工時**: Phase 1: 6-8 小時
+**預估工時**: Phase 1: 6-8 hr ✅ | Phase 2: 4 hr ✅ | Phase 2.5: 2 hr ✅ | Phase 3: 2 hr ✅
 
 ---
 
@@ -14,6 +14,7 @@
 |------|------|------|
 | 1.0 | 2026-01-26 | 初版 |
 | 1.1 | 2026-01-26 | **重大修正** - 整合 Gemini/ChatGPT 審閱意見:<br>• G1: Snapshot + Events 雙軌還原<br>• G2: Admin PIN 保護<br>• G3: 批量交易<br>• C1-C8: 分頁/分批/hash驗證/雙寫/server_uuid 等 |
+| 1.2 | 2026-01-26 | **擴展 Lifeboat**:<br>• Phase 2.5: Biomed/Blood/Pharmacy PWAs Lifeboat<br>• Phase 3: HLC 整合到 events 和 xIRS headers |
 
 ---
 
@@ -520,7 +521,7 @@ def generate_uuidv7() -> str:
 - Export 10000 events: < 5 秒
 - Restore 1000 events: < 2 秒
 
-### 8.2 Phase 2: PWA 自動化 ✅ COMPLETED (2026-01-26)
+### 8.2 Phase 2: PWA 自動化 (Anesthesia) ✅ COMPLETED (2026-01-26)
 
 **交付物**：
 - [x] PWA 定期備份到 IndexedDB
@@ -549,6 +550,65 @@ await lifeboat.restore({ pin });     // 手動還原
 
 **驗收標準**：
 - 換一台空 RPi，iPad 自動還原資料
+
+### 8.3 Phase 2.5: Other PWAs Lifeboat ✅ COMPLETED (2026-01-26)
+
+**目標**：將 Lifeboat 災難復原功能擴展到所有 PWA。
+
+**PWA 清單**：
+| PWA | 路徑 | 狀態 | 說明 |
+|-----|------|------|------|
+| Anesthesia | `/anesthesia/` | ✅ DONE | Phase 2 已完成 |
+| Biomed | `/biomed/` | ✅ DONE | 生醫設備管理 |
+| Blood Bank | `/blood/` | ✅ DONE | 血庫管理 |
+| Pharmacy | `/pharmacy/` | ✅ DONE | 藥局管理 |
+
+**整合步驟** (每個 PWA):
+1. 引入 `<script src="/shared/sdk/lifeboat.js"></script>`
+2. 各 PWA 已有內建 Toast 系統 (Alpine.js)
+3. 在 `init()` 中初始化 `LifeboatClient`
+4. 設定回調函數 (onNewHostDetected, onRestoreNeeded, etc.)
+
+**交付物**：
+- [x] `frontend/biomed/index.html` - Lifeboat 整合
+- [x] `frontend/blood/index.html` - Lifeboat 整合
+- [x] `frontend/pharmacy/index.html` - Lifeboat 整合
+
+### 8.4 Phase 3: HLC 整合 ✅ COMPLETED (2026-01-26)
+
+**目標**：將 Hybrid Logical Clock 整合到事件建立與 xIRS 回應。
+
+**交付物**：
+- [x] `services/hlc.py` - HLC 實作 (281 lines)
+- [x] `routes/anesthesia.py` - 事件建立時加入 HLC (line 1589-1634)
+- [x] `routes/anesthesia.py` - xIRS 回應 headers 加入 HLC (line 4301-4315)
+- [x] `routes/dr.py` - Export 已支援 HLC 排序
+
+**xIRS Headers 更新** (已實作於 line 4301-4315):
+```python
+def make_xirs_response(data: dict, hub_revision: int = 0) -> JSONResponse:
+    headers = {
+        "X-XIRS-Protocol-Version": "1.0",
+        "X-XIRS-Hub-Revision": str(hub_revision),
+        "X-XIRS-Station-Id": STATION_ID,
+    }
+    # v2.5: Add HLC timestamp for causal ordering (P2-01)
+    if HLC_ENABLED:
+        hlc_ts = hlc_now(STATION_ID)
+        if hlc_ts:
+            headers["X-XIRS-HLC"] = hlc_ts
+    return JSONResponse(content=data, headers=headers)
+```
+
+**事件 HLC 欄位** (已實作於 line 1589-1634):
+```python
+# _record_to_events_table() dual-write includes HLC
+hlc = hlc_now(station_id)
+cursor.execute("""
+    INSERT INTO events (event_id, ..., hlc, ...)
+    VALUES (?, ..., ?, ...)
+""", (event_id, ..., hlc, ...))
+```
 
 ---
 
