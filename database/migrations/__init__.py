@@ -118,3 +118,4 @@ from . import m005_ensure_equipment_units
 from . import m006_ensure_resilience_profiles
 from . import m007_blood_bank
 from . import m008_hlc
+from . import m009_walkaway

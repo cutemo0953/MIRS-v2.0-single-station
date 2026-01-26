@@ -1526,8 +1526,13 @@ def generate_case_id() -> str:
 
 
 def generate_event_id() -> str:
-    """Generate unique event ID"""
-    return str(uuid.uuid4())
+    """Generate unique event ID (UUIDv7 for time-sortable ordering)"""
+    try:
+        from services.id_service import generate_uuidv7
+        return generate_uuidv7()
+    except ImportError:
+        # Fallback to UUID4 if id_service not available
+        return str(uuid.uuid4())
 
 
 def generate_preop_id() -> str:
@@ -1549,6 +1554,87 @@ def generate_intervention_id() -> str:
 def generate_outcome_id() -> str:
     """Generate unique PIO outcome ID"""
     return f"OUT-{uuid.uuid4().hex[:8].upper()}"
+
+
+# =============================================================================
+# Dual-Write Helper for Lifeboat (v3.5)
+# =============================================================================
+
+def _record_to_events_table(
+    cursor,
+    event_id: str,
+    case_id: str,
+    event_type: str,
+    payload: dict,
+    actor_id: str,
+    clinical_time: Optional[str] = None,
+):
+    """
+    Record event to unified events table for Disaster Recovery.
+
+    This is called after inserting into anesthesia_events to maintain
+    dual-write consistency for Lifeboat/Walkaway Test.
+
+    Args:
+        cursor: Database cursor
+        event_id: Event ID (UUIDv7)
+        case_id: Anesthesia case ID
+        event_type: Event type (STATUS_CHANGE, MEDICATION_ADMIN, etc.)
+        payload: Event payload dictionary
+        actor_id: Actor who created the event
+        clinical_time: Clinical time of event (optional)
+    """
+    try:
+        from services.id_service import compute_event_hash, get_current_timestamp_ms
+        from services.hlc import hlc_now
+
+        station_id = os.environ.get('MIRS_STATION_ID', 'MIRS-DEFAULT')
+        ts_device = get_current_timestamp_ms()
+        hlc = hlc_now(station_id)
+        payload_json = json.dumps(payload, ensure_ascii=False)
+
+        # Compute hash for idempotency
+        event_dict = {
+            'event_id': event_id,
+            'entity_type': 'anesthesia_case',
+            'entity_id': case_id,
+            'event_type': event_type,
+            'payload': payload,
+            'ts_device': ts_device,
+            'hlc': hlc,
+        }
+        payload_hash = compute_event_hash(event_dict)
+
+        cursor.execute("""
+            INSERT OR IGNORE INTO events (
+                event_id, site_id, entity_type, entity_id,
+                actor_id, ts_device, ts_server, hlc, event_type,
+                schema_version, payload_json, payload_hash,
+                synced, acknowledged
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            event_id,
+            station_id,
+            'anesthesia_case',
+            case_id,
+            actor_id,
+            ts_device,
+            ts_device,
+            hlc,
+            event_type,
+            '1.0',
+            payload_json,
+            payload_hash,
+            0,  # Not synced yet
+            0,  # Not acknowledged yet
+        ))
+
+    except ImportError:
+        # Services not available - skip dual-write (graceful degradation)
+        logger.debug(f"Dual-write skipped: id_service or hlc not available")
+    except Exception as e:
+        # Don't fail the main operation if dual-write fails
+        logger.warning(f"Dual-write to events table failed: {e}")
 
 
 # =============================================================================
@@ -1606,15 +1692,19 @@ async def create_case(request: CreateCaseRequest, actor_id: str = Query(...)):
 
         # Add STATUS_CHANGE event
         event_id = generate_event_id()
+        status_payload = {"from": None, "to": "PREOP", "reason": "Case created"}
         cursor.execute("""
             INSERT INTO anesthesia_events (
                 id, case_id, event_type, clinical_time, payload, actor_id
             ) VALUES (?, ?, ?, datetime('now'), ?, ?)
         """, (
             event_id, case_id, 'STATUS_CHANGE',
-            json.dumps({"from": None, "to": "PREOP", "reason": "Case created"}),
+            json.dumps(status_payload),
             actor_id
         ))
+
+        # v3.5: Dual-write to events table for Lifeboat
+        _record_to_events_table(cursor, event_id, case_id, 'STATUS_CHANGE', status_payload, actor_id)
 
         conn.commit()
 
@@ -3147,15 +3237,19 @@ async def close_case(case_id: str, actor_id: str = Query(...)):
 
         # Add status change event
         event_id = generate_event_id()
+        status_payload = {"from": case['status'], "to": "CLOSED"}
         cursor.execute("""
             INSERT INTO anesthesia_events (
                 id, case_id, event_type, clinical_time, payload, actor_id
             ) VALUES (?, ?, 'STATUS_CHANGE', datetime('now'), ?, ?)
         """, (
             event_id, case_id,
-            json.dumps({"from": case['status'], "to": "CLOSED"}),
+            json.dumps(status_payload),
             actor_id
         ))
+
+        # v3.5: Dual-write to events table for Lifeboat
+        _record_to_events_table(cursor, event_id, case_id, 'STATUS_CHANGE', status_payload, actor_id)
 
         conn.commit()
 
@@ -3240,6 +3334,9 @@ async def quick_drug_admin(
                 id, case_id, event_type, clinical_time, payload, actor_id
             ) VALUES (?, ?, 'MEDICATION_ADMIN', datetime('now'), ?, ?)
         """, (event_id, case_id, json.dumps(payload), actor_id))
+
+        # v3.5: Dual-write to events table for Lifeboat (medication events are critical)
+        _record_to_events_table(cursor, event_id, case_id, 'MEDICATION_ADMIN', payload, actor_id)
 
         conn.commit()
 
@@ -5847,6 +5944,9 @@ async def add_medication_with_billing(
                 id, case_id, event_type, clinical_time, payload, actor_id
             ) VALUES (?, ?, 'MEDICATION_ADMIN', datetime('now'), ?, ?)
         """, (result.event_id, case_id, json.dumps(payload), actor_id))
+
+        # v3.5: Dual-write to events table for Lifeboat (medication events are critical)
+        _record_to_events_table(cursor, result.event_id, case_id, 'MEDICATION_ADMIN', payload, actor_id)
 
         conn.commit()
         conn.close()

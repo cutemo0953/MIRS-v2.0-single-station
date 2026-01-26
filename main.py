@@ -132,6 +132,14 @@ except ImportError as e:
     ANALYTICS_AVAILABLE = False
     analytics_router = None
 
+# v3.5 新增: Disaster Recovery / Lifeboat (Walkaway Test)
+try:
+    from routes.dr import router as dr_router
+    DR_AVAILABLE = True
+except ImportError as e:
+    DR_AVAILABLE = False
+    dr_router = None
+
 
 # ============================================================================
 # 日誌配置
@@ -4067,6 +4075,17 @@ async def startup_event():
         logger.warning("⚠ [MIRS] Idempotent migrations module not found")
     except Exception as e:
         logger.error(f"⚠ [MIRS] Migration error: {e}")
+
+    # v3.5: Initialize HLC (Hybrid Logical Clock) for Lifeboat
+    try:
+        from services.hlc import get_hlc
+        station_id = Config.get_station_id()
+        hlc = get_hlc(station_id)
+        logger.info(f"✓ [MIRS] HLC initialized for station: {station_id}")
+    except ImportError:
+        logger.debug("[MIRS] HLC module not available")
+    except Exception as e:
+        logger.warning(f"[MIRS] Failed to initialize HLC: {e}")
 
     # Seed demo data if running on Vercel
     if IS_VERCEL:
@@ -8961,6 +8980,13 @@ if ANALYTICS_AVAILABLE and analytics_router:
     logger.info("✓ MIRS Analytics Dashboard v1.0 已啟用 (/api/analytics)")
 else:
     logger.warning("Analytics Dashboard 模組未啟用")
+
+# v3.5: Disaster Recovery / Lifeboat (Walkaway Test)
+if DR_AVAILABLE and dr_router:
+    app.include_router(dr_router)
+    logger.info("✓ MIRS Disaster Recovery (Lifeboat) v1.0 已啟用 (/api/dr)")
+else:
+    logger.warning("Disaster Recovery (Lifeboat) 模組未啟用")
 
 
 class ResilienceConfigUpdate(BaseModel):
