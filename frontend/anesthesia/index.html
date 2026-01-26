@@ -101,6 +101,16 @@
             50% { opacity: 0.5; }
         }
 
+        /* Toast animation (Lifeboat) */
+        @keyframes toastFadeIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes toastFadeOut {
+            from { opacity: 1; transform: translateX(-50%) translateY(0); }
+            to { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        }
+
         /* Main Content */
         .main {
             padding: 16px;
@@ -3499,10 +3509,13 @@
     <script src="/shared/sdk/xirs-offline.js"></script>
     <script src="/shared/sdk/xirs-ui.js"></script>
     <script src="/shared/sdk/index.js"></script>
+    <!-- Lifeboat (Disaster Recovery) v1.0 -->
+    <script src="/shared/sdk/lifeboat.js"></script>
 
     <script>
         // State
         let currentCase = null;
+        let lifeboat = null; // Lifeboat client instance
         let actorId = 'ANES001'; // TODO: Get from auth
         let isOnline = navigator.onLine;
         let syncQueue = [];
@@ -3729,6 +3742,37 @@
             }
         }
 
+        // Toast notification (Lifeboat v1.0)
+        function showToast(message, type = 'info') {
+            // Remove existing toast
+            const existing = document.querySelector('.lifeboat-toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'lifeboat-toast';
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 80px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 12px 24px;
+                border-radius: 8px;
+                color: white;
+                font-size: 14px;
+                z-index: 10000;
+                animation: toastFadeIn 0.3s ease;
+                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#6366f1'};
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                toast.style.animation = 'toastFadeOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         // Sync with server
         async function syncWithServer() {
             if (!isOnline || syncQueue.length === 0) return;
@@ -3870,7 +3914,7 @@
         }
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             loadSyncQueue();
             loadCases();
 
@@ -3880,6 +3924,68 @@
                     syncWithServer();
                 }
             }, 30000); // Every 30 seconds
+
+            // =========================================================
+            // Lifeboat (Disaster Recovery) v1.0
+            // =========================================================
+            if (typeof LifeboatClient !== 'undefined' && !IS_VERCEL_DEMO) {
+                lifeboat = new LifeboatClient({
+                    apiBase: '/api/dr',
+                    backupIntervalMs: 5 * 60 * 1000, // 5 minutes
+
+                    onNewHostDetected: (health) => {
+                        console.log('[Anesthesia PWA] New host detected:', health.server_uuid);
+                        showToast('偵測到新主機', 'info');
+                    },
+
+                    onRestoreNeeded: async (health) => {
+                        console.log('[Anesthesia PWA] Restore needed - empty database on new host');
+                        // Show restore prompt
+                        if (confirm('偵測到新主機且資料庫為空。\n\n是否從本機備份還原資料？\n\n(需要管理員 PIN)')) {
+                            const pin = prompt('請輸入管理員 PIN:');
+                            if (pin) {
+                                try {
+                                    showToast('正在還原資料...', 'info');
+                                    const result = await lifeboat.restore({ pin });
+                                    if (result.success) {
+                                        showToast(`還原完成: ${result.totalInserted} 筆事件`, 'success');
+                                        loadCases(); // Reload cases after restore
+                                    } else {
+                                        showToast('還原失敗: ' + result.message, 'error');
+                                    }
+                                } catch (e) {
+                                    showToast('還原失敗: ' + e.message, 'error');
+                                }
+                            }
+                        }
+                    },
+
+                    onBackupComplete: (data) => {
+                        console.log('[Anesthesia PWA] Backup complete:', data.events_count, 'events');
+                    },
+
+                    onRestoreComplete: (result) => {
+                        console.log('[Anesthesia PWA] Restore complete:', result);
+                    },
+
+                    onError: (msg, error) => {
+                        console.error('[Anesthesia PWA] Lifeboat error:', msg, error);
+                    }
+                });
+
+                // Initialize Lifeboat
+                const initOk = await lifeboat.init();
+                if (initOk) {
+                    console.log('[Anesthesia PWA] Lifeboat initialized');
+
+                    // Check server health (detects new host)
+                    const healthResult = await lifeboat.checkServerHealth();
+                    if (!healthResult.needsRestore) {
+                        // Start periodic backup
+                        lifeboat.startPeriodicBackup();
+                    }
+                }
+            }
         });
 
         // Modal Functions
