@@ -4079,6 +4079,33 @@ async def startup_event():
         asyncio.create_task(daily_equipment_reset())
         logger.info("✓ 每日設備重置背景任務已啟動 (07:00am)")
 
+        # v1.9.1: Start OTA scheduler (if enabled)
+        try:
+            from services.ota_scheduler import start_scheduler, OTA_SCHEDULER_ENABLED
+            if OTA_SCHEDULER_ENABLED:
+                await start_scheduler()
+                logger.info("✓ [OTA] Auto-update scheduler started")
+            else:
+                logger.info("✓ [OTA] Scheduler disabled (MIRS_OTA_SCHEDULER_ENABLED=false)")
+        except ImportError:
+            logger.debug("[OTA] Scheduler module not available")
+        except Exception as e:
+            logger.warning(f"[OTA] Failed to start scheduler: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """應用關閉時執行"""
+    # Stop OTA scheduler
+    try:
+        from services.ota_scheduler import stop_scheduler
+        await stop_scheduler()
+        logger.info("✓ [OTA] Scheduler stopped")
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning(f"[OTA] Error stopping scheduler: {e}")
+
 
 # ============================================================================
 # API 端點
@@ -4115,7 +4142,7 @@ async def api_info():
         "station": config.STATION_ID,
         "docs": "/docs",
         "server_ip": local_ip,
-        "server_url": f"http://{local_ip}:8090/api" if local_ip else None
+        "server_url": f"http://{local_ip}:{os.environ.get('MIRS_PORT', '8000')}/api" if local_ip else None
     }
 
 
@@ -10707,23 +10734,27 @@ if __name__ == "__main__":
     print("=" * 70)
     print(f"🏥 BORP備援手術站庫存管理系統（單站版）v{config.VERSION}")
     print("=" * 70)
+    # Port configuration: MIRS_PORT env var, default 8000
+    server_port = int(os.environ.get("MIRS_PORT", "8000"))
+
     print(f"📁 資料庫: {config.DATABASE_PATH}")
     print(f"🏢 站點ID: {config.get_station_id()}")
     print(f"🏷️  站點名稱: {config.get_station_name()}")
     print(f"🏥 組織: {config.ORG_NAME}")
-    print(f"🌐 服務位址: http://0.0.0.0:8090")
-    print(f"📖 API文件: http://localhost:8090/docs")
-    print(f"📊 健康檢查: http://localhost:8090/api/health")
+    print(f"🌐 服務位址: http://0.0.0.0:{server_port}")
+    print(f"📖 API文件: http://localhost:{server_port}/docs")
+    print(f"📊 健康檢查: http://localhost:{server_port}/api/health")
     print("=" * 70)
-    print("✨ v1.4.8 功能:")
+    print("✨ v1.5.0 功能:")
     print("   - 藥品整合至庫存查詢 (MED- 前綴區分)")
     print("   - 庫存查詢分類篩選 (全部/藥品/耗材)")
     print("   - 血袋標籤多張排列列印 (A4紙 ~12張/頁)")
     print("   - 動態 API URL (支援遠端存取)")
     print("   - 單站版簡化架構")
     print("   - 📱 Mobile API v1 (巡房助手 PWA)")
+    print("   - 🔧 Port 可配置 (MIRS_PORT 環境變數)")
     print("=" * 70)
-    print("📱 Mobile API: http://localhost:8090/api/mirs-mobile/v1/info")
+    print(f"📱 Mobile API: http://localhost:{server_port}/api/mirs-mobile/v1/info")
     print("=" * 70)
     print("按 Ctrl+C 停止服務")
     print("=" * 70)
@@ -10731,7 +10762,7 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8090,
+        port=server_port,
         log_level="info",
         access_log=True
     )

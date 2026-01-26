@@ -84,14 +84,18 @@ install_nuitka() {
 build_standalone() {
     log_info "=== Building Standalone Binary ==="
     log_info "This will take 15-30 minutes on RPi 5..."
+    log_info "(--standalone is MANDATORY per OTA v1.2 spec - includes all dependencies)"
 
     mkdir -p "$DIST_DIR"
     cd "$PROJECT_DIR"
 
+    # CRITICAL: --standalone is MANDATORY per DEV_SPEC_OTA_ARCHITECTURE_v1.2
+    # This ensures the binary includes ALL dependencies and doesn't rely on
+    # the system Python environment (which may have different package versions).
     python3 -m nuitka \
         --standalone \
         --onefile \
-        --python-flag=no_site \
+        --assume-yes-for-downloads \
         --include-package=routes \
         --include-package=services \
         --include-package=database \
@@ -101,19 +105,22 @@ build_standalone() {
         --include-data-dir=static=static \
         --include-data-dir=frontend=frontend \
         --include-data-dir=fonts=fonts \
+        --include-data-dir=database/migrations=database/migrations \
+        --include-data-dir=database/profiles=database/profiles \
+        --include-data-files=database/*.sql=database/ \
         --output-dir="$DIST_DIR" \
-        --output-filename=mirs-hub \
+        --output-filename=mirs-server \
         --company-name=xIRS \
-        --product-name=MIRS-Hub \
-        --product-version=2.4.0 \
+        --product-name=MIRS-Server \
+        --product-version=1.5.0 \
         --lto=yes \
-        --jobs=4 \
+        --jobs=2 \
         main.py
 
-    if [ -f "$DIST_DIR/mirs-hub" ]; then
-        chmod +x "$DIST_DIR/mirs-hub"
-        SIZE=$(du -h "$DIST_DIR/mirs-hub" | cut -f1)
-        log_success "Build complete: dist/mirs-hub ($SIZE)"
+    if [ -f "$DIST_DIR/mirs-server" ]; then
+        chmod +x "$DIST_DIR/mirs-server"
+        SIZE=$(du -h "$DIST_DIR/mirs-server" | cut -f1)
+        log_success "Build complete: dist/mirs-server ($SIZE)"
     else
         log_error "Build failed - binary not found"
         exit 1

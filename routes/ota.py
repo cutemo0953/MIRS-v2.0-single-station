@@ -3,9 +3,9 @@ xIRS OTA Update API Routes
 
 Provides REST endpoints for OTA update management.
 
-Version: 1.0
-Date: 2026-01-25
-Reference: DEV_SPEC_COMMERCIAL_APPLIANCE_v1.6 (P1-04)
+Version: 1.1
+Date: 2026-01-26
+Reference: DEV_SPEC_COMMERCIAL_APPLIANCE_v1.9.1 (P3-02a OTA Scheduler)
 """
 
 import logging
@@ -37,6 +37,23 @@ try:
 except ImportError as e:
     logger.warning(f"OTA service not available: {e}")
     OTA_AVAILABLE = False
+
+# Import scheduler (v1.9.1)
+try:
+    from services.ota_scheduler import (
+        ota_scheduler,
+        get_scheduler_status,
+        start_scheduler,
+        stop_scheduler
+    )
+    from services.ota_safety import (
+        run_all_safety_checks,
+        is_safe_to_update
+    )
+    SCHEDULER_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"OTA scheduler not available: {e}")
+    SCHEDULER_AVAILABLE = False
 
 
 # =============================================================================
@@ -267,5 +284,157 @@ async def ota_health():
     return {
         "status": "healthy",
         "ota_available": OTA_AVAILABLE,
+        "scheduler_available": SCHEDULER_AVAILABLE if 'SCHEDULER_AVAILABLE' in dir() else False,
         "update_method": get_ota_status().get('update_method') if OTA_AVAILABLE else "unknown"
+    }
+
+
+# =============================================================================
+# Scheduler Endpoints (v1.9.1)
+# =============================================================================
+
+@router.get("/scheduler/status")
+async def get_scheduler_status_endpoint():
+    """
+    Get OTA scheduler status.
+
+    GET /api/ota/scheduler/status
+
+    Returns scheduler state including:
+    - running: Is scheduler active
+    - auto_update_enabled: Will updates be applied automatically
+    - last_check: Last update check timestamp
+    - pending_update: Update waiting to be applied
+    """
+    if not SCHEDULER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="OTA scheduler not available")
+
+    return get_scheduler_status()
+
+
+@router.post("/scheduler/start")
+async def start_scheduler_endpoint():
+    """
+    Start the OTA scheduler.
+
+    POST /api/ota/scheduler/start
+
+    Starts background scheduler that periodically checks for updates.
+    """
+    if not SCHEDULER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="OTA scheduler not available")
+
+    await ota_scheduler.start()
+    return {"success": True, "message": "Scheduler started"}
+
+
+@router.post("/scheduler/stop")
+async def stop_scheduler_endpoint():
+    """
+    Stop the OTA scheduler.
+
+    POST /api/ota/scheduler/stop
+
+    Stops background scheduler. Manual update checks still work.
+    """
+    if not SCHEDULER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="OTA scheduler not available")
+
+    await ota_scheduler.stop()
+    return {"success": True, "message": "Scheduler stopped"}
+
+
+@router.post("/scheduler/check-now")
+async def manual_check_endpoint():
+    """
+    Manually trigger update check.
+
+    POST /api/ota/scheduler/check-now
+
+    Checks for updates immediately without waiting for next scheduled check.
+    """
+    if not SCHEDULER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="OTA scheduler not available")
+
+    result = await ota_scheduler.check_now()
+    return result
+
+
+@router.post("/scheduler/apply-now")
+async def manual_apply_endpoint(version: Optional[str] = None):
+    """
+    Manually trigger update application.
+
+    POST /api/ota/scheduler/apply-now
+
+    Applies pending update immediately (bypasses time window).
+    Still respects active case guard - will not update during surgery.
+    """
+    if not SCHEDULER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="OTA scheduler not available")
+
+    result = await ota_scheduler.apply_now(version)
+
+    if not result.get('success'):
+        raise HTTPException(status_code=400, detail=result.get('error'))
+
+    return result
+
+
+@router.get("/safety/check")
+async def safety_check_endpoint():
+    """
+    Run safety checks without applying update.
+
+    GET /api/ota/safety/check
+
+    Returns detailed safety check report including:
+    - Active case guard status
+    - Time validity
+    - Update window
+    - System load
+    """
+    if not SCHEDULER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="OTA scheduler not available")
+
+    # Run quick synchronous check
+    safe, reason = is_safe_to_update()
+
+    return {
+        "safe_to_update": safe,
+        "reason": reason,
+        "checks": {
+            "active_cases": "checked",
+            "time_validity": "checked",
+            "system_load": "checked"
+        }
+    }
+
+
+@router.get("/safety/full-check")
+async def full_safety_check_endpoint(
+    new_version: str = Query("1.0.0", description="Version to check"),
+    current_version: str = Query("1.0.0", description="Current version")
+):
+    """
+    Run comprehensive safety checks.
+
+    GET /api/ota/safety/full-check?new_version=2.0.0&current_version=1.5.0
+
+    Returns complete safety report with all checks.
+    """
+    if not SCHEDULER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="OTA scheduler not available")
+
+    report = await run_all_safety_checks(
+        new_version=new_version,
+        current_version=current_version
+    )
+
+    return {
+        "safe_to_update": report.safe_to_update,
+        "checks": report.checks,
+        "blocking_reasons": report.blocking_reasons,
+        "warnings": report.warnings,
+        "timestamp": report.timestamp.isoformat()
     }
